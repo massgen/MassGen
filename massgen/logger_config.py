@@ -16,12 +16,20 @@ Color Scheme for Debug Logging:
 """
 
 import inspect
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+import yaml
 from loguru import logger
+
+# Try to import massgen for version info (optional)
+try:
+    import massgen
+except ImportError:
+    massgen = None
 
 # Remove default logger to have full control
 logger.remove()
@@ -109,10 +117,6 @@ def save_execution_metadata(
         config_content: The actual config dictionary (optional)
         cli_args: Command line arguments as dict (optional)
     """
-    import subprocess
-
-    import yaml
-
     log_dir = get_log_session_dir()
 
     # Create a single metadata file with all execution info
@@ -140,20 +144,12 @@ def save_execution_metadata(
         pass
 
     # Add Python version and package version
-    import sys
-
     metadata["python_version"] = sys.version
-    try:
-        import massgen
-
+    if massgen is not None:
         metadata["massgen_version"] = getattr(massgen, "__version__", "unknown")
-    except Exception:
-        pass
 
     # Add working directory
-    from pathlib import Path as PathLib
-
-    metadata["working_directory"] = str(PathLib.cwd())
+    metadata["working_directory"] = str(Path.cwd())
 
     metadata_file = log_dir / "execution_metadata.yaml"
     try:

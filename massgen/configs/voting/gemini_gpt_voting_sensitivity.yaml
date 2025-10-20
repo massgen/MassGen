@@ -1,10 +1,10 @@
 # MassGen Voting Sensitivity Configuration Example
 #
 # How to run:
-#   python -m massgen.cli --config configs/voting/gemini_gpt_voting_sensitivity.yaml "Your question here"
+#   massgen --config configs/voting/gemini_gpt_voting_sensitivity.yaml "Your question here"
 #
 # Or in interactive mode:
-#   python -m massgen.cli --config configs/voting/gemini_gpt_voting_sensitivity.yaml
+#   massgen --config configs/voting/gemini_gpt_voting_sensitivity.yaml
 #
 # Try different sensitivity levels by changing the voting_sensitivity value below
 

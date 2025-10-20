@@ -23,6 +23,7 @@ Usage examples:
 
 import argparse
 import asyncio
+import copy
 import json
 import os
 import shutil
@@ -2040,8 +2041,6 @@ async def main(args):
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
 
         # Save original config before relocation (for execution_metadata.yaml)
-        import copy
-
         original_config_for_metadata = copy.deepcopy(config)
 
         # Validate that all context paths exist before proceeding

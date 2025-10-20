@@ -18,7 +18,6 @@ agents:
       cwd: "workspace2"
 
 orchestrator:
-    voting_sensitivity: "balanced"
     snapshot_storage: "snapshots"
     agent_temporary_workspace: "temp_workspaces"
     # Context paths applied to all agents - read-only access during orchestration, write for final agent if specified

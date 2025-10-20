@@ -724,7 +724,7 @@ These parameters control coordination behavior to balance quality and duration.
    * - ``voting_sensitivity``
      - string
      - No
-     - Controls how critical agents are when evaluating answers. **Options:** ``"lenient"`` (default) - agents vote YES more easily, faster convergence; ``"balanced"`` - agents apply detailed criteria (comprehensive, accurate, complete?), more thorough evaluation; ``"strict"`` - agents apply high standards of excellence (all aspects, edge cases, reference-quality), maximum quality.
+     - Controls how critical agents are when evaluating answers. **Options:** ``"lenient"`` (default) - agents vote for existing answers more readily, faster convergence; ``"balanced"`` - agents apply detailed criteria (comprehensive, accurate, complete?) before voting, more thorough evaluation; ``"strict"`` - agents apply high standards of excellence (all aspects, edge cases, reference-quality) before voting, maximum quality.
    * - ``max_new_answers_per_agent``
      - integer or null
      - No
