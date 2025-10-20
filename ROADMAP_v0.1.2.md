@@ -2,55 +2,50 @@
 
 ## Overview
 
-Version 0.1.2 focuses on enterprise collaboration capabilities and intelligent agent workflows. Key priorities include:
+Version 0.1.2 focuses on general interoperability, enterprise collaboration capabilities and intelligent agent workflows. Key priorities include:
 
-- **AG2 Group Chat Patterns** (Required): 🔄 Complete AG2 group chat orchestration patterns for complex research workflows
+- **General Interoperability** (Required): 🔄 Enable MassGen to orchestrate agents from multiple frameworks with unified interface
 - **Final Agent Submit/Restart Tools** (Required): 🔁 Enable final agent to intelligently decide whether to submit or restart orchestration
 - **Memory Module - Phase 1** (Required): 💾 Long-term memory implementation for reasoning tasks and document understanding
 
 ## Key Technical Priorities
 
-1. **AG2 Group Chat Integration**: Complete AG2 nested chat and group chat patterns for hierarchical agent conversations
+1. **General Interoperability**: Framework integration with external agent frameworks (nested/group chat patterns) and custom agent adapters
 2. **Final Agent Submit/Restart**: Multi-step task verification with intelligent restart capabilities
 3. **Memory Module - Phase 1**: Long-term memory using mem0 inspired by agentscope
 
 ## Key Milestones
 
-### 🎯 Milestone 1: AG2 Group Chat Patterns (REQUIRED)
+### 🎯 Milestone 1: General Interoperability (REQUIRED)
 
-**Goal**: Complete AG2 group chat orchestration patterns enabling specialized agent roles and complex research workflows
+**Goal**: Enable MassGen to orchestrate agents from multiple external frameworks and custom implementations
 
-**Owner**: @Eric-Shang (ericshang.)
+**Owner**: @qidanrui (danrui2020)
 
-#### 1.1 Group Chat Architecture
-- [ ] Design group chat integration with AG2 framework
-- [ ] Implement multi-agent group chat coordination
-- [ ] Support different speaker selection modes (auto, round_robin, manual)
-- [ ] Handle message routing within group conversations
+**Issue**: [#341](https://github.com/Leezekun/MassGen/issues/341)
 
-#### 1.2 Orchestration Patterns
-- [ ] Implement summarization method for group chats
-- [ ] Add AutoPattern for automatic agent selection
-- [ ] Support round robin pattern for sequential agent participation
-- [ ] Enable nested chat for hierarchical conversations
+#### 1.1 Unified Agent Interface
+- [ ] Design framework-agnostic agent adapter interface
+- [ ] Implement base adapter class for external frameworks
+- [ ] Support message translation between frameworks
+- [ ] Handle framework-specific capabilities and tools
 
-#### 1.3 Tool and Workflow Integration
-- [ ] Integrate workflow tools within group chat sessions
-- [ ] Support MCP tool access in group conversations
-- [ ] Enable custom tools in group chat contexts
-- [ ] Add resource management for group execution
+#### 1.2 Framework Integration
+- [ ] Design and implement framework integration architecture
+- [ ] Support external agent systems with unified interface
+- [ ] Enable seamless orchestration across frameworks
+- [ ] Handle framework-specific communication patterns
 
-#### 1.4 Testing and Examples
-- [ ] Create comprehensive group chat tests
-- [ ] Add example configurations for research workflows
-- [ ] Document group chat patterns and best practices
-- [ ] Test with specialized agent roles (researcher, analyst, critic, synthesizer)
+#### 1.3 Testing and Examples
+- [ ] Create tests for framework integration
+- [ ] Add example configurations for multi-framework teams
+- [ ] Document best practices for framework integration
+- [ ] Test with specialized agent roles from different frameworks
 
 **Success Criteria**:
-- ✅ Group chat patterns functional with AG2 framework
-- ✅ Multiple orchestration patterns supported
-- ✅ Tool integration working in group contexts
-- ✅ Documentation with real-world examples
+- ✅ Framework integration functional with unified interface
+- ✅ Seamless orchestration across external agent systems
+- ✅ Comprehensive documentation with examples
 
 ---
 
@@ -136,10 +131,11 @@ Version 0.1.2 focuses on enterprise collaboration capabilities and intelligent a
 
 ### Functional Requirements
 
-**AG2 Group Chat Patterns:**
-- [ ] Group chat patterns working with AG2 framework
-- [ ] Multiple orchestration patterns (summarization, AutoPattern, round robin, nested)
-- [ ] Tool integration functional in group contexts
+**General Interoperability:**
+- [ ] Framework integration architecture implemented
+- [ ] Unified agent interface functional
+- [ ] External agent systems integrated seamlessly
+- [ ] Tool integration across frameworks
 - [ ] Documentation and examples complete
 
 **Final Agent Submit/Restart:**
@@ -155,14 +151,16 @@ Version 0.1.2 focuses on enterprise collaboration capabilities and intelligent a
 - [ ] Performance acceptable for production use
 
 ### Performance Requirements
-- [ ] Group chat performance scales with number of agents
+- [ ] Framework integration overhead minimal
+- [ ] Multi-framework orchestration performs efficiently
 - [ ] Restart mechanism completes efficiently
 - [ ] Memory operations have minimal latency impact
 - [ ] Overall system remains responsive
 
 ### Quality Requirements
 - [ ] Test coverage for all new features
-- [ ] Integration tests for group chat patterns
+- [ ] Integration tests for framework integration
+- [ ] End-to-end tests for multi-framework orchestration
 - [ ] End-to-end tests for submit/restart workflows
 - [ ] Memory system tested with various scenarios
 - [ ] Comprehensive documentation for all features
@@ -172,15 +170,16 @@ Version 0.1.2 focuses on enterprise collaboration capabilities and intelligent a
 ## Dependencies & Risks
 
 ### Dependencies
-- **AG2 Framework**: For group chat and nested chat patterns
+- **External Frameworks**: For agent system integration (implementation details TBD)
 - **mem0 Framework**: For memory module implementation
 - **Existing Infrastructure**: Custom tools system, MCP integration, orchestrator
 
 ### Risks & Mitigations
-1. **AG2 API Changes**: *Mitigation*: Version pinning, compatibility testing, fallback mechanisms
-2. **Memory Performance**: *Mitigation*: Caching strategies, efficient retrieval, memory limits
-3. **Restart Complexity**: *Mitigation*: Clear state management, thorough testing, rollback capabilities
-4. **Integration Challenges**: *Mitigation*: Incremental development, modular design, extensive testing
+1. **Framework API Changes**: *Mitigation*: Version pinning, compatibility testing, fallback mechanisms
+2. **Cross-Framework Compatibility**: *Mitigation*: Unified adapter interface, thorough testing, clear boundaries
+3. **Memory Performance**: *Mitigation*: Caching strategies, efficient retrieval, memory limits
+4. **Restart Complexity**: *Mitigation*: Clear state management, thorough testing, rollback capabilities
+5. **Integration Challenges**: *Mitigation*: Incremental development, modular design, extensive testing
 
 ---
 
@@ -195,7 +194,7 @@ Version 0.1.2 focuses on enterprise collaboration capabilities and intelligent a
 - **Visual Workflow Designer**: No-code multi-agent workflow creation
 - **Enterprise Features**: RBAC, audit logs, multi-user collaboration
 - **Complete Multimodal Pipeline**: End-to-end audio/video processing
-- **Additional Framework Integrations**: LangChain, CrewAI, custom adapters
+- **Additional Framework Integrations**: Various external frameworks, custom adapters
 
 ---
 
@@ -203,7 +202,7 @@ Version 0.1.2 focuses on enterprise collaboration capabilities and intelligent a
 
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
-| Phase 1 | AG2 Group Chat | Orchestration patterns, tool integration, examples | @Eric-Shang | **REQUIRED** |
+| Phase 1 | General Interoperability | External framework integration, unified adapter interface | @qidanrui | **REQUIRED** |
 | Phase 2 | Submit/Restart | Decision tools, context access, verification workflows | @ncrispino | **REQUIRED** |
 | Phase 3 | Memory Module | Long-term memory, context management, integration | @kitrakrev | **REQUIRED** |
 
@@ -216,19 +215,21 @@ Version 0.1.2 focuses on enterprise collaboration capabilities and intelligent a
 ### For Contributors
 
 **Required Work:**
-1. Complete AG2 group chat pattern implementations
-2. Implement final agent submit/restart tools with context access
-3. Develop memory module Phase 1 with mem0
-4. Add comprehensive tests for all features
-5. Create documentation and examples
+1. Implement general interoperability with external agent frameworks
+2. Create unified adapter interface for framework integration
+3. Implement final agent submit/restart tools with context access
+4. Develop memory module Phase 1 with mem0
+5. Add comprehensive tests for all features
+6. Create documentation and examples
 
 ### For Users
 
-- v0.1.2 enables complex research workflows with specialized agent roles
+- v0.1.2 enables orchestration of agents from external frameworks
+- Unified interface for seamless integration with proven agent systems
 - Final agent can now verify and restart tasks when needed
 - Memory module improves multi-turn conversation quality
-- AG2 group chat patterns support hierarchical agent coordination
 - Submit/restart tools enable intelligent multi-step verification
+- Framework adapters allow integration of specialized agent systems
 
 ---
 
@@ -241,13 +242,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Documentation guidelines
 
 **Contact Track Owners:**
-- AG2 Group Chat: @Eric-Shang on Discord (ericshang.)
+- General Interoperability: @qidanrui on Discord (danrui2020)
 - Submit/Restart: @ncrispino on Discord (nickcrispino)
 - Memory Module: @kitrakrev on Discord (kitrak_23536)
 
 ---
 
-*This roadmap reflects v0.1.2 priorities focusing on enterprise collaboration, intelligent workflows, and memory capabilities. All features are required for this release.*
+*This roadmap reflects v0.1.2 priorities focusing on general interoperability, enterprise collaboration, intelligent workflows, and memory capabilities. All features are required for this release.*
 
 **Last Updated:** October 20, 2025
 **Maintained By:** MassGen Team

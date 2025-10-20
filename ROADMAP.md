@@ -16,7 +16,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 |-------|--------|---------|
 | Tool System Refactoring | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Multimodal Support | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
-| AG2 Group Chat Patterns | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
+| General Interoperability | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
 | Memory Module | [@kitrakrev](https://github.com/kitrakrev) | kitrak_23536 |
@@ -36,7 +36,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | **v0.1.1** | ✅ 10/20/25 | Custom Tools System | @qidanrui | User-defined Python functions as tools alongside MCP servers |
 | | | Voting Sensitivity Controls | @qidanrui | Three-tier voting system for multi-agent quality control |
 | | | Interactive Config Builder | @ncrispino | Wizard for creating YAML configurations |
-| **v0.1.2** | 10/22/25 | AG2 Group Chat Patterns | @Eric-Shang | Complex research workflows with specialized agent roles |
+| **v0.1.2** | 10/22/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
 | | | Final Agent Submit/Restart Tools | @ncrispino | Multi-step task verification and intelligent restart decisions |
 | | | Memory Module (Phase 1) | @kitrakrev | Long-term memory for reasoning tasks and document understanding |
 | **v0.1.3** | 10/24/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
@@ -78,17 +78,15 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.2 - Enterprise Collaboration
+## 📋 v0.1.2 - General Interoperability & Enterprise Collaboration
 
 ### Features
 
-**1. Finish AG2 Group Chat Integration** (@Eric-Shang)
-- Group chat orchestration patterns:
-  - Summarization method
-  - AutoPattern
-  - Round robin pattern
-  - Nested chat
-- **Use Case**: Complex research workflows requiring specialized agent roles (researcher, analyst, critic, synthesizer) in already-proven AG2 patterns
+**1. General Interoperability** (@qidanrui)
+- Issue: [#341](https://github.com/Leezekun/MassGen/issues/341)
+- Framework integration for external agent systems
+- Unified agent interface for seamless integration
+- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source
 
 **2. Final Agent Submit/Restart Tools** (@ncrispino)
 - Issue: [#325](https://github.com/Leezekun/MassGen/issues/325)
@@ -222,7 +220,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 - [CHANGELOG.md](CHANGELOG.md) - Complete release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
-- [Documentation](https://docs.massgen.io/en/latest/) - Full user guide
+- [Documentation](https://docs.massgen.ai/en/latest/) - Full user guide
 
 ---
 

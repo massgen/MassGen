@@ -100,7 +100,7 @@ Homepage = "https://github.com/Leezekun/MassGen"
 Repository = "https://github.com/Leezekun/MassGen"
 "Bug Reports" = "https://github.com/Leezekun/MassGen/issues"
 Source = "https://github.com/Leezekun/MassGen"
-Documentation = "https://docs.massgen.io/en/latest/"
+Documentation = "https://docs.massgen.ai/en/latest/"
 
 [tool.setuptools]
 include-package-data = true

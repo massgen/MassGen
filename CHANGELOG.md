@@ -31,9 +31,9 @@ Isolated command execution in Docker containers with resource limits and multi-a
 
 - **Voting Sensitivity & Answer Novelty Controls**: Three-tier system for multi-agent coordination
   - New `voting_sensitivity` parameter with three levels: "lenient", "balanced", "strict"
-  - "Lenient": Accepts any reasonable answer (>60% approval, 1 required vote)
-  - "Balanced": Default middle ground (>70% approval, 2 required votes)
-  - "Strict": High-quality requirement (>80% approval, 3 required votes)
+  - "Lenient": Accepts any reasonable answer
+  - "Balanced": Default middle ground
+  - "Strict": High-quality requirement
   - Answer novelty detection with `_check_answer_novelty()` method in `orchestrator.py` preventing duplicate answers
   - Configurable `max_new_answers_per_agent` limiting submissions per agent
   - Token-based similarity thresholds (50-70% overlap) for duplicate detection
@@ -50,7 +50,6 @@ Isolated command execution in Docker containers with resource limits and multi-a
   - New `capabilities.py` module in `massgen/backend/` documenting backend capabilities
   - Feature matrix showing MCP, custom tools, multimodal, and code execution support
   - Runtime capability queries for backend selection
-  - Documentation integration for user-facing capability tables
 
 ### Changed
 - **Gemini Backend Architecture**: Major refactoring for improved maintainability
