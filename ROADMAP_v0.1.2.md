@@ -1,256 +1,254 @@
-
-# MassGen v0.0.33 Roadmap
+# MassGen v0.1.2 Roadmap
 
 ## Overview
 
-Version 0.0.33 focuses on improving developer experience and expanding framework integrations. Key priorities include:
+Version 0.1.2 focuses on general interoperability, enterprise collaboration capabilities and intelligent agent workflows. Key priorities include:
 
-- **Configuration Builder CLI** (Required): 🛠️ Build command-line tool for generating and validating MassGen configurations
-- **PyPI Package Release v0.1.0** (Required): 📦 Prepare and publish official PyPI package representing new usage paradigm
-- **Nested Chat Integration** (Optional): 🔄 Complete AG2 nested chat pattern support for hierarchical agent conversations
-- **DSPy Integration** (Optional): 🧠 Integrate DSPy framework for prompt optimization and systematic agent improvement
+- **General Interoperability** (Required): 🔄 Enable MassGen to orchestrate agents from multiple frameworks with unified interface
+- **Final Agent Submit/Restart Tools** (Required): 🔁 Enable final agent to intelligently decide whether to submit or restart orchestration
+- **Memory Module - Phase 1** (Required): 💾 Long-term memory implementation for reasoning tasks and document understanding
 
 ## Key Technical Priorities
 
-1. **Configuration Builder CLI** (REQUIRED): Create interactive CLI tool for configuration management and validation
-2. **PyPI Package Release v0.1.0** (REQUIRED): Prepare production-ready PyPI distribution with improved installation experience
-3. **Nested Chat Integration** (OPTIONAL): Complete AG2 nested chat support for complex multi-agent workflows
-4. **DSPy Integration** (OPTIONAL): Add DSPy framework support for prompt optimization and agent performance tuning
+1. **General Interoperability**: Framework integration with external agent frameworks (nested/group chat patterns) and custom agent adapters
+2. **Final Agent Submit/Restart**: Multi-step task verification with intelligent restart capabilities
+3. **Memory Module - Phase 1**: Long-term memory using mem0 inspired by agentscope
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Configuration Builder CLI (REQUIRED)
+### 🎯 Milestone 1: General Interoperability (REQUIRED)
 
-**Goal**: Create interactive CLI tool simplifying configuration creation, validation, and management
+**Goal**: Enable MassGen to orchestrate agents from multiple external frameworks and custom implementations
 
-#### 1.1 CLI Architecture
-- [ ] Design configuration builder interface with intuitive command structure
-- [ ] Implement interactive prompts guiding users through configuration options
-- [ ] Support configuration templates and presets for common use cases
-- [ ] Add comprehensive validation with clear error messages
+**Owner**: @qidanrui (danrui2020)
 
-#### 1.2 Configuration Generation
-- [ ] Generate agent configurations interactively with backend selection
-- [ ] Support multi-agent setup with different model providers
-- [ ] Configure MCP servers and tools with automatic discovery
-- [ ] Generate filesystem and permission configurations with security defaults
+**Issue**: [#341](https://github.com/Leezekun/MassGen/issues/341)
 
-#### 1.3 Configuration Management
-- [ ] Validate existing configuration files against schema
-- [ ] Update and migrate configurations between versions
-- [ ] Export configurations in YAML and JSON formats
-- [ ] Support configuration versioning and compatibility checks
+#### 1.1 Unified Agent Interface
+- [ ] Design framework-agnostic agent adapter interface
+- [ ] Implement base adapter class for external frameworks
+- [ ] Support message translation between frameworks
+- [ ] Handle framework-specific capabilities and tools
 
-#### 1.4 User Experience
-- [ ] Create intuitive prompts with contextual help messages
-- [ ] Add configuration preview and dry-run mode before execution
-- [ ] Implement configuration testing utilities validating API keys and connections
-- [ ] Document CLI usage with comprehensive examples
+#### 1.2 Framework Integration
+- [ ] Design and implement framework integration architecture
+- [ ] Support external agent systems with unified interface
+- [ ] Enable seamless orchestration across frameworks
+- [ ] Handle framework-specific communication patterns
 
+#### 1.3 Testing and Examples
+- [ ] Create tests for framework integration
+- [ ] Add example configurations for multi-framework teams
+- [ ] Document best practices for framework integration
+- [ ] Test with specialized agent roles from different frameworks
 
-### 🎯 Milestone 2: PyPI Package Release v0.1.0 (REQUIRED) ✅ **COMPLETED**
+**Success Criteria**:
+- ✅ Framework integration functional with unified interface
+- ✅ Seamless orchestration across external agent systems
+- ✅ Comprehensive documentation with examples
 
-**Goal**: Publish production-ready PyPI package representing departure in intended usage patterns
+---
 
-**Status**: Released October 15, 2025
+### 🎯 Milestone 2: Final Agent Submit/Restart Tools (REQUIRED)
 
-#### 2.1 Package Preparation
-- [x] Audit and clean up package dependencies with version pinning
-- [x] Update package metadata for v0.1.0 milestone
-- [x] Create comprehensive installation documentation
-- [x] Prepare migration guide from local installation to PyPI package
+**Goal**: Enable final agent to intelligently decide whether to submit answer or restart orchestration for multi-step verification
 
-#### 2.2 Distribution Setup
-- [x] Configure PyPI release workflow automation
-- [x] Set up test PyPI deployment for validation
-- [x] Create release checklist ensuring quality standards
-- [x] Prepare announcement materials and changelog
+**Owner**: @ncrispino (nickcrispino)
 
-#### 2.3 Documentation Updates
-- [x] Update README with pip installation instructions
-- [x] Create quickstart guide for PyPI users
-- [x] Document dependency management and optional features
-- [x] Add troubleshooting guide for common installation issues
-- [x] Add comprehensive code execution documentation (code_execution.rst)
+**Issue**: [#325](https://github.com/Leezekun/MassGen/issues/325)
 
-#### 2.4 Quality Assurance
-- [x] Test installation across Python versions and platforms
-- [x] Validate all optional dependencies install correctly
-- [x] Ensure backward compatibility with existing configurations
-- [x] Verify documentation accuracy and completeness
+#### 2.1 Submit/Restart Architecture
+- [ ] Design final agent decision-making interface
+- [ ] Implement restart tool allowing orchestration reset
+- [ ] Add submit tool for final answer presentation
+- [ ] Handle state management between restarts
 
+#### 2.2 Context Access
+- [ ] Enable final agent access to previous agents' responses
+- [ ] Support workspace access from prior orchestration rounds
+- [ ] Implement context aggregation for informed decisions
+- [ ] Add history tracking for restart decisions
 
-### 🎯 Milestone 3: Nested Chat Integration (OPTIONAL)
+#### 2.3 Verification Workflows
+- [ ] Support multi-step task verification patterns
+- [ ] Enable planning-mode scenarios with restart logic
+- [ ] Add completion criteria evaluation
+- [ ] Implement intelligent retry strategies
 
-**Goal**: Complete AG2 nested chat pattern support enabling hierarchical agent conversations
+#### 2.4 Testing and Examples
+- [ ] Create tests for submit/restart workflows
+- [ ] Add configuration examples for verification tasks
+- [ ] Document use cases (repository cloning + issue resolution)
+- [ ] Test with various multi-step scenarios
 
-#### 3.1 Nested Chat Architecture
-- [ ] Design nested chat integration with AG2 framework
-- [ ] Implement parent-child agent relationship management
-- [ ] Support multiple nesting levels with clear hierarchy
-- [ ] Handle message routing between nested conversations
+**Success Criteria**:
+- ✅ Final agent can decide to restart when task incomplete
+- ✅ Previous context accessible during restarts
+- ✅ Verification workflows functional
+- ✅ Documentation with practical examples
 
-#### 3.2 Conversation Management
-- [ ] Implement nested conversation context tracking
-- [ ] Support independent tool access per nesting level
-- [ ] Handle conversation state transitions and resumption
-- [ ] Add conversation history management for nested chats
+---
 
-#### 3.3 Tool and Workflow Integration
-- [ ] Enable workflow tools within nested conversations
-- [ ] Support MCP tool access in nested contexts
-- [ ] Implement permission inheritance for nested agents
-- [ ] Add resource management for nested execution
+### 🎯 Milestone 3: Memory Module - Phase 1 (REQUIRED)
+
+**Goal**: Implement long-term memory for reasoning tasks, large document understanding, and multi-turn conversation quality
+
+**Owner**: @kitrakrev (kitrak_23536), @qidanrui (danrui2020), @ncrispino (nickcrispino)
+
+#### 3.1 Memory Architecture
+- [ ] Design memory system using mem0 framework
+- [ ] Implement memory storage and retrieval mechanisms
+- [ ] Support session-based memory management
+- [ ] Enable persistent memory across conversations
+
+#### 3.2 Context Management
+- [ ] Implement long-term context storage
+- [ ] Support document and code understanding with memory
+- [ ] Add memory retrieval for reasoning tasks
+- [ ] Enable memory-augmented agent responses
+
+#### 3.3 Integration
+- [ ] Integrate memory with existing agent workflows
+- [ ] Support memory access in multi-agent coordination
+- [ ] Add memory configuration options
+- [ ] Implement memory cleanup and management
 
 #### 3.4 Testing and Examples
-- [ ] Create comprehensive nested chat tests
-- [ ] Add example configurations demonstrating nested patterns
-- [ ] Document nested chat use cases and best practices
-- [ ] Test with various AG2 agent configurations
+- [ ] Create memory system tests
+- [ ] Add configuration examples with memory enabled
+- [ ] Document memory use cases and patterns
+- [ ] Test with reasoning and document understanding tasks
 
+**Success Criteria**:
+- ✅ Memory module handles basic context management
+- ✅ Long-term memory improves multi-turn conversations
+- ✅ Document understanding enhanced by memory
+- ✅ Configuration and usage documented
 
-### 🎯 Milestone 4: DSPy Integration (OPTIONAL)
-
-**Goal**: Integrate DSPy framework enabling systematic prompt optimization and agent improvement
-
-#### 4.1 DSPy Framework Integration
-- [ ] Design DSPy integration architecture with MassGen
-- [ ] Implement DSPy module wrappers for agent components
-- [ ] Support DSPy signature definitions for agent interactions
-- [ ] Enable DSPy optimizer integration with agent workflows
-
-#### 4.2 Prompt Optimization
-- [ ] Integrate DSPy prompt optimization for agent templates
-- [ ] Support automatic prompt tuning based on performance metrics
-- [ ] Enable few-shot example generation and selection
-- [ ] Implement prompt caching and version management
-
-#### 4.3 Agent Performance Tuning
-- [ ] Add DSPy-based agent evaluation metrics
-- [ ] Support systematic agent improvement workflows
-- [ ] Enable A/B testing for different prompt strategies
-- [ ] Implement performance tracking and analytics
-
-#### 4.4 Documentation and Examples
-- [ ] Create DSPy integration documentation
-- [ ] Add example configurations using DSPy optimization
-- [ ] Document best practices for prompt tuning
-- [ ] Provide case studies showing performance improvements
-
-
+---
 
 ## Success Criteria
 
-### Functional Requirements (REQUIRED)
+### Functional Requirements
 
-**Configuration Builder CLI:**
-- [ ] Interactive configuration generation functional with intuitive prompts
-- [ ] Configuration validation working with comprehensive error messages
-- [ ] Template and preset support implemented covering common scenarios
-- [ ] User-friendly help system with contextual guidance
-- [ ] Documentation complete with examples and tutorials
+**General Interoperability:**
+- [ ] Framework integration architecture implemented
+- [ ] Unified agent interface functional
+- [ ] External agent systems integrated seamlessly
+- [ ] Tool integration across frameworks
+- [ ] Documentation and examples complete
 
-**PyPI Package Release v0.1.0:** ✅ **COMPLETED**
-- [x] Package successfully published to PyPI
-- [x] Installation working across supported Python versions and platforms
-- [x] All optional dependencies installable and functional
-- [x] Documentation updated with pip installation instructions
-- [x] Migration guide available for existing users
-- [x] Comprehensive code execution documentation added
+**Final Agent Submit/Restart:**
+- [ ] Submit/restart decision making functional
+- [ ] Previous context accessible to final agent
+- [ ] Multi-step verification workflows working
+- [ ] Use case documentation available
 
-### Functional Requirements (OPTIONAL)
+**Memory Module - Phase 1:**
+- [ ] Memory storage and retrieval functional
+- [ ] Long-term context management working
+- [ ] Integration with agent workflows complete
+- [ ] Performance acceptable for production use
 
-**Nested Chat Integration:**
-- [ ] Nested chat patterns working with AG2 framework
-- [ ] Multi-level nesting supported with clear hierarchy
-- [ ] Message routing functional between nested conversations
-- [ ] Tool access working within nested contexts
-- [ ] Documentation and examples available
+### Performance Requirements
+- [ ] Framework integration overhead minimal
+- [ ] Multi-framework orchestration performs efficiently
+- [ ] Restart mechanism completes efficiently
+- [ ] Memory operations have minimal latency impact
+- [ ] Overall system remains responsive
 
-**DSPy Integration:**
-- [ ] DSPy framework integrated with agent workflows
-- [ ] Prompt optimization functional for agent templates
-- [ ] Performance tuning working with measurable improvements
-- [ ] Evaluation metrics tracking agent performance
-- [ ] Documentation with optimization examples
-
-### Performance Requirements (REQUIRED)
-- [ ] Configuration builder responsive with instant feedback
-- [ ] Package installation completes within reasonable time
-- [ ] Nested chat performance acceptable for production use (if implemented)
-- [ ] DSPy optimization completes efficiently (if implemented)
-
-### Quality Requirements (REQUIRED)
-- [ ] Test coverage for configuration builder functionality
-- [ ] Test coverage for package installation and dependencies
-- [ ] Integration tests for nested chat (if implemented)
-- [ ] Integration tests for DSPy optimization (if implemented)
+### Quality Requirements
+- [ ] Test coverage for all new features
+- [ ] Integration tests for framework integration
+- [ ] End-to-end tests for multi-framework orchestration
+- [ ] End-to-end tests for submit/restart workflows
+- [ ] Memory system tested with various scenarios
 - [ ] Comprehensive documentation for all features
 
+---
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **Python Packaging Tools**: setuptools, wheel, twine for PyPI distribution
-- **AG2 Framework**: For nested chat integration (if implemented)
-- **DSPy Framework**: For prompt optimization features (if implemented)
-- **Configuration Schema**: JSON schema for validation logic
+- **External Frameworks**: For agent system integration (implementation details TBD)
+- **mem0 Framework**: For memory module implementation
+- **Existing Infrastructure**: Custom tools system, MCP integration, orchestrator
 
 ### Risks & Mitigations
-1. **PyPI Package Dependencies**: *Mitigation*: Thorough dependency testing, optional dependency groups, fallback mechanisms
-2. **Configuration Complexity**: *Mitigation*: Intuitive CLI design, comprehensive templates, contextual help
-3. **AG2 API Stability**: *Mitigation*: Version pinning, compatibility testing, graceful degradation
-4. **DSPy Learning Curve**: *Mitigation*: Comprehensive documentation, starter examples, best practices guide
-5. **Cross-Platform Compatibility**: *Mitigation*: Multi-platform testing, platform-specific documentation
+1. **Framework API Changes**: *Mitigation*: Version pinning, compatibility testing, fallback mechanisms
+2. **Cross-Framework Compatibility**: *Mitigation*: Unified adapter interface, thorough testing, clear boundaries
+3. **Memory Performance**: *Mitigation*: Caching strategies, efficient retrieval, memory limits
+4. **Restart Complexity**: *Mitigation*: Clear state management, thorough testing, rollback capabilities
+5. **Integration Challenges**: *Mitigation*: Incremental development, modular design, extensive testing
 
+---
 
-## Future Enhancements (Post-v0.0.33)
+## Future Enhancements (Post-v0.1.2)
 
-- **LLM-Generated Tool Classification**: Automatically identify irreversible MCP tools using LLM analysis with optional human-in-the-loop review
-- **Per-User Tool Preferences**: Store user-specific tool safety classifications and permissions
-- **Advanced Configuration Templates**: Industry-specific and use-case-driven configuration presets
-- **Configuration Version Control**: Track configuration changes and enable rollback capabilities
-
+### v0.1.3 Plans
+- **DSPy Integration**: Automated prompt optimization for domain-specific tasks
+- **Irreversible Actions Safety**: LLM-generated tool risk detection with human-in-the-loop
+- **Memory Module - Phase 2**: Advanced memory capabilities and optimization
 
 ### Long-term Vision
-- **Enterprise File Management**: Advanced file operation capabilities for large organizations
-- **AI-Powered Code Generation**: Sophisticated code generation with learning capabilities
-- **Real-time Collaboration**: Multi-user file editing and collaboration features
-- **Advanced Analytics**: Deep insights into agent performance and optimization opportunities
+- **Visual Workflow Designer**: No-code multi-agent workflow creation
+- **Enterprise Features**: RBAC, audit logs, multi-user collaboration
+- **Complete Multimodal Pipeline**: End-to-end audio/video processing
+- **Additional Framework Integrations**: Various external frameworks, custom adapters
+
+---
 
 ## Timeline Summary
 
-| Phase | Focus | Key Deliverables | Priority |
-|-------|-------|------------------|----------|
-| Phase 1 | Configuration Builder | Interactive CLI, validation, templates, help system | **REQUIRED** |
-| Phase 2 | PyPI Package | v0.1.0 release, documentation, migration guide | **REQUIRED** |
-| Phase 3 | Nested Chat | AG2 integration, hierarchical conversations, examples | OPTIONAL |
-| Phase 4 | DSPy Integration | Prompt optimization, performance tuning, evaluation | OPTIONAL |
+| Phase | Focus | Key Deliverables | Owner | Priority |
+|-------|-------|------------------|-------|----------|
+| Phase 1 | General Interoperability | External framework integration, unified adapter interface | @qidanrui | **REQUIRED** |
+| Phase 2 | Submit/Restart | Decision tools, context access, verification workflows | @ncrispino | **REQUIRED** |
+| Phase 3 | Memory Module | Long-term memory, context management, integration | @kitrakrev | **REQUIRED** |
 
+**Target Release**: October 22, 2025 (Wednesday @ 9am PT)
+
+---
 
 ## Getting Started
 
 ### For Contributors
 
 **Required Work:**
-1. Implement configuration builder CLI with interactive prompts
-2. Add configuration validation and template system
-3. Prepare PyPI package with proper dependencies
-4. Update documentation for pip installation
-5. Test across platforms and Python versions
-
-**Optional Work:**
-6. Complete AG2 nested chat integration
-7. Integrate DSPy framework for prompt optimization
+1. Implement general interoperability with external agent frameworks
+2. Create unified adapter interface for framework integration
+3. Implement final agent submit/restart tools with context access
+4. Develop memory module Phase 1 with mem0
+5. Add comprehensive tests for all features
+6. Create documentation and examples
 
 ### For Users
 
-- v0.0.33 will simplify configuration with interactive CLI tool
-- PyPI package v0.1.0 enables easy installation via pip
-- Configuration builder reduces setup time and prevents errors
-- Validation catches configuration issues before runtime
-- Optional improvements: nested conversations and prompt optimization
+- v0.1.2 enables orchestration of agents from external frameworks
+- Unified interface for seamless integration with proven agent systems
+- Final agent can now verify and restart tasks when needed
+- Memory module improves multi-turn conversation quality
+- Submit/restart tools enable intelligent multi-step verification
+- Framework adapters allow integration of specialized agent systems
 
 ---
 
-*This roadmap prioritizes developer experience improvements and PyPI distribution while keeping nested chat and DSPy integration as optional enhancements.*
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup and workflow
+- Code standards and testing requirements
+- Pull request process
+- Documentation guidelines
+
+**Contact Track Owners:**
+- General Interoperability: @qidanrui on Discord (danrui2020)
+- Submit/Restart: @ncrispino on Discord (nickcrispino)
+- Memory Module: @kitrakrev on Discord (kitrak_23536)
+
+---
+
+*This roadmap reflects v0.1.2 priorities focusing on general interoperability, enterprise collaboration, intelligent workflows, and memory capabilities. All features are required for this release.*
+
+**Last Updated:** October 20, 2025
+**Maintained By:** MassGen Team
