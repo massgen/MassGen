@@ -416,6 +416,11 @@ Full multi-agent configuration demonstrating all 6 configuration levels:
          4. DO NOT execute MCP commands
          5. Save execution for final presentation
 
+     # Voting and answer control
+     voting_sensitivity: "balanced"         # How critical agents are when voting (lenient/balanced)
+     max_new_answers_per_agent: 2           # Cap new answers per agent (null=unlimited)
+     answer_novelty_requirement: "balanced" # How different new answers must be (lenient/balanced/strict)
+
      # Advanced settings
      skip_coordination_rounds: false        # Normal coordination
      timeout:
@@ -703,6 +708,60 @@ Coordination Configuration
 
    1. **Coordination Phase** (with planning mode): Agents discuss and vote on approaches WITHOUT executing MCP tools
    2. **Final Presentation Phase**: The winning agent EXECUTES the planned actions
+
+Voting and Answer Control
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These parameters control coordination behavior to balance quality and duration.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Parameter
+     - Type
+     - Required
+     - Description
+   * - ``voting_sensitivity``
+     - string
+     - No
+     - Controls how critical agents are when evaluating answers. **Options:** ``"lenient"`` (default) - agents vote for existing answers more readily, faster convergence; ``"balanced"`` - agents apply detailed criteria (comprehensive, accurate, complete?) before voting, more thorough evaluation; ``"strict"`` - agents apply high standards of excellence (all aspects, edge cases, reference-quality) before voting, maximum quality.
+   * - ``max_new_answers_per_agent``
+     - integer or null
+     - No
+     - Maximum number of new answers each agent can provide. Once an agent reaches this limit, they can only vote (not provide new answers). **Options:** ``null`` (default) - unlimited answers; ``1``, ``2``, ``3``, etc. - cap at N answers per agent. Prevents endless coordination rounds.
+   * - ``answer_novelty_requirement``
+     - string
+     - No
+     - Controls how different new answers must be from existing ones to prevent rephrasing. **Options:** ``"lenient"`` (default) - no similarity checks (fastest); ``"balanced"`` - reject if >70% token overlap, requires meaningful differences; ``"strict"`` - reject if >50% token overlap, requires substantially different solutions.
+
+**Example Configurations:**
+
+Fast but thorough (recommended for balanced evaluation):
+
+.. code-block:: yaml
+
+   orchestrator:
+     voting_sensitivity: "balanced"       # Critical evaluation
+     max_new_answers_per_agent: 2         # But cap at 2 tries
+     answer_novelty_requirement: "balanced"  # Must actually improve
+
+Maximum quality with bounded time:
+
+.. code-block:: yaml
+
+   orchestrator:
+     voting_sensitivity: "strict"          # Highest quality bar
+     max_new_answers_per_agent: 3
+     answer_novelty_requirement: "strict"   # Only accept real improvements
+
+Quick convergence:
+
+.. code-block:: yaml
+
+   orchestrator:
+     voting_sensitivity: "lenient"
+     max_new_answers_per_agent: 1
+     answer_novelty_requirement: "lenient"
 
 Timeout Configuration
 ~~~~~~~~~~~~~~~~~~~~~

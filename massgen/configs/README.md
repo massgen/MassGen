@@ -220,37 +220,66 @@ backend:
 
 ## Environment Variables
 
-Most configurations use environment variables for API keys:
+Most configurations use environment variables for API keys:so
 - Set up your `.env` file based on `.env.example`
 - Provider-specific keys: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.
 - MCP server keys: `DISCORD_BOT_TOKEN`, `BRAVE_API_KEY`, etc.
 
 ## Release History & Examples
 
-### v0.1.0 - Latest
-**New Features:** PyPI Package Release, Comprehensive Documentation, Interactive Setup Wizard, Enhanced CLI Experience
+### v0.1.1 - Latest
+**New Features:** Custom Tools System, Voting Sensitivity Controls, Interactive Configuration Builder, Backend Enhancements, Self-Evolution
+
+**Configuration Files:**
+- `massgen/configs/tools/custom_tools/` - 40+ custom tool examples (calculator, weather, data processing)
+- `massgen/configs/tools/custom_tools/github_issue_market_analysis.yaml` - GitHub issue market analysis with custom tools
+- `massgen/configs/voting/gemini_gpt_voting_sensitivity.yaml` - Voting sensitivity demonstration
+
+**Case Study:**
+- [Custom Tools with GitHub Issue Market Analysis](../../docs/case_studies/github-issue-market-analysis.md)
 
 **Key Features:**
-- Official PyPI distribution: `pip install massgen` (no repo clone needed)
-- Global CLI command: Run `massgen` from any directory with centralized config in `~/.config/massgen/`
-- Simplified command syntax: `massgen "question"` replaces `uv run python -m massgen.cli`
-- Built-in examples: `@examples/` prefix for instant access (e.g., `@examples/basic/multi/three_agents_default`)
-- Interactive Setup Wizard: Step-by-step first-run with smart defaults (API keys, use case, model)
-- Documentation site at [docs.massgen.io](https://docs.massgen.io/en/latest/)
-- Backward compatibility: Existing git/`uv run` workflows still work
+- **Custom Tools**: Register your own Python functions as tools using `ToolManager` class
+- **Voting Controls**: Three-tier quality system (lenient/balanced/strict) for multi-agent consensus
+- **Backend Registry**: New capabilities tracking in `massgen/backend/capabilities.py`
+- **40+ Examples**: Custom tools configurations in `massgen/configs/tools/custom_tools/`
+- **Self-Evolution**: Agents autonomously analyze GitHub issues and market trends for data-driven roadmaps
+- **Gemini Refactoring**: Enhanced architecture with separate MCP manager and tracking modules
 
 **Try it:**
 ```bash
-# Install and run setup wizard
-pip install massgen
-massgen
+# Install or upgrade
+pip install --upgrade massgen
 
-# Quick multi-agent collaboration
-massgen --config @examples/basic/multi/three_agents_default \
-  "Analyze the pros and cons of renewable energy"
+# Create custom configuration interactively
+massgen --setup
 
-# Single agent quick start
-massgen --model gpt-5-nano "What is machine learning?"
+# Try custom tools with agents
+massgen --config @examples/tools/custom_tools/claude_custom_tool_example \
+  "What's the sum of 123 and 456?"
+
+# Test voting sensitivity controls
+massgen --config @examples/voting/gemini_gpt_voting_sensitivity \
+  "What are the pros and cons of renewable energy?"
+
+# Self-evolution with GitHub issue analysis
+massgen --config @examples/tools/custom_tools/github_issue_market_analysis \
+  "Analyze the massgen dir and MassGen GitHub issues to understand what features users are requesting. Also research current trends in multi-agent AI systems and LLM orchestration. Based on the existing code, the open issues and market trends, write a prioritized recommendation report for the next release."
+```
+
+### v0.1.0
+**New Features:** PyPI Package Release, Comprehensive Documentation, Interactive Setup Wizard, Enhanced CLI
+
+**Key Features:**
+- Official PyPI distribution: `pip install massgen` with global CLI command
+- Interactive Setup Wizard with smart defaults for API keys and model selection
+- Comprehensive documentation at [docs.massgen.ai](https://docs.massgen.ai/)
+- Simplified command syntax: `massgen "question"` with `@examples/` prefix
+
+**Try it:**
+```bash
+pip install massgen && massgen
+massgen --config @examples/basic/multi/three_agents_default "What is 2+2?"
 ```
 
 ### v0.0.32
@@ -304,9 +333,11 @@ massgen --config @examples/tools/code-execution/docker_with_resource_limits \
 - `massgen/configs/basic/multi/gpt4o_audio_generation.yaml` - Multi-agent audio generation with GPT-4o
 - `massgen/configs/basic/single/single_gpt4o_video_generation.yaml` - Video generation with OpenAI Sora-2
 
+**Case Study:**
+- [Universal Code Execution via MCP](../../docs/case_studies/universal-code-execution-mcp.md)
+
 **Key Features:**
 - Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
-- AG2 group chat integration with speaker selection modes (auto, round-robin, manual)
 - Audio tools: text-to-speech, audio transcription, audio generation
 - Video tools: text-to-video generation via Sora-2 API
 - Code execution in planning mode for safer coordination

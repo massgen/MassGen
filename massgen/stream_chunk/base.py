@@ -33,6 +33,9 @@ class ChunkType(Enum):
     # MCP-related chunks
     MCP_STATUS = "mcp_status"
 
+    # Custom tool chunks
+    CUSTOM_TOOL_STATUS = "custom_tool_status"
+
     # Multimodal chunks
     MEDIA = "media"
     MEDIA_PROGRESS = "media_progress"

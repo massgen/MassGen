@@ -315,7 +315,8 @@ class CoordinationUI:
             #     time.sleep(1.0)
 
             # Get final presentation from winning agent
-            if self.enable_final_presentation and selected_agent and vote_results.get("vote_counts"):
+            # Run final presentation if enabled and there's a selected agent (regardless of votes)
+            if self.enable_final_presentation and selected_agent:
                 # Don't print - let the display handle it
                 # print(f"\n🎤  Final Presentation from {selected_agent}:")
                 # print("=" * 60)
@@ -691,7 +692,8 @@ class CoordinationUI:
             #     time.sleep(1.0)
 
             # Get final presentation from winning agent
-            if self.enable_final_presentation and selected_agent and vote_results.get("vote_counts"):
+            # Run final presentation if enabled and there's a selected agent (regardless of votes)
+            if self.enable_final_presentation and selected_agent:
                 # Don't print - let the display handle it
                 # print(f"\n🎤 Final Presentation from {selected_agent}:")
                 # print("=" * 60)
