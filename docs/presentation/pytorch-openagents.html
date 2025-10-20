@@ -817,18 +817,18 @@
 
                 <div>
                     <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-                        <h3 style="margin: 0 0 10px 0;">🤖 Round 1: Initial Answers</h3>
+                        <h3 style="margin: 0 0 10px 0;">🤖 Initial Answers</h3>
                         <div style="font-size: 0.9em; line-height: 1.4;">
-                            <strong>Claude:</strong> "I calculate ~6 Gpc → Answer C"<br>
-                            <strong>GPT-5:</strong> "I get ~8.95 Gpc → Answer D"<br>
-                            <strong>Gemini:</strong> "~6.1 Gpc → Answer C"
+                            <strong>Agent 1:</strong> "I calculate ~6 Gpc → Answer C"<br>
+                            <strong>Agent 2:</strong> "I get ~8.95 Gpc → Answer D"<br>
+                            <strong>Agent 3:</strong> "~6.1 Gpc → Answer C"
                         </div>
                     </div>
 
                     <div style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 10px 0;">🔄 Self-Correction Process</h3>
                         <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
-                            <strong>Claude observes:</strong> "There is significant discrepancy in calculations:
+                            <strong>Agent 1 observes:</strong> "There is significant discrepancy in calculations:
                             Agent1 gets ~6.1 Gpc, Agent2 gets ~8.95 Gpc. Let me re-examine..."
                         </div>
                     </div>
@@ -836,7 +836,7 @@
                     <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 15px;">
                         <h3 style="margin: 0 0 10px 0;">✨ Breakthrough Moment</h3>
                         <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
-                            <strong>Claude revises:</strong> "Standard cosmological calculators yield 8000-8500 Mpc
+                            <strong>Agent 1 revises:</strong> "Standard cosmological calculators yield 8000-8500 Mpc
                             for z=5.5. This equals 8.0-8.5 Gpc, closest to option A."<br><br>
                             <strong>Result:</strong> 3/4 agents converge on correct answer
                         </div>
@@ -890,18 +890,19 @@
             <div class="icon">⚡</div>
             <h2>Get Started in 60 Seconds</h2>
             <div class="code-snippet">
-                # 1. Clone and setup<br>
-                git clone https://github.com/Leezekun/MassGen<br>
-                cd MassGen && pip install uv && uv venv<br><br>
+                # 1. Install via PyPI<br>
+                pip install massgen<br><br>
 
-                # 2. Configure API keys<br>
-                cp .env.example .env  # Add your API keys<br><br>
+                # 2. Interactive setup (first time only)<br>
+                massgen --setup  # Guided API key configuration<br><br>
 
                 # 3. Run single agent (quick test)<br>
-                uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"<br><br>
+                massgen --model gemini-2.5-flash "When is your knowledge up to"<br><br>
 
                 # 4. Run multi-agent collaboration<br>
-                uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
+                massgen --config @examples/basic/multi/three_agents_default "Summarize latest news of github.com/Leezekun/MassGen"<br><br>
+
+                <!-- # Documentation: https://docs.massgen.io -->
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; margin-top: 30px;">
                 <div style="text-align: center; padding: 20px; background: rgba(46, 204, 113, 0.1); border-radius: 15px;">
@@ -936,7 +937,7 @@
                     <a href="https://github.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">⭐ github.massgen.ai</a>
                     <a href="https://discord.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">💬 discord.massgen.ai</a>
                     <a href="https://x.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">🐦 x.massgen.ai</a>
-                    <a href="https://massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">🌐 massgen.ai</a>
+                    <a href="https://docs.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">📖 docs.massgen.ai</a>
                 </div>
                 <!-- <div style="margin-top: 30px;">
                     <div class="version-badge" style="background: linear-gradient(135deg, #e74c3c, #c0392b); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">
