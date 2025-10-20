@@ -167,6 +167,12 @@ class Orchestrator(ChatAgent):
         # Multi-turn session tracking (loaded by CLI, not managed by orchestrator)
         self._previous_turns: List[Dict[str, Any]] = previous_turns or []
 
+        # Orchestration restart tracking (for final agent restart feature)
+        self._current_attempt: int = 1
+        self._restart_requested: bool = False
+        self._restart_context: Optional[Dict[str, Any]] = None
+        self._max_restarts: int = self.config.coordination_config.max_orchestration_restarts
+
         # Coordination tracking - always enabled for analysis/debugging
         self.coordination_tracker = CoordinationTracker()
         self.coordination_tracker.initialize_session(list(agents.keys()))
@@ -329,53 +335,93 @@ class Orchestrator(ChatAgent):
             self.coordination_tracker.save_coordination_logs(log_session_dir)
 
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
-        """Execute coordination with orchestrator-level timeout protection."""
-        self.coordination_start_time = time.time()
-        self.total_tokens = 0
-        self.is_orchestrator_timeout = False
-        self.timeout_reason = None
+        """Execute coordination with orchestrator-level timeout protection and restart support."""
+        # Restart loop: retry coordination if final agent requests it
+        while True:
+            self.coordination_start_time = time.time()
+            self.total_tokens = 0
+            self.is_orchestrator_timeout = False
+            self.timeout_reason = None
+            self._restart_requested = False
 
-        log_orchestrator_activity(
-            self.orchestrator_id,
-            "Starting coordination with timeout",
-            {
-                "timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds,
-                "agents": list(self.agents.keys()),
-            },
-        )
+            log_orchestrator_activity(
+                self.orchestrator_id,
+                "Starting coordination with timeout",
+                {
+                    "attempt": self._current_attempt,
+                    "max_attempts": self._max_restarts + 1,
+                    "timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds,
+                    "agents": list(self.agents.keys()),
+                },
+            )
 
-        # Track active coordination state for cleanup
-        self._active_streams = {}
-        self._active_tasks = {}
+            # If this is a restart attempt, show context from previous attempts
+            if self._current_attempt > 1 and self._restart_context:
+                restart_msg = f"""
+🔄 **Orchestration Restart - Attempt {self._current_attempt}/{self._max_restarts + 1}**
 
-        timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
+**Reason:** {self._restart_context.get('reason', 'Not specified')}
 
-        try:
-            # Use asyncio.timeout for timeout protection
-            async with asyncio.timeout(timeout_seconds):
-                async for chunk in self._coordinate_agents(conversation_context):
-                    # Track tokens if this is a content chunk
-                    if hasattr(chunk, "content") and chunk.content:
-                        self.total_tokens += len(chunk.content.split())  # Rough token estimation
+**Instructions:** {self._restart_context.get('instructions', 'No specific instructions')}
 
+---
+
+"""
+                log_stream_chunk("orchestrator", "content", restart_msg, self.orchestrator_id)
+                yield StreamChunk(type="content", content=restart_msg, source=self.orchestrator_id)
+
+            # Track active coordination state for cleanup
+            self._active_streams = {}
+            self._active_tasks = {}
+
+            timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
+
+            try:
+                # Use asyncio.timeout for timeout protection
+                async with asyncio.timeout(timeout_seconds):
+                    async for chunk in self._coordinate_agents(conversation_context):
+                        # Track tokens if this is a content chunk
+                        if hasattr(chunk, "content") and chunk.content:
+                            self.total_tokens += len(chunk.content.split())  # Rough token estimation
+
+                        yield chunk
+
+            except asyncio.TimeoutError:
+                self.is_orchestrator_timeout = True
+                elapsed = time.time() - self.coordination_start_time
+                self.timeout_reason = f"Time limit exceeded ({elapsed:.1f}s/{timeout_seconds}s)"
+                # Track timeout for all agents that were still working
+                for agent_id in self.agent_states.keys():
+                    if not self.agent_states[agent_id].has_voted:
+                        self.coordination_tracker.track_agent_action(agent_id, ActionType.TIMEOUT, self.timeout_reason)
+
+                # Force cleanup of any active agent streams and tasks
+                await self._cleanup_active_coordination()
+
+            # Handle timeout by jumping to final presentation
+            if self.is_orchestrator_timeout:
+                async for chunk in self._handle_orchestrator_timeout():
                     yield chunk
 
-        except asyncio.TimeoutError:
-            self.is_orchestrator_timeout = True
-            elapsed = time.time() - self.coordination_start_time
-            self.timeout_reason = f"Time limit exceeded ({elapsed:.1f}s/{timeout_seconds}s)"
-            # Track timeout for all agents that were still working
-            for agent_id in self.agent_states.keys():
-                if not self.agent_states[agent_id].has_voted:
-                    self.coordination_tracker.track_agent_action(agent_id, ActionType.TIMEOUT, self.timeout_reason)
+            # Check if restart was requested
+            if self._restart_requested:
+                # Handle the restart (reset states, increment attempt)
+                await self._handle_orchestration_restart()
 
-            # Force cleanup of any active agent streams and tasks
-            await self._cleanup_active_coordination()
+                # Check if we should continue (within max restarts)
+                if self._current_attempt <= self._max_restarts + 1:
+                    logger.info(f"🔄 Restarting orchestration (attempt {self._current_attempt})")
+                    continue  # Loop back to start new coordination
+                else:
+                    # Max restarts exceeded, break out
+                    logger.error(f"❌ Max orchestration restarts ({self._max_restarts}) exceeded")
+                    error_msg = f"\n❌ **Maximum orchestration restarts ({self._max_restarts}) exceeded.** Proceeding with last available answer.\n"
+                    log_stream_chunk("orchestrator", "content", error_msg, self.orchestrator_id)
+                    yield StreamChunk(type="content", content=error_msg, source=self.orchestrator_id)
+                    break
 
-        # Handle timeout by jumping to final presentation
-        if self.is_orchestrator_timeout:
-            async for chunk in self._handle_orchestrator_timeout():
-                yield chunk
+            # No restart requested, exit loop
+            break
 
     async def _coordinate_agents(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
@@ -457,9 +503,70 @@ class Orchestrator(ChatAgent):
             {"selected_agent": self._selected_agent, "votes": votes},
         )
 
-        # Present final answer
+        # Check evaluation mode
+        use_post_evaluation = self.config.coordination_config.enable_post_presentation_evaluation if self.config and hasattr(self.config, "coordination_config") else False
+
+        if not use_post_evaluation:
+            # ORIGINAL BEHAVIOR: Pre-presentation decision
+            # Get vote results for final agent decision
+            vote_results = self._get_vote_results()
+
+            # Ask final agent to decide: submit or restart
+            decision, restart_context = await self._get_final_agent_decision(self._selected_agent, vote_results)
+
+            if decision == "restart":
+                # Store restart context and set flag
+                self._restart_context = restart_context
+                self._restart_requested = True
+                logger.info(f"🔄 Final agent requested restart: {restart_context.get('reason', '')}")
+
+                # Yield a message to user about restart
+                restart_notice = f"\n🔄 **Orchestration restart requested by final agent**\n\n**Reason:** {restart_context.get('reason', 'Not specified')}\n\n"
+                log_stream_chunk("orchestrator", "content", restart_notice, self.orchestrator_id)
+                yield StreamChunk(type="content", content=restart_notice, source=self.orchestrator_id)
+
+                # Return early - the restart loop will handle restarting
+                return
+
+            # Decision was "submit", proceed with final presentation
+
+        # Present final answer (happens in both modes)
         async for chunk in self._present_final_answer():
             yield chunk
+
+        # NEW BEHAVIOR: Post-presentation evaluation (if enabled)
+        if use_post_evaluation:
+            logger.info("🔍 Starting post-presentation evaluation")
+
+            # Get the final presentation content
+            final_content = self._final_presentation_content or ""
+
+            if not final_content:
+                logger.warning("⚠️ No final presentation content to evaluate - skipping post-evaluation")
+                return
+
+            # Evaluate the completed final answer
+            decision, restart_context = await self._evaluate_final_presentation(
+                self._selected_agent,
+                final_content,
+            )
+
+            if decision == "restart":
+                # Store restart context and set flag
+                self._restart_context = restart_context
+                self._restart_requested = True
+                logger.info(f"🔄 Post-evaluation restart requested: {restart_context.get('reason', '')}")
+
+                # Yield a message to user about restart
+                restart_notice = f"\n🔄 **Post-evaluation restart requested**\n\n**Reason:** {restart_context.get('reason', 'Not specified')}\n\n"
+                log_stream_chunk("orchestrator", "content", restart_notice, self.orchestrator_id)
+                yield StreamChunk(type="content", content=restart_notice, source=self.orchestrator_id)
+
+                # Return - the restart loop will handle restarting
+                return
+
+            # Decision was "submit", orchestration complete
+            logger.info("✅ Post-evaluation confirmed: answer is satisfactory")
 
     async def _stream_coordination_with_agents(
         self,
@@ -1294,6 +1401,24 @@ class Orchestrator(ChatAgent):
             if planning_mode_enabled and self.config.coordination_config.planning_mode_instruction:
                 planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
                 agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
+
+            # Add restart context if this is a restart attempt
+            if self._current_attempt > 1 and self._restart_context:
+                restart_instructions = f"""
+
+## Previous Orchestration Attempts
+
+This is attempt {self._current_attempt} to solve the task. The final agent from the previous attempt was not satisfied and requested a restart.
+
+**Why the restart was requested:**
+{self._restart_context.get('reason', 'Not specified')}
+
+**Instructions for improvement:**
+{self._restart_context.get('instructions', 'No specific instructions provided')}
+
+Please take these insights into account as you work on providing a better answer."""
+
+                agent_system_message = f"{agent_system_message}{restart_instructions}" if agent_system_message else restart_instructions.strip()
 
             # Build conversation with context support
             if conversation_context and conversation_context.get("conversation_history"):
@@ -2289,6 +2414,236 @@ class Orchestrator(ChatAgent):
 
         log_stream_chunk("orchestrator", "done", None)
         yield StreamChunk(type="done")
+
+    async def _get_final_agent_decision(
+        self,
+        selected_agent_id: str,
+        vote_results: Dict[str, Any],
+    ) -> tuple[str, Optional[Dict[str, Any]]]:
+        """
+        Ask the final agent to decide whether to submit or restart orchestration.
+
+        Args:
+            selected_agent_id: ID of the selected final agent
+            vote_results: Voting results
+
+        Returns:
+            tuple: ("submit" | "restart", restart_context or None)
+        """
+        agent = self.agents[selected_agent_id]
+
+        # Get all answers for context
+        all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
+
+        # Build decision prompt
+        vote_counts = vote_results.get("vote_counts", {})
+        voter_details = vote_results.get("voter_details", {})
+
+        voting_summary = f"You received {vote_counts.get(selected_agent_id, 0)} vote(s) as the best answer."
+        if voter_details.get(selected_agent_id):
+            reasons = [v["reason"] for v in voter_details[selected_agent_id]]
+            voting_summary += f" Feedback: {'; '.join(reasons)}"
+
+        decision_prompt = f"""You have been selected to present the final answer for this task.
+
+## Voting Results
+{voting_summary}
+
+## All Agent Answers
+"""
+        for aid, answer in all_answers.items():
+            marker = " (YOU)" if aid == selected_agent_id else ""
+            decision_prompt += f"\n### Agent {aid}{marker}\n{answer}\n"
+
+        decision_prompt += """
+## Your Decision
+Review all the answers and the original task. Decide whether:
+1. The current answers adequately address the task → Call `submit` tool
+2. The task needs more work and orchestration should restart → Call `restart_orchestration` tool with detailed instructions
+
+You MUST call one of these tools to proceed."""
+
+        decision_messages = [
+            {
+                "role": "system",
+                "content": "You are evaluating whether the coordinated answers are sufficient to complete the task, or if the orchestration should restart with new guidance.",
+            },
+            {"role": "user", "content": decision_prompt},
+        ]
+
+        # Get final agent tools (submit and restart)
+        final_tools = self.message_templates.get_final_agent_tools()
+
+        # Stream the decision
+        tool_calls = []
+        async for chunk in agent.chat(decision_messages, tools=final_tools, reset_chat=True):
+            chunk_type = self._get_chunk_type_value(chunk)
+
+            if chunk_type == "tool_calls":
+                chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
+                tool_calls.extend(chunk_tool_calls)
+
+        # Process the tool call
+        if tool_calls:
+            first_tool_call = tool_calls[0]
+            tool_name = agent.backend.extract_tool_name(first_tool_call)
+            tool_args = agent.backend.extract_tool_arguments(first_tool_call)
+
+            if tool_name == "submit":
+                logger.info(f"✅ Final agent {selected_agent_id} chose to SUBMIT the coordinated answer")
+                return ("submit", None)
+
+            elif tool_name == "restart_orchestration":
+                reason = tool_args.get("reason", "")
+                instructions = tool_args.get("instructions", "")
+                logger.info(f"🔄 Final agent {selected_agent_id} chose to RESTART orchestration")
+                logger.info(f"   Reason: {reason}")
+                logger.info(f"   Instructions: {instructions}")
+
+                return (
+                    "restart",
+                    {
+                        "reason": reason,
+                        "instructions": instructions,
+                        "selected_agent_id": selected_agent_id,
+                    },
+                )
+
+        # Default to submit if no valid tool call
+        logger.warning(f"⚠️ Final agent {selected_agent_id} did not call submit or restart - defaulting to submit")
+        return ("submit", None)
+
+    async def _evaluate_final_presentation(
+        self,
+        selected_agent_id: str,
+        final_presentation_content: str,
+    ) -> tuple[str, Optional[Dict[str, Any]]]:
+        """
+        Post-presentation evaluation: Ask final agent to review completed answer.
+
+        This happens AFTER the final presentation completes, with fresh context.
+        The agent evaluates the actual completed answer, not just the plan.
+
+        Args:
+            selected_agent_id: ID of the final agent
+            final_presentation_content: The completed final answer text
+
+        Returns:
+            tuple: ("submit" | "restart", restart_context or None)
+        """
+        agent = self.agents[selected_agent_id]
+
+        # Build evaluation prompt - fresh context focusing on the completed answer
+        evaluation_prompt = f"""You have completed presenting a final answer. Please review it to determine if the task has been satisfactorily addressed.
+
+## Original Task
+{self.current_task}
+
+## Your Final Answer
+{final_presentation_content}
+
+## Evaluation
+Review the final answer above. Does it adequately and completely address the original task?
+
+Consider:
+- Are all requirements from the task met?
+- Is the answer complete and actionable?
+- Were all necessary steps executed (not just planned)?
+- Is the quality satisfactory?
+
+**Decision:**
+- If the answer is satisfactory → Call `submit` tool
+- If the answer needs improvement → Call `restart_orchestration` tool with specific feedback on what needs to be fixed
+
+You MUST call one of these tools to proceed."""
+
+        evaluation_messages = [
+            {
+                "role": "system",
+                "content": "You are evaluating your own completed final answer to determine if it adequately addresses the task or if orchestration should restart with improvements.",
+            },
+            {"role": "user", "content": evaluation_prompt},
+        ]
+
+        # Get final agent tools (submit and restart)
+        final_tools = self.message_templates.get_final_agent_tools()
+
+        logger.info(f"🔍 Post-presentation evaluation by {selected_agent_id}")
+
+        # Stream the evaluation decision
+        tool_calls = []
+        async for chunk in agent.chat(evaluation_messages, tools=final_tools, reset_chat=True):
+            chunk_type = self._get_chunk_type_value(chunk)
+
+            if chunk_type == "tool_calls":
+                chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
+                tool_calls.extend(chunk_tool_calls)
+
+        # Process the tool call
+        if tool_calls:
+            first_tool_call = tool_calls[0]
+            tool_name = agent.backend.extract_tool_name(first_tool_call)
+            tool_args = agent.backend.extract_tool_arguments(first_tool_call)
+
+            if tool_name == "submit":
+                logger.info(f"✅ Post-evaluation: {selected_agent_id} confirmed answer is SATISFACTORY")
+                return ("submit", None)
+
+            elif tool_name == "restart_orchestration":
+                reason = tool_args.get("reason", "")
+                instructions = tool_args.get("instructions", "")
+                logger.info(f"🔄 Post-evaluation: {selected_agent_id} requests RESTART")
+                logger.info(f"   Reason: {reason}")
+                logger.info(f"   Instructions: {instructions}")
+
+                return (
+                    "restart",
+                    {
+                        "reason": reason,
+                        "instructions": instructions,
+                        "selected_agent_id": selected_agent_id,
+                    },
+                )
+
+        # Default to submit if no valid tool call
+        logger.warning(f"⚠️ Post-evaluation: {selected_agent_id} did not call submit or restart - defaulting to submit")
+        return ("submit", None)
+
+    async def _handle_orchestration_restart(self) -> None:
+        """
+        Handle orchestration restart by resetting agent states and incrementing attempt counter.
+
+        This is called when the final agent decides the current answers are insufficient
+        and requests a restart with new instructions.
+        """
+        logger.info(f"🔄 Handling orchestration restart (attempt {self._current_attempt} -> {self._current_attempt + 1})")
+
+        # Increment attempt counter
+        self._current_attempt += 1
+
+        # Check if we've exceeded max restarts
+        if self._current_attempt > self._max_restarts + 1:  # +1 because first attempt is 1
+            logger.error(f"❌ Maximum orchestration restarts ({self._max_restarts}) exceeded")
+            self._restart_requested = False  # Cancel restart
+            return
+
+        # Reset agent states for new attempt
+        for agent_id, state in self.agent_states.items():
+            state.answer = None
+            state.has_voted = False
+            state.votes = {}
+            state.restart_pending = False
+            # Don't reset is_killed or timeout_reason - those persist
+
+        # Reset coordination state
+        self._selected_agent = None
+        self._final_presentation_content = None
+        self.workflow_phase = "idle"
+
+        # Clear coordination messages
+        self._coordination_messages.clear()
+
+        logger.info(f"✅ Orchestration state reset for attempt {self._current_attempt}")
 
     # =============================================================================
     # PUBLIC API METHODS

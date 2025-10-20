@@ -247,6 +247,72 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         """Get standard tools for MassGen framework."""
         return [self.get_new_answer_tool(), self.get_vote_tool(valid_agent_ids)]
 
+    def get_submit_tool(self) -> Dict[str, Any]:
+        """Get submit tool definition for final agent.
+
+        The submit tool allows the final agent to confirm that the task is complete
+        and the coordinated answer is satisfactory.
+        """
+        if "submit_tool" in self._template_overrides:
+            return self._template_overrides["submit_tool"]
+
+        return {
+            "type": "function",
+            "function": {
+                "name": "submit",
+                "description": "Submit the final coordinated answer as complete and satisfactory",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "confirmed": {
+                            "type": "boolean",
+                            "description": "Set to true to confirm the final answer is ready",
+                        },
+                    },
+                    "required": ["confirmed"],
+                },
+            },
+        }
+
+    def get_restart_tool(self) -> Dict[str, Any]:
+        """Get restart tool definition for final agent.
+
+        The restart tool allows the final agent to restart the orchestration
+        when the current answers are not satisfactory and more work is needed.
+        """
+        if "restart_tool" in self._template_overrides:
+            return self._template_overrides["restart_tool"]
+
+        return {
+            "type": "function",
+            "function": {
+                "name": "restart_orchestration",
+                "description": "Restart the orchestration process with detailed instructions for what needs improvement",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "reason": {
+                            "type": "string",
+                            "description": "Clear explanation of why the current answers are insufficient and restart is needed",
+                        },
+                        "instructions": {
+                            "type": "string",
+                            "description": "Detailed instructions for agents on what to improve, what approach to take, or what was missing from previous attempts",
+                        },
+                    },
+                    "required": ["reason", "instructions"],
+                },
+            },
+        }
+
+    def get_final_agent_tools(self) -> List[Dict[str, Any]]:
+        """Get tools for final agent (submit and restart instead of vote/new_answer).
+
+        Returns:
+            List of tool definitions for final agent
+        """
+        return [self.get_submit_tool(), self.get_restart_tool()]
+
     def final_presentation_system_message(
         self,
         original_system_message: Optional[str] = None,
@@ -382,6 +448,64 @@ Present the best possible coordinated answer by combining the strengths from all
             context_parts.append(self.format_current_answers_with_summaries(agent_answers))
         else:
             context_parts.append(self.format_current_answers_empty())
+
+        return "\n".join(context_parts)
+
+    def format_restart_context(
+        self,
+        current_attempt: int,
+        previous_attempts: List[Dict[str, Any]],
+    ) -> str:
+        """Format context about previous orchestration attempts for agents.
+
+        This is used when an orchestration restart occurs, providing agents with
+        information about what was tried before and why it wasn't sufficient.
+
+        Args:
+            current_attempt: Current attempt number
+            previous_attempts: List of previous attempt metadata
+
+        Returns:
+            Formatted context string
+        """
+        if "format_restart_context" in self._template_overrides:
+            override = self._template_overrides["format_restart_context"]
+            if callable(override):
+                return override(current_attempt, previous_attempts)
+            return str(override)
+
+        if not previous_attempts:
+            return ""
+
+        context_parts = [
+            "<PREVIOUS ORCHESTRATION ATTEMPTS>",
+            f"This is attempt {current_attempt} to solve the task. Previous attempt(s) were restarted because they were insufficient.",
+            "",
+        ]
+
+        for attempt_data in previous_attempts:
+            attempt_num = attempt_data.get("attempt", "?")
+            reason = attempt_data.get("restart_reason", "Not specified")
+            instructions = attempt_data.get("restart_instructions", "")
+
+            context_parts.append(f"--- Attempt {attempt_num} ---")
+            context_parts.append(f"Why it was restarted: {reason}")
+
+            if instructions:
+                context_parts.append(f"Instructions for improvement: {instructions}")
+
+            # Optionally include the answer from that attempt
+            if "answer" in attempt_data:
+                # Truncate if too long
+                answer = attempt_data["answer"]
+                if len(answer) > 500:
+                    answer = answer[:500] + "... (truncated)"
+                context_parts.append(f"Answer from this attempt: {answer}")
+
+            context_parts.append("")
+
+        context_parts.append("<END OF PREVIOUS ORCHESTRATION ATTEMPTS>")
+        context_parts.append("")
 
         return "\n".join(context_parts)
 

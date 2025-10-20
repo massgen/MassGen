@@ -35,12 +35,19 @@ class CoordinationConfig:
                              Only the winning agent executes actions during final presentation.
                              If False, agents execute actions during coordination (default behavior).
         planning_mode_instruction: Custom instruction to add when planning mode is enabled.
+        max_orchestration_restarts: Maximum number of times the final agent can restart orchestration
+                                    when the task is not satisfactorily complete (default: 2).
+        enable_post_presentation_evaluation: If True, after final presentation completes, a separate
+                                             evaluation call asks the final agent to review the completed
+                                             answer and decide whether to submit or restart (default: False).
     """
 
     enable_planning_mode: bool = False
     planning_mode_instruction: str = (
         "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools."
     )
+    max_orchestration_restarts: int = 2
+    enable_post_presentation_evaluation: bool = False
 
 
 @dataclass

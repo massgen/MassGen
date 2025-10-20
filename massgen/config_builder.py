@@ -2036,6 +2036,7 @@ class ConfigBuilder:
 
             # Planning Mode (for MCP irreversible actions) - only ask if MCPs are configured
             has_mcp = any(a.get("backend", {}).get("mcp_servers") for a in agents)
+            planning_choice = False
             if has_mcp:
                 console.print()
                 console.print("  [dim]Planning Mode: Prevents MCP tool execution during coordination[/dim]")
@@ -2044,12 +2045,60 @@ class ConfigBuilder:
                 planning_choice = Confirm.ask("  [prompt]Enable planning mode for MCP tools?[/prompt]", default=False)
                 if planning_choice is None:
                     raise KeyboardInterrupt  # User cancelled
-                if planning_choice:
-                    orchestrator_config["coordination"] = {
-                        "enable_planning_mode": True,
-                    }
-                    console.print()
-                    console.print("  ✅ Planning mode enabled - MCP tools will plan without executing during coordination")
+
+            # Ask about orchestration restarts (always available)
+            console.print()
+            console.print("  [dim]Orchestration Restarts: Allow final agent to restart coordination if answers are insufficient[/dim]")
+            console.print("  [dim](useful for multi-step tasks or when initial attempts miss key requirements)[/dim]")
+            console.print()
+            restart_choice = Confirm.ask("  [prompt]Configure orchestration restart limit?[/prompt]", default=False)
+            if restart_choice is None:
+                raise KeyboardInterrupt  # User cancelled
+
+            max_restarts = 2  # Default
+            post_presentation_eval = False  # Default
+            if restart_choice:
+                console.print()
+                console.print("  [dim]Enter maximum number of restarts (0-5, default: 2)[/dim]")
+                restart_input = Prompt.ask("  [prompt]Max restarts[/prompt]", default="2")
+                try:
+                    max_restarts = int(restart_input)
+                    if max_restarts < 0 or max_restarts > 5:
+                        console.print("  [warning]⚠️  Using default value of 2 (input out of range)[/warning]")
+                        max_restarts = 2
+                except ValueError:
+                    console.print("  [warning]⚠️  Using default value of 2 (invalid input)[/warning]")
+                    max_restarts = 2
+
+                # Ask about post-presentation evaluation
+                console.print()
+                console.print("  [dim]Post-Presentation Evaluation: Evaluate AFTER final answer completes (recommended)[/dim]")
+                console.print("  [dim](final agent reviews the completed answer with fresh context)[/dim]")
+                console.print()
+                post_presentation_eval = Confirm.ask("  [prompt]Enable post-presentation evaluation?[/prompt]", default=True)
+                if post_presentation_eval is None:
+                    raise KeyboardInterrupt  # User cancelled
+
+            # Build coordination config
+            coordination_config = {}
+            if planning_choice:
+                coordination_config["enable_planning_mode"] = True
+            if restart_choice or max_restarts != 2:
+                coordination_config["max_orchestration_restarts"] = max_restarts
+            if post_presentation_eval:
+                coordination_config["enable_post_presentation_evaluation"] = True
+
+            if coordination_config:
+                orchestrator_config["coordination"] = coordination_config
+
+            if planning_choice:
+                console.print()
+                console.print("  ✅ Planning mode enabled - MCP tools will plan without executing during coordination")
+            if restart_choice:
+                console.print()
+                console.print(f"  ✅ Orchestration restarts configured - max {max_restarts} restart(s) allowed")
+                if post_presentation_eval:
+                    console.print("  ✅ Post-presentation evaluation enabled - final agent reviews completed answer")
 
             return agents, orchestrator_config
 
