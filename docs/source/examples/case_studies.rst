@@ -23,6 +23,7 @@ Research and Analysis
 
 .. toctree::
    :maxdepth: 1
+   :titlesonly:
 
    case_studies/berkeley-conference-talks
    case_studies/diverse_ai_news
@@ -33,6 +34,7 @@ Travel and Recommendations
 
 .. toctree::
    :maxdepth: 1
+   :titlesonly:
 
    case_studies/stockholm_travel_guide
 
@@ -41,6 +43,7 @@ Creative Writing
 
 .. toctree::
    :maxdepth: 1
+   :titlesonly:
 
    case_studies/collaborative_creative_writing
 
@@ -49,6 +52,7 @@ Technical Analysis
 
 .. toctree::
    :maxdepth: 1
+   :titlesonly:
 
    case_studies/fibonacci_number_algorithms
 
@@ -59,21 +63,23 @@ Feature case studies organized by release version (newest first).
 
 .. toctree::
    :maxdepth: 1
+   :titlesonly:
 
    case_studies/universal-code-execution-mcp
    case_studies/mcp-planning-mode
    case_studies/ag2-framework-integration
    case_studies/multi-turn-filesystem-support
+   case_studies/user-context-path-support-with-copy-mcp
    case_studies/unified-filesystem-mcp-integration
    case_studies/gemini-mcp-notion-integration
    case_studies/claude-code-workspace-management
-   case_studies/user-context-path-support-with-copy-mcp
 
 Problem Solving
 ---------------
 
 .. toctree::
    :maxdepth: 1
+   :titlesonly:
 
    case_studies/SuperIntelligence
    case_studies/imo_2025_winner

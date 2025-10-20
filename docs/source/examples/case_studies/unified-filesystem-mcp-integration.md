@@ -2,44 +2,19 @@
 
 MassGen v0.0.16 introduces unified filesystem support for Gemini agents through MCP (Model Context Protocol) integration, enabling cross-backend collaboration between Gemini and Claude Code agents with shared workspace management. This case study demonstrates the new filesystem capabilities through a complex educational content creation task.
 
-## Table of Contents
-- [📋 PLANNING PHASE](#planning-phase)
-  - [📝 Evaluation Design](#evaluation-design)
-    - [Prompt](#prompt)
-    - [Configuration](#configuration)
-    - [Baseline Command](#baseline-command)
-    - [Expected Result](#expected-result)
-  - [🔧 Evaluation Analysis](#evaluation-analysis)
-    - [Previous Limitations](#previous-limitations)
-    - [Success Criteria](#success-criteria)
-  - [🎯 Desired Features](#desired-features)
-- [🚀 TESTING PHASE](#testing-phase)
-  - [📦 Implementation Details](#implementation-details)
-    - [Version](#version)
-    - [New Configuration](#new-configuration)
-    - [Command](#command)
-  - [🤖 Agents](#agents)
-  - [🎥 Demo](#demo)
-- [📊 EVALUATION & ANALYSIS](#evaluation-analysis)
-  - [Results](#results)
-    - [🗂️ Unified Filesystem Manager - The Core Innovation](#unified-filesystem-manager)
-    - [🤝 Cross-Backend Workspace Sharing](#cross-backend-workspace-sharing)
-    - [🔧 MCP-Based Filesystem Operations](#mcp-based-filesystem-operations)
-    - [📁 Enhanced Workspace Management](#enhanced-workspace-management)
-    - [🏆 Final Implementation - Coordinated Excellence](#final-implementation)
-- [🎯 Conclusion](#conclusion)
-- [📌 Status Tracker](#status-tracker)
+```{contents}
+:depth: 3
+:local:
+```
 
----
+## 📋 PLANNING PHASE
 
-<h1 id="planning-phase">📋 PLANNING PHASE</h1>
+### 📝 Evaluation Design
 
-<h2 id="evaluation-design">📝 Evaluation Design</h2>
-
-### Prompt
+#### Prompt
 "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 
-### Configuration
+#### Baseline Config
 
 Prior to v0.0.16, Gemini agents had no filesystem access capabilities, making them unable to create files or collaborate with Claude Code agents that rely on workspace sharing.
 
@@ -65,14 +40,14 @@ ui:
   logging_enabled: true
 ```
 
-### Baseline Command
+#### Baseline Command
 ```bash
 massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 ```
 
-<h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
+### 🔧 Evaluation Analysis
 
-### Previous Limitations
+#### Results & Failure Modes
 Before v0.0.16, MassGen had fundamental disparities between backends:
 
 1. **Filesystem Access Gap**: Only Claude Code agents had built-in filesystem tools (Read, Write, Edit, etc.)
@@ -80,7 +55,7 @@ Before v0.0.16, MassGen had fundamental disparities between backends:
 3. **Workspace Isolation**: No shared workspace management between different backend types
 4. **Limited MCP Filesystem Integration**: No unified approach to filesystem operations via MCP
 
-### Success Criteria
+#### Success Criteria
 The unified filesystem support would be considered successful if:
 
 1. **Backend Parity**: Gemini agents gain equivalent filesystem capabilities to Claude Code agents
@@ -89,7 +64,7 @@ The unified filesystem support would be considered successful if:
 4. **Unified Configuration**: Identical `cwd` and workspace configuration syntax across backends
 5. **Collaborative Workflows**: Multi-backend agents working on shared files and projects
 
-<h2 id="desired-features">🎯 Desired Features</h2>
+### 🎯 Desired Features
 
 1. **FilesystemManager Class**: Unified filesystem management for all backends with MCP integration
 2. **Cross-Backend Workspace Sharing**: Automatic workspace synchronization between different agent types
@@ -99,14 +74,14 @@ The unified filesystem support would be considered successful if:
 
 ---
 
-<h1 id="testing-phase">🚀 TESTING PHASE</h1>
+## 🚀 TESTING PHASE
 
-<h2 id="implementation-details">📦 Implementation Details</h2>
+### 📦 Implementation Details
 
-### Version
+#### Version
 MassGen v0.0.16 (September 8, 2025)
 
-### New Configuration
+#### New Configuration
 Configuration file: [`massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml`](../../massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml)
 
 Key breakthrough - **identical filesystem configuration across backends**:
@@ -129,12 +104,12 @@ orchestrator:
     agent_temporary_workspace: "temp_workspaces"
 ```
 
-### Command
+#### Command
 ```bash
 massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
 ```
 
-<h2 id="agents">🤖 Agents</h2>
+### 🤖 Agents
 
 **Agent Configuration:**
 - **Gemini Agent**: `gemini-2.5-pro` with MCP filesystem capabilities via FilesystemManager
@@ -145,7 +120,7 @@ massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code
 - **claude_code**: `workspace2` (main workspace), `temp_workspaces/claude_code` (shared context workspace)
 - **Orchestrator**: Creates and manages `temp_workspaces/` for all agents, maintains `snapshots/` for state preservation, handles automatic cross-agent workspace synchronization
 
-<h2 id="demo">🎥 Demo</h2>
+### 🎥 Demo
 
 [![MassGen v0.0.16 Gemini file system integration Demo](https://img.youtube.com/vi/KWpo7bUSw_s/0.jpg)](https://youtu.be/KWpo7bUSw_s)
 
@@ -158,11 +133,11 @@ The test execution demonstrates:
 
 ---
 
-<h1 id="evaluation-analysis">📊 EVALUATION & ANALYSIS</h1>
+## 📊 EVALUATION & ANALYSIS
 
-<h2 id="results">Results</h2>
+### Results
 
-<h3 id="unified-filesystem-manager">🗂️ Unified Filesystem Manager - The Core Innovation</h3>
+#### 🗂️ Unified Filesystem Manager - The Core Innovation
 
 **Major Breakthrough**: Introduction of the `FilesystemManager` class provides unified filesystem access (currently implemented for Gemini and Claude Code backends, with architecture designed for future expansion).
 
@@ -183,7 +158,7 @@ The test execution demonstrates:
 - Consistent workspace behavior across different backend types
 - Extensible foundation for adding filesystem support to any future backend
 
-<h3 id="cross-backend-workspace-sharing">🤝 Cross-Backend Workspace Sharing</h3>
+#### 🤝 Cross-Backend Workspace Sharing
 
 **Revolutionary Capability**: First-time cross-backend collaboration with shared workspace access.
 
@@ -213,7 +188,7 @@ You have access to filesystem operations through MCP tools allowing you to read 
 - Intelligent combination of both agents' work into a comprehensive final presentation
 - Seamless collaboration despite different backend implementations
 
-<h3 id="mcp-based-filesystem-operations">🔧 MCP-Based Filesystem Operations</h3>
+#### 🔧 MCP-Based Filesystem Operations
 
 **Technical Achievement**: Gemini agents gain filesystem access through MCP protocol integration.
 
@@ -235,7 +210,7 @@ You have access to filesystem operations through MCP tools allowing you to read 
 - Same permission model as Claude Code with `cwd` workspace restrictions
 - Clean abstraction allowing future backends to easily adopt filesystem capabilities
 
-<h3 id="enhanced-workspace-management">📁 Enhanced Workspace Management</h3>
+#### 📁 Enhanced Workspace Management
 
 **Advanced Orchestration**: Sophisticated workspace management and agent coordination.
 
@@ -272,7 +247,7 @@ log_20250908_022042/
 - **Final Workspace Copy**: Winning agent's workspace copied to `final/` directory
 - **Comprehensive Logging**: Detailed logs of all filesystem operations and agent interactions
 
-<h3 id="final-implementation">🤝 Cross-Backend Synthesis - Superior Through Collaboration</h3>
+#### 🤝 Cross-Backend Synthesis - Superior Through Collaboration
 
 **The Power of Unified Filesystem**: Cross-backend collaboration produces results exceeding individual agent capabilities.
 

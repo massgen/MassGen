@@ -68,6 +68,15 @@ myst_enable_extensions = [
     "tasklist",
 ]
 
+# Auto-generate heading anchors for deep linking
+myst_heading_anchors = 3
+
+# Configure heading slug generation to handle emojis better
+myst_heading_slug_func = None  # Use default slugification
+
+# Suppress duplicate label warnings for auto-generated TOC links
+suppress_warnings = ["myst.header"]
+
 # Configure MyST to parse markdown files
 source_suffix = {
     ".rst": "restructuredtext",

@@ -2,45 +2,18 @@
 
 MassGen is focused on **case-driven development**. MassGen v0.0.31 introduces universal code execution capabilities through MCP (Model Context Protocol), enabling agents across all backends to run commands, execute tests, and validate code directly from conversations. This case study demonstrates how agents leverage the new `execute_command` MCP tool to create and run pytest validation tests, showcasing test-driven development through multi-agent collaboration.
 
-## 🤝 Contributing
-To guide future versions of MassGen, we encourage **anyone** to submit an issue using the corresponding `case-study` issue template based on the "PLANNING PHASE" section found in this template.
+```{contents}
+:depth: 3
+:local:
+```
 
----
+(planning-phase)=
+## 📋 PLANNING PHASE
 
-## Table of Contents
-- [📋 PLANNING PHASE](#planning-phase)
-  - [📝 Evaluation Design](#evaluation-design)
-    - [Prompt](#prompt)
-    - [Baseline Config](#baseline-config)
-    - [Baseline Command](#baseline-command)
-  - [🔧 Evaluation Analysis](#evaluation-analysis)
-    - [Results & Failure Modes](#results--failure-modes)
-    - [Success Criteria](#success-criteria)
-  - [🎯 Desired Features](#desired-features)
-- [🚀 TESTING PHASE](#testing-phase)
-  - [📦 Implementation Details](#implementation-details)
-    - [Version](#version)
-    - [New Features](#new-features)
-    - [New Configuration](#new-configuration)
-    - [Command](#command)
-  - [🤖 Agents](#agents)
-  - [🎥 Demo](#demo)
-- [📊 EVALUATION & ANALYSIS](#evaluation-and-analysis)
-  - [Results](#results)
-    - [The Collaborative Process](#the-collaborative-process)
-    - [The Voting Pattern](#the-voting-pattern)
-    - [Final Results & Answer Comparison](#final-results--answer-comparison)
-    - [Anything Else](#anything-else)
-  - [🎯 Conclusion](#conclusion)
-- [📌 Status Tracker](#status-tracker)
+(evaluation-design)=
+### 📝 Evaluation Design
 
----
-
-<h1 id="planning-phase">📋 PLANNING PHASE</h1>
-
-<h2 id="evaluation-design">📝 Evaluation Design</h2>
-
-### Prompt
+#### Prompt
 
 The prompt tests whether MassGen agents can create automated tests, execute them, and verify results through the new code execution MCP integration:
 
@@ -48,7 +21,7 @@ The prompt tests whether MassGen agents can create automated tests, execute them
 Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing.
 ```
 
-### Baseline Config
+#### Baseline Config
 
 Prior to v0.0.31, code execution capabilities were fragmented across backends:
 - **OpenAI, Azure OpenAI, Claude, Gemini**: Builtin code execution tools (Python sandboxed - **cannot run shell commands**)
@@ -58,7 +31,7 @@ Prior to v0.0.31, code execution capabilities were fragmented across backends:
 
 **The Core Problem**: No universal way to execute shell commands (pytest, uv run, npm test) across all backends.
 
-### Baseline Command
+#### Baseline Command
 
 ```bash
 # Pre-v0.0.31: Fragmented - no universal shell command execution
@@ -79,9 +52,9 @@ uv run python -m massgen.cli \
 # NO execution capability at all - cannot run any code or commands
 ```
 
-<h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
+### 🔧 Evaluation Analysis
 
-### Results & Failure Modes
+#### Results & Failure Modes
 
 Before v0.0.31, users attempting to perform test-driven development or validation workflows with MassGen faced significant challenges:
 
@@ -100,7 +73,7 @@ Users had to implement hacky workarounds like:
 **4. Limited Chat Completions Support:**
 Providers like Cerebras, Fireworks, Together, OpenRouter, Qwen had no code execution at all, making them unsuitable for any validation workflows despite potentially offering better cost/performance.
 
-### Success Criteria
+#### Success Criteria
 
 1. **Universal Execution**: All backends can execute commands through a unified MCP tool
 2. **Security Layers**: Multi-layer protection preventing dangerous operations (AG2-inspired sanitization, command filtering, path validation, timeouts)
@@ -108,7 +81,7 @@ Providers like Cerebras, Fireworks, Together, OpenRouter, Qwen had no code execu
 4. **Cross-Backend Compatibility**: The same execution capability works with Claude, Gemini, OpenAI, Chat Completions, etc.
 5. **Workspace Integration**: Commands execute within agent workspaces with proper permission management
 
-<h2 id="desired-features">🎯 Desired Features</h2>
+### 🎯 Desired Features
 
 With these goals defined, the next step was to design a universal code execution system built on MCP. The desired features included:
 
@@ -121,15 +94,15 @@ With these goals defined, the next step was to design a universal code execution
 
 ---
 
-<h1 id="testing-phase">🚀 TESTING PHASE</h1>
+## 🚀 TESTING PHASE
 
-<h2 id="implementation-details">📦 Implementation Details</h2>
+### 📦 Implementation Details
 
-### Version
+#### Version
 
 MassGen v0.0.31 (October 14, 2025)
 
-<h3 id="new-features">✨ New Features</h3>
+#### ✨ New Features
 
 The universal code execution capability was realized through a **new MCP server** that provides command execution as a tool across all backends. The implementation consists of three core components:
 
@@ -185,7 +158,7 @@ The `execute_command` tool automatically registers with all MCP-enabled backends
 
 See the full [v0.0.31 release notes](https://github.com/Leezekun/MassGen/releases/tag/v0.0.31) for complete details.
 
-### New Configuration
+#### New Configuration
 
 Configuration file: [`massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml`](../../massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml)
 
@@ -236,7 +209,7 @@ agent:
       - "pip.*"
 ```
 
-### Command
+#### Command
 
 ```bash
 uv run python -m massgen.cli \
@@ -244,7 +217,7 @@ uv run python -m massgen.cli \
   "Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing."
 ```
 
-<h2 id="agents">🤖 Agents</h2>
+### 🤖 Agents
 
 - **Agent A (agent_a)**: Gemini 2.5 Pro with code execution
   - Backend: Gemini (Chat API)
@@ -258,7 +231,7 @@ uv run python -m massgen.cli \
 
 Both agents participate in MassGen's collaborative consensus mechanism with the new universal code execution capability via the `execute_command` MCP tool.
 
-<h2 id="demo">🎥 Demo</h2>
+### 🎥 Demo
 
 Watch the v0.0.31 Universal Code Execution in action:
 
@@ -274,10 +247,9 @@ Key artifacts from the case study run:
 
 ---
 
-<h1 id="evaluation-and-analysis">📊 EVALUATION & ANALYSIS</h1>
+## 📊 EVALUATION & ANALYSIS
 
-## Results
-
+### Results
 The v0.0.31 universal code execution successfully achieved all success criteria and demonstrated powerful test automation capabilities:
 
 ✅ **Universal Execution**: Both agents (Gemini and OpenAI) executed commands through unified `execute_command` MCP tool
@@ -290,7 +262,7 @@ The v0.0.31 universal code execution successfully achieved all success criteria 
 
 ✅ **Workspace Integration**: Commands executed in agent workspaces with proper isolation (`workspace1` for Agent A, `workspace2` for Agent B)
 
-### The Collaborative Process
+#### The Collaborative Process
 
 **How agents collaborated with v0.0.31 universal code execution:**
 
@@ -337,7 +309,7 @@ The coordination log reveals iterative refinement with code execution:
 
 **Key v0.0.31 improvement**: The `execute_command` MCP tool enabled both agents (Gemini and OpenAI) to actually run pytest tests, not just describe them. This closed the loop from test creation → execution → result verification.
 
-### The Voting Pattern
+#### The Voting Pattern
 
 **Code Execution-Enabled Voting Dynamics:**
 
@@ -359,7 +331,7 @@ The coordination table shows informed voting based on executed results:
 
 **Key v0.0.31 improvement**: Code execution allowed agents to make evidence-based voting decisions by actually running tests and seeing results rather than just evaluating code quality in the abstract.
 
-### Final Results & Answer Comparison
+#### Final Results & Answer Comparison
 
 **Winner: Agent B (agent_b) - OpenAI GPT-5-mini with Code Execution**
 
@@ -368,7 +340,7 @@ To provide concrete evidence of the execution capability and demonstrate the cro
 **Agent A's Final Answer (agent1.1):**
 
 <details>
-<summary><u>📄 Agent A (Gemini 2.5 Pro) - Initial Answer (agent1.1)</u></summary>
+<summary><u>📄 Agent A (Gemini 2.5 Pro) - Final Answer (agent1.1)</u></summary>
 
 ```
 I have created a test case to validate the format of the configuration file and its parameters. The test successfully ran on the provided configuration file, `/Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml`, and all tests passed, confirming that the configuration is valid.
@@ -380,7 +352,7 @@ The test file, `test_config_validation.py`, checks for the presence and correct 
 The command `uv run python test_config_validation.py` was executed, and the output was:
 ```
 ....
-----------------------------------------------------------------------
+
 Ran 4 tests in 0.004s
 
 OK
@@ -447,7 +419,7 @@ if __name__ == '__main__':
 **Agent B's Final Answer (agent2.2):**
 
 <details>
-<summary><u>📄 Agent B (OpenAI GPT-5-mini) - Second Answer (agent2.2) ✓ Voted as Best</u></summary>
+<summary><u>📄 Agent B (OpenAI GPT-5-mini) - Second Answer (agent2.2)  ✓ Selected as Winner</u></summary>
 
 ```
 I created and ran a test that validates the example config file and confirmed it is valid.
@@ -481,10 +453,10 @@ If you want, I can add negative tests, move the test into the repository tests f
 ```
 </details>
 
-**Agent B's Final Presentation Answer (agent2.final):**
+**Final Presentation Answer (agent2.final):**
 
 <details>
-<summary><u>📄 Agent B (OpenAI GPT-5-mini) - Final Presentation Answer (agent2.final) ✓ Selected as Winner</u></summary>
+<summary><u>📄 Final Presentation Answer (agent2.final) </u></summary>
 
 ```
 Summary
@@ -578,7 +550,7 @@ Agent B won based on votes from both agents. The reasoning:
 
 **Key v0.0.31 validation**: An OpenAI GPT-5-mini agent with universal code execution successfully created, ran, and validated a pytest test - demonstrating that backends previously lacking execution capability now have full command execution through MCP.
 
-### Anything Else
+#### Anything Else
 
 **Security Layer Effectiveness:**
 
@@ -632,8 +604,7 @@ The Docker execution mode complements the local execution introduced in v0.0.31,
 
 Both modes share the same `execute_command` MCP tool interface, ensuring consistent agent behavior regardless of execution environment.
 
-<h2 id="conclusion">🎯 Conclusion</h2>
-
+## 🎯 Conclusion
 The Universal Code Execution via MCP in v0.0.31 successfully solves the backend execution gap that users faced when trying to perform test-driven development across different AI providers. The key user benefits specifically enabled by this feature include:
 
 1. **Universal Shell Command Execution**: All backends can now execute shell commands (`pytest`, `uv run`, `npm test`, etc.) through the unified `execute_command` MCP tool - previously only Claude Code and AG2 had this capability
@@ -660,8 +631,7 @@ This case study validates that universal code execution via MCP successfully bri
 
 ---
 
-<h3 id="status-tracker">📌 Status Tracker</h3>
-
+## 📌 Status Tracker
 - [✓] Planning phase completed
 - [✓] Features implemented (v0.0.31)
 - [✓] Testing completed

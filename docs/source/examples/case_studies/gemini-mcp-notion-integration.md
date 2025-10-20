@@ -2,32 +2,10 @@
 
 MassGen v0.0.15 introduces the Model Context Protocol (MCP) integration for Gemini agents, enabling seamless access to external tools and services. This case study demonstrates the first implementation of MCP in MassGen through a practical learning content generation task using Notion API.
 
-## Table of Contents
-- [Prerequisites for MCP Integration](#prerequisites-for-mcp-integration)
-- [📋 PLANNING PHASE](#planning-phase)
-  - [📝 Evaluation Design](#evaluation-design)
-    - [Prompt](#prompt)
-    - [Baseline Config](#baseline-config)
-    - [Baseline Command](#baseline-command)
-    - [Expected Result](#expected-result)
-  - [🔧 Evaluation Analysis](#evaluation-analysis)
-    - [Current Failure Modes](#current-failure-modes)
-    - [Success Criteria](#success-criteria)
-  - [🎯 Desired Features](#desired-features)
-- [🚀 TESTING PHASE](#testing-phase)
-  - [📦 Implementation Details](#implementation-details)
-    - [Version](#version)
-    - [New Config](#new-config)
-    - [Command](#command)
-  - [🤖 Agents](#agents)
-  - [🎥 Demo](#demo)
-- [📊 EVALUATION & ANALYSIS](#evaluation-analysis)
-  - [Results](#results)
-    - [🔧 External Tool Integration - The Core Transformation](#external-tool-integration)
-    - [🎯 Enhanced Task Completion](#enhanced-task-completion)
-    - [🗳️ Voting Evolution](#voting-evolution)
-- [🎯 Conclusion](#conclusion)
-- [📌 Status Tracker](#status-tracker)
+```{contents}
+:depth: 3
+:local:
+```
 
 
 ## Prerequisites for MCP Integration
@@ -51,27 +29,24 @@ MassGen v0.0.15 introduces the Model Context Protocol (MCP) integration for Gemi
   settings, and troubleshooting within MassGen
 ---
 
-<h1 id="planning-phase">📋 PLANNING PHASE</h1>
+## 📋 PLANNING PHASE
 
-<h2 id="evaluation-design">📝 Evaluation Design</h2>
+### 📝 Evaluation Design
 
-### Prompt
+#### Prompt
 "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 
-### Baseline Config
+#### Baseline Config
 Prior to v0.0.15, Gemini agents would use a standard multi-agent configuration like `massgen/configs/basic/multi/two_agents_gemini.yaml` without any MCP server configuration.
 
-### Baseline Command
+#### Baseline Command
 ```bash
 massgen --config @examples/basic/multi/two_agents_gemini "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 ```
 
-### Expected Result
-Agents would generate excellent todo list content but would be unable to create Notion pages, store the content, or verify the results. They would likely provide instructions for manual copy-pasting to Notion instead.
+### 🔧 Evaluation Analysis
 
-<h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
-
-### Current Failure Modes
+#### Results & Failure Modes
 Before v0.0.15, MassGen's Gemini integration had notable limitations:
 
 1. **No External Tool Access**: Gemini agents could only use built-in capabilities (web search, code execution)
@@ -79,7 +54,7 @@ Before v0.0.15, MassGen's Gemini integration had notable limitations:
 3. **Manual Output Management**: Users had to manually copy/paste agent outputs to external systems
 4. **Isolated Agent Operations**: Agents couldn't persist data or share information through external systems
 
-### Success Criteria
+#### Success Criteria
 The new MCP integration would be considered successful if:
 
 1. **External API Integration**: Agents can successfully create, read, and modify external resources (Notion pages) via MCP
@@ -87,7 +62,7 @@ The new MCP integration would be considered successful if:
 3. **Data Persistence**: Agent outputs are recorded in external systems
 4. **End-to-End Validation**: Agents can verify final results match intended outcomes (beyond just API success)
 
-<h2 id="desired-features">🎯 Desired Features</h2>
+### 🎯 Desired Features
 
 1. **MCP Client Integration**: A complete MCP client implementation for Gemini backend
 2. **Automatic Tool Discovery**: Agents discover available MCP tools without manual configuration
@@ -98,14 +73,14 @@ The new MCP integration would be considered successful if:
 
 ---
 
-<h1 id="testing-phase">🚀 TESTING PHASE</h1>
+## 🚀 TESTING PHASE
 
-<h2 id="implementation-details">📦 Implementation Details</h2>
+### 📦 Implementation Details
 
-### Version
+#### Version
 MassGen v0.0.15 (September 5, 2025)
 
-### New Config
+#### New Config
 Configuration file: [`massgen/configs/tools/mcp/gemini_notion_mcp.yaml`](../../massgen/configs/tools/mcp/gemini_notion_mcp.yaml)
 
 Key MCP configuration:
@@ -119,12 +94,12 @@ mcp_servers:
       NOTION_TOKEN: "${NOTION_TOKEN_ONE}"
 ```
 
-### Command
+#### Command
 ```bash
 massgen --config @examples/tools/mcp/gemini_notion_mcp "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 ```
 
-<h2 id="agents">🤖 Agents</h2>
+### 🤖 Agents
 
 - **Agent 1 (gemini-2.5-pro1)**: Primary content creator with access to Notion workspace "LLM Agent Research (1)" via NOTION_TOKEN_ONE
 - **Agent 2 (gemini-2.5-pro2)**: Secondary content creator with access to Notion workspace "LLM Agent Research (2)" via NOTION_TOKEN_TWO
@@ -134,17 +109,16 @@ Both agents use Gemini 2.5 Pro model with:
 - MCP tool access via Notion API
 - 19 available Notion MCP tools including API-post-search, API-post-page, API-patch-block-children
 
-<h2 id="demo">🎥 Demo</h2>
+### 🎥 Demo
 
 [![MassGen v0.0.15 MCP Integration Demo](https://img.youtube.com/vi/Mg091VCBn90/0.jpg)](https://youtu.be/Mg091VCBn90)
 
 ---
 
-<h1 id="evaluation-analysis">📊 EVALUATION & ANALYSIS</h1>
+## 📊 EVALUATION & ANALYSIS
 
-## Results
-
-<h3 id="external-tool-integration">🔧 External Tool Integration - The Core Transformation</h3>
+### Results
+#### 🔧 External Tool Integration - The Core Transformation
 
 A key change is that MassGen agents can now **interact with external systems** through standardized protocols:
 
@@ -158,7 +132,7 @@ A key change is that MassGen agents can now **interact with external systems** t
 {"object":"page","id":"26480a06-b67b-81b4-b5a5-dbbf472df2cc",...}
 ```
 
-<h3 id="enhanced-task-completion">🎯 Enhanced Task Completion</h3>
+#### 🎯 Enhanced Task Completion
 
 **Before**: "I can't create Notion pages, but here's a todo list you can copy-paste"
 
@@ -168,13 +142,12 @@ The agents now:
 1. **Complete the full requested workflow** including external system interactions
 2. **Provide URLs to persistent results** rather than ephemeral text
 
-<h3 id="voting-evolution">🗳️ Voting Evolution</h3>
+#### 🗳️ Voting Evolution
 
 Agents now vote on **execution success** not just content quality. From the logs:
 > "Agent 1 provided a more comprehensive and well-structured Todo list that better addresses the user's request AND successfully fulfilled all aspects including creating a correctly titled Notion page"
 
-<h2 id="conclusion">🎯 Conclusion</h2>
-
+## 🎯 Conclusion
 The MCP integration in v0.0.15 marks a significant step from isolated AI agents to connected, tool-enabled systems. Key improvements include:
 
 1. **MCP Protocol Integration**: Agents have ability to connect to any MCP-compatible server (demonstrated with Notion)
@@ -192,7 +165,7 @@ The success of this case study supports the MCP integration approach and demonst
 
 ---
 
-<h3 id="status-tracker">📌 Status Tracker</h3>
+## 📌 Status Tracker
 - ✅ Planning phase completed
 - ✅ Features implemented
 - ✅ Testing completed

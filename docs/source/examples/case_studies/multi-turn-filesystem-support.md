@@ -2,45 +2,16 @@
 
 MassGen is focused on **case-driven development**. MassGen v0.0.25 introduces multi-turn conversation support with persistent filesystem context, enabling continuous back-and-forth interaction where agents maintain workspace state and build upon work from earlier exchanges in the same conversation session. This case study demonstrates how agents iteratively develop a website across multiple conversation turns, with each turn accessing files created in previous turns.
 
-## 🤝 Contributing
-To guide future versions of MassGen, we encourage **anyone** to submit an issue using the corresponding `case-study` issue template based on the "PLANNING PHASE" section found in this template.
+```{contents}
+:depth: 3
+:local:
+```
 
----
+## 📋 PLANNING PHASE
 
-## Table of Contents
-- [📋 PLANNING PHASE](#planning-phase)
-  - [📝 Evaluation Design](#evaluation-design)
-    - [Prompt](#prompt)
-    - [Baseline Config](#baseline-config)
-    - [Baseline Command](#baseline-command)
-  - [🔧 Evaluation Analysis](#evaluation-analysis)
-    - [Previous Limitations](#previous-limitations)
-    - [Success Criteria](#success-criteria)
-  - [🎯 Desired Features](#desired-features)
-- [🚀 TESTING PHASE](#testing-phase)
-  - [📦 Implementation Details](#implementation-details)
-    - [Version](#version)
-    - [New Features](#new-features)
-    - [New Configuration](#new-configuration)
-    - [Command](#command)
-  - [🤖 Agents](#agents)
-  - [🎥 Demo](#demo)
-- [📊 EVALUATION & ANALYSIS](#evaluation-and-analysis)
-  - [Results](#results)
-    - [Multi-Turn Session Management](#multi-turn-session-management)
-    - [Persistent Workspace State](#persistent-workspace-state)
-    - [Context Preservation Across Turns](#context-preservation-across-turns)
-    - [Enhanced Project Organization](#enhanced-project-organization)
-  - [🎯 Conclusion](#conclusion)
-- [📌 Status Tracker](#status-tracker)
+### 📝 Evaluation Design
 
----
-
-<h1 id="planning-phase">📋 PLANNING PHASE</h1>
-
-<h2 id="evaluation-design">📝 Evaluation Design</h2>
-
-### Prompt
+#### Prompt
 
 Multi-turn conversation demonstrating iterative web development with the Bob Dylan fan site:
 
@@ -54,11 +25,11 @@ Make a website about Bob Dylan
 Can you 1) remove the image placeholder? we won't use image directly. 2) generally improve the appearance so it is more engaging, 3) make it longer and add an interactive element
 ```
 
-### Baseline Config
+#### Baseline Config
 
 [`grok4_gpt5_gemini_filesystem.yaml`](../../massgen/configs/tools/filesystem/grok4_gpt5_gemini_filesystem.yaml)
 
-### Baseline Command
+#### Baseline Command
 
 ```bash
 # Pre-v0.0.25: Each turn required separate execution, no session continuity
@@ -69,9 +40,9 @@ uv run python -m massgen.cli --config tools/filesystem/grok4_gpt5_gemini_filesys
 # Turn 2 starts fresh - no access to Turn 1's workspace or conversation context
 ```
 
-<h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
+### 🔧 Evaluation Analysis
 
-### Results & Failure Modes
+#### Results & Failure Modes
 
 Without multi-turn support, each MassGen execution was independent with no ability to continue previous conversations or access workspace files from earlier runs.
 
@@ -80,7 +51,7 @@ Without multi-turn support, each MassGen execution was independent with no abili
 - **Lost Workspace Context**: Previous workspace files were not accessible in new runs, requiring users to start from scratch each time
 - **Limited Iterative Development**: Complex projects requiring multiple refinement steps across conversation turns were not supported
 
-### Success Criteria
+#### Success Criteria
 
 The multi-turn filesystem support would be considered successful if:
 
@@ -89,7 +60,7 @@ The multi-turn filesystem support would be considered successful if:
 3. **Access Previous Work**: Agents can reference and build upon files created in earlier turns
 4. **Track Conversation History**: Users can review the complete evolution of multi-turn conversations
 
-<h2 id="desired-features">🎯 Desired Features</h2>
+### 🎯 Desired Features
 
 To achieve the success criteria above, v0.0.25 needs to implement:
 
@@ -100,15 +71,15 @@ To achieve the success criteria above, v0.0.25 needs to implement:
 
 ---
 
-<h1 id="testing-phase">🚀 TESTING PHASE</h1>
+## 🚀 TESTING PHASE
 
-<h2 id="implementation-details">📦 Implementation Details</h2>
+### 📦 Implementation Details
 
-### Version
+#### Version
 
 MassGen v0.0.25 (September 29, 2025)
 
-<h3 id="new-features">✨ New Features</h3>
+#### ✨ New Features
 
 - **Session Management**: Continue previous conversations with automatic session detection and restoration
 - **Persistent Workspace**: Workspaces now preserved across turns for seamless iterative development
@@ -121,7 +92,7 @@ MassGen v0.0.25 (September 29, 2025)
 - **Enhanced Path Permission System**: Default exclusion patterns and improved path validation
 - For complete v0.0.25 features, see the full [v0.0.25 release notes](https://github.com/Leezekun/MassGen/releases/tag/v0.0.25)
 
-### New Configuration
+#### New Configuration
 
 Configuration file: [`massgen/configs/tools/filesystem/multiturn/grok4_gpt5_gemini_filesystem_multiturn.yaml`](../../massgen/configs/tools/filesystem/multiturn/grok4_gpt5_gemini_filesystem_multiturn.yaml)
 
@@ -132,7 +103,7 @@ orchestrator:
   session_storage: "sessions"  # NEW: Enables multi-turn conversation support
 ```
 
-### Command
+#### Command
 
 **Quick Start: Running Multi-Turn MassGen**
 
@@ -181,7 +152,7 @@ Turn 2: Can you (1) remove the image placeholder? we will not use image directly
 # Agents can directly access and modify files from the previous turn
 ```
 
-<h2 id="agents">🤖 Agents</h2>
+### 🤖 Agents
 
 - **Agent A**: `grok-4-fast-reasoning` (Grok backend)
 - **Agent B**: `gpt-5-mini` with medium reasoning effort (OpenAI backend)
@@ -189,7 +160,7 @@ Turn 2: Can you (1) remove the image placeholder? we will not use image directly
 
 All agents have filesystem access through MCP with isolated workspaces. In multi-turn mode, each agent maintains workspace state across conversation turns, with automatic session persistence and restoration.
 
-<h2 id="demo">🎥 Demo</h2>
+### 🎥 Demo
 
 Watch the v0.0.25 Multi-Turn Filesystem Support in action:
 
@@ -203,10 +174,9 @@ Key artifacts:
 
 ---
 
-<h1 id="evaluation-and-analysis">📊 EVALUATION & ANALYSIS</h1>
+## 📊 EVALUATION & ANALYSIS
 
-## Results
-
+### Results
 The v0.0.25 multi-turn filesystem support successfully achieved all success criteria and demonstrated iterative development capabilities across conversation turns:
 
 ✅ **Continue Previous Conversations**: Users resumed conversation after Turn 1, with Turn 2 building upon previous work
@@ -262,8 +232,7 @@ The v0.0.25 multi-turn filesystem support successfully achieved all success crit
 
 ---
 
-<h2 id="conclusion">🎯 Conclusion</h2>
-
+## 🎯 Conclusion
 The Multi-Turn Filesystem Support in v0.0.25 successfully solves critical conversation continuity problems that users faced when building complex projects. The key user benefits specifically enabled by this feature include:
 
 1. **Build Iteratively**: Refine complex projects across multiple conversation turns with full workspace continuity
@@ -274,8 +243,7 @@ The Multi-Turn Filesystem Support in v0.0.25 successfully solves critical conver
 
 ---
 
-<h3 id="status-tracker">📌 Status Tracker</h3>
-
+## 📌 Status Tracker
 - [✓] Planning phase completed
 - [✓] Features implemented (v0.0.25)
 - [✓] Testing completed

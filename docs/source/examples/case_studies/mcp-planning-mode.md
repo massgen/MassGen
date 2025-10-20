@@ -2,58 +2,28 @@
 
 MassGen is focused on **case-driven development**. MassGen v0.0.29 introduces MCP Planning Mode, a strategic coordination approach that allows agents to plan MCP tool usage without execution during collaboration, preventing irreversible actions like sending messages or modifying external systems until consensus is reached. This case study demonstrates how planning mode enables safe multi-agent collaboration with external integrations like Discord.
 
-## 🤝 Contributing
-To guide future versions of MassGen, we encourage **anyone** to submit an issue using the corresponding `case-study` issue template based on the "PLANNING PHASE" section found in this template.
+```{contents}
+:depth: 3
+:local:
+```
 
----
+## 📋 PLANNING PHASE
 
-# Table of Contents
+### 📝 Evaluation Design
 
-- [📋 PLANNING PHASE](#planning-phase)
-  - [📝 Evaluation Design](#evaluation-design)
-    - [Prompt](#prompt)
-    - [Baseline Config](#baseline-config)
-    - [Baseline Command](#baseline-command)
-  - [🔧 Evaluation Analysis](#evaluation-analysis)
-    - [Results & Failure Modes](#results--failure-modes)
-    - [Success Criteria](#success-criteria)
-  - [🎯 Desired Features](#desired-features)
-- [🚀 TESTING PHASE](#testing-phase)
-  - [📦 Implementation Details](#implementation-details)
-    - [Version](#version)
-    - [New Features](#new-features)
-    - [New Config](#new-config)
-    - [Command](#command)
-  - [🤖 Agents](#agents)
-  - [🎥 Demo](#demo)
-- [📊 EVALUATION & ANALYSIS](#evaluation--analysis)
-  - [Results](#results)
-    - [The Collaborative Process](#the-collaborative-process)
-    - [The Voting Pattern](#the-voting-pattern)
-    - [Final Results & Answer Comparison](#final-results--answer-comparison)
-    - [Anything Else](#anything-else)
-  - [🎯 Conclusion](#conclusion)
-- [📌 Status Tracker](#status-tracker)
-
----
-
-<h1 id="planning-phase">📋 PLANNING PHASE</h1>
-
-<h2 id="evaluation-design">📝 Evaluation Design</h2>
-
-### Prompt
+#### Prompt
 The prompt tests whether MassGen can safely handle MCP tool usage (Discord messaging) in a multi-agent scenario without causing duplicate or premature executions:
 
 ```bash
 Please read https://github.com/Leezekun/MassGen/issues/276 and send a message to the 'MassGen Testing Server' Discord server in the general channel with a summary and implementation next steps to notify the team of your approach. The guild ID is 1417773298309136445 and channel ID is 1417773298837880906
 ```
 
-### Baseline Config
+#### Baseline Config
 Prior to v0.0.29, MassGen agents with MCP tool access would execute tools immediately during coordination, leading to duplicate messages, premature actions, and no rollback capability for irreversible operations.
 
 A baseline would use MCP without planning mode, where agents execute tools during coordination.
 
-### Baseline Command
+#### Baseline Command
 ```bash
 # Pre-v0.0.29: No planning mode - agents execute tools immediately
 # Would cause multiple Discord messages during coordination
@@ -62,9 +32,9 @@ uv run python -m massgen.cli \
   "Please read https://github.com/Leezekun/MassGen/issues/276 and send a message to Discord..."
 ```
 
-<h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
+### 🔧 Evaluation Analysis
 
-### Results & Failure Modes
+#### Results & Failure Modes
 
 Before v0.0.29, users attempting multi-agent workflows with MCP tools (Discord, Twitter, Notion, etc.) would face:
 
@@ -77,14 +47,14 @@ Before v0.0.29, users attempting multi-agent workflows with MCP tools (Discord, 
 - Users must choose between multi-agent quality OR safe MCP usage
 - Manual intervention needed to prevent duplicate actions
 
-### Success Criteria
+#### Success Criteria
 1. **Safe Tool Planning**: Agents can plan MCP tool usage without execution during coordination
 2. **Consensus Before Execution**: Only the winning agent executes tools in final presentation
 3. **Multi-Agent Quality Preserved**: Full collaboration benefits (debate, refinement, voting) maintained
 4. **Multi-Backend Support**: Planning mode works across Response API, Chat Completions, and Gemini backends
 5. **Transparent Planning**: Users can see planned tool calls in agent answers
 
-<h2 id="desired-features">🎯 Desired Features</h2>
+### 🎯 Desired Features
 
 With these goals defined, the next step was to design a system that separates tool planning from execution.
 - **Coordination Configuration**: New `CoordinationConfig` class with `enable_planning_mode` flag
@@ -95,14 +65,14 @@ With these goals defined, the next step was to design a system that separates to
 
 ---
 
-<h1 id="testing-phase">🚀 TESTING PHASE</h1>
+## 🚀 TESTING PHASE
 
-<h2 id="implementation-details">📦 Implementation Details</h2>
+### 📦 Implementation Details
 
-### Version
+#### Version
 MassGen v0.0.29 (October 8, 2025)
 
-<h3 id="new-features">✨ New Features</h3>
+#### ✨ New Features
 
 The MCP Planning Mode was realized through a **coordination-level configuration system** that controls tool execution timing. The implementation consists of three core components:
 
@@ -135,7 +105,7 @@ Strategic tool execution management:
 
 See the full [v0.0.29 release notes](https://github.com/Leezekun/MassGen/releases/tag/v0.0.29) for complete details.
 
-### New Config
+#### New Config
 
 Configuration file: [`massgen/configs/tools/planning/gpt5_mini_case_study_mcp_planning_mode.yaml`](../../massgen/configs/tools/planning/gpt5_mini_case_study_mcp_planning_mode.yaml)
 
@@ -150,14 +120,14 @@ orchestrator:
 
 **Key Innovation**: System message explicitly instructs agents to provide content first, execute tools only in final presentation. Combined with `enable_planning_mode`, this prevents premature execution!
 
-### Command
+#### Command
 ```bash
 uv run python -m massgen.cli \
   --config massgen/configs/tools/planning/gpt5_mini_case_study_mcp_planning_mode.yaml \
   "Please read https://github.com/Leezekun/MassGen/issues/276 and send a message to the 'MassGen Testing Server' Discord server in the general channel with a summary and implementation next steps to notify the team of your approach. The guild ID is 1417773298309136445 and channel ID is 1417773298837880906"
 ```
 
-<h2 id="agents">🤖 Agents</h2>
+### 🤖 Agents
 
 - **Agent A (claude_code_discord_mcp)**: Claude Code with Discord MCP server
   - Backend: Claude Code (native SDK)
@@ -173,7 +143,7 @@ uv run python -m massgen.cli \
 
 Both agents participate in MassGen's collaborative consensus mechanism with planning mode ensuring safe tool usage.
 
-<h2 id="demo">🎥 Demo</h2>
+### 🎥 Demo
 
 Watch the v0.0.29 MCP Planning Mode in action:
 
@@ -188,10 +158,9 @@ Key artifacts from the case study run:
 
 ---
 
-<h1 id="evaluation--analysis">📊 EVALUATION & ANALYSIS</h1>
+## 📊 EVALUATION & ANALYSIS
 
-## Results
-
+### Results
 The v0.0.29 MCP Planning Mode successfully achieved all success criteria and demonstrated safe multi-agent collaboration with external integrations:
 
 ✅ **Safe Tool Planning**: Both agents created Discord message plans without execution during coordination
@@ -204,7 +173,7 @@ The v0.0.29 MCP Planning Mode successfully achieved all success criteria and dem
 
 ✅ **Transparent Planning**: Agents' answers showed planned Discord message content and tool invocations
 
-### The Collaborative Process
+#### The Collaborative Process
 
 **How agents collaborated with v0.0.29 MCP Planning Mode:**
 
@@ -245,7 +214,7 @@ The coordination log reveals efficient collaboration with planning mode:
 
 **Key v0.0.29 improvement**: Planning mode prevented both agents from sending duplicate Discord messages during coordination. Only the winner executed tools after consensus was reached.
 
-### The Voting Pattern
+#### The Voting Pattern
 
 **Planning Mode Voting Dynamics:**
 
@@ -267,7 +236,7 @@ The coordination table shows clean voting behavior enabled by planning mode:
 
 **Key v0.0.29 improvement**: Planning mode allowed agents to evaluate each other's planned Discord messages without risk of duplicate executions, leading to informed voting decisions.
 
-### Final Results & Answer Comparison
+#### Final Results & Answer Comparison
 
 **Winner: Agent B (gpt-5-mini) - GPT-5-mini with Planning Mode**
 
@@ -504,7 +473,7 @@ Agent B's answer achieved consensus through its concise, actionable approach. Wh
 
 **Key v0.0.29 validation**: Planning mode successfully prevented duplicate Discord messages during multi-agent coordination, allowing agents to collaborate on communication content before any external action occurred. Only the winner executed tools after consensus.
 
-### Anything Else
+#### Anything Else
 
 **Planning Mode Effectiveness:**
 
@@ -532,8 +501,7 @@ Combined with `enable_planning_mode`, this created a powerful safety mechanism w
 - Content was provided in answers for review and voting
 - Tool execution happened only in final presentation phase
 
-<h2 id="conclusion">🎯 Conclusion</h2>
-
+## 🎯 Conclusion
 The MCP Planning Mode in v0.0.29 successfully solves the external integration safety challenge that users faced when trying to use multi-agent collaboration with MCP tools. The key user benefits specifically enabled by this feature include:
 
 1. **Safe Multi-Agent MCP Usage**: Users can now leverage multi-agent quality (debate, refinement, voting) with MCP tools (Discord, Twitter, Notion) without risking duplicate actions
@@ -558,8 +526,7 @@ This case study validates that planning mode successfully bridges the gap betwee
 
 ---
 
-<h3 id="status-tracker">📌 Status Tracker</h3>
-
+## 📌 Status Tracker
 - [✓] Planning phase completed
 - [✓] Features implemented (v0.0.29)
 - [✓] Testing completed

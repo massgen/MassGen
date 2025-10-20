@@ -2,67 +2,37 @@
 
 MassGen is focused on **case-driven development**. MassGen v0.0.28 introduces AG2 framework integration through a comprehensive external agent adapter system, enabling MassGen to orchestrate agents from other established frameworks while maintaining its unique multi-agent consensus architecture. This case study demonstrates how AG2 agents with code execution capabilities can be seamlessly integrated into MassGen's collaborative environment.
 
-## 🤝 Contributing
-To guide future versions of MassGen, we encourage **anyone** to submit an issue using the corresponding `case-study` issue template based on the "PLANNING PHASE" section found in this template.
+```{contents}
+:depth: 3
+:local:
+```
 
----
+## 📋 PLANNING PHASE
 
-# Table of Contents
+### 📝 Evaluation Design
 
-- [📋 PLANNING PHASE](#planning-phase)
-  - [📝 Evaluation Design](#evaluation-design)
-    - [Prompt](#prompt)
-    - [Baseline Config](#baseline-config)
-    - [Baseline Command](#baseline-command)
-  - [🔧 Evaluation Analysis](#evaluation-analysis)
-    - [Results & Failure Modes](#results--failure-modes)
-    - [Success Criteria](#success-criteria)
-  - [🎯 Desired Features](#desired-features)
-- [🚀 TESTING PHASE](#testing-phase)
-  - [📦 Implementation Details](#implementation-details)
-    - [Version](#version)
-    - [New Features](#new-features)
-    - [New Config](#new-config)
-    - [Command](#command)
-  - [🤖 Agents](#agents)
-  - [🎥 Demo](#demo)
-- [📊 EVALUATION & ANALYSIS](#evaluation--analysis)
-  - [Results](#results)
-    - [The Collaborative Process](#the-collaborative-process)
-    - [The Voting Pattern](#the-voting-pattern)
-    - [Final Results & Answer Comparison](#final-results--answer-comparison)
-    - [Anything Else](#anything-else)
-  - [🎯 Conclusion](#conclusion)
-- [📌 Status Tracker](#status-tracker)
-
----
-
-<h1 id="planning-phase">📋 PLANNING PHASE</h1>
-
-<h2 id="evaluation-design">📝 Evaluation Design</h2>
-
-### Prompt
+#### Prompt
 The prompt tests whether MassGen can effectively integrate and orchestrate agents from external frameworks (specifically AG2) while maintaining its collaborative consensus mechanism:
 
 ```bash
 Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents.
 ```
 
-### Baseline Config
+#### Baseline Config
 Prior to v0.0.28, MassGen could only use agents from its native backends (OpenAI, Anthropic, Gemini, etc.). There was no way to integrate agents from external frameworks like AG2 or other multi-agent systems.
 
 A baseline would use only native MassGen agents without external framework integration.
 
-### Baseline Command
+#### Baseline Command
 ```bash
 # Pre-v0.0.28: No AG2 support available
 # Would need to use only native backends
 uv run python -m massgen.cli --config basic/single/single_gemini2.5pro.yaml "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
 ```
 
-<h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
+### 🔧 Evaluation Analysis
 
-### Results & Failure Modes
+#### Results & Failure Modes
 
 Before v0.0.28, users attempting to work with external frameworks like AG2 would face:
 
@@ -74,14 +44,14 @@ Before v0.0.28, users attempting to work with external frameworks like AG2 would
 - Restricted to MassGen's native backends (OpenAI, Anthropic, Gemini, etc.)
 - Cannot bring specialized agents from other established frameworks into the collaboration
 
-### Success Criteria
+#### Success Criteria
 1. **AG2 Workflows Work in MassGen**: Users can bring their existing AG2 agents into MassGen orchestration
 2. **AG2 Features Preserved**: AG2 capabilities (code execution, tool calling) function correctly within MassGen
 3. **Full Collaboration**: AG2 agents participate in MassGen's consensus mechanism (generate, vote, refine)
 4. **Beyond AG2**: The adapter architecture supports other external frameworks, not just AG2
 5. **Easy Configuration**: Simple YAML setup for AG2 agents without complex integration work
 
-<h2 id="desired-features">🎯 Desired Features</h2>
+### 🎯 Desired Features
 
 With these goals defined, the next step was to design a system capable of bridging MassGen with external frameworks.
 - **Adapter Architecture**: Base adapter system bridging MassGen and external frameworks
@@ -93,14 +63,14 @@ With these goals defined, the next step was to design a system capable of bridgi
 
 ---
 
-<h1 id="testing-phase">🚀 TESTING PHASE</h1>
+## 🚀 TESTING PHASE
 
-<h2 id="implementation-details">📦 Implementation Details</h2>
+### 📦 Implementation Details
 
-### Version
+#### Version
 MassGen v0.0.28 (October 6, 2025)
 
-<h3 id="new-features">✨ New Features</h3>
+#### ✨ New Features
 
 The AG2 integration was realized through an **adapter registry pattern** that bridges MassGen's orchestration with external frameworks. The implementation consists of three core components:
 
@@ -129,7 +99,7 @@ Comprehensive test coverage ensures reliability across the integration:
 
 **Additional v0.0.28 improvements** include enhanced MCP circuit breaker logic and better error handling. See the full [v0.0.28 release notes](https://github.com/Leezekun/MassGen/releases/tag/v0.0.28) for complete details.
 
-### New Config
+#### New Config
 
 Configuration file: [`massgen/configs/ag2/ag2_coder_case_study.yaml`](../../massgen/configs/ag2/ag2_coder_case_study.yaml)
 
@@ -162,12 +132,12 @@ agents:
 
 **Key Innovation**: This configuration shows AG2 agents working alongside native MassGen agents (Gemini) in the same coordination workflow!
 
-### Command
+#### Command
 ```bash
 uv run python -m massgen.cli --config ag2/ag2_coder_case_study.yaml "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
 ```
 
-<h2 id="agents">🤖 Agents</h2>
+### 🤖 Agents
 
 - **Agent 1 (ag2_coder)**: AG2 AssistantAgent with code execution capabilities
   - Backend: AG2 framework (external adapter)
@@ -181,7 +151,7 @@ uv run python -m massgen.cli --config ag2/ag2_coder_case_study.yaml "Output a su
 
 Both agents participate in MassGen's collaborative consensus mechanism, with AG2 agent bringing code execution capabilities while Gemini provides web-enhanced reasoning.
 
-<h2 id="demo">🎥 Demo</h2>
+### 🎥 Demo
 
 Watch the v0.0.28 AG2 Framework Integration in action:
 
@@ -195,10 +165,9 @@ Key artifacts from the case study run:
 
 ---
 
-<h1 id="evaluation--analysis">📊 EVALUATION & ANALYSIS</h1>
+## 📊 EVALUATION & ANALYSIS
 
-## Results
-
+### Results
 The v0.0.28 AG2 integration successfully achieved all success criteria and demonstrated powerful cross-framework collaboration:
 
 ✅ **Seamless Integration**: AG2 agent configured and executed within MassGen orchestration without issues
@@ -211,7 +180,7 @@ The v0.0.28 AG2 integration successfully achieved all success criteria and demon
 
 ✅ **Configuration Simplicity**: Clean YAML configuration with framework-specific settings under `backend.agent_config`
 
-### The Collaborative Process
+#### The Collaborative Process
 
 **How agents generated answers with v0.0.28 AG2 integration:**
 
@@ -248,7 +217,7 @@ The coordination log reveals an intensive collaborative refinement process:
 
 **Key v0.0.28 improvement**: AG2's code execution capabilities brought a programmatic, data-driven approach to information gathering, complementing Gemini's web search capabilities within the same consensus workflow.
 
-### The Voting Pattern
+#### The Voting Pattern
 
 **Cross-Framework Voting Dynamics:**
 
@@ -269,7 +238,7 @@ The coordination table shows sophisticated voting behavior:
 
 **Key v0.0.28 improvement**: AG2 agents can fully participate in MassGen's voting mechanism, demonstrating that external framework agents understand and contribute to consensus building.
 
-### Final Results & Answer Comparison
+#### Final Results & Answer Comparison
 
 **Winner: Agent 1 (ag2_coder) - AG2 AssistantAgent**
 
@@ -378,7 +347,6 @@ Inspired by the methodologies of advanced AI, MassGen's core idea is not to divi
 
 **Best for:** Generating the highest quality output for a single, complex request by harnessing the diverse reasoning power of multiple top-tier LLMs working in parallel.
 ```
-
 </details>
 
 **Final Presentation Answer:**
@@ -434,7 +402,6 @@ Here's a concise differences summary between AG2 and MassGen for LLM agents:
 - Updates licensing statement to be more general
 
 This suggests MassGen incorporate insights from multiple agents even after selecting a winner, creating a hybrid final answer.
-
 </details>
 
 
@@ -465,7 +432,7 @@ Agent 1's streamlined, scannable format best matched the user's request for a "s
 
 **Key v0.0.28 validation**: An AG2 agent with code execution successfully served as the final answer provider, proving that external framework agents can deliver high-quality results within MassGen's orchestration.
 
-### Anything Else
+#### Anything Else
 
 **Restart Dynamics - Evidence of Deep Refinement:**
 
@@ -488,8 +455,7 @@ This intensive refinement pattern suggests:
 - AG2's system messages and LLM config preserved within MassGen's agent configuration
 - No compatibility issues between AG2's conversation model and MassGen's coordination
 
-<h2 id="conclusion">🎯 Conclusion</h2>
-
+## 🎯 Conclusion
 The AG2 Framework Integration in v0.0.28 successfully solves the framework interoperability challenge that users faced when trying to combine specialized agent capabilities with MassGen's consensus approach. The key user benefits specifically enabled by this feature include:
 
 1. **Best of Both Worlds**: Users can now leverage AG2's specialized capabilities (code execution, tool calling) within MassGen's multi-agent consensus framework
@@ -513,8 +479,7 @@ This case study validates that cross-framework multi-agent collaboration is not 
 
 ---
 
-<h3 id="status-tracker">📌 Status Tracker</h3>
-
+## 📌 Status Tracker
 - [✓] Planning phase completed
 - [✓] Features implemented (v0.0.28)
 - [✓] Testing completed
