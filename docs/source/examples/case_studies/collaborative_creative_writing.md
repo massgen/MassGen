@@ -11,7 +11,7 @@ massgen --config @examples/basic/multi/gemini_4o_claude "Write a short story abo
 ```
 
 **Prompt:**
-`Write a short story about a robot who discovers music.`
+Write a short story about a robot who discovers music.
 
 ---
 

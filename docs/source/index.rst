@@ -259,8 +259,9 @@ Documentation Sections
 
       **Examples**
 
-      * :doc:`examples/index`
+      * :doc:`examples/case_studies`
       * :doc:`examples/basic_examples`
+      * :doc:`examples/advanced_patterns`
 
    .. grid-item::
 
@@ -311,10 +312,10 @@ Documentation Sections
    :hidden:
    :caption: Examples
 
-   examples/index
-   examples/available_configs
-   examples/basic_examples
    examples/case_studies
+   examples/basic_examples
+   examples/advanced_patterns
+   examples/available_configs
 
 .. toctree::
    :maxdepth: 2

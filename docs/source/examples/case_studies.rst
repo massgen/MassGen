@@ -18,6 +18,24 @@ Each case study includes:
 * **Final outcome** - Results and quality assessment
 * **Session logs** - Actual coordination history and voting patterns
 
+Release Features
+----------------
+
+Feature case studies organized by release version (newest first).
+
+.. toctree::
+   :maxdepth: 1
+   :titlesonly:
+
+   case_studies/universal-code-execution-mcp
+   case_studies/mcp-planning-mode
+   case_studies/ag2-framework-integration
+   case_studies/multi-turn-filesystem-support
+   case_studies/user-context-path-support-with-copy-mcp
+   case_studies/unified-filesystem-mcp-integration
+   case_studies/gemini-mcp-notion-integration
+   case_studies/claude-code-workspace-management
+
 Research and Analysis
 ---------------------
 
@@ -55,24 +73,6 @@ Technical Analysis
    :titlesonly:
 
    case_studies/fibonacci_number_algorithms
-
-Release Features
-----------------
-
-Feature case studies organized by release version (newest first).
-
-.. toctree::
-   :maxdepth: 1
-   :titlesonly:
-
-   case_studies/universal-code-execution-mcp
-   case_studies/mcp-planning-mode
-   case_studies/ag2-framework-integration
-   case_studies/multi-turn-filesystem-support
-   case_studies/user-context-path-support-with-copy-mcp
-   case_studies/unified-filesystem-mcp-integration
-   case_studies/gemini-mcp-notion-integration
-   case_studies/claude-code-workspace-management
 
 Problem Solving
 ---------------
