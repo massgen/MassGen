@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["ai", "multi-agent", "collaboration", "orchestration", "llm", "claude", "gemini", "gpt", "xai"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
@@ -51,6 +51,7 @@ dependencies = [
     "ag2>=0.9.10",
     "pyautogen>=0.10.0",
     "vertexai>=1.71.1",
+    "pytest>=8.4.2",
 ]
 
 [project.optional-dependencies]
@@ -99,7 +100,7 @@ Homepage = "https://github.com/Leezekun/MassGen"
 Repository = "https://github.com/Leezekun/MassGen"
 "Bug Reports" = "https://github.com/Leezekun/MassGen/issues"
 Source = "https://github.com/Leezekun/MassGen"
-Documentation = "https://github.com/Leezekun/MassGen/blob/main/README.md"
+Documentation = "https://docs.massgen.io/en/latest/"
 
 [tool.setuptools]
 include-package-data = true
@@ -210,8 +211,12 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "asyncio: mark test as requiring asyncio",
 ]
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::pytest.PytestAssertRewriteWarning:_pytest.config",
+]
 
 # Coverage configuration
 [tool.coverage.run]
@@ -254,4 +259,5 @@ dev = [
     "sphinx-design>=0.6.1",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx-book-theme>=1.1.4",
+    "pytest-asyncio>=1.2.0",
 ]

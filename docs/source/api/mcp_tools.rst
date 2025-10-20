@@ -8,6 +8,7 @@ Module Overview
 
 .. automodule:: massgen.mcp_tools
    :members:
+   :exclude-members: MCPTimeoutError, MCPServerError, MCPConfigurationError, MCPToolError
    :undoc-members:
    :show-inheritance:
 

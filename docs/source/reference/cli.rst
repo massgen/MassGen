@@ -35,6 +35,8 @@ CLI Parameters
      - Description
    * - ``--config PATH``
      - Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings
+   * - ``--select``
+     - Interactively select from available configurations (user configs, project configs, current directory, package examples). Uses hierarchical navigation: category → config
    * - ``--backend TYPE``
      - Backend type for quick setup without config file. Options: ``claude``, ``claude_code``, ``gemini``, ``grok``, ``openai``, ``azure_openai``, ``zai``
    * - ``--model NAME``
@@ -66,6 +68,23 @@ Default Configuration Mode
 
    # Run single query with default config
    massgen "What is machine learning?"
+
+Interactive Config Selection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   # Browse and select from available configurations
+   massgen --select
+
+   # After selection, optionally provide a question
+   massgen --select "Your question here"
+
+   # The selector shows configs from:
+   # - User configs: ~/.config/massgen/agents/
+   # - Project configs: .massgen/*.yaml
+   # - Current directory: *.yaml
+   # - Package examples: Built-in example configs
 
 Quick Single Agent
 ~~~~~~~~~~~~~~~~~~

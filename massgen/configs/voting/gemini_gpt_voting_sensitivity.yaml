@@ -1,0 +1,67 @@
+# MassGen Voting Sensitivity Configuration Example
+#
+# How to run:
+#   massgen --config configs/voting/gemini_gpt_voting_sensitivity.yaml "Your question here"
+#
+# Or in interactive mode:
+#   massgen --config configs/voting/gemini_gpt_voting_sensitivity.yaml
+#
+# Try different sensitivity levels by changing the voting_sensitivity value below
+
+agents:
+  - id: "gemini2.5flash"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      enable_web_search: true
+
+  - id: "gpt5nano"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
+
+orchestrator:
+  # voting_sensitivity controls how critical agents are when evaluating answers
+  #
+  # Options:
+  #   - "lenient" (default): Agents vote for existing answers more readily, fewer new answers
+  #                          Use when you want faster convergence
+  #
+  #   - "balanced": Agents apply detailed criteria (comprehensive, accurate, complete?) before voting,
+  #                 more new answers. Use when you want thorough evaluation
+  #
+  #   - "strict": Agents apply high standards of excellence (all aspects, edge cases, reference-quality) before voting,
+  #               most new answers. Use when you need maximum quality
+  #
+  voting_sensitivity: "balanced"
+
+  # max_new_answers_per_agent controls how many new answers each agent can provide
+  # Once an agent reaches this limit, they can only vote (not provide new answers)
+  #
+  # Options:
+  #   - null (default): No limit - agents can provide unlimited new answers
+  #   - 1, 2, 3, etc.: Cap the number of new answers per agent
+  #
+  # Example: Set to 2 for thorough evaluation but bounded duration
+  max_new_answers_per_agent: 2
+
+  # answer_novelty_requirement controls how different new answers must be from existing ones
+  #
+  # Options:
+  #   - "lenient" (default): No additional checks - current behavior (fastest)
+  #   - "balanced": Reject if >70% token overlap - requires meaningful differences
+  #   - "strict": Reject if >50% token overlap - requires substantially different solutions
+  #
+  # Example: Use "balanced" to prevent agents from just rephrasing the same answer
+  answer_novelty_requirement: "balanced"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

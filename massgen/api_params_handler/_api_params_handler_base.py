@@ -21,6 +21,7 @@ class APIParamsHandlerBase(ABC):
         """
         self.backend = backend_instance
         self.formatter = backend_instance.formatter
+        self.custom_tool_manager = backend_instance.custom_tool_manager
 
     @abstractmethod
     async def build_api_params(

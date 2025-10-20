@@ -82,6 +82,10 @@ source_suffix = {
     ".rst": "restructuredtext",
     ".md": "markdown",
 }
+# Suppress MyST warnings for missing cross-references in markdown files
+suppress_warnings = [
+    "myst.xref_missing",  # Suppress missing cross-reference warnings in MyST
+]
 
 templates_path = ["_templates"]
 exclude_patterns = []

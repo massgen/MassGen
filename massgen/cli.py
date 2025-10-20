@@ -8,30 +8,34 @@ Supports both interactive mode and single-question mode.
 
 Usage examples:
     # Use YAML/JSON configuration file
-    python -m massgen.cli --config config.yaml "What is the capital of France?"
+    massgen --config config.yaml "What is the capital of France?"
 
     # Quick setup with backend and model
-    python -m massgen.cli --backend openai --model gpt-4o-mini "What is 2+2?"
+    massgen --backend openai --model gpt-4o-mini "What is 2+2?"
 
     # Interactive mode
-    python -m massgen.cli --config config.yaml
+    massgen --config config.yaml
+    massgen  # Uses default config if available
 
     # Multiple agents from config
-    python -m massgen.cli --config multi_agent.yaml "Compare different approaches to renewable energy"  # noqa
+    massgen --config multi_agent.yaml "Compare different approaches to renewable energy"
 """
 
 import argparse
 import asyncio
+import copy
 import json
 import os
 import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+import questionary
 import yaml
 from dotenv import load_dotenv
+from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -48,7 +52,7 @@ from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
 from .frontend.coordination_ui import CoordinationUI
-from .logger_config import _DEBUG_MODE, logger, setup_logging
+from .logger_config import _DEBUG_MODE, logger, save_execution_metadata, setup_logging
 from .orchestrator import Orchestrator
 from .utils import get_backend_type_from_model
 
@@ -85,6 +89,22 @@ BRIGHT_RED = "\033[91m"
 BRIGHT_WHITE = "\033[97m"
 RESET = "\033[0m"
 BOLD = "\033[1m"
+
+# Custom questionary style for polished selection interface
+MASSGEN_QUESTIONARY_STYLE = Style(
+    [
+        ("qmark", "fg:#00d7ff bold"),  # Bright cyan question mark
+        ("question", "fg:#ffffff bold"),  # White question text
+        ("answer", "fg:#00d7ff bold"),  # Bright cyan answer
+        ("pointer", "fg:#00d7ff bold"),  # Bright cyan pointer (▸)
+        ("highlighted", "fg:#00d7ff bold"),  # Bright cyan highlighted option
+        ("selected", "fg:#00ff87"),  # Bright green selected
+        ("separator", "fg:#6c6c6c"),  # Gray separators
+        ("instruction", "fg:#808080"),  # Gray instructions
+        ("text", "fg:#ffffff"),  # White text
+        ("disabled", "fg:#6c6c6c italic"),  # Gray disabled
+    ],
+)
 
 
 class ConfigurationError(Exception):
@@ -802,105 +822,94 @@ async def run_question_with_history(
     messages = history.copy()
     messages.append({"role": "user", "content": question})
 
-    # Check if we should use orchestrator for single agents (default: False for backward compatibility)
-    use_orchestrator_for_single = ui_config.get("use_orchestrator_for_single_agent", True)
+    # In multiturn mode with session persistence, ALWAYS use orchestrator for proper final/ directory creation
+    # Single agents in multiturn mode need the orchestrator to create session artifacts (final/, workspace/, etc.)
+    # The orchestrator handles single agents efficiently by skipping unnecessary coordination
 
-    if len(agents) == 1 and not use_orchestrator_for_single:
-        # Single agent mode with history
-        agent = next(iter(agents.values()))
-        print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}", flush=True)
-        print(f"Agent: {agent.agent_id}", flush=True)
-        if history:
-            print(f"History: {len(history)//2} previous exchanges", flush=True)
-        print(f"Question: {question}", flush=True)
-        print("\n" + "=" * 60, flush=True)
+    # Create orchestrator config with timeout settings
+    timeout_config = kwargs.get("timeout_config")
+    orchestrator_config = AgentConfig()
+    if timeout_config:
+        orchestrator_config.timeout_config = timeout_config
 
-        response_content = ""
+    # Get orchestrator parameters from config
+    orchestrator_cfg = kwargs.get("orchestrator", {})
 
-        async for chunk in agent.chat(messages):
-            if chunk.type == "content" and chunk.content:
-                response_content += chunk.content
-                print(chunk.content, end="", flush=True)
-            elif chunk.type == "builtin_tool_results":
-                # Skip builtin_tool_results to avoid duplication with real-time streaming
-                # The backends already show tool status during execution
-                continue
-            elif chunk.type == "error":
-                print(f"\n❌ Error: {chunk.error}", flush=True)
-                return ("", session_info.get("session_id"), session_info.get("current_turn", 0))
+    # Apply voting sensitivity if specified
+    if "voting_sensitivity" in orchestrator_cfg:
+        orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
 
-        print("\n" + "=" * 60, flush=True)
-        # Single agent mode doesn't use session storage
-        return (response_content, session_info.get("session_id"), session_info.get("current_turn", 0))
+    # Apply answer count limit if specified
+    if "max_new_answers_per_agent" in orchestrator_cfg:
+        orchestrator_config.max_new_answers_per_agent = orchestrator_cfg["max_new_answers_per_agent"]
 
+    # Apply answer novelty requirement if specified
+    if "answer_novelty_requirement" in orchestrator_cfg:
+        orchestrator_config.answer_novelty_requirement = orchestrator_cfg["answer_novelty_requirement"]
+
+    # Get context sharing parameters
+    snapshot_storage = orchestrator_cfg.get("snapshot_storage")
+    agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
+    session_storage = orchestrator_cfg.get("session_storage", "sessions")  # Default to "sessions"
+
+    # Get debug/test parameters
+    if orchestrator_cfg.get("skip_coordination_rounds", False):
+        orchestrator_config.skip_coordination_rounds = True
+
+    # Load previous turns from session storage for multi-turn conversations
+    previous_turns = load_previous_turns(session_info, session_storage)
+
+    orchestrator = Orchestrator(
+        agents=agents,
+        config=orchestrator_config,
+        snapshot_storage=snapshot_storage,
+        agent_temporary_workspace=agent_temporary_workspace,
+        previous_turns=previous_turns,
+    )
+    # Create a fresh UI instance for each question to ensure clean state
+    ui = CoordinationUI(
+        display_type=ui_config.get("display_type", "rich_terminal"),
+        logging_enabled=ui_config.get("logging_enabled", True),
+        enable_final_presentation=True,  # Required for multi-turn: ensures final answer is saved
+    )
+
+    # Determine display mode text
+    if len(agents) == 1:
+        mode_text = "Single Agent (Orchestrator)"
     else:
-        # Multi-agent mode with history
-        # Create orchestrator config with timeout settings
-        timeout_config = kwargs.get("timeout_config")
-        orchestrator_config = AgentConfig()
-        if timeout_config:
-            orchestrator_config.timeout_config = timeout_config
+        mode_text = "Multi-Agent"
 
-        # Get orchestrator parameters from config
-        orchestrator_cfg = kwargs.get("orchestrator", {})
+    print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
+    print(f"Agents: {', '.join(agents.keys())}", flush=True)
+    if history:
+        print(f"History: {len(history)//2} previous exchanges", flush=True)
+    print(f"Question: {question}", flush=True)
+    print("\n" + "=" * 60, flush=True)
 
-        # Get context sharing parameters
-        snapshot_storage = orchestrator_cfg.get("snapshot_storage")
-        agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
-        session_storage = orchestrator_cfg.get("session_storage", "sessions")  # Default to "sessions"
+    # For multi-agent with history, we need to use a different approach
+    # that maintains coordination UI display while supporting conversation context
 
-        # Get debug/test parameters
-        if orchestrator_cfg.get("skip_coordination_rounds", False):
-            orchestrator_config.skip_coordination_rounds = True
+    if history and len(history) > 0:
+        # Use coordination UI with conversation context
+        # Extract current question from messages
+        current_question = messages[-1].get("content", question) if messages else question
 
-        # Load previous turns from session storage for multi-turn conversations
-        previous_turns = load_previous_turns(session_info, session_storage)
+        # Pass the full message context to the UI coordination
+        response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
+    else:
+        # Standard coordination for new conversations
+        response_content = await ui.coordinate(orchestrator, question)
 
-        orchestrator = Orchestrator(
-            agents=agents,
-            config=orchestrator_config,
-            snapshot_storage=snapshot_storage,
-            agent_temporary_workspace=agent_temporary_workspace,
-            previous_turns=previous_turns,
-        )
-        # Create a fresh UI instance for each question to ensure clean state
-        ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "rich_terminal"),
-            logging_enabled=ui_config.get("logging_enabled", True),
-            enable_final_presentation=True,  # Required for multi-turn: ensures final answer is saved
-        )
+    # Handle session persistence if applicable
+    session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
+        orchestrator,
+        question,
+        session_info,
+        session_storage,
+    )
 
-        print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
-        print(f"Agents: {', '.join(agents.keys())}", flush=True)
-        if history:
-            print(f"History: {len(history)//2} previous exchanges", flush=True)
-        print(f"Question: {question}", flush=True)
-        print("\n" + "=" * 60, flush=True)
-
-        # For multi-agent with history, we need to use a different approach
-        # that maintains coordination UI display while supporting conversation context
-
-        if history and len(history) > 0:
-            # Use coordination UI with conversation context
-            # Extract current question from messages
-            current_question = messages[-1].get("content", question) if messages else question
-
-            # Pass the full message context to the UI coordination
-            response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
-        else:
-            # Standard coordination for new conversations
-            response_content = await ui.coordinate(orchestrator, question)
-
-        # Handle session persistence if applicable
-        session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
-            orchestrator,
-            question,
-            session_info,
-            session_storage,
-        )
-
-        # Return normalized response so conversation history has correct paths
-        return (normalized_response or response_content, session_id_to_use, updated_turn)
+    # Return normalized response so conversation history has correct paths
+    return (normalized_response or response_content, session_id_to_use, updated_turn)
 
 
 async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs) -> str:
@@ -944,6 +953,18 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
 
         # Get orchestrator parameters from config
         orchestrator_cfg = kwargs.get("orchestrator", {})
+
+        # Apply voting sensitivity if specified
+        if "voting_sensitivity" in orchestrator_cfg:
+            orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
+
+        # Apply answer count limit if specified
+        if "max_new_answers_per_agent" in orchestrator_cfg:
+            orchestrator_config.max_new_answers_per_agent = orchestrator_cfg["max_new_answers_per_agent"]
+
+        # Apply answer novelty requirement if specified
+        if "answer_novelty_requirement" in orchestrator_cfg:
+            orchestrator_config.answer_novelty_requirement = orchestrator_cfg["answer_novelty_requirement"]
 
         # Get context sharing parameters
         snapshot_storage = orchestrator_cfg.get("snapshot_storage")
@@ -1217,6 +1238,405 @@ def print_example_config(name: str):
     except Exception as e:
         print(f"Error printing example config: {e}", file=sys.stderr)
         sys.exit(1)
+
+
+def discover_available_configs() -> Dict[str, List[Tuple[str, Path]]]:
+    """Discover all available configuration files.
+
+    Returns:
+        Dict with categories as keys and list of (display_name, path) tuples as values
+    """
+    configs = {
+        "User Configs": [],
+        "Project Configs": [],
+        "Current Directory": [],
+        "Package Examples": [],
+    }
+
+    # 1. User configs (~/.config/massgen/agents/)
+    user_agents_dir = Path.home() / ".config/massgen/agents"
+    if user_agents_dir.exists():
+        for config_file in sorted(user_agents_dir.glob("*.yaml")):
+            display_name = config_file.stem
+            configs["User Configs"].append((display_name, config_file))
+
+    # 2. Project configs (.massgen/)
+    project_config_dir = Path.cwd() / ".massgen"
+    if project_config_dir.exists():
+        for config_file in sorted(project_config_dir.glob("*.yaml")):
+            display_name = f".massgen/{config_file.name}"
+            configs["Project Configs"].append((display_name, config_file))
+
+    # 3. Current directory (*.yaml files, excluding .massgen/ and non-massgen configs)
+    # Filter out common non-massgen YAML files
+    exclude_patterns = {
+        ".pre-commit-config.yaml",
+        ".readthedocs.yaml",
+        ".github",
+        "docker-compose",
+        "ansible",
+        "kubernetes",
+    }
+
+    for config_file in sorted(Path.cwd().glob("*.yaml")):
+        # Skip if inside .massgen/ (already covered)
+        if ".massgen" in str(config_file):
+            continue
+
+        # Skip common non-massgen config files
+        file_name = config_file.name.lower()
+        if any(pattern in file_name for pattern in exclude_patterns):
+            continue
+
+        display_name = config_file.name
+        configs["Current Directory"].append((display_name, config_file))
+
+    # 4. Package examples (massgen/configs/)
+    try:
+        from importlib.resources import files
+
+        configs_root = files("massgen") / "configs"
+
+        # Organize by subdirectory
+        for config_file in sorted(configs_root.rglob("*.yaml")):
+            # Get relative path from configs root
+            rel_path = str(config_file).replace(str(configs_root) + "/", "")
+            # Skip README and docs
+            if "README" in rel_path or "BACKEND_CONFIGURATION" in rel_path:
+                continue
+            # Use relative path as display name
+            display_name = rel_path.replace(".yaml", "")
+            configs["Package Examples"].append((display_name, Path(str(config_file))))
+
+    except Exception as e:
+        logger.warning(f"Could not load package examples: {e}")
+
+    # Remove empty categories
+    configs = {k: v for k, v in configs.items() if v}
+
+    return configs
+
+
+def interactive_config_selector() -> Optional[str]:
+    """Interactively select a configuration file.
+
+    Shows user/project/current directory configs directly in a flat list.
+    Package examples are shown hierarchically (category → config).
+
+    Returns:
+        Path to selected config file, or None if cancelled
+    """
+    # Create console instance for rich output
+    selector_console = Console()
+
+    # Discover all available configs
+    configs = discover_available_configs()
+
+    if not configs:
+        selector_console.print(
+            "\n[yellow]⚠️  No configurations found![/yellow]",
+        )
+        selector_console.print("[dim]Create one with: massgen --init[/dim]\n")
+        return None
+
+    # Create a summary table showing what's available
+    summary_table = Table(
+        show_header=True,
+        header_style="bold bright_white",
+        border_style="bright_black",
+        box=None,
+        padding=(0, 1),
+        width=88,
+    )
+    summary_table.add_column("Category", style="bright_cyan", no_wrap=True, width=25)
+    summary_table.add_column("Count", justify="center", style="bright_yellow", width=10)
+    summary_table.add_column("Location", style="dim")
+
+    # Build summary and choices
+    choices = []
+
+    # Build summary table (overview only - no duplication)
+    # User configs
+    if "User Configs" in configs and configs["User Configs"]:
+        summary_table.add_row(
+            "👤 Your Configs",
+            str(len(configs["User Configs"])),
+            "~/.config/massgen/agents/",
+        )
+        choices.append(questionary.Separator("\n─────────────────────────────────"))
+        for display_name, path in configs["User Configs"]:
+            choices.append(
+                questionary.Choice(
+                    title=f"  👤  {display_name}",
+                    value=str(path),
+                ),
+            )
+
+    # Project configs
+    if "Project Configs" in configs and configs["Project Configs"]:
+        summary_table.add_row(
+            "📁 Project Configs",
+            str(len(configs["Project Configs"])),
+            ".massgen/",
+        )
+        if choices:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        else:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        for display_name, path in configs["Project Configs"]:
+            choices.append(
+                questionary.Choice(
+                    title=f"  📁  {display_name}",
+                    value=str(path),
+                ),
+            )
+
+    # Current directory configs
+    if "Current Directory" in configs and configs["Current Directory"]:
+        summary_table.add_row(
+            "📂 Current Directory",
+            str(len(configs["Current Directory"])),
+            f"*.yaml in {Path.cwd().name}/",
+        )
+        if choices:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        else:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        for display_name, path in configs["Current Directory"]:
+            choices.append(
+                questionary.Choice(
+                    title=f"  📂  {display_name}",
+                    value=str(path),
+                ),
+            )
+
+    # Package examples
+    if "Package Examples" in configs and configs["Package Examples"]:
+        summary_table.add_row(
+            "📦 Package Examples",
+            str(len(configs["Package Examples"])),
+            "Built-in examples (hierarchical browser)",
+        )
+        if choices:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        choices.append(
+            questionary.Choice(
+                title=f"  📦  Browse {len(configs['Package Examples'])} example configs  →",
+                value="__browse_examples__",
+            ),
+        )
+
+    # Display summary table in a panel
+    selector_console.print()
+    selector_console.print(
+        Panel(
+            summary_table,
+            title="[bold bright_cyan]🚀 Select a Configuration[/bold bright_cyan]",
+            border_style="bright_cyan",
+            padding=(0, 1),
+            width=90,
+        ),
+    )
+
+    # Add cancel option
+    choices.append(questionary.Separator("\n─────────────────────────────────"))
+    choices.append(questionary.Choice(title="  ❌  Cancel", value="__cancel__"))
+
+    # Show the selector
+    selector_console.print()
+    selected = questionary.select(
+        "Select a configuration:",
+        choices=choices,
+        use_shortcuts=True,
+        use_arrow_keys=True,
+        style=MASSGEN_QUESTIONARY_STYLE,
+        pointer="▸",
+    ).ask()
+
+    if selected is None or selected == "__cancel__":
+        selector_console.print("\n[yellow]⚠️  Selection cancelled[/yellow]\n")
+        return None
+
+    # If user wants to browse package examples, show hierarchical navigation
+    if selected == "__browse_examples__":
+        return _select_package_example(configs["Package Examples"], selector_console)
+
+    # Otherwise, return the selected config path
+    selector_console.print(f"\n[bold green]✓ Selected:[/bold green] [cyan]{selected}[/cyan]\n")
+    return selected
+
+
+def _select_package_example(examples: List[Tuple[str, Path]], console: Console) -> Optional[str]:
+    """Show hierarchical navigation for package examples.
+
+    Args:
+        examples: List of (display_name, path) tuples
+        console: Rich console for output
+
+    Returns:
+        Path to selected config, or None if cancelled/back
+    """
+    # Organize examples by category (first directory in path)
+    categories = {}
+    for display_name, path in examples:
+        # Extract category from display name (e.g., "basic/multi/config" -> "basic")
+        parts = display_name.split("/")
+        category = parts[0] if len(parts) > 1 else "other"
+
+        if category not in categories:
+            categories[category] = []
+        categories[category].append((display_name, path))
+
+    # Emoji mapping for categories
+    category_emojis = {
+        "basic": "🎯",
+        "tools": "🛠️",
+        "providers": "🌐",
+        "configs": "⚙️",
+        "other": "📋",
+    }
+
+    # Create category summary table
+    category_table = Table(
+        show_header=True,
+        header_style="bold bright_white",
+        border_style="bright_black",
+        box=None,
+        padding=(0, 1),
+        width=88,
+    )
+    category_table.add_column("Category", style="bright_cyan", no_wrap=True, width=20)
+    category_table.add_column("Count", justify="center", style="bright_yellow", width=10)
+    category_table.add_column("Description", style="dim")
+
+    # Category descriptions
+    category_descriptions = {
+        "basic": "Simple configurations for getting started",
+        "tools": "Configs demonstrating tool integrations",
+        "providers": "Provider-specific example configs",
+        "configs": "Advanced configuration examples",
+        "other": "Miscellaneous configurations",
+    }
+
+    # Build category table and choices
+    category_choices = []
+    for category in sorted(categories.keys()):
+        count = len(categories[category])
+        emoji = category_emojis.get(category, "📁")
+        description = category_descriptions.get(category, "Example configurations")
+
+        category_table.add_row(
+            f"{emoji} {category.title()}",
+            str(count),
+            description,
+        )
+
+        category_choices.append(
+            questionary.Choice(
+                title=f"  {emoji}  {category.title()}  ({count} config{'s' if count != 1 else ''})",
+                value=category,
+            ),
+        )
+
+    # Display category summary in a panel
+    console.print()
+    console.print(
+        Panel(
+            category_table,
+            title="[bold bright_yellow]📦 Package Examples - Select Category[/bold bright_yellow]",
+            border_style="bright_yellow",
+            padding=(0, 1),
+            width=90,
+        ),
+    )
+
+    # Add back option
+    category_choices.append(questionary.Separator("\n─────────────────────────────────"))
+    category_choices.append(questionary.Choice(title="  ← Back to main menu", value="__back__"))
+
+    # Step 1: Select category
+    console.print()
+    selected_category = questionary.select(
+        "Select a category:",
+        choices=category_choices,
+        use_shortcuts=True,
+        use_arrow_keys=True,
+        style=MASSGEN_QUESTIONARY_STYLE,
+        pointer="▸",
+    ).ask()
+
+    if selected_category is None or selected_category == "__cancel__":
+        console.print("\n[yellow]⚠️  Selection cancelled[/yellow]\n")
+        return None
+
+    if selected_category == "__back__":
+        # Go back to main selector
+        return interactive_config_selector()
+
+    # Create configs table
+    emoji = category_emojis.get(selected_category, "📁")
+    configs_table = Table(
+        show_header=True,
+        header_style="bold bright_white",
+        border_style="bright_black",
+        box=None,
+        padding=(0, 1),
+        width=88,
+    )
+    configs_table.add_column("#", style="dim", width=5, justify="right")
+    configs_table.add_column("Configuration", style="bright_cyan")
+
+    # Build config choices and table
+    config_choices = []
+    for idx, (display_name, path) in enumerate(sorted(categories[selected_category]), 1):
+        # Show relative path within category
+        short_name = display_name.replace(f"{selected_category}/", "")
+        configs_table.add_row(str(idx), short_name)
+        config_choices.append(
+            questionary.Choice(
+                title=f"  {idx:2d}. {short_name}",
+                value=str(path),
+            ),
+        )
+
+    # Display configs in a panel
+    console.print()
+    console.print(
+        Panel(
+            configs_table,
+            title=f"[bold bright_green]{emoji} {selected_category.title()} Configurations[/bold bright_green]",
+            border_style="bright_green",
+            padding=(0, 1),
+            width=90,
+        ),
+    )
+
+    # Add back option
+    config_choices.append(questionary.Separator("\n─────────────────────────────────"))
+    config_choices.append(questionary.Choice(title="  ← Back to categories", value="__back__"))
+
+    # Step 2: Select config
+    console.print()
+    selected_config = questionary.select(
+        "Select a configuration:",
+        choices=config_choices,
+        use_shortcuts=True,
+        use_arrow_keys=True,
+        style=MASSGEN_QUESTIONARY_STYLE,
+        pointer="▸",
+    ).ask()
+
+    if selected_config is None or selected_config == "__cancel__":
+        console.print("\n[yellow]⚠️  Selection cancelled[/yellow]\n")
+        return None
+
+    if selected_config == "__back__":
+        # Recursively call to go back to category selection
+        return _select_package_example(examples, console)
+
+    # Return the selected config path
+    console.print(f"\n[bold green]✓ Selected:[/bold green] [cyan]{selected_config}[/cyan]\n")
+    return selected_config
 
 
 def should_run_builder() -> bool:
@@ -1511,6 +1931,14 @@ async def run_interactive_mode(
                 setup_logging(debug=_DEBUG_MODE, turn=next_turn)
                 logger.info(f"Starting turn {next_turn}")
 
+                # Save execution metadata for this turn (original_config already has pre-relocation paths)
+                save_execution_metadata(
+                    query=question,
+                    config_path=config_path,
+                    config_content=original_config,  # This is the pre-relocation config passed from main()
+                    cli_args={"mode": "interactive", "turn": next_turn, "session_id": session_id},
+                )
+
                 # Pass session state for multi-turn filesystem support
                 session_info = {
                     "session_id": session_id,
@@ -1612,6 +2040,9 @@ async def main(args):
                 logger.debug(f"Created simple config with backend: {backend}, model: {model}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
 
+        # Save original config before relocation (for execution_metadata.yaml)
+        original_config_for_metadata = copy.deepcopy(config)
+
         # Validate that all context paths exist before proceeding
         validate_context_paths(config)
 
@@ -1695,6 +2126,16 @@ async def main(args):
         if "orchestrator" in config:
             kwargs["orchestrator"] = config["orchestrator"]
 
+        # Save execution metadata for debugging and reconstruction
+        if args.question:
+            # For single question mode, save metadata now (use original config before .massgen/ relocation)
+            save_execution_metadata(
+                query=args.question,
+                config_path=str(resolved_path) if args.config and "resolved_path" in locals() else None,
+                config_content=original_config_for_metadata,
+                cli_args=vars(args),
+            )
+
         # Run mode based on whether question was provided
         try:
             if args.question:
@@ -1734,23 +2175,27 @@ def cli_main():
         epilog="""
 Examples:
   # Use configuration file
-  python -m massgen.cli --config config.yaml "What is machine learning?"
+  massgen --config config.yaml "What is machine learning?"
 
   # Quick single agent setup
-  python -m massgen.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
-  python -m massgen.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
+  massgen --backend openai --model gpt-4o-mini "Explain quantum computing"
+  massgen --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
 
   # Use ChatCompletion backend with custom base URL
-  python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
+  massgen --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
 
   # Interactive mode
-  python -m massgen.cli --config config.yaml
+  massgen --config config.yaml
+  massgen  # Uses default config if available
 
   # Timeout control examples
-  python -m massgen.cli --config config.yaml --orchestrator-timeout 600 "Complex task"
+  massgen --config config.yaml --orchestrator-timeout 600 "Complex task"
 
-  # Create sample configurations
-  python -m massgen.cli --create-samples
+  # Configuration management
+  massgen --init          # Create new configuration interactively
+  massgen --select        # Choose from available configurations
+  massgen --setup         # Set up API keys
+  massgen --list-examples # View example configurations
 
 Environment Variables:
     OPENAI_API_KEY      - Required for OpenAI backend
@@ -1782,6 +2227,11 @@ Environment Variables:
     # Configuration options
     config_group = parser.add_mutually_exclusive_group()
     config_group.add_argument("--config", type=str, help="Path to YAML/JSON configuration file or @examples/NAME")
+    config_group.add_argument(
+        "--select",
+        action="store_true",
+        help="Interactively select from available configurations",
+    )
     config_group.add_argument(
         "--backend",
         type=str,
@@ -1825,7 +2275,7 @@ Environment Variables:
         help="Launch interactive configuration builder to create config file",
     )
     parser.add_argument(
-        "--setup-keys",
+        "--setup",
         action="store_true",
         help="Launch interactive API key setup wizard to configure credentials",
     )
@@ -1888,7 +2338,7 @@ Environment Variables:
         return
 
     # Launch interactive API key setup if requested
-    if args.setup_keys:
+    if args.setup:
         from .config_builder import ConfigBuilder
 
         builder = ConfigBuilder()
@@ -1899,8 +2349,19 @@ Environment Variables:
             print(f"{BRIGHT_CYAN}💡 You can now use MassGen with these providers{RESET}\n")
         else:
             print(f"\n{BRIGHT_YELLOW}⚠️  No API keys configured{RESET}")
-            print(f"{BRIGHT_CYAN}💡 You can run 'massgen --setup-keys' anytime to set them up{RESET}\n")
+            print(f"{BRIGHT_CYAN}💡 You can run 'massgen --setup' anytime to set them up{RESET}\n")
         return
+
+    # Launch interactive config selector if requested
+    if args.select:
+        selected_config = interactive_config_selector()
+        if selected_config:
+            # Update args to use the selected config
+            args.config = selected_config
+            # Continue to main() with the selected config
+        else:
+            # User cancelled selection
+            return
 
     # Launch interactive config builder if requested
     if args.init:
@@ -1918,7 +2379,7 @@ Environment Variables:
             elif filepath:
                 # Config created but user chose not to run
                 print(f"\n✅ Configuration saved to: {filepath}")
-                print(f'Run with: python -m massgen.cli --config {filepath} "Your question"')
+                print(f'Run with: massgen --config {filepath} "Your question"')
                 return
             else:
                 # User cancelled

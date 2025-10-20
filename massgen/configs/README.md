@@ -236,7 +236,7 @@ Most configurations use environment variables for API keys:
 - Simplified command syntax: `massgen "question"` replaces `uv run python -m massgen.cli`
 - Built-in examples: `@examples/` prefix for instant access (e.g., `@examples/basic/multi/three_agents_default`)
 - Interactive Setup Wizard: Step-by-step first-run with smart defaults (API keys, use case, model)
-- Documentation site at [massgen.readthedocs.io](https://massgen.readthedocs.io)
+- Documentation site at [docs.massgen.io](https://docs.massgen.io/en/latest/)
 - Backward compatibility: Existing git/`uv run` workflows still work
 
 **Try it:**

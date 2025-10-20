@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="MassGen Logo" width="360" />
+  <img src="https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/logo.png" alt="MassGen Logo" width="360" />
 </p>
 
 <p align="center">
@@ -8,6 +8,9 @@
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
+  </a>
+  <a href="https://docs.massgen.io">
+    <img src="https://img.shields.io/badge/docs-massgen.ai-blue.svg" alt="Documentation" style="margin-right: 5px;">
   </a>
   <a href="https://discord.massgen.ai">
     <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Join our Discord">
@@ -22,7 +25,7 @@
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
-    <img src="assets/massgen-demo.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
+    <img src="https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/massgen-demo.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
 </p>
 
@@ -135,7 +138,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 **What's New in v0.1.0:**
 - **📦 PyPI Package** - Official pip installation: `pip install massgen`
-- **📖 Comprehensive Documentation** - Full Sphinx docs at [massgen.readthedocs.io](https://massgen.readthedocs.io)
+- **📖 Comprehensive Documentation** - Full Sphinx docs at [MassGen Official Documentation](https://docs.massgen.io/)
 - **🎯 Interactive Setup Wizard** - Guided configuration for first-time users
 - **🚀 Simplified Commands** - Clean `massgen` CLI with `@examples/` prefix for built-in configs
 
@@ -199,7 +202,7 @@ This collaborative approach ensures that the final output leverages collective i
 
 ---
 
-> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[massgen.readthedocs.io](https://massgen.readthedocs.io)**
+> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[MassGen Official Documentation](https://docs.massgen.io/)**
 
 ---
 
@@ -238,7 +241,7 @@ massgen "Your question here"
 massgen --config @examples/basic/multi/three_agents_default "Your question"
 ```
 
-→ See [Installation Guide](https://massgen.readthedocs.io/en/latest/quickstart/installation.html) for complete setup instructions.
+→ See [Installation Guide](https://docs.massgen.io/en/latest/quickstart/installation.html) for complete setup instructions.
 
 **Method 2: Development Installation** (for contributors):
 
@@ -328,11 +331,11 @@ OPENROUTER_API_KEY=...
 
 MassGen automatically loads API keys from `.env` in your current directory.
 
-→ **Complete setup guide with all providers:** See [API Key Configuration](https://massgen.readthedocs.io/en/latest/quickstart/installation.html#api-key-configuration) in the docs
+→ **Complete setup guide with all providers:** See [API Key Configuration](https://docs.massgen.io/en/latest/quickstart/installation.html#api-key-configuration) in the docs
 
 **Get API keys:**
  - [OpenAI](https://platform.openai.com/api-keys) | [Claude](https://docs.anthropic.com/en/api/overview) | [Gemini](https://ai.google.dev/gemini-api/docs) | [Grok](https://docs.x.ai/docs/overview)
- - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/) | [Cerebras](https://inference-docs.cerebras.ai/introduction) | [More providers...](https://massgen.readthedocs.io/en/latest/reference/supported_models.html)
+ - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/) | [Cerebras](https://inference-docs.cerebras.ai/introduction) | [More providers...](https://docs.massgen.io/en/latest/reference/supported_models.html)
 
 ### 3. 🧩 Supported Models and Tools
 
@@ -363,7 +366,7 @@ The system currently supports multiple model providers with advanced capabilitie
   - Zero-cost usage reporting
   - Support for LLaMA, Mistral, Qwen and other open-weight models
 
-→ For complete model list and configuration details, see [Supported Models](https://massgen.readthedocs.io/en/latest/reference/supported_models.html)
+→ For complete model list and configuration details, see [Supported Models](https://docs.massgen.io/en/latest/reference/supported_models.html)
 
 #### Tools
 
@@ -383,13 +386,13 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
 
-→ For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://massgen.readthedocs.io/en/latest/user_guide/backends.html)
+→ For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://docs.massgen.io/en/latest/user_guide/backends.html)
 
 ---
 
 ### 4. 🏃 Run MassGen
 
-> **Complete Usage Guide:** For all usage modes, advanced features, and interactive multi-turn sessions, see [Running MassGen](https://massgen.readthedocs.io/en/latest/quickstart/running-massgen.html)
+> **Complete Usage Guide:** For all usage modes, advanced features, and interactive multi-turn sessions, see [Running MassGen](https://docs.massgen.io/en/latest/quickstart/running-massgen.html)
 
 #### 🚀 Getting Started
 
@@ -553,7 +556,7 @@ agents:
 
 → [View more MCP examples](massgen/configs/tools/mcp/)
 
-→ For comprehensive MCP integration guide, see [MCP Integration](https://massgen.readthedocs.io/en/latest/user_guide/mcp_integration.html)
+→ For comprehensive MCP integration guide, see [MCP Integration](https://docs.massgen.io/en/latest/user_guide/mcp_integration.html)
 
 #### **4. File System Operations & Workspace Management**
 
@@ -632,7 +635,7 @@ orchestrator:
 >
 > The agents will execute file operations without additional confirmation once permissions are granted.
 
-→ For comprehensive file operations guide, see [File Operations](https://massgen.readthedocs.io/en/latest/user_guide/file_operations.html)
+→ For comprehensive file operations guide, see [File Operations](https://docs.massgen.io/en/latest/user_guide/file_operations.html)
 
 #### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
@@ -760,7 +763,7 @@ agents:
 
 → [Learn more about project integration](massgen/mcp_tools/permissions_and_context_files.md)
 
-→ For comprehensive project integration guide, see [Project Integration](https://massgen.readthedocs.io/en/latest/user_guide/project_integration.html)
+→ For comprehensive project integration guide, see [Project Integration](https://docs.massgen.io/en/latest/user_guide/project_integration.html)
 
 **Security Considerations:**
 - **Agent ID Safety**: Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
@@ -970,14 +973,14 @@ All sessions are automatically logged with detailed information for debugging an
 - **Agent Outputs** (`agent_outputs/`): Complete output history and final presentations from all agents
 - **Debug Log** (`massgen.log`): Complete system operations, API calls, tool usage, and error traces (use `--debug` for verbose logging)
 
-→ For comprehensive logging guide and debugging techniques, see [Logging & Debugging](https://massgen.readthedocs.io/en/latest/user_guide/logging.html)
+→ For comprehensive logging guide and debugging techniques, see [Logging & Debugging](https://docs.massgen.io/en/latest/user_guide/logging.html)
 
 ## 💡 Case Studies
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
 - [**MassGen Case Studies**](docs/case_studies/README.md)
-- [**Case Studies Documentation**](https://massgen.readthedocs.io/en/latest/examples/case_studies.html) - Browse case studies online
+- [**Case Studies Documentation**](https://docs.massgen.io/en/latest/examples/case_studies.html) - Browse case studies online
 
 ---
 
@@ -998,7 +1001,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Global Access**: Run `massgen` command from any directory after pip install
 
 #### Comprehensive Documentation
-- **Sphinx Documentation**: Full documentation site at [massgen.readthedocs.io](https://massgen.readthedocs.io)
+- **Sphinx Documentation**: Full documentation site at [MassGen Official Documentation](https://docs.massgen.io/en/latest/)
 - **Complete User Guide**: Installation, configuration, usage modes, and API reference
 - **Case Studies**: Real-world examples with session logs and outcomes
 - **Structured Navigation**: Getting Started, User Guide, Reference, Examples, and Development sections

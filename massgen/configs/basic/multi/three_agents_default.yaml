@@ -1,6 +1,6 @@
 # MassGen Three Agent Configuration
 # Gemini-2.5-flash, GPT-5-nano, and Grok-3-mini with builtin tools enabled
-
+# uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "What is 2+2?"
 agents:
   - id: "gemini2.5flash"
     backend:
