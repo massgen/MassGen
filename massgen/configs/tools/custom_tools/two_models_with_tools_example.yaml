@@ -1,0 +1,43 @@
+# MassGen Configuration: Two Models with Custom Tools
+# Usage:
+#   massgen --config massgen/configs/custom_tools/two_models_with_tools_example.yaml "whats the sum of 123 and 456, and also 789 and 012?"
+agents:
+  - id: "claude_agent_with_tools" # Anthropic Claude Agent
+    backend:
+      type: "claude"
+      model: "claude-sonnet-4-20250514"
+      custom_tools:
+        - name: "two_num_tool"
+          category: "math"
+          path: "massgen/tool/_basic/_two_num_tool.py"
+          function: "two_num_tool"
+    system_message: |
+      You are Claude, an AI assistant with access to custom math calculation tools.
+
+      The two_num_tool is available as a custom tool that can add two numbers together.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about adding two numbers together, use the two_num_tool to calculate the sum and provide
+      a clear, accurate result.
+
+  - id: "gemini_agent_with_tools" # Google Gemini Agent
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      custom_tools:
+        - name: ["two_num_tool"]
+          category: "math"
+          path: "massgen/tool/_basic/_two_num_tool.py"
+          function: ["two_num_tool"]
+    system_message: |
+      You are Gemini, an AI assistant with access to custom math calculation tools.
+
+      The two_num_tool is available as a custom tool that can add two numbers together.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about adding two numbers together, use the two_num_tool to calculate the sum and provide
+      a clear, accurate result.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
