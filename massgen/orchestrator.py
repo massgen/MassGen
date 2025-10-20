@@ -260,6 +260,20 @@ class Orchestrator(ChatAgent):
             if conversation_context and conversation_context.get("conversation_history"):
                 self._clear_agent_workspaces()
 
+            # Analyze question for irreversibility and set planning mode accordingly
+            # This happens silently - users don't see this analysis
+            has_irreversible = await self._analyze_question_irreversibility(user_message, conversation_context)
+            
+            # Set planning mode for all agents based on analysis
+            for agent_id, agent in self.agents.items():
+                if hasattr(agent.backend, 'set_planning_mode'):
+                    agent.backend.set_planning_mode(has_irreversible)
+                    log_orchestrator_activity(
+                        self.orchestrator_id,
+                        f"Set planning mode for {agent_id}",
+                        {"planning_mode_enabled": has_irreversible, "reason": "irreversibility analysis"}
+                    )
+
             async for chunk in self._coordinate_agents_with_timeout(conversation_context):
                 yield chunk
 
@@ -327,6 +341,132 @@ class Orchestrator(ChatAgent):
         log_session_dir = get_log_session_dir()
         if log_session_dir:
             self.coordination_tracker.save_coordination_logs(log_session_dir)
+
+    async def _analyze_question_irreversibility(self, user_question: str, conversation_context: Dict[str, Any]) -> bool:
+        """
+        Analyze if the user's question involves MCP tools with irreversible outcomes.
+        
+        This method randomly selects an available agent to analyze whether executing
+        the user's question would involve MCP tool operations with irreversible outcomes
+        (e.g., sending Discord messages, posting tweets, deleting files) vs reversible
+        read operations (e.g., reading Discord messages, searching tweets, listing files).
+        
+        Args:
+            user_question: The user's question/request
+            conversation_context: Full conversation context including history
+            
+        Returns:
+            bool: True if the question involves irreversible MCP operations, False otherwise
+        """
+        import random
+        
+        print("="*80, flush=True)
+        print("🔍 [INTELLIGENT PLANNING MODE] Analyzing question for irreversibility...", flush=True)
+        print(f"📝 Question: {user_question[:100]}{'...' if len(user_question) > 100 else ''}", flush=True)
+        print("="*80, flush=True)
+        
+        # Select a random agent for analysis
+        available_agents = [aid for aid, agent in self.agents.items() if agent.backend is not None]
+        if not available_agents:
+            # No agents available, default to safe mode (planning enabled)
+            log_orchestrator_activity(
+                self.orchestrator_id,
+                "No agents available for irreversibility analysis, defaulting to planning mode",
+                {}
+            )
+            return True
+            
+        analyzer_agent_id = random.choice(available_agents)
+        analyzer_agent = self.agents[analyzer_agent_id]
+        
+        print(f"🤖 Selected analyzer agent: {analyzer_agent_id}", flush=True)
+        
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            "Analyzing question irreversibility",
+            {
+                "analyzer_agent": analyzer_agent_id,
+                "question_preview": user_question[:100] + "..." if len(user_question) > 100 else user_question
+            }
+        )
+        
+        # Build analysis prompt
+        analysis_prompt = f"""You are analyzing whether a user's request involves operations with irreversible outcomes.
+
+USER REQUEST:
+{user_question}
+
+CONTEXT:
+Your task is to determine if executing this request would involve MCP (Model Context Protocol) tools that have irreversible outcomes.
+
+IRREVERSIBLE OPERATIONS (answer YES):
+- Sending messages (Discord, Slack, Twitter, etc.)
+- Posting content publicly
+- Deleting files or data
+- Modifying external systems
+- Creating permanent records
+- Executing commands that change state
+
+REVERSIBLE OPERATIONS (answer NO):
+- Reading messages or data
+- Searching or querying information
+- Listing files or resources
+- Fetching data from APIs
+- Viewing channel information
+- Any read-only operation
+
+Respond with ONLY one word:
+- "YES" if the request involves irreversible operations
+- "NO" if the request only involves reversible/read-only operations
+
+Your answer:"""
+
+        # Create messages for the analyzer
+        analysis_messages = [
+            {"role": "user", "content": analysis_prompt}
+        ]
+        
+        try:
+            # Stream response from analyzer agent (but don't show to user)
+            response_text = ""
+            async for chunk in analyzer_agent.backend.stream_with_tools(
+                messages=analysis_messages,
+                tools=[],  # No tools needed for simple analysis
+                agent_id=analyzer_agent_id
+            ):
+                if chunk.type == "content" and chunk.content:
+                    response_text += chunk.content
+            
+            # Parse response
+            response_clean = response_text.strip().upper()
+            has_irreversible = "YES" in response_clean
+            
+            log_orchestrator_activity(
+                self.orchestrator_id,
+                "Irreversibility analysis complete",
+                {
+                    "analyzer_agent": analyzer_agent_id,
+                    "response": response_clean[:50],
+                    "has_irreversible": has_irreversible
+                }
+            )
+            
+            print("="*80, flush=True)
+            print(f"✅ [ANALYSIS COMPLETE] Irreversible operations detected: {has_irreversible}", flush=True)
+            print(f"🎯 Planning mode will be: {'ENABLED' if has_irreversible else 'DISABLED'}", flush=True)
+            print("="*80, flush=True)
+            
+            return has_irreversible
+
+            
+        except Exception as e:
+            # On error, default to safe mode (planning enabled)
+            log_orchestrator_activity(
+                self.orchestrator_id,
+                "Irreversibility analysis failed, defaulting to planning mode",
+                {"error": str(e)}
+            )
+            return True
 
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute coordination with orchestrator-level timeout protection."""
@@ -1283,17 +1423,25 @@ class Orchestrator(ChatAgent):
                 logger.info(f"[Orchestrator] Agent {agent_id} sees no existing answers")
 
             # Check if planning mode is enabled for coordination phase
+            # Use the ACTUAL backend planning mode status (set by intelligent analysis)
+            # instead of the static config setting
             is_coordination_phase = self.workflow_phase == "coordinating"
-            planning_mode_enabled = (
-                self.config.coordination_config and self.config.coordination_config.enable_planning_mode and is_coordination_phase
-                if self.config and hasattr(self.config, "coordination_config")
-                else False
-            )
+            planning_mode_enabled = agent.backend.is_planning_mode_enabled() if is_coordination_phase else False
+            
+            print(f"🔧 [{agent_id}] Planning mode check: is_planning_mode_enabled() = {planning_mode_enabled}", flush=True)
 
             # Add planning mode instructions to system message if enabled
-            if planning_mode_enabled and self.config.coordination_config.planning_mode_instruction:
+            # Only add instructions if we have a coordination config with planning instruction
+            if (planning_mode_enabled and 
+                self.config and 
+                hasattr(self.config, "coordination_config") and 
+                self.config.coordination_config and 
+                self.config.coordination_config.planning_mode_instruction):
                 planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
                 agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
+                print(f"📝 [{agent_id}] Adding planning mode instructions to system message", flush=True)
+            else:
+                print(f"✅ [{agent_id}] No planning mode instructions added (planning mode disabled)", flush=True)
 
             # Build conversation with context support
             if conversation_context and conversation_context.get("conversation_history"):
@@ -2259,6 +2407,19 @@ class Orchestrator(ChatAgent):
 
     async def _handle_followup(self, user_message: str, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Handle follow-up questions after presenting final answer with conversation context."""
+        # Analyze the follow-up question for irreversibility before re-coordinating
+        has_irreversible = await self._analyze_question_irreversibility(user_message, conversation_context or {})
+        
+        # Set planning mode for all agents based on analysis
+        for agent_id, agent in self.agents.items():
+            if hasattr(agent.backend, 'set_planning_mode'):
+                agent.backend.set_planning_mode(has_irreversible)
+                log_orchestrator_activity(
+                    self.orchestrator_id,
+                    f"Set planning mode for {agent_id} (follow-up)",
+                    {"planning_mode_enabled": has_irreversible, "reason": "follow-up irreversibility analysis"}
+                )
+        
         # For now, acknowledge with context awareness
         # Future: implement full re-coordination with follow-up context
 

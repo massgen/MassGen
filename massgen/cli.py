@@ -527,8 +527,13 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
         system_msg = agent_data.get("system_message")
         if system_msg:
             if backend_type_lower == "claude_code":
-                # For Claude Code, use append_system_prompt to preserve Claude Code capabilities
-                agent_config.backend_params["append_system_prompt"] = system_msg
+                # For Claude Code, use system_prompt dict with append to preserve Claude Code capabilities
+                # This follows the claude-agent-sdk format: {"type": "preset", "preset": "claude_code", "append": "..."}
+                agent_config.backend_params["system_prompt"] = {
+                    "type": "preset",
+                    "preset": "claude_code",
+                    "append": system_msg
+                }
             else:
                 # For other backends, fall back to deprecated custom_system_instruction
                 # TODO: Add backend-specific routing for other backends
@@ -841,6 +846,20 @@ async def run_question_with_history(
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
+        
+        # Get coordination config from YAML (if present)
+        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        if coordination_settings:
+            from .agent_config import CoordinationConfig
+
+            orchestrator_config.coordination_config = CoordinationConfig(
+                enable_planning_mode=coordination_settings.get("enable_planning_mode", False),
+                planning_mode_instruction=coordination_settings.get(
+                    "planning_mode_instruction",
+                    "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+                ),
+            )
+
         # Get orchestrator parameters from config
         orchestrator_cfg = kwargs.get("orchestrator", {})
 
@@ -941,6 +960,19 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         orchestrator_config = AgentConfig()
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
+
+        # Get coordination config from YAML (if present)
+        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        if coordination_settings:
+            from .agent_config import CoordinationConfig
+
+            orchestrator_config.coordination_config = CoordinationConfig(
+                enable_planning_mode=coordination_settings.get("enable_planning_mode", False),
+                planning_mode_instruction=coordination_settings.get(
+                    "planning_mode_instruction",
+                    "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+                ),
+            )
 
         # Get orchestrator parameters from config
         orchestrator_cfg = kwargs.get("orchestrator", {})

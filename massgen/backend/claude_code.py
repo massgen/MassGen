@@ -805,6 +805,17 @@ class ClaudeCodeBackend(LLMBackend):
         )
         # Merge constructor config with stream kwargs (stream kwargs take priority)
         all_params = {**self.config, **kwargs}
+        
+        # Extract system message from messages for append mode (always do this, even if reusing client)
+        system_msg = next((msg for msg in messages if msg.get("role") == "system"), None)
+        if system_msg:
+            system_content = system_msg.get("content", "")  # noqa: E128
+        else:
+            system_content = ""
+
+        # Build system prompt with tools information (needed for logging and client creation)
+        workflow_system_prompt = self._build_system_prompt_with_workflow_tools(tools or [], system_content)
+        
         # Check if we already have a client
         if self._client is not None:
             client = self._client
@@ -829,16 +840,6 @@ class ClaudeCodeBackend(LLMBackend):
                     if tool not in disallowed_tools:
                         disallowed_tools.append(tool)
                 all_params["disallowed_tools"] = disallowed_tools
-
-            # Extract system message from messages for append mode (always do this)
-            system_msg = next((msg for msg in messages if msg.get("role") == "system"), None)
-            if system_msg:
-                system_content = system_msg.get("content", "")  # noqa: E128
-            else:
-                system_content = ""
-
-            # Build system prompt with tools information
-            workflow_system_prompt = self._build_system_prompt_with_workflow_tools(tools or [], system_content)
 
             # Windows-specific handling: detect complex prompts that cause subprocess hang
             if sys.platform == "win32" and len(workflow_system_prompt) > 200:
