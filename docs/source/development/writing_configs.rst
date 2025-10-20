@@ -227,7 +227,7 @@ Here's a fully annotated config template showing all conventions:
 
      # Voting sensitivity (multi-agent only)
      # Controls consensus threshold for agent voting
-     # Options: "lenient" (default, faster decisions) | "balanced" (moderate agreement)
+     # Options: "lenient" (default, faster decisions) | "balanced" (moderate agreement) | "strict" (highest quality bar)
      voting_sensitivity: "balanced"
 
      # Optional: Planning mode coordination
