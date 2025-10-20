@@ -31,13 +31,13 @@ orchestrator:
   # voting_sensitivity controls how critical agents are when evaluating answers
   #
   # Options:
-  #   - "lenient" (default): Agents vote YES more easily, fewer new answers
+  #   - "lenient" (default): Agents vote for existing answers more readily, fewer new answers
   #                          Use when you want faster convergence
   #
-  #   - "balanced": Agents apply detailed criteria (comprehensive, accurate, complete?),
+  #   - "balanced": Agents apply detailed criteria (comprehensive, accurate, complete?) before voting,
   #                 more new answers. Use when you want thorough evaluation
   #
-  #   - "strict": Agents apply high standards of excellence (all aspects, edge cases, reference-quality),
+  #   - "strict": Agents apply high standards of excellence (all aspects, edge cases, reference-quality) before voting,
   #               most new answers. Use when you need maximum quality
   #
   voting_sensitivity: "balanced"
