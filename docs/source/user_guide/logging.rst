@@ -165,7 +165,7 @@ This file captures the complete execution context for reproducibility:
 
    query: "Your original question"
    timestamp: "2025-10-13T14:30:22"
-   config_path: "@examples/basic/multi/three_agents_default"
+   config_path: "/path/to/config.yaml"
    config:
      agents:
        - id: "agent1"
@@ -173,20 +173,50 @@ This file captures the complete execution context for reproducibility:
            type: "gemini"
            model: "gemini-2.5-flash"
        # ... full config
+   cli_args:
+     config: "/path/to/config.yaml"
+     question: "Your original question"
+     debug: false
+     # ... all CLI arguments
+   git:
+     commit: "a1b2c3d4e5f6..."
+     branch: "main"
+   python_version: "3.13.0"
+   massgen_version: "0.0.33"
+   working_directory: "/path/to/project"
 
 **Contents:**
 
 * ``query`` - The user's original query/prompt
-* ``timestamp`` - When the execution started
+* ``timestamp`` - When the execution started (ISO 8601 format)
 * ``config_path`` - Path or description of config used
-* ``config`` - Complete configuration (if available)
+* ``config`` - Complete configuration (full YAML/JSON content)
+* ``cli_args`` - All command-line arguments passed to massgen
+* ``git`` - Git repository info (commit hash, branch) if in a git repo
+* ``python_version`` - Python interpreter version
+* ``massgen_version`` - MassGen package version
+* ``working_directory`` - Current working directory
 
 **Use cases:**
 
-* Reproduce the exact same run later
-* Debug configuration issues
-* Share execution details with team members
-* Create test cases from real runs
+* **Reproduce the exact same run** - All information needed to recreate execution
+* **Debug configuration issues** - Full config and CLI args captured
+* **Share execution details** - Send metadata file to team members
+* **Create test cases** - Convert real runs into regression tests
+* **Track experiments** - Git commit ensures you know which code version was used
+* **Environment debugging** - Python version and working directory help diagnose environment issues
+
+**Multi-turn sessions:**
+
+For interactive multi-turn mode, each turn gets its own ``execution_metadata.yaml`` with additional fields:
+
+.. code-block:: yaml
+
+   # ... standard fields above ...
+   cli_args:
+     mode: "interactive"
+     turn: 3
+     session_id: "session_20251013_143022"
 
 Coordination Table
 ------------------
