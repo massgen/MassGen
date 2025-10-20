@@ -1616,12 +1616,18 @@ def _select_package_example(examples: List[Tuple[str, Path]], console: Console) 
     config_choices.append(questionary.Choice(title="  ← Back to categories", value="__back__"))
 
     # Step 2: Select config
+    # For large lists: disable shortcuts (max 36) and enable search filter for better UX
+    # Note: When search filter is enabled, j/k keys must be disabled (they conflict with search)
+    use_shortcuts = len(config_choices) <= 36
+    use_search_filter = len(config_choices) > 36
     console.print()
     selected_config = questionary.select(
         "Select a configuration:",
         choices=config_choices,
-        use_shortcuts=True,
+        use_shortcuts=use_shortcuts,
         use_arrow_keys=True,
+        use_search_filter=use_search_filter,
+        use_jk_keys=not use_search_filter,
         style=MASSGEN_QUESTIONARY_STYLE,
         pointer="▸",
     ).ask()
