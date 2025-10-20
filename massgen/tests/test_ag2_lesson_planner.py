@@ -14,7 +14,9 @@ import pytest
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from massgen.tool._extraframework_agents.ag2_lesson_planner_tool import ag2_lesson_planner  # noqa: E402
+from massgen.tool._extraframework_agents.ag2_lesson_planner_tool import (  # noqa: E402
+    ag2_lesson_planner,
+)
 from massgen.tool._result import ExecutionResult  # noqa: E402
 
 
@@ -178,7 +180,9 @@ class TestAG2ToolWithBackend:
         api_key = os.getenv("OPENAI_API_KEY", "test-key")
 
         # Import the tool
-        from massgen.tool._extraframework_agents.ag2_lesson_planner_tool import ag2_lesson_planner
+        from massgen.tool._extraframework_agents.ag2_lesson_planner_tool import (
+            ag2_lesson_planner,
+        )
 
         # Register with backend
         backend = ResponseBackend(
@@ -187,7 +191,7 @@ class TestAG2ToolWithBackend:
                 {
                     "func": ag2_lesson_planner,
                     "description": "Create a comprehensive lesson plan using AG2 nested chat",
-                }
+                },
             ],
         )
 

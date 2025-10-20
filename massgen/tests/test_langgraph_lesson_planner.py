@@ -14,7 +14,9 @@ import pytest
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from massgen.tool._extraframework_agents.langgraph_lesson_planner_tool import langgraph_lesson_planner  # noqa: E402
+from massgen.tool._extraframework_agents.langgraph_lesson_planner_tool import (  # noqa: E402
+    langgraph_lesson_planner,
+)
 from massgen.tool._result import ExecutionResult  # noqa: E402
 
 
@@ -178,7 +180,9 @@ class TestLangGraphToolWithBackend:
         api_key = os.getenv("OPENAI_API_KEY", "test-key")
 
         # Import the tool
-        from massgen.tool._extraframework_agents.langgraph_lesson_planner_tool import langgraph_lesson_planner
+        from massgen.tool._extraframework_agents.langgraph_lesson_planner_tool import (
+            langgraph_lesson_planner,
+        )
 
         # Register with backend
         backend = ResponseBackend(
@@ -187,7 +191,7 @@ class TestLangGraphToolWithBackend:
                 {
                     "func": langgraph_lesson_planner,
                     "description": "Create a comprehensive lesson plan using LangGraph state graph",
-                }
+                },
             ],
         )
 

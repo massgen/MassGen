@@ -4,17 +4,20 @@ LangGraph Lesson Planner Tool
 This tool demonstrates interoperability by wrapping LangGraph's state graph functionality as a MassGen custom tool.
 """
 
-from typing import TypedDict, Optional, Annotated, Sequence
-from langgraph.graph import StateGraph, END
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from massgen.tool._result import ExecutionResult, TextContent
 import operator
 import os
+from typing import Annotated, Optional, Sequence, TypedDict
+
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, StateGraph
+
+from massgen.tool._result import ExecutionResult, TextContent
 
 
 class LessonPlannerState(TypedDict):
     """State for the lesson planner workflow."""
+
     messages: Annotated[Sequence[BaseMessage], operator.add]
     topic: str
     standards: str
@@ -56,13 +59,14 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
         llm = ChatOpenAI(
             model="gpt-4o",
             api_key=api_key,
-            temperature=0.7
+            temperature=0.7,
         )
 
         # Define the curriculum standards node
         async def curriculum_node(state: LessonPlannerState) -> LessonPlannerState:
             """Determine curriculum standards and learning objectives."""
-            system_msg = SystemMessage(content="""You are a curriculum standards expert for fourth grade education.
+            system_msg = SystemMessage(
+                content="""You are a curriculum standards expert for fourth grade education.
             When given a topic, you provide relevant grade-level standards and learning objectives.
             Format every response as:
             STANDARDS:
@@ -70,7 +74,8 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
             - [Standard 2]
             OBJECTIVES:
             - By the end of this lesson, students will be able to [objective 1]
-            - By the end of this lesson, students will be able to [objective 2]""")
+            - By the end of this lesson, students will be able to [objective 2]""",
+            )
 
             human_msg = HumanMessage(content=f"Please provide fourth grade standards and objectives for the topic: {state['topic']}")
 
@@ -83,19 +88,21 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
                 "topic": state["topic"],
                 "lesson_plan": "",
                 "reviewed_plan": "",
-                "final_plan": ""
+                "final_plan": "",
             }
 
         # Define the lesson planner node
         async def lesson_planner_node(state: LessonPlannerState) -> LessonPlannerState:
             """Create a detailed lesson plan based on standards."""
-            system_msg = SystemMessage(content="""You are a lesson planning specialist.
+            system_msg = SystemMessage(
+                content="""You are a lesson planning specialist.
             Given standards and objectives, you create detailed lesson plans including:
             - Opening/Hook (5-10 minutes)
             - Main Activity (20-30 minutes)
             - Practice Activity (15-20 minutes)
             - Assessment/Closure (5-10 minutes)
-            Format as a structured lesson plan with clear timing and materials needed.""")
+            Format as a structured lesson plan with clear timing and materials needed.""",
+            )
 
             human_msg = HumanMessage(content=f"Based on these standards and objectives, create a detailed lesson plan:\n\n{state['standards']}")
 
@@ -108,20 +115,22 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
                 "topic": state["topic"],
                 "standards": state["standards"],
                 "reviewed_plan": "",
-                "final_plan": ""
+                "final_plan": "",
             }
 
         # Define the lesson reviewer node
         async def lesson_reviewer_node(state: LessonPlannerState) -> LessonPlannerState:
             """Review and provide feedback on the lesson plan."""
-            system_msg = SystemMessage(content="""You are a lesson plan reviewer who ensures:
+            system_msg = SystemMessage(
+                content="""You are a lesson plan reviewer who ensures:
             1. Age-appropriate content and activities
             2. Alignment with provided standards
             3. Realistic timing
             4. Clear instructions
             5. Differentiation opportunities
             Provide specific feedback in these areas and suggest improvements if needed.
-            Then provide an improved version of the lesson plan incorporating your feedback.""")
+            Then provide an improved version of the lesson plan incorporating your feedback.""",
+            )
 
             human_msg = HumanMessage(content=f"Please review this lesson plan:\n\n{state['lesson_plan']}")
 
@@ -134,19 +143,21 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
                 "topic": state["topic"],
                 "standards": state["standards"],
                 "lesson_plan": state["lesson_plan"],
-                "final_plan": ""
+                "final_plan": "",
             }
 
         # Define the formatter node
         async def formatter_node(state: LessonPlannerState) -> LessonPlannerState:
             """Format the final lesson plan to a standard format."""
-            system_msg = SystemMessage(content="""You are a lesson plan formatter. Format the complete plan as follows:
+            system_msg = SystemMessage(
+                content="""You are a lesson plan formatter. Format the complete plan as follows:
 <title>Lesson plan title</title>
 <standards>Standards covered</standards>
 <learning_objectives>Key learning objectives</learning_objectives>
 <materials>Materials required</materials>
 <activities>Lesson plan activities</activities>
-<assessment>Assessment details</assessment>""")
+<assessment>Assessment details</assessment>""",
+            )
 
             human_msg = HumanMessage(content=f"Format this reviewed lesson plan:\n\n{state['reviewed_plan']}")
 
@@ -159,7 +170,7 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
                 "topic": state["topic"],
                 "standards": state["standards"],
                 "lesson_plan": state["lesson_plan"],
-                "reviewed_plan": state["reviewed_plan"]
+                "reviewed_plan": state["reviewed_plan"],
             }
 
         # Build the state graph
@@ -188,7 +199,7 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
             "standards": "",
             "lesson_plan": "",
             "reviewed_plan": "",
-            "final_plan": ""
+            "final_plan": "",
         }
 
         # Stream intermediate results

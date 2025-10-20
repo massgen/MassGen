@@ -4,10 +4,12 @@ AG2 (AutoGen) Nested Chat Lesson Planner Tool
 This tool demonstrates interoperability by wrapping AutoGen's nested chat functionality as a MassGen custom tool.
 """
 
-from autogen import ConversableAgent, GroupChatManager, GroupChat
-from massgen.tool._result import ExecutionResult, TextContent
 import os
 from typing import Optional
+
+from autogen import ConversableAgent, GroupChat, GroupChatManager
+
+from massgen.tool._result import ExecutionResult, TextContent
 
 
 async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> ExecutionResult:
@@ -40,11 +42,13 @@ async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> Execu
     try:
         # Configure LLM
         llm_config = {
-            "config_list": [{
-                "api_type": "openai",
-                "model": "gpt-4o",
-                "api_key": api_key
-            }]
+            "config_list": [
+                {
+                    "api_type": "openai",
+                    "model": "gpt-4o",
+                    "api_key": api_key,
+                }
+            ],
         }
 
         # Curriculum Standards Agent
@@ -155,7 +159,7 @@ async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> Execu
                 "message": "Format the lesson plan.",
                 "max_turns": 1,
                 "summary_method": "last_msg",
-            }
+            },
         ]
 
         # Register nested chats with the lead teacher
@@ -176,11 +180,11 @@ async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> Execu
         result = assistant_agent.initiate_chat(
             recipient=lead_teacher_agent,
             message=f"Create a lesson plan for: {topic}",
-            max_turns=1
+            max_turns=1,
         )
 
         # Extract the lesson plan from the result
-        lesson_plan = result.summary if hasattr(result, 'summary') else str(result)
+        lesson_plan = result.summary if hasattr(result, "summary") else str(result)
 
         return ExecutionResult(
             output_blocks=[
