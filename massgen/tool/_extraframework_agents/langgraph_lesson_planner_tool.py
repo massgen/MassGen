@@ -218,7 +218,7 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
                 elif node_name == "reviewer" and state_update.get("reviewed_plan"):
                     output_parts.append(f"\n  Review completed: {len(state_update['reviewed_plan'])} characters")
                 elif node_name == "formatter" and state_update.get("final_plan"):
-                    output_parts.append(f"\n  Final formatting completed")
+                    output_parts.append("\n  Final formatting completed")
                     final_state = state_update
 
         # Extract the final lesson plan
