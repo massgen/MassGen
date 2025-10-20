@@ -61,7 +61,7 @@
 ```python
 # Fine-grained tool streaming (beta) - REQUIRES BETA CLIENT
 stream = client.beta.messages.create(
-    model="claude-3-5-sonnet-20241022",
+    model="claude-3-5-sonnet-20250114",
     messages=[{"role": "user", "content": "Search and analyze..."}],
     tools=[
         {"type": "web_search_20250305"},
@@ -96,7 +96,7 @@ async_client = anthropic.AsyncAnthropic()
 # IMPORTANT: For code execution, use the beta client
 beta_client = anthropic.AsyncAnthropic()
 response = await beta_client.beta.messages.create(
-    model="claude-3-5-sonnet-20241022",
+    model="claude-3-5-sonnet-20250114",
     tools=[{"type": "code_execution_20250522"}],
     headers={"anthropic-beta": "code-execution-2025-05-22"},
     messages=[...]
@@ -197,7 +197,7 @@ class ClaudeBackend(LLMBackend):
             headers["anthropic-beta"] = "code-execution-2025-05-22"
 
         stream = await self.client.beta.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-3-5-sonnet-20250114",
             messages=messages,
             tools=combined_tools,
             headers=headers,

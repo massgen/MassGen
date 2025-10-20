@@ -23,6 +23,7 @@ class ChatCompletionsAPIParamsHandler(APIParamsHandlerBase):
                 "enable_code_interpreter",
                 "allowed_tools",
                 "exclude_tools",
+                "custom_tools",  # Custom tools configuration (processed separately)
             },
         )
 
@@ -114,10 +115,16 @@ class ChatCompletionsAPIParamsHandler(APIParamsHandlerBase):
         if provider_tools:
             combined_tools.extend(provider_tools)
 
-        # User-defined tools
+        # Workflow tools
         if tools:
             converted_tools = self.formatter.format_tools(tools)
             combined_tools.extend(converted_tools)
+
+        # Add custom tools
+        custom_tools = self.custom_tool_manager.registered_tools
+        if custom_tools:
+            converted_custom_tools = self.formatter.format_custom_tools(custom_tools)
+            combined_tools.extend(converted_custom_tools)
 
         # MCP tools
         mcp_tools = self.get_mcp_tools()
