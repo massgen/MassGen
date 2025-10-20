@@ -22,6 +22,7 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
                 "enable_code_interpreter",
                 "allowed_tools",
                 "exclude_tools",
+                "custom_tools",  # Custom tools configuration (processed separately)
                 "_has_file_search_files",  # Internal flag for file search tracking
             },
         )
@@ -88,10 +89,16 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
         if provider_tools:
             combined_tools.extend(provider_tools)
 
-        # Add framework tools
+        # Add workflow tools
         if tools:
             converted_tools = self.formatter.format_tools(tools)
             combined_tools.extend(converted_tools)
+
+        # Add custom tools
+        custom_tools = self.custom_tool_manager.registered_tools
+        if custom_tools:
+            converted_custom_tools = self.formatter.format_custom_tools(custom_tools)
+            combined_tools.extend(converted_custom_tools)
 
         # Add MCP tools (use OpenAI format)
         mcp_tools = self._convert_mcp_tools_to_openai_format()

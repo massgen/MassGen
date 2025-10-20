@@ -17,6 +17,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 import httpx
 
 from ..logger_config import log_backend_activity, logger
+from ..tool import ToolManager
 from .base import LLMBackend, StreamChunk
 
 
@@ -107,12 +108,21 @@ SUPPORTED_AUDIO_MIME_TYPES = {
 }
 
 
-class MCPBackend(LLMBackend):
+class CustomToolAndMCPBackend(LLMBackend):
     """Base backend class with MCP (Model Context Protocol) support."""
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         """Initialize backend with MCP support."""
         super().__init__(api_key, **kwargs)
+
+        # Custom tools support - initialize before api_params_handler
+        self.custom_tool_manager = ToolManager()
+        self._custom_tool_names: set[str] = set()
+
+        # Register custom tools if provided
+        custom_tools = kwargs.get("custom_tools", [])
+        if custom_tools:
+            self._register_custom_tools(custom_tools)
 
         # MCP integration (filesystem MCP server may have been injected by base class)
         self.mcp_servers = self.config.get("mcp_servers", [])
@@ -169,6 +179,261 @@ class MCPBackend(LLMBackend):
     async def _process_stream(self, stream, all_params, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
         """Process stream."""
 
+    # Custom tools support
+    def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
+        """Register custom tools with the tool manager.
+
+        Supports flexible configuration:
+        - function: str | List[str]
+        - description: str (shared) | List[str] (1-to-1 mapping)
+        - preset_args: dict (shared) | List[dict] (1-to-1 mapping)
+
+        Examples:
+            # Single function
+            function: "my_func"
+            description: "My description"
+
+            # Multiple functions with shared description
+            function: ["func1", "func2"]
+            description: "Shared description"
+
+            # Multiple functions with individual descriptions
+            function: ["func1", "func2"]
+            description: ["Description 1", "Description 2"]
+
+            # Multiple functions with mixed (shared desc, individual args)
+            function: ["func1", "func2"]
+            description: "Shared description"
+            preset_args: [{"arg1": "val1"}, {"arg1": "val2"}]
+
+        Args:
+            custom_tools: List of custom tool configurations
+        """
+        # Collect unique categories and create them if needed
+        categories = set()
+        for tool_config in custom_tools:
+            if isinstance(tool_config, dict):
+                category = tool_config.get("category", "default")
+                if category != "default":
+                    categories.add(category)
+
+        # Create categories that don't exist
+        for category in categories:
+            if category not in self.custom_tool_manager.tool_categories:
+                self.custom_tool_manager.setup_category(
+                    category_name=category,
+                    description=f"Custom {category} tools",
+                    enabled=True,
+                )
+
+        # Register each custom tool
+        for tool_config in custom_tools:
+            try:
+                if isinstance(tool_config, dict):
+                    # Extract base configuration
+                    path = tool_config.get("path")
+                    category = tool_config.get("category", "default")
+
+                    # Normalize function field to list
+                    func_field = tool_config.get("function")
+                    if isinstance(func_field, str):
+                        functions = [func_field]
+                    elif isinstance(func_field, list):
+                        functions = func_field
+                    else:
+                        logger.error(
+                            f"Invalid function field type: {type(func_field)}. " f"Must be str or List[str].",
+                        )
+                        continue
+
+                    if not functions:
+                        logger.error("Empty function list in tool config")
+                        continue
+
+                    num_functions = len(functions)
+
+                    # Process name field (can be str or List[str])
+                    name_field = tool_config.get("name")
+                    names = self._process_field_for_functions(
+                        name_field,
+                        num_functions,
+                        "name",
+                    )
+                    if names is None:
+                        continue  # Validation error, skip this tool
+
+                    # Process description field (can be str or List[str])
+                    desc_field = tool_config.get("description")
+                    descriptions = self._process_field_for_functions(
+                        desc_field,
+                        num_functions,
+                        "description",
+                    )
+                    if descriptions is None:
+                        continue  # Validation error, skip this tool
+
+                    # Process preset_args field (can be dict or List[dict])
+                    preset_field = tool_config.get("preset_args")
+                    preset_args_list = self._process_field_for_functions(
+                        preset_field,
+                        num_functions,
+                        "preset_args",
+                    )
+                    if preset_args_list is None:
+                        continue  # Validation error, skip this tool
+
+                    # Register each function with its corresponding values
+                    for i, func in enumerate(functions):
+                        # Load the function first if custom name is needed
+                        if names[i] and names[i] != func:
+                            # Need to load function and apply custom name
+                            if path:
+                                loaded_func = self.custom_tool_manager._load_function_from_path(path, func)
+                            else:
+                                loaded_func = self.custom_tool_manager._load_builtin_function(func)
+
+                            if loaded_func is None:
+                                logger.error(f"Could not load function '{func}' from path: {path}")
+                                continue
+
+                            # Apply custom name by modifying __name__ attribute
+                            loaded_func.__name__ = names[i]
+
+                            # Register with loaded function (no path needed)
+                            self.custom_tool_manager.add_tool_function(
+                                path=None,
+                                func=loaded_func,
+                                category=category,
+                                preset_args=preset_args_list[i],
+                                description=descriptions[i],
+                            )
+                        else:
+                            # No custom name or same as function name, use normal registration
+                            self.custom_tool_manager.add_tool_function(
+                                path=path,
+                                func=func,
+                                category=category,
+                                preset_args=preset_args_list[i],
+                                description=descriptions[i],
+                            )
+
+                        # Use custom name for logging and tracking if provided
+                        registered_name = names[i] if names[i] else func
+
+                        # Track tool name for categorization
+                        if registered_name.startswith("custom_tool__"):
+                            self._custom_tool_names.add(registered_name)
+                        else:
+                            self._custom_tool_names.add(f"custom_tool__{registered_name}")
+
+                        logger.info(
+                            f"Registered custom tool: {registered_name} from {path} " f"(category: {category}, " f"desc: '{descriptions[i][:50] if descriptions[i] else 'None'}...')",
+                        )
+
+            except Exception as e:
+                func_name = tool_config.get("function", "unknown")
+                logger.error(
+                    f"Failed to register custom tool {func_name}: {e}",
+                    exc_info=True,
+                )
+
+    def _process_field_for_functions(
+        self,
+        field_value: Any,
+        num_functions: int,
+        field_name: str,
+    ) -> Optional[List[Any]]:
+        """Process a config field that can be a single value or list.
+
+        Conversion rules:
+        - None → [None, None, ...] (repeated num_functions times)
+        - Single value (not list) → [value, value, ...] (shared)
+        - List with matching length → use as-is (1-to-1 mapping)
+        - List with wrong length → ERROR (return None)
+
+        Args:
+            field_value: The field value from config
+            num_functions: Number of functions being registered
+            field_name: Name of the field (for error messages)
+
+        Returns:
+            List of values (one per function), or None if validation fails
+
+        Examples:
+            _process_field_for_functions(None, 3, "desc")
+            → [None, None, None]
+
+            _process_field_for_functions("shared", 3, "desc")
+            → ["shared", "shared", "shared"]
+
+            _process_field_for_functions(["a", "b", "c"], 3, "desc")
+            → ["a", "b", "c"]
+
+            _process_field_for_functions(["a", "b"], 3, "desc")
+            → None (error logged)
+        """
+        # Case 1: None or missing field → use None for all functions
+        if field_value is None:
+            return [None] * num_functions
+
+        # Case 2: Single value (not a list) → share across all functions
+        if not isinstance(field_value, list):
+            return [field_value] * num_functions
+
+        # Case 3: List value → must match function count exactly
+        if len(field_value) == num_functions:
+            return field_value
+        else:
+            # Length mismatch → validation error
+            logger.error(
+                f"Configuration error: {field_name} is a list with "
+                f"{len(field_value)} items, but there are {num_functions} functions. "
+                f"Either use a single value (shared) or a list with exactly "
+                f"{num_functions} items (1-to-1 mapping).",
+            )
+            return None
+
+    async def _execute_custom_tool(self, call: Dict[str, Any]) -> str:
+        """Execute a custom tool and return the result.
+
+        Args:
+            call: Function call dictionary with name and arguments
+
+        Returns:
+            The execution result as a string
+        """
+        import json
+
+        tool_request = {
+            "name": call["name"],
+            "input": json.loads(call["arguments"]) if isinstance(call["arguments"], str) else call["arguments"],
+        }
+
+        result_text = ""
+        try:
+            async for result in self.custom_tool_manager.execute_tool(tool_request):
+                # Accumulate results
+                if hasattr(result, "output_blocks"):
+                    for block in result.output_blocks:
+                        if hasattr(block, "data"):
+                            result_text += str(block.data)
+                        elif hasattr(block, "content"):
+                            result_text += str(block.content)
+                elif hasattr(result, "content"):
+                    result_text += str(result.content)
+                else:
+                    result_text += str(result)
+        except Exception as e:
+            logger.error(f"Error in custom tool execution: {e}")
+            result_text = f"Error: {str(e)}"
+
+        return result_text or "Tool executed successfully"
+
+    def _get_custom_tools_schemas(self) -> List[Dict[str, Any]]:
+        """Get OpenAI-formatted schemas for all registered custom tools."""
+        return self.custom_tool_manager.fetch_tool_schemas()
+
+    # MCP support methods
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
         if not self.mcp_servers or self._mcp_initialized:
@@ -783,14 +1048,16 @@ class MCPBackend(LLMBackend):
                     async for chunk in self.yield_mcp_status_chunks(use_mcp):
                         yield chunk
 
-                    if use_mcp:
+                    use_custom_tools = bool(self._custom_tool_names)
+
+                    if use_mcp or use_custom_tools:
                         # MCP MODE: Recursive function call detection and execution
                         logger.info("Using recursive MCP execution mode")
 
                         current_messages = self._trim_message_history(messages.copy())
 
                         # Start recursive MCP streaming
-                        async for chunk in self._stream_with_mcp_tools(current_messages, tools, client, **kwargs):
+                        async for chunk in self._stream_with_custom_and_mcp_tools(current_messages, tools, client, **kwargs):
                             yield chunk
 
                     else:
@@ -798,7 +1065,7 @@ class MCPBackend(LLMBackend):
                         logger.info("Using no-MCP mode")
 
                         # Start non-MCP streaming
-                        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                        async for chunk in self._stream_without_custom_and_mcp_tools(messages, tools, client, **kwargs):
                             yield chunk
 
                 except Exception as e:
@@ -808,7 +1075,7 @@ class MCPBackend(LLMBackend):
                         await self._record_mcp_circuit_breaker_failure(e, agent_id)
 
                         # Handle MCP exceptions with fallback
-                        async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
+                        async for chunk in self._stream_handle_custom_and_mcp_exceptions(e, messages, tools, client, **kwargs):
                             yield chunk
                     else:
                         logger.error(f"Streaming error: {e}")
@@ -824,7 +1091,7 @@ class MCPBackend(LLMBackend):
 
                 if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
                     # Handle MCP exceptions with fallback
-                    async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
+                    async for chunk in self._stream_handle_custom_and_mcp_exceptions(e, messages, tools, client, **kwargs):
                         yield chunk
                 else:
                     # Generic setup error: still notify if MCP was configured
@@ -837,7 +1104,7 @@ class MCPBackend(LLMBackend):
                         )
 
                     # Proceed with non-MCP streaming
-                    async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                    async for chunk in self._stream_without_custom_and_mcp_tools(messages, tools, client, **kwargs):
                         yield chunk
             except Exception as inner_e:
                 logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
@@ -845,7 +1112,7 @@ class MCPBackend(LLMBackend):
             finally:
                 await self._cleanup_client(client)
 
-    async def _stream_without_mcp_tools(
+    async def _stream_without_custom_and_mcp_tools(
         self,
         messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -885,7 +1152,7 @@ class MCPBackend(LLMBackend):
         async for chunk in self._process_stream(stream, all_params, agent_id):
             yield chunk
 
-    async def _stream_handle_mcp_exceptions(
+    async def _stream_handle_custom_and_mcp_exceptions(
         self,
         error: Exception,
         messages: List[Dict[str, Any]],
@@ -921,7 +1188,7 @@ class MCPBackend(LLMBackend):
             content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
         )
 
-        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+        async for chunk in self._stream_without_custom_and_mcp_tools(messages, tools, client, **kwargs):
             yield chunk
 
     def _track_mcp_function_names(self, tools: List[Dict[str, Any]]) -> None:
@@ -1012,7 +1279,7 @@ class MCPBackend(LLMBackend):
             self._mcp_functions.clear()
             self._mcp_function_names.clear()
 
-    async def __aenter__(self) -> "MCPBackend":
+    async def __aenter__(self) -> "CustomToolAndMCPBackend":
         """Async context manager entry."""
         # Initialize MCP tools if configured
         if MCPResourceManager:
@@ -1086,6 +1353,10 @@ class MCPBackend(LLMBackend):
     def is_mcp_tool_call(self, tool_name: str) -> bool:
         """Check if a tool call is an MCP function."""
         return tool_name in self._mcp_functions
+
+    def is_custom_tool_call(self, tool_name: str) -> bool:
+        """Check if a tool call is a custom tool function."""
+        return tool_name in self._custom_tool_names
 
     def get_mcp_tools_formatted(self) -> List[Dict[str, Any]]:
         """Get MCP tools formatted for specific API format."""

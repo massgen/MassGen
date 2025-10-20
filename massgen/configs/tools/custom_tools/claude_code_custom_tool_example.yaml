@@ -1,0 +1,32 @@
+# MassGen Configuration: Claude Code with Custom Tools
+# Usage:
+#   massgen --config @examples/tools/custom_tools/claude_code_custom_tool_example "whats the sum of 123 and 456?"
+
+orchestrator:
+  snapshot_storage: "claude_code_snapshots"
+  agent_temporary_workspace: "claude_code_temp"
+
+agents:
+  - id: "claude_code_custom_tools"
+    backend:
+      type: "claude_code"
+      model: "claude-sonnet-4-20250514"
+      cwd: "claude_code_workspace"
+      custom_tools:
+        - name: ["two_num_tool"]
+          category: "math"
+          path: "massgen/tool/_basic/_two_num_tool.py"
+          function: ["two_num_tool"]
+          description: ["Add two numbers together"]
+    append_system_prompt: |
+      You are an AI assistant with access to custom calculation tools in addition to your built-in Claude Code tools.
+
+      When users ask about calculations or math operations, check if a custom tool is available and use it.
+      The custom tools will be described in your system prompt, and you should call them using the JSON format specified.
+
+      Remember to use your built-in tools (Read, Write, Bash, etc.) for file operations and system tasks,
+      but use custom tools for specialized calculations when appropriate.
+
+ui:
+  display_type: "simple"
+  logging_enabled: true

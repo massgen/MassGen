@@ -1,0 +1,33 @@
+# MassGen Configuration: Grok-3 Mini with Wrong MCP Integration
+# Usage:
+#   massgen --config @examples/tools/custom_tools/grok3_mini_custom_tool_with_wrong_mcp_example "whats the sum of 123 and 456? and whats the weather of Tokyo?"
+agents:
+  - id: "grok3_mini_custom_tool"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      custom_tools:
+        - name: "two_num_tool"
+          function: "two_num_tool"
+      mcp_servers:
+        - name: "weather"
+          type: "stdio"
+          command: "python"
+          args: ["-u", "-m", "aaa.bbb"]  # Wrong MCP command to demonstrate error handling
+    system_message: |
+      You are an AI assistant with access to a custom math calculation tool and a weather information MCP tool.
+
+      The two_num_tool is available as a custom tool that can add two numbers together.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about adding two numbers together, use the two_num_tool to calculate the sum and provide
+      a clear, accurate result.
+
+      Weather tools are available via MCP sessions and will be called automatically by the system when needed.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about weather conditions, forecasts, or alerts, include the location and time frame in your
+      response and provide concise, up-to-date information using the integrated tools.
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

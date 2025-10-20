@@ -23,16 +23,18 @@ from ..formatter import ResponseFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType, TextStreamChunk
 from .base import FilesystemSupport, StreamChunk
-from .base_with_mcp import MCPBackend, UploadFileError
+from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, UploadFileError
 
 
-class ResponseBackend(MCPBackend):
+class ResponseBackend(CustomToolAndMCPBackend):
     """Backend using the standard Response API format with multimodal support."""
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.formatter = ResponseFormatter()
+
+        # Initialize API params handler after custom_tool_manager
         self.api_params_handler = ResponseAPIParamsHandler(self)
 
         # Queue for pending image saves
@@ -88,7 +90,7 @@ class ResponseBackend(MCPBackend):
                 except Exception:
                     pass
 
-    async def _stream_without_mcp_tools(
+    async def _stream_without_custom_and_mcp_tools(
         self,
         messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -123,6 +125,8 @@ class ResponseBackend(MCPBackend):
                     name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
                     if name and name in self._mcp_function_names:
                         continue
+                    if name and name in self._custom_tool_names:
+                        continue
                 elif tool.get("type") == "mcp":
                     continue
                 non_mcp_tools.append(tool)
@@ -133,7 +137,7 @@ class ResponseBackend(MCPBackend):
         async for chunk in self._process_stream(stream, all_params, agent_id):
             yield chunk
 
-    async def _stream_with_mcp_tools(
+    async def _stream_with_custom_and_mcp_tools(
         self,
         current_messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -218,16 +222,127 @@ class ResponseBackend(MCPBackend):
 
         # Execute any captured function calls
         if captured_function_calls and response_completed:
-            # Check if any of the function calls are NOT MCP functions
-            non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self._mcp_functions]
+            # Categorize function calls
+            mcp_calls = []
+            custom_calls = []
+            provider_calls = []
 
-            if non_mcp_functions:
-                logger.info(f"Non-MCP function calls detected: {[call['name'] for call in non_mcp_functions]}. Ending MCP processing.")
+            for call in captured_function_calls:
+                if call["name"] in self._mcp_functions:
+                    mcp_calls.append(call)
+                elif call["name"] in self._custom_tool_names:
+                    custom_calls.append(call)
+                else:
+                    provider_calls.append(call)
+
+            # If there are provider calls (non-MCP, non-custom), let API handle them
+            if provider_calls:
+                logger.info(f"Provider function calls detected: {[call['name'] for call in provider_calls]}. Ending local processing.")
                 yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                 return
 
+            # Initialize for execution
+            functions_executed = False
+            updated_messages = current_messages.copy()
+            processed_call_ids = set()  # Initialize processed_call_ids here
+
+            # Execute custom tools first
+            for call in custom_calls:
+                try:
+                    # Yield custom tool call status
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="custom_tool_called",
+                        content=f"🔧 [Custom Tool] Calling {call['name']}...",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    # Yield custom tool arguments (like MCP tools)
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="function_call",
+                        content=f"Arguments for Calling {call['name']}: {call['arguments']}",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    # Execute custom tool
+                    result = await self._execute_custom_tool(call)
+
+                    # Add function call and result to messages
+                    function_call_msg = {
+                        "type": "function_call",
+                        "call_id": call["call_id"],
+                        "name": call["name"],
+                        "arguments": call["arguments"],
+                    }
+                    updated_messages.append(function_call_msg)
+
+                    function_output_msg = {
+                        "type": "function_call_output",
+                        "call_id": call["call_id"],
+                        "output": str(result),
+                    }
+                    updated_messages.append(function_output_msg)
+
+                    # Yield custom tool results (like MCP tools)
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="function_call_output",
+                        content=f"Results for Calling {call['name']}: {str(result)}",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    # Yield custom tool response status
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="custom_tool_response",
+                        content=f"✅ [Custom Tool] {call['name']} completed",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    processed_call_ids.add(call["call_id"])
+                    functions_executed = True
+                    logger.info(f"Executed custom tool: {call['name']}")
+
+                except Exception as e:
+                    logger.error(f"Error executing custom tool {call['name']}: {e}")
+                    error_msg = f"Error executing {call['name']}: {str(e)}"
+
+                    # Yield error with arguments shown
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="function_call",
+                        content=f"Arguments for Calling {call['name']}: {call['arguments']}",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="custom_tool_error",
+                        content=f"❌ [Custom Tool Error] {error_msg}",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    # Add error result to messages
+                    function_call_msg = {
+                        "type": "function_call",
+                        "call_id": call["call_id"],
+                        "name": call["name"],
+                        "arguments": call["arguments"],
+                    }
+                    updated_messages.append(function_call_msg)
+
+                    error_output_msg = {
+                        "type": "function_call_output",
+                        "call_id": call["call_id"],
+                        "output": error_msg,
+                    }
+                    updated_messages.append(error_output_msg)
+                    processed_call_ids.add(call["call_id"])
+                    functions_executed = True
+
             # Check circuit breaker status before executing MCP functions
-            if not await super()._check_circuit_breaker_before_execution():
+            if mcp_calls and not await super()._check_circuit_breaker_before_execution():
                 logger.warning("All MCP servers blocked by circuit breaker")
                 yield TextStreamChunk(
                     type=ChunkType.MCP_STATUS,
@@ -238,9 +353,8 @@ class ResponseBackend(MCPBackend):
                 yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                 return
 
-            # Execute only MCP function calls
+            # Execute MCP function calls
             mcp_functions_executed = False
-            updated_messages = current_messages.copy()
 
             # Check if planning mode is enabled - block MCP tool execution during planning
             if self.is_planning_mode_enabled():
@@ -256,8 +370,6 @@ class ResponseBackend(MCPBackend):
                 return
 
             # Ensure every captured function call gets a result to prevent hanging
-            processed_call_ids = set()
-
             for call in captured_function_calls:
                 function_name = call["name"]
                 if function_name in self._mcp_functions:
@@ -367,6 +479,7 @@ class ResponseBackend(MCPBackend):
                     )
 
                     mcp_functions_executed = True
+                    functions_executed = True
 
             # Ensure all captured function calls have results to prevent hanging
             for call in captured_function_calls:
@@ -391,15 +504,14 @@ class ResponseBackend(MCPBackend):
                     mcp_functions_executed = True
 
             # Trim history after function executions to bound memory usage
-            if mcp_functions_executed:
+            if functions_executed or mcp_functions_executed:
                 updated_messages = super()._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
-                async for chunk in self._stream_with_mcp_tools(updated_messages, tools, client, **kwargs):
+                async for chunk in self._stream_with_custom_and_mcp_tools(updated_messages, tools, client, **kwargs):
                     yield chunk
             else:
-                # No MCP functions were executed, we're done
-
+                # No functions were executed, we're done
                 yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                 return
 
@@ -627,59 +739,6 @@ class ResponseBackend(MCPBackend):
 
         self._vector_store_ids.clear()
         self._uploaded_file_ids.clear()
-
-    # def _save_image_sync(
-    #     self,
-    #     image_data: str,
-    #     prompt: str = None,
-    #     image_format: str = "png",
-    # ) -> Optional[str]:
-    #     """
-    #     Save generated image directly to filesystem (synchronous version).
-
-    #     Args:
-    #         image_data: Base64 encoded image data
-    #         prompt: Generation prompt (used for naming)
-    #         image_format: Image format (default png)
-
-    #     Returns:
-    #         Saved file path, or None if failed
-    #     """
-    #     try:
-    #         # Use agent's filesystem workspace if available, otherwise use current working directory
-    #         if self.filesystem_manager:
-    #             workspace_path = self.filesystem_manager.get_current_workspace()
-    #         else:
-    #             workspace_path = Path.cwd()
-
-    #         # Create generated_images subdirectory path
-    #         images_dir = workspace_path
-
-    #         # Create directory if it doesn't exist
-    #         images_dir.mkdir(parents=True, exist_ok=True)
-
-    #         # Generate filename
-    #         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    #         if prompt:
-    #             # Clean prompt for filename
-    #             clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
-    #             clean_prompt = clean_prompt.replace(" ", "_")
-    #             filename = f"{timestamp}_{clean_prompt}.{image_format}"
-    #         else:
-    #             filename = f"{timestamp}_generated.{image_format}"
-
-    #         file_path = images_dir / filename
-
-    #         # Decode base64 and write to file
-    #         image_bytes = base64.b64decode(image_data)
-    #         file_path.write_bytes(image_bytes)
-
-    #         logger.info(f"Image saved to: {file_path}")
-    #         return str(file_path)
-
-    #     except Exception as e:
-    #         logger.error(f"Error saving image: {e}")
-    #         return None
 
     def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:
         """Convert MCP tools (stdio + streamable-http) to OpenAI function declarations."""
