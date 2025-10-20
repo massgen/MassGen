@@ -68,6 +68,12 @@ myst_enable_extensions = [
     "tasklist",
 ]
 
+# Configure MyST to parse markdown files
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+
 templates_path = ["_templates"]
 exclude_patterns = []
 
