@@ -47,7 +47,7 @@ async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> Execu
                     "api_type": "openai",
                     "model": "gpt-4o",
                     "api_key": api_key,
-                }
+                },
             ],
         }
 
