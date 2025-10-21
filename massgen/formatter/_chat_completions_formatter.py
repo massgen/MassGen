@@ -258,6 +258,110 @@ class ChatCompletionsFormatter(FormatterBase):
 
         return converted_tools
 
+    def format_custom_tools(self, custom_tools: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Convert custom tools from RegisteredToolEntry format to Chat Completions API format.
+
+        Custom tools are provided as a dictionary where:
+        - Keys are tool names (str)
+        - Values are RegisteredToolEntry objects with:
+          - tool_name: str
+          - schema_def: dict with structure {"type": "function", "function": {...}}
+          - get_extended_schema: property that returns the schema with extensions
+
+        Chat Completions API expects: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
+
+        Args:
+            custom_tools: Dictionary of tool_name -> RegisteredToolEntry objects
+
+        Returns:
+            List of tools in Chat Completions API format
+        """
+        if not custom_tools:
+            return []
+
+        converted_tools = []
+
+        # Handle dictionary format: {tool_name: RegisteredToolEntry, ...}
+        if isinstance(custom_tools, dict):
+            for tool_name, tool_entry in custom_tools.items():
+                # Check if it's a RegisteredToolEntry object with schema_def
+                if hasattr(tool_entry, "schema_def"):
+                    tool_schema = tool_entry.schema_def
+
+                    # Schema may already be in Chat Completions format
+                    if tool_schema.get("type") == "function" and "function" in tool_schema:
+                        # Already in correct format, just append
+                        converted_tools.append(tool_schema)
+                    elif tool_schema.get("type") == "function":
+                        # Response API format, need to wrap in function object
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool_schema.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
+                                    "description": tool_schema.get("description", ""),
+                                    "parameters": tool_schema.get("parameters", {}),
+                                },
+                            },
+                        )
+                # Check if it has get_extended_schema property
+                elif hasattr(tool_entry, "get_extended_schema"):
+                    tool_schema = tool_entry.get_extended_schema
+
+                    if tool_schema.get("type") == "function" and "function" in tool_schema:
+                        # Already in correct format
+                        converted_tools.append(tool_schema)
+                    elif tool_schema.get("type") == "function":
+                        # Response API format, need to wrap
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool_schema.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
+                                    "description": tool_schema.get("description", ""),
+                                    "parameters": tool_schema.get("parameters", {}),
+                                },
+                            },
+                        )
+        # Handle list format for backward compatibility
+        elif isinstance(custom_tools, list):
+            for tool in custom_tools:
+                if hasattr(tool, "schema_def"):
+                    tool_schema = tool.schema_def
+
+                    if tool_schema.get("type") == "function" and "function" in tool_schema:
+                        converted_tools.append(tool_schema)
+                    elif tool_schema.get("type") == "function":
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool_schema.get("name", tool.tool_name),
+                                    "description": tool_schema.get("description", ""),
+                                    "parameters": tool_schema.get("parameters", {}),
+                                },
+                            },
+                        )
+                elif hasattr(tool, "get_extended_schema"):
+                    tool_schema = tool.get_extended_schema
+
+                    if tool_schema.get("type") == "function" and "function" in tool_schema:
+                        converted_tools.append(tool_schema)
+                    elif tool_schema.get("type") == "function":
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool_schema.get("name", tool.tool_name),
+                                    "description": tool_schema.get("description", ""),
+                                    "parameters": tool_schema.get("parameters", {}),
+                                },
+                            },
+                        )
+
+        return converted_tools
+
     def format_mcp_tools(self, mcp_functions: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Convert MCP tools to Chat Completions format."""
         if not mcp_functions:

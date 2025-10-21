@@ -54,7 +54,7 @@ Use the interactive API key wizard to set up credentials:
 .. code-block:: bash
 
    # Launch API key setup wizard
-   massgen --setup-keys
+   massgen --setup
 
 The wizard will:
 

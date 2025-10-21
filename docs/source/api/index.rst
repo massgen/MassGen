@@ -16,6 +16,7 @@ Internal API reference for MassGen contributors and developers.
    orchestrator
    backends
    formatter
+   tools
    mcp_tools
    frontend
    token_manager
@@ -35,6 +36,7 @@ Quick Reference
 * :doc:`orchestrator` - Orchestration and coordination components
 * :doc:`backends` - Backend implementations for different LLM providers
 * :doc:`formatter` - Message and tool formatting utilities
+* :doc:`tools` - Custom tool system API (ToolManager, ExecutionResult, built-in tools)
 * :doc:`mcp_tools` - Model Context Protocol (MCP) integration tools
 * :doc:`frontend` - Frontend displays and UI components
 * :doc:`token_manager` - Token management and usage tracking

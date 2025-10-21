@@ -59,6 +59,14 @@ class LLMBackend(ABC):
         # Initialize utility classes
         self.token_usage = TokenUsage()
 
+        # # Initialize tool manager
+        # self.custom_tool_manager = ToolManager()
+
+        # # Register custom tools if specified
+        # custom_tools = kwargs.get("custom_tools", [])
+        # if custom_tools:
+        #     self._register_custom_tools(custom_tools)
+
         # Planning mode flag - when True, MCP tools should be blocked during coordination
         self._planning_mode_enabled: bool = False
 
@@ -124,6 +132,29 @@ class LLMBackend(ABC):
         self.formatter = None
         self.api_params_handler = None
         self.coordination_stage = None
+
+    # def _register_custom_tools(self, tool_names: list[str]) -> None:
+    #     """Register custom tool functions.
+
+    #     Args:
+    #         tool_names: List of tool names to register
+    #     """
+    #     import importlib
+
+    #     for tool_name in tool_names:
+    #         try:
+    #             # Try to import from tool module
+    #             module = importlib.import_module("massgen.tool")
+    #             if hasattr(module, tool_name):
+    #                 tool_func = getattr(module, tool_name)
+    #                 self.custom_tool_manager.add_tool_function(tool_func)
+    #                 print(f"Successfully registered custom tool: {tool_name}")
+    #             else:
+    #                 print(f"Warning: Tool '{tool_name}' not found in massgen.tool")
+    #         except ImportError as e:
+    #             print(f"Warning: Could not import tool module: {e}")
+    #         except Exception as e:
+    #             print(f"Error registering tool '{tool_name}': {e}")
 
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""

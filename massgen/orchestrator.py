@@ -44,6 +44,7 @@ from .logger_config import (
 )
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
+from .tool import get_workflow_tools
 from .utils import ActionType, AgentStatus, CoordinationStage
 
 
@@ -137,9 +138,16 @@ class Orchestrator(ChatAgent):
         self.config = config or AgentConfig.create_openai_config()
 
         # Get message templates from config
-        self.message_templates = self.config.message_templates or MessageTemplates()
-        # Create workflow tools for agents (vote and new_answer)
-        self.workflow_tools = self.message_templates.get_standard_tools(list(agents.keys()))
+        self.message_templates = self.config.message_templates or MessageTemplates(
+            voting_sensitivity=self.config.voting_sensitivity,
+            answer_novelty_requirement=self.config.answer_novelty_requirement,
+        )
+        # Create workflow tools for agents (vote and new_answer) using new toolkit system
+        self.workflow_tools = get_workflow_tools(
+            valid_agent_ids=list(agents.keys()),
+            template_overrides=getattr(self.message_templates, "_template_overrides", {}),
+            api_format="chat_completions",  # Default format, will be overridden per backend
+        )
 
         # MassGen-specific state
         self.current_task: Optional[str] = None
@@ -948,8 +956,8 @@ class Orchestrator(ChatAgent):
         # Generate single timestamp for answer/vote and workspace
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
-        # Save answer if provided
-        if answer_content:
+        # Save answer if provided (or create final directory structure even if empty)
+        if answer_content is not None or is_final:
             try:
                 log_session_dir = get_log_session_dir()
                 if log_session_dir:
@@ -962,8 +970,9 @@ class Orchestrator(ChatAgent):
                     timestamped_dir.mkdir(parents=True, exist_ok=True)
                     answer_file = timestamped_dir / "answer.txt"
 
-                    # Write the answer content
-                    answer_file.write_text(answer_content)
+                    # Write the answer content (even if empty for final snapshots)
+                    content_to_write = answer_content if answer_content is not None else ""
+                    answer_file.write_text(content_to_write)
                     logger.info(f"[Orchestrator._save_agent_snapshot] Saved answer to {answer_file}")
 
             except Exception as e:
@@ -1042,7 +1051,7 @@ class Orchestrator(ChatAgent):
             logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager")
 
         # Save context if provided (unified context saving)
-        if context_data and (answer_content or vote_data):
+        if context_data:
             try:
                 log_session_dir = get_log_session_dir()
                 if log_session_dir:
@@ -1051,6 +1060,8 @@ class Orchestrator(ChatAgent):
                     else:
                         timestamped_dir = log_session_dir / agent_id / timestamp
 
+                    # Ensure directory exists (may not have been created if no answer/vote)
+                    timestamped_dir.mkdir(parents=True, exist_ok=True)
                     context_file = timestamped_dir / "context.txt"
 
                     # Handle different types of context data
@@ -1228,6 +1239,91 @@ class Orchestrator(ChatAgent):
     #     """
     #     # Implementation will check against PermissionManager
     #     pass
+
+    def _calculate_jaccard_similarity(self, text1: str, text2: str) -> float:
+        """Calculate Jaccard similarity between two texts based on word tokens.
+
+        Args:
+            text1: First text to compare
+            text2: Second text to compare
+
+        Returns:
+            Similarity score between 0.0 and 1.0
+        """
+        # Tokenize and normalize - simple word-based approach
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+
+        if not words1 and not words2:
+            return 1.0  # Both empty, consider identical
+        if not words1 or not words2:
+            return 0.0  # One empty, one not
+
+        intersection = len(words1 & words2)
+        union = len(words1 | words2)
+
+        return intersection / union if union > 0 else 0.0
+
+    def _check_answer_novelty(self, new_answer: str, existing_answers: Dict[str, str]) -> tuple[bool, Optional[str]]:
+        """Check if a new answer is sufficiently different from existing answers.
+
+        Args:
+            new_answer: The proposed new answer
+            existing_answers: Dictionary of existing answers {agent_id: answer_content}
+
+        Returns:
+            Tuple of (is_novel, error_message). is_novel=True if answer passes novelty check.
+        """
+        # Lenient mode: no checks (current behavior)
+        if self.config.answer_novelty_requirement == "lenient":
+            return (True, None)
+
+        # Determine threshold based on setting
+        if self.config.answer_novelty_requirement == "strict":
+            threshold = 0.50  # Reject if >50% overlap (strict)
+            error_msg = (
+                "Your answer is too similar to existing answers (>50% overlap). Please use a fundamentally different approach, employ different tools/techniques, or vote for an existing answer."
+            )
+        else:  # balanced
+            threshold = 0.70  # Reject if >70% overlap (balanced)
+            error_msg = (
+                "Your answer is too similar to existing answers (>70% overlap). "
+                "Please provide a meaningfully different solution with new insights, "
+                "approaches, or tools, or vote for an existing answer."
+            )
+
+        # Check similarity against all existing answers
+        for agent_id, existing_answer in existing_answers.items():
+            similarity = self._calculate_jaccard_similarity(new_answer, existing_answer)
+            if similarity > threshold:
+                logger.info(f"[Orchestrator] Answer rejected: {similarity:.2%} similar to {agent_id}'s answer (threshold: {threshold:.0%})")
+                return (False, error_msg)
+
+        # Answer is sufficiently novel
+        return (True, None)
+
+    def _check_answer_count_limit(self, agent_id: str) -> tuple[bool, Optional[str]]:
+        """Check if agent has reached their answer count limit.
+
+        Args:
+            agent_id: The agent attempting to provide a new answer
+
+        Returns:
+            Tuple of (can_answer, error_message). can_answer=True if agent can provide another answer.
+        """
+        # No limit set
+        if self.config.max_new_answers_per_agent is None:
+            return (True, None)
+
+        # Count how many answers this agent has provided
+        answer_count = len(self.coordination_tracker.answers_by_agent.get(agent_id, []))
+
+        if answer_count >= self.config.max_new_answers_per_agent:
+            error_msg = f"You've reached the maximum of {self.config.max_new_answers_per_agent} new answer(s). Please vote for the best existing answer using the `vote` tool."
+            logger.info(f"[Orchestrator] Answer rejected: {agent_id} has reached limit ({answer_count}/{self.config.max_new_answers_per_agent})")
+            return (False, error_msg)
+
+        return (True, None)
 
     def _create_tool_error_messages(
         self,
@@ -1568,6 +1664,10 @@ Please take these insights into account as you work on providing a better answer
                         # Forward MCP status messages with proper formatting
                         mcp_content = f"🔧 MCP: {chunk.content}"
                         yield ("content", mcp_content)
+                    elif chunk_type == "custom_tool_status":
+                        # Forward custom tool status messages with proper formatting
+                        custom_tool_content = f"🔧 Custom Tool: {chunk.content}"
+                        yield ("content", custom_tool_content)
                     elif chunk_type == "debug":
                         # Forward debug chunks
                         yield ("debug", chunk.content)
@@ -1785,6 +1885,54 @@ Please take these insights into account as you work on providing a better answer
                             # Agent provided new answer
                             content = tool_args.get("content", response_text.strip())
 
+                            # Check answer count limit
+                            can_answer, count_error = self._check_answer_count_limit(agent_id)
+                            if not can_answer:
+                                if attempt < max_attempts - 1:
+                                    if self._check_restart_pending(agent_id):
+                                        await self._save_partial_work_on_restart(agent_id)
+                                        yield (
+                                            "content",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                        )
+                                        yield ("done", None)
+                                        return
+                                    yield ("content", f"❌ {count_error}")
+                                    # Create proper tool error message for retry
+                                    enforcement_msg = self._create_tool_error_messages(agent, [tool_call], count_error)
+                                    continue
+                                else:
+                                    yield (
+                                        "error",
+                                        f"Answer count limit reached after {max_attempts} attempts",
+                                    )
+                                    yield ("done", None)
+                                    return
+
+                            # Check answer novelty (similarity to existing answers)
+                            is_novel, novelty_error = self._check_answer_novelty(content, answers)
+                            if not is_novel:
+                                if attempt < max_attempts - 1:
+                                    if self._check_restart_pending(agent_id):
+                                        await self._save_partial_work_on_restart(agent_id)
+                                        yield (
+                                            "content",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                        )
+                                        yield ("done", None)
+                                        return
+                                    yield ("content", f"❌ {novelty_error}")
+                                    # Create proper tool error message for retry
+                                    enforcement_msg = self._create_tool_error_messages(agent, [tool_call], novelty_error)
+                                    continue
+                                else:
+                                    yield (
+                                        "error",
+                                        f"Answer novelty requirement not met after {max_attempts} attempts",
+                                    )
+                                    yield ("done", None)
+                                    return
+
                             # Check for duplicate answer
                             # Normalize both new content and existing content to neutral paths for comparison
                             normalized_new_content = self._normalize_workspace_paths_for_comparison(content)
@@ -1819,6 +1967,9 @@ Please take these insights into account as you work on providing a better answer
                             yield ("done", None)
                             return
                         elif tool_name.startswith("mcp"):
+                            pass
+                        elif tool_name.startswith("custom_tool"):
+                            # Custom tools are handled by the backend and their results are streamed separately
                             pass
                         else:
                             # Non-workflow tools not yet implemented
@@ -2181,6 +2332,7 @@ Please take these insights into account as you work on providing a better answer
 
         # Use agent's chat method with proper system message (reset chat for clean presentation)
         presentation_content = ""
+        final_snapshot_saved = False  # Track whether snapshot was saved during stream
 
         try:
             # Track final round iterations (each chunk is like an iteration)
@@ -2246,6 +2398,9 @@ Please take these insights into account as you work on providing a better answer
                     # Track the final answer in coordination tracker
                     self.coordination_tracker.set_final_answer(selected_agent_id, final_answer, snapshot_timestamp="final")
 
+                    # Mark snapshot as saved
+                    final_snapshot_saved = True
+
                     log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                     yield StreamChunk(type="done", source=selected_agent_id)
                 elif chunk_type == "error":
@@ -2264,7 +2419,7 @@ Please take these insights into account as you work on providing a better answer
                             type=chunk_type,
                             content=getattr(chunk, "content", ""),
                             source=selected_agent_id,
-                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]},
+                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source", "timestamp", "sequence_number"]},
                         )
                     else:
                         log_stream_chunk(
@@ -2277,10 +2432,24 @@ Please take these insights into account as you work on providing a better answer
                             type=chunk_type,
                             content=getattr(chunk, "content", ""),
                             source=selected_agent_id,
-                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]},
+                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source", "timestamp", "sequence_number"]},
                         )
 
         finally:
+            # Ensure final snapshot is always saved (even if "done" chunk wasn't yielded)
+            if not final_snapshot_saved:
+                final_answer = presentation_content.strip() if presentation_content.strip() else self.agent_states[selected_agent_id].answer
+                final_context = self.get_last_context(selected_agent_id)
+                await self._save_agent_snapshot(
+                    self._selected_agent,
+                    answer_content=final_answer,
+                    is_final=True,
+                    context_data=final_context,
+                )
+
+                # Track the final answer in coordination tracker
+                self.coordination_tracker.set_final_answer(selected_agent_id, final_answer, snapshot_timestamp="final")
+
             # Store the final presentation content for logging
             if presentation_content.strip():
                 # Store the synthesized final answer

@@ -45,20 +45,37 @@ class LinkValidator:
             # Relative from current directory
             target_path = file_path.parent / ref
 
-        # Add .rst extension if not present
-        if not str(target_path).endswith(".rst"):
-            target_path = Path(str(target_path) + ".rst")
+        # Check for .rst or .md extension if not present
+        if not (str(target_path).endswith(".rst") or str(target_path).endswith(".md")):
+            # Try .rst first, then .md
+            rst_path = Path(str(target_path) + ".rst")
+            md_path = Path(str(target_path) + ".md")
 
-        # Check if file exists
-        if not target_path.exists():
-            self.errors.append(
-                (
-                    file_path,
-                    f":doc:`{ref}`",
-                    f"Referenced file does not exist: {target_path.relative_to(self.docs_path.parent)}",
-                ),
-            )
-            return False
+            if rst_path.exists():
+                target_path = rst_path
+            elif md_path.exists():
+                target_path = md_path
+            else:
+                # Neither exists
+                self.errors.append(
+                    (
+                        file_path,
+                        f":doc:`{ref}`",
+                        f"Referenced file does not exist: {rst_path.relative_to(self.docs_path.parent)} or {md_path.relative_to(self.docs_path.parent)}",
+                    ),
+                )
+                return False
+        else:
+            # Explicit extension given, check if file exists
+            if not target_path.exists():
+                self.errors.append(
+                    (
+                        file_path,
+                        f":doc:`{ref}`",
+                        f"Referenced file does not exist: {target_path.relative_to(self.docs_path.parent)}",
+                    ),
+                )
+                return False
 
         return True
 
