@@ -59,10 +59,19 @@ class TokenCostCalculator:
             "o3-mini": ModelPricing(0.0011, 0.0044, 200000, 100000),
         },
         "Anthropic": {
-            "claude-3-5-sonnet": ModelPricing(0.003, 0.015, 200000, 8192),
-            "claude-3-5-haiku": ModelPricing(0.001, 0.005, 200000, 8192),
-            "claude-3-opus": ModelPricing(0.015, 0.075, 200000, 4096),
-            "claude-3-sonnet": ModelPricing(0.003, 0.015, 200000, 4096),
+            # Claude 4.5 models (October 2024+)
+            "claude-haiku-4-5": ModelPricing(0.001, 0.005, 200000, 65536),  # $1/MTok input, $5/MTok output, 64K max output
+            "claude-sonnet-4-5": ModelPricing(0.003, 0.015, 200000, 65536),  # $3/MTok input, $15/MTok output, 64K max output
+            # Claude 4 models
+            "claude-opus-4.1": ModelPricing(0.015, 0.075, 200000, 32768),  # $15/MTok input, $75/MTok output, 32K max output
+            "claude-opus-4": ModelPricing(0.015, 0.075, 200000, 32768),  # $15/MTok input, $75/MTok output, 32K max output
+            "claude-sonnet-4": ModelPricing(0.003, 0.015, 200000, 8192),  # $3/MTok input, $15/MTok output
+            # Claude 3.5 models
+            "claude-3-5-sonnet": ModelPricing(0.003, 0.015, 200000, 8192),  # $3/MTok input, $15/MTok output
+            "claude-3-5-haiku": ModelPricing(0.0008, 0.004, 200000, 8192),  # $0.80/MTok input, $4/MTok output
+            # Claude 3 models (deprecated)
+            "claude-3-opus": ModelPricing(0.015, 0.075, 200000, 4096),  # Deprecated
+            "claude-3-sonnet": ModelPricing(0.003, 0.015, 200000, 4096),  # Deprecated
             "claude-3-haiku": ModelPricing(0.00025, 0.00125, 200000, 4096),
         },
         "Google": {
