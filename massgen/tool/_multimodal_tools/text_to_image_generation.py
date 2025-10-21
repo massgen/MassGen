@@ -40,7 +40,7 @@ def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None
     raise ValueError(f"Path not in allowed directories: {path}")
 
 
-async def text_to_image(
+async def text_to_image_generation(
     prompt: str,
     model: str = "gpt-4.1",
     storage_path: Optional[str] = None,

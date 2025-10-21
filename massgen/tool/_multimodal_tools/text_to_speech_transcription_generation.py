@@ -39,7 +39,7 @@ def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None
     raise ValueError(f"Path not in allowed directories: {path}")
 
 
-async def convert_text_to_speech(
+async def text_to_speech_transcription_generation(
     input_text: str,
     model: str = "gpt-4o-mini-tts",
     voice: str = "alloy",

@@ -40,7 +40,7 @@ def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None
     raise ValueError(f"Path not in allowed directories: {path}")
 
 
-async def text_to_video(
+async def text_to_video_generation(
     prompt: str,
     model: str = "sora-2",
     seconds: int = 4,

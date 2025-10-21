@@ -40,7 +40,7 @@ def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None
     raise ValueError(f"Path not in allowed directories: {path}")
 
 
-async def image_to_image(
+async def image_to_image_generation(
     base_image_paths: List[str],
     prompt: str = "Create a variation of the provided images",
     model: str = "gpt-4.1",
