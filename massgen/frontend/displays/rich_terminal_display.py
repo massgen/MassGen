@@ -3679,10 +3679,54 @@ class RichTerminalDisplay(TerminalDisplay):
             )
             self.console.print(error_text)
 
+        # Run post-presentation evaluation if enabled (after presentation completes but before inspection)
+        self._run_post_presentation_evaluation_if_enabled(selected_agent)
+
         # except Exception as e:
         #     # Handle errors gracefully - show a simple message
         #     error_text = Text(f"Unable to retrieve final presentation: {str(e)}", style=self.colors['warning'])
         #     self.console.print(error_text)
+
+    def _run_post_presentation_evaluation_if_enabled(self, selected_agent_id: str) -> None:
+        """Run post-presentation evaluation if enabled in orchestrator config."""
+        try:
+            if not hasattr(self, "orchestrator") or not self.orchestrator:
+                return
+
+            # Check if post-presentation evaluation is enabled
+            if not hasattr(self.orchestrator, "_run_post_presentation_evaluation_if_enabled"):
+                return
+
+            # Run the orchestrator's evaluation method synchronously
+            import asyncio
+
+            import nest_asyncio
+
+            nest_asyncio.apply()
+
+            async def _run_eval() -> None:
+                """Helper to run evaluation asynchronously."""
+                await self.orchestrator._run_post_presentation_evaluation_if_enabled(selected_agent_id)
+
+            # Run the async function
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            try:
+                loop.run_until_complete(_run_eval())
+            except Exception:
+                # If all else fails, try asyncio.run
+                try:
+                    asyncio.run(_run_eval())
+                except Exception:
+                    # Silently fail if evaluation doesn't work
+                    pass
+        except Exception:
+            # Handle errors gracefully - evaluation is optional
+            pass
 
     def _force_display_final_vote_statuses(self) -> None:
         """Force display update to show all agents' final vote statuses."""

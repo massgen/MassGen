@@ -856,6 +856,13 @@ async def run_question_with_history(
     if orchestrator_cfg.get("skip_coordination_rounds", False):
         orchestrator_config.skip_coordination_rounds = True
 
+    # Load coordination config from YAML
+    coordination_data = orchestrator_cfg.get("coordination", {})
+    if coordination_data:
+        from massgen.agent_config import CoordinationConfig
+
+        orchestrator_config.coordination_config = CoordinationConfig(**coordination_data)
+
     # Load previous turns from session storage for multi-turn conversations
     previous_turns = load_previous_turns(session_info, session_storage)
 
@@ -973,6 +980,13 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         # Get debug/test parameters
         if orchestrator_cfg.get("skip_coordination_rounds", False):
             orchestrator_config.skip_coordination_rounds = True
+
+        # Load coordination config from YAML
+        coordination_data = orchestrator_cfg.get("coordination", {})
+        if coordination_data:
+            from massgen.agent_config import CoordinationConfig
+
+            orchestrator_config.coordination_config = CoordinationConfig(**coordination_data)
 
         orchestrator = Orchestrator(
             agents=agents,

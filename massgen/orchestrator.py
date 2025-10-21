@@ -465,6 +465,8 @@ class Orchestrator(ChatAgent):
             # Present final answer immediately
             async for chunk in self._present_final_answer():
                 yield chunk
+
+            # Return to restart loop where post-presentation evaluation will happen (if enabled)
             return
 
         log_stream_chunk(
@@ -514,6 +516,13 @@ class Orchestrator(ChatAgent):
         # Check evaluation mode
         use_post_evaluation = self.config.coordination_config.enable_post_presentation_evaluation if self.config and hasattr(self.config, "coordination_config") else False
 
+        # DEBUG: Log evaluation mode
+        logger.info(f"🔍 DEBUG: use_post_evaluation = {use_post_evaluation}")
+        logger.info(f"🔍 DEBUG: config exists = {self.config is not None}")
+        logger.info(f"🔍 DEBUG: has coordination_config = {hasattr(self.config, 'coordination_config') if self.config else False}")
+        if self.config and hasattr(self.config, "coordination_config"):
+            logger.info(f"🔍 DEBUG: coordination_config.enable_post_presentation_evaluation = {self.config.coordination_config.enable_post_presentation_evaluation}")
+
         if not use_post_evaluation:
             # ORIGINAL BEHAVIOR: Pre-presentation decision
             # Get vote results for final agent decision
@@ -538,43 +547,9 @@ class Orchestrator(ChatAgent):
 
             # Decision was "submit", proceed with final presentation
 
-        # Present final answer (happens in both modes)
+        # Present final answer (post-presentation evaluation happens inside get_final_presentation if enabled)
         async for chunk in self._present_final_answer():
             yield chunk
-
-        # NEW BEHAVIOR: Post-presentation evaluation (if enabled)
-        if use_post_evaluation:
-            logger.info("🔍 Starting post-presentation evaluation")
-
-            # Get the final presentation content
-            final_content = self._final_presentation_content or ""
-
-            if not final_content:
-                logger.warning("⚠️ No final presentation content to evaluate - skipping post-evaluation")
-                return
-
-            # Evaluate the completed final answer
-            decision, restart_context = await self._evaluate_final_presentation(
-                self._selected_agent,
-                final_content,
-            )
-
-            if decision == "restart":
-                # Store restart context and set flag
-                self._restart_context = restart_context
-                self._restart_requested = True
-                logger.info(f"🔄 Post-evaluation restart requested: {restart_context.get('reason', '')}")
-
-                # Yield a message to user about restart
-                restart_notice = f"\n🔄 **Post-evaluation restart requested**\n\n**Reason:** {restart_context.get('reason', 'Not specified')}\n\n"
-                log_stream_chunk("orchestrator", "content", restart_notice, self.orchestrator_id)
-                yield StreamChunk(type="content", content=restart_notice, source=self.orchestrator_id)
-
-                # Return - the restart loop will handle restarting
-                return
-
-            # Decision was "submit", orchestration complete
-            logger.info("✅ Post-evaluation confirmed: answer is satisfactory")
 
     async def _stream_coordination_with_agents(
         self,
@@ -2401,8 +2376,8 @@ Please take these insights into account as you work on providing a better answer
                     # Mark snapshot as saved
                     final_snapshot_saved = True
 
+                    # DON'T yield done chunk yet - will yield after evaluation in finally block
                     log_stream_chunk("orchestrator", "done", None, selected_agent_id)
-                    yield StreamChunk(type="done", source=selected_agent_id)
                 elif chunk_type == "error":
                     log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
                     yield StreamChunk(type="error", error=chunk.error, source=selected_agent_id)
@@ -2434,6 +2409,15 @@ Please take these insights into account as you work on providing a better answer
                             source=selected_agent_id,
                             **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source", "timestamp", "sequence_number"]},
                         )
+
+            # Store final presentation content for potential evaluation later
+            if presentation_content.strip():
+                self._final_presentation_content = presentation_content.strip()
+            elif self.agent_states[selected_agent_id].answer:
+                self._final_presentation_content = self.agent_states[selected_agent_id].answer
+
+            # Yield the done chunk to signal presentation completion
+            yield StreamChunk(type="done", source=selected_agent_id)
 
         finally:
             # Ensure final snapshot is always saved (even if "done" chunk wasn't yielded)
@@ -2484,6 +2468,89 @@ Please take these insights into account as you work on providing a better answer
 
             # Save logs
             self.save_coordination_logs()
+
+    async def _run_post_presentation_evaluation_if_enabled(self, selected_agent_id: str) -> None:
+        """Run post-presentation evaluation if enabled. Sets restart flag if needed."""
+        use_post_eval = self.config.coordination_config.enable_post_presentation_evaluation if self.config and hasattr(self.config, "coordination_config") else False
+
+        logger.info(f"🔍 DEBUG: use_post_eval={use_post_eval}, has_content={bool(self._final_presentation_content)}")
+
+        if not use_post_eval or not self._final_presentation_content:
+            return
+
+        logger.info("🔍 Starting post-presentation evaluation")
+        self._print_evaluation_header()
+
+        decision, restart_context = await self._evaluate_final_presentation(
+            selected_agent_id,
+            self._final_presentation_content,
+        )
+
+        if decision == "restart":
+            self._handle_restart_decision(restart_context)
+        else:
+            self._print_submit_decision()
+
+    def _print_evaluation_header(self) -> None:
+        """Print the evaluation header panel."""
+        try:
+            from rich.console import Console
+            from rich.panel import Panel
+
+            console = Console()
+            console.print(
+                Panel(
+                    "📊 POST-PRESENTATION EVALUATION\n\nReviewing the completed answer...",
+                    style="bold cyan",
+                    border_style="cyan",
+                    expand=True,
+                ),
+            )
+        except Exception:
+            pass
+
+    def _handle_restart_decision(self, restart_context: dict) -> None:
+        """Handle restart decision from evaluation."""
+        self._restart_context = restart_context
+        self._restart_requested = True
+        logger.info(f"🔄 Post-evaluation restart requested: {restart_context.get('reason', '')}")
+
+        try:
+            from rich.console import Console
+            from rich.panel import Panel
+
+            console = Console()
+            restart_reason = restart_context.get("reason", "Not specified")
+            console.print(
+                Panel(
+                    f"🔄 DECISION: RESTART ORCHESTRATION\n\n[bold]Reason:[/bold] {restart_reason}",
+                    style="bold yellow",
+                    border_style="yellow",
+                    expand=True,
+                ),
+            )
+        except Exception:
+            pass
+
+    def _print_submit_decision(self) -> None:
+        """Print submit decision panel."""
+        logger.info("✅ Post-evaluation confirmed: answer is satisfactory")
+
+        try:
+            from rich.console import Console
+            from rich.panel import Panel
+
+            console = Console()
+            console.print(
+                Panel(
+                    "✅ DECISION: ANSWER IS SATISFACTORY",
+                    style="bold green",
+                    border_style="green",
+                    expand=True,
+                ),
+            )
+        except Exception:
+            pass
 
     def _get_vote_results(self) -> Dict[str, Any]:
         """Get current vote results and statistics."""
@@ -2738,15 +2805,29 @@ You MUST call one of these tools to proceed."""
         final_tools = self.message_templates.get_final_agent_tools()
 
         logger.info(f"🔍 Post-presentation evaluation by {selected_agent_id}")
+        logger.info(f"🔍 DEBUG: final_tools = {final_tools}")
 
-        # Stream the evaluation decision
-        tool_calls = []
-        async for chunk in agent.chat(evaluation_messages, tools=final_tools, reset_chat=True):
-            chunk_type = self._get_chunk_type_value(chunk)
+        # Temporarily disable MCP for this evaluation call
+        # MCP tools can interfere with the submit/restart tools
+        original_mcp_enabled = getattr(agent.backend, "enable_mcp", None)
+        if hasattr(agent.backend, "enable_mcp"):
+            logger.info(f"🔍 DEBUG: Temporarily disabling MCP (was {original_mcp_enabled})")
+            agent.backend.enable_mcp = False
 
-            if chunk_type == "tool_calls":
-                chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
-                tool_calls.extend(chunk_tool_calls)
+        try:
+            # Stream the evaluation decision
+            tool_calls = []
+            async for chunk in agent.chat(evaluation_messages, tools=final_tools, reset_chat=True):
+                chunk_type = self._get_chunk_type_value(chunk)
+
+                if chunk_type == "tool_calls":
+                    chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
+                    tool_calls.extend(chunk_tool_calls)
+        finally:
+            # Restore MCP setting
+            if hasattr(agent.backend, "enable_mcp") and original_mcp_enabled is not None:
+                agent.backend.enable_mcp = original_mcp_enabled
+                logger.info(f"🔍 DEBUG: Restored MCP to {original_mcp_enabled}")
 
         # Process the tool call
         if tool_calls:

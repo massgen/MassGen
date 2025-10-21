@@ -1,0 +1,32 @@
+# DEBUG config for testing orchestration restart feature
+# This skips coordination/voting and goes straight to final presentation + restart evaluation
+# Useful for testing ONLY the restart logic without full coordination overhead
+
+agents:
+  - id: "test_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace1"
+      # enable_code_execution: true  # Can run Python/bash directly
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  # DEBUG: Skip coordination rounds - go straight to final presentation
+  # When enabled, the first agent is selected as winner and immediately enters final presentation mode
+  skip_coordination_rounds: true
+
+  # Coordination config (still applies even with skip_coordination_rounds)
+  coordination:
+    # Allow up to 2 restarts for testing
+    max_orchestration_restarts: 2
+
+    # Post-presentation evaluation (agent evaluates AFTER presenting)
+    # This is critical for restart testing
+    enable_post_presentation_evaluation: true
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
