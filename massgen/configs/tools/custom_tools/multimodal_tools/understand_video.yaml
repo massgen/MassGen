@@ -20,6 +20,13 @@ agents:
 
       When users ask about analyzing or understanding videos, use the understand_video tool to process
       the video and provide detailed descriptions or answers to their questions.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git23/MassGen/massgen/configs/resources/v0.0.27-example/multimodality.jpg"
+      permission: "read"
 ui:
   display_type: "simple"
   logging_enabled: true

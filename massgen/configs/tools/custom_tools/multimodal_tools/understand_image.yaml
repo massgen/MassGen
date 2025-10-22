@@ -1,11 +1,12 @@
 # MassGen Configuration: Understand Image Tool
 # Usage:
-#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/understand_image "Analyze the image at photo.jpg"
+#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml "Please summarize the content in this image."
 agents:
   - id: "understand_image_tool"
     backend:
       type: "openai"
       model: "gpt-5-nano"
+      cwd: "workspace1"
       custom_tools:
         - name: ["understand_image"]
           category: "multimodal"
@@ -19,6 +20,14 @@ agents:
 
       When users ask about analyzing or understanding images, use the understand_image tool to process
       the image and provide detailed descriptions or answers to their questions.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git23/MassGen/massgen/configs/resources/v0.0.27-example/multimodality.jpg"
+      permission: "read"
+
 ui:
   display_type: "simple"
   logging_enabled: true
