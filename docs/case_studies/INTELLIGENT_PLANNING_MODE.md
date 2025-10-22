@@ -302,49 +302,167 @@ massgen --debug --config your_config.yaml
 └─────────────────────────────────────────────────────────┘
 ```
 
-## Future Enhancements
+## Selective Tool Blocking Implementation
 
-### 1. Tool-Specific Analysis
-Instead of blocking all MCP tools, analyze per-tool:
+### Overview
+This following section describes the implementation of selective MCP tool blocking during planning mode. Instead of blocking ALL MCP tools when irreversible operations are detected, the system can now selectively block only specific tools while allowing read-only operations to proceed.
 
+### Architecture
+
+#### 1. Core Backend Support (`massgen/backend/base.py`)
+
+Added to `LLMBackend` class:
+- `_planning_mode_blocked_tools: set` - Stores specific tool names to block
+- `set_planning_mode_blocked_tools(tool_names: set)` - Set tools to block
+- `get_planning_mode_blocked_tools() -> set` - Get currently blocked tools
+- `is_mcp_tool_blocked(tool_name: str) -> bool` - Check if specific tool is blocked
+
+**Blocking Logic:**
+- Planning mode disabled → All tools allowed
+- Planning mode enabled + empty blocked_tools → Block ALL tools (backward compatible)
+- Planning mode enabled + specific blocked_tools → Block only listed tools
+
+#### 2. Question Analysis (`massgen/orchestrator.py`)
+
+Modified `_analyze_question_irreversibility()`:
+- **Return type changed:** `bool` → `Dict[str, Any]`
+- **Returns:** `{"has_irreversible": bool, "blocked_tools": set}`
+- **Enhanced prompt:** Asks LLM to identify specific MCP tools to block
+- **Isolated Workspace Detection:** Automatically detects if agents have isolated workspaces (directories with "workspace" in name)
+- **Filesystem Exception:** When isolated workspaces are detected, filesystem operations are NOT blocked as they're contained within temporary sandboxes
+- **Response format:**
+  ```
+  IRREVERSIBLE: YES/NO
+  BLOCKED_TOOLS: mcp__discord__discord_send, mcp__twitter__post_tweet
+  ```
+
+Modified `chat()` method:
+- Unpacks analysis result to get both flag and tool list
+- Sets both planning mode and blocked tools on all agents
+
+#### 3. MCP Execution Layer (`massgen/backend/base_with_mcp.py`)
+
+Modified `_execute_mcp_function_with_retry()`:
+- Changed from `if self.is_planning_mode_enabled()` to `if self.is_mcp_tool_blocked(function_name)`
+- Now checks specific tool blocking instead of blanket blocking
+- Provides specific error message naming the blocked tool
+
+### Example Usage
+
+#### Scenario 1: Block ALL MCP tools (Backward Compatible)
 ```python
-# Future feature
-tool_permissions = {
-    "discord_read": False,   # No planning mode
-    "discord_send": True,    # Planning mode enabled
-    "discord_delete": True,  # Planning mode enabled
+backend.set_planning_mode(True)
+backend.set_planning_mode_blocked_tools(set())  # Empty set
+
+# Result: ALL MCP tools blocked
+backend.is_mcp_tool_blocked("mcp__discord__discord_send")  # True
+backend.is_mcp_tool_blocked("mcp__discord__discord_read_channel")  # True
+```
+
+#### Scenario 2: Selective Blocking
+```python
+backend.set_planning_mode(True)
+backend.set_planning_mode_blocked_tools({
+    "mcp__discord__discord_send",
+    "mcp__twitter__post_tweet"
+})
+
+# Result: Only specified tools blocked
+backend.is_mcp_tool_blocked("mcp__discord__discord_send")  # True (blocked)
+backend.is_mcp_tool_blocked("mcp__discord__discord_read_channel")  # False (allowed)
+backend.is_mcp_tool_blocked("mcp__twitter__search_tweets")  # False (allowed)
+```
+
+#### Scenario 3: Planning Mode Disabled
+```python
+backend.set_planning_mode(False)
+
+# Result: ALL tools allowed regardless of blocked_tools set
+backend.is_mcp_tool_blocked("mcp__discord__discord_send")  # False
+backend.is_mcp_tool_blocked("any_tool")  # False
+```
+
+## Real-World Example
+
+### Example 1: User Question with Isolated Workspace
+
+**User Question:** "Create a Python script that reads data.json and generates a report"
+
+**System Detects:**
+- Agents have isolated workspaces (e.g., `/tmp/massgen_workspace_agent1/`)
+- Filesystem operations are within isolated sandboxes
+
+**Analysis Result:**
+```python
+{
+    "has_irreversible": False,  # No irreversible operations
+    "blocked_tools": set()      # No tools blocked
 }
 ```
 
-### 2. Confidence Scoring
-Use multiple agents for consensus:
+**Behavior:**
+1. Planning mode DISABLED (no irreversible operations)
+2. Agents can freely use all filesystem tools ✅
+3. Files created in isolated workspace are temporary and safe
+4. No coordination restrictions needed
 
+### Example 2: Discord Message with Isolated Workspace
+
+**User Question:** "Send a message to #general saying 'Hello' and create a log file"
+
+**System Detects:**
+- Agents have isolated workspaces
+- Request involves Discord message (external system) + file creation (isolated workspace)
+
+**Analysis Result:**
 ```python
-# Future feature
-agents_agree = sum(agent.analyze(question) for agent in agents)
-enable_planning = agents_agree >= threshold
+{
+    "has_irreversible": True,
+    "blocked_tools": {"mcp__discord__discord_send"}  # Only block Discord send
+}
 ```
 
-### 3. Learning from History
-Track accuracy and improve:
+**Behavior:**
+1. Planning mode ENABLED for coordination
+2. Agent can create log file in workspace ✅ (isolated, safe)
+3. Agent can read Discord channels ✅ (read-only)
+4. Agent cannot send Discord message 🚫 (blocked - external system)
+5. After coordination, planning mode disabled
+6. Agent executes plan including sending message ✅
 
+### Example 3: No Isolated Workspace (Traditional Behavior)
+
+**User Question:** "Write a configuration file to /etc/myapp/config.yaml"
+
+**System Detects:**
+- No isolated workspaces detected
+- Filesystem operation targets external system path
+
+**Analysis Result:**
 ```python
-# Future feature
-if outcome_was_safe and planning_was_enabled:
-    improve_analysis_prompt()
+{
+    "has_irreversible": True,
+    "blocked_tools": {"mcp__filesystem__write_file"}
+}
 ```
 
-### 4. User Preferences
-Allow users to override:
+**Behavior:**
+1. Planning mode enabled for coordination
+2. Agent cannot write to /etc/myapp ✅ (blocked during planning)
+3. Agent plans the configuration structure
+4. After coordination, planning mode disabled
+5. Agent writes the actual file ✅
 
-```yaml
-# Future feature
-orchestrator:
-  risk_tolerance: "high"  # More read operations allowed
-  custom_irreversibility_rules:
-    - "send*": true
-    - "read*": false
-```
+## Benefits
+
+1. **Better Coordination:** Agents can gather information during planning phase
+2. **Safer Execution:** Still prevents irreversible actions during coordination
+3. **Workspace-Aware:** Automatically detects isolated workspaces and allows safe operations
+4. **Flexible Sandbox:** Agents can use temporary workspaces freely without restrictions
+5. **Backward Compatible:** Empty blocked set behaves like before (block all)
+6. **Smart Analysis:** LLM determines which tools are irreversible based on context
+7. **Transparent:** Clear logging shows which tools are blocked and why
+
 
 ## Related Documentation
 

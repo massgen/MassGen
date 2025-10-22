@@ -1531,21 +1531,44 @@ Make your decision and include the JSON at the very end of your response."""
                     if self._mcp_client:
                         available_tools = list(self._mcp_client.tools.keys())
 
-                    # Check planning mode - block MCP tools during coordination phase
+                    # Check planning mode - selectively block MCP tools during coordination phase
                     if self.is_planning_mode_enabled():
-                        logger.info("[Gemini] Planning mode enabled - blocking MCP tools during coordination")
-                        # Don't set tools, which prevents automatic function calling
-                        log_backend_activity(
-                            "gemini",
-                            "MCP tools blocked in planning mode",
-                            {
-                                "blocked_tools": len(available_tools),
-                                "session_count": len(mcp_sessions),
-                            },
-                            agent_id=agent_id,
-                        )
+                        blocked_tools = self.get_planning_mode_blocked_tools()
+
+                        if not blocked_tools:
+                            # Empty set means block ALL MCP tools (backward compatible)
+                            logger.info("[Gemini] Planning mode enabled - blocking ALL MCP tools during coordination")
+                            # Don't set tools at all - this prevents any MCP tool execution
+                            log_backend_activity(
+                                "gemini",
+                                "All MCP tools blocked in planning mode",
+                                {
+                                    "blocked_tools": len(available_tools),
+                                    "session_count": len(mcp_sessions),
+                                },
+                                agent_id=agent_id,
+                            )
+                        else:
+                            # Selective blocking - allow non-blocked tools to be called
+                            # The execution layer (_execute_mcp_function_with_retry) will enforce blocking
+                            # but we still register all tools so non-blocked ones can be used
+                            logger.info(f"[Gemini] Planning mode enabled - allowing non-blocked MCP tools, blocking {len(blocked_tools)} specific tools")
+
+                            # Pass all sessions - the backend's is_mcp_tool_blocked() will handle selective blocking
+                            session_config["tools"] = mcp_sessions
+
+                            log_backend_activity(
+                                "gemini",
+                                "Selective MCP tools blocked in planning mode",
+                                {
+                                    "total_tools": len(available_tools),
+                                    "blocked_tools": len(blocked_tools),
+                                    "allowed_tools": len(available_tools) - len(blocked_tools),
+                                },
+                                agent_id=agent_id,
+                            )
                     else:
-                        # Log session types for debugging if needed
+                        # Planning mode disabled - allow all MCP tools
                         logger.debug(f"[Gemini] Passing {len(mcp_sessions)} sessions to SDK: {[type(s).__name__ for s in mcp_sessions]}")
 
                         session_config["tools"] = mcp_sessions

@@ -145,7 +145,7 @@ orchestrator:
       1. Describe your intended actions and reasoning
       2. Analyze other agents' proposals
       3. Use only the 'vote' or 'new_answer' tools for coordination
-      4. DO NOT execute any actual Notion commands or API calls
-      5. Save tool execution for the final presentation phase when the winning agent will implement the plan
+      4. Execute read-only actions - DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)
+      5. Save actions that have side effects for the final presentation phase when the winning agent will implement the plan
 
       Focus on planning, analysis, and coordination rather than execution.

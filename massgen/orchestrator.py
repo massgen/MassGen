@@ -262,16 +262,24 @@ class Orchestrator(ChatAgent):
 
             # Analyze question for irreversibility and set planning mode accordingly
             # This happens silently - users don't see this analysis
-            has_irreversible = await self._analyze_question_irreversibility(user_message, conversation_context)
+            analysis_result = await self._analyze_question_irreversibility(user_message, conversation_context)
+            has_irreversible = analysis_result["has_irreversible"]
+            blocked_tools = analysis_result["blocked_tools"]
 
-            # Set planning mode for all agents based on analysis
+            # Set planning mode and blocked tools for all agents based on analysis
             for agent_id, agent in self.agents.items():
                 if hasattr(agent.backend, "set_planning_mode"):
                     agent.backend.set_planning_mode(has_irreversible)
+                    if hasattr(agent.backend, "set_planning_mode_blocked_tools"):
+                        agent.backend.set_planning_mode_blocked_tools(blocked_tools)
                     log_orchestrator_activity(
                         self.orchestrator_id,
                         f"Set planning mode for {agent_id}",
-                        {"planning_mode_enabled": has_irreversible, "reason": "irreversibility analysis"},
+                        {
+                            "planning_mode_enabled": has_irreversible,
+                            "blocked_tools_count": len(blocked_tools),
+                            "reason": "irreversibility analysis",
+                        },
                     )
 
             async for chunk in self._coordinate_agents_with_timeout(conversation_context):
@@ -342,7 +350,7 @@ class Orchestrator(ChatAgent):
         if log_session_dir:
             self.coordination_tracker.save_coordination_logs(log_session_dir)
 
-    async def _analyze_question_irreversibility(self, user_question: str, conversation_context: Dict[str, Any]) -> bool:
+    async def _analyze_question_irreversibility(self, user_question: str, conversation_context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze if the user's question involves MCP tools with irreversible outcomes.
 
@@ -356,7 +364,10 @@ class Orchestrator(ChatAgent):
             conversation_context: Full conversation context including history
 
         Returns:
-            bool: True if the question involves irreversible MCP operations, False otherwise
+            Dict with:
+                - has_irreversible (bool): True if irreversible operations detected
+                - blocked_tools (set): Set of MCP tool names to block (e.g., {'mcp__discord__discord_send'})
+                                      Empty set means block ALL MCP tools
         """
         import random
 
@@ -368,18 +379,31 @@ class Orchestrator(ChatAgent):
         # Select a random agent for analysis
         available_agents = [aid for aid, agent in self.agents.items() if agent.backend is not None]
         if not available_agents:
-            # No agents available, default to safe mode (planning enabled)
+            # No agents available, default to safe mode (planning enabled, block ALL)
             log_orchestrator_activity(
                 self.orchestrator_id,
                 "No agents available for irreversibility analysis, defaulting to planning mode",
                 {},
             )
-            return True
+            return {"has_irreversible": True, "blocked_tools": set()}
 
         analyzer_agent_id = random.choice(available_agents)
         analyzer_agent = self.agents[analyzer_agent_id]
 
         print(f"🤖 Selected analyzer agent: {analyzer_agent_id}", flush=True)
+
+        # Check if agents have isolated workspaces
+        has_isolated_workspaces = False
+        workspace_info = []
+        for agent_id, agent in self.agents.items():
+            if agent.backend and agent.backend.filesystem_manager:
+                cwd = agent.backend.filesystem_manager.cwd
+                if cwd and "workspace" in os.path.basename(cwd).lower():
+                    has_isolated_workspaces = True
+                    workspace_info.append(f"{agent_id}: {cwd}")
+
+        if has_isolated_workspaces:
+            print("🔒 Detected isolated agent workspaces - filesystem ops will be allowed", flush=True)
 
         log_orchestrator_activity(
             self.orchestrator_id,
@@ -387,37 +411,65 @@ class Orchestrator(ChatAgent):
             {
                 "analyzer_agent": analyzer_agent_id,
                 "question_preview": user_question[:100] + "..." if len(user_question) > 100 else user_question,
+                "has_isolated_workspaces": has_isolated_workspaces,
             },
         )
 
-        # Build analysis prompt
+        # Build analysis prompt - now asking for specific tool names
+        workspace_context = ""
+        if has_isolated_workspaces:
+            workspace_context = """
+IMPORTANT - ISOLATED WORKSPACES:
+The agents are working in isolated temporary workspaces (directories containing "workspace" in their name).
+Filesystem operations (read_file, write_file, delete_file, list_files, etc.) within these isolated workspaces are SAFE and REVERSIBLE.
+They should NOT be blocked because:
+- These are temporary directories specific to this coordination session
+- Files created/modified are isolated from external systems
+- Changes are contained within the agent's sandbox
+- The workspace can be cleared after coordination
+
+Only block filesystem operations if they explicitly target paths OUTSIDE the isolated workspace.
+"""
+
         analysis_prompt = f"""You are analyzing whether a user's request involves operations with irreversible outcomes.
 
 USER REQUEST:
 {user_question}
-
+{workspace_context}
 CONTEXT:
-Your task is to determine if executing this request would involve MCP (Model Context Protocol) tools that have irreversible outcomes.
+Your task is to determine if executing this request would involve MCP (Model Context Protocol) tools that have irreversible outcomes, and if so, identify which specific tools should be blocked.
 
-IRREVERSIBLE OPERATIONS (answer YES):
-- Sending messages (Discord, Slack, Twitter, etc.)
-- Posting content publicly
-- Deleting files or data
-- Modifying external systems
-- Creating permanent records
-- Executing commands that change state
+MCP tools follow the naming convention: mcp__<server>__<tool_name>
+Examples:
+- mcp__discord__discord_send (irreversible - sends messages)
+- mcp__discord__discord_read_channel (reversible - reads messages)
+- mcp__twitter__post_tweet (irreversible - posts publicly)
+- mcp__twitter__search_tweets (reversible - searches)
+- mcp__filesystem__write_file (SAFE in isolated workspace - writes to temporary files)
+- mcp__filesystem__read_file (reversible - reads files)
 
-REVERSIBLE OPERATIONS (answer NO):
-- Reading messages or data
-- Searching or querying information
-- Listing files or resources
-- Fetching data from APIs
-- Viewing channel information
-- Any read-only operation
+IRREVERSIBLE OPERATIONS:
+- Sending messages (discord_send, slack_send, etc.)
+- Posting content publicly (post_tweet, create_post, etc.)
+- Deleting files or data OUTSIDE isolated workspace (delete_file on external paths, remove_data, etc.)
+- Modifying external systems (write_file to external paths, update_record, etc.)
+- Creating permanent records (create_issue, add_comment, etc.)
+- Executing commands that change state (run_command, execute_script, etc.)
 
-Respond with ONLY one word:
-- "YES" if the request involves irreversible operations
-- "NO" if the request only involves reversible/read-only operations
+REVERSIBLE OPERATIONS (DO NOT BLOCK):
+- Reading messages or data (read_channel, get_messages, etc.)
+- Searching or querying information (search_tweets, query_data, etc.)
+- Listing files or resources (list_files, list_channels, etc.)
+- Fetching data from APIs (get_user, fetch_data, etc.)
+- Viewing information (view_channel, get_info, etc.)
+- Filesystem operations IN ISOLATED WORKSPACE (write_file, read_file, delete_file, list_files when in workspace*)
+
+Respond in this EXACT format:
+IRREVERSIBLE: YES/NO
+BLOCKED_TOOLS: tool1, tool2, tool3
+
+If IRREVERSIBLE is NO, leave BLOCKED_TOOLS empty.
+If IRREVERSIBLE is YES, list the specific MCP tool names that should be blocked (e.g., mcp__discord__discord_send).
 
 Your answer:"""
 
@@ -438,34 +490,70 @@ Your answer:"""
                     response_text += chunk.content
 
             # Parse response
-            response_clean = response_text.strip().upper()
-            has_irreversible = "YES" in response_clean
+            response_clean = response_text.strip()
+            has_irreversible = False
+            blocked_tools = set()
+
+            # Parse IRREVERSIBLE line
+            found_irreversible_line = False
+            for line in response_clean.split("\n"):
+                line = line.strip()
+                if line.startswith("IRREVERSIBLE:"):
+                    found_irreversible_line = True
+                    # Extract the value after the colon
+                    value = line.split(":", 1)[1].strip().upper()
+                    # Check if the first word is YES
+                    has_irreversible = value.startswith("YES")
+                elif line.startswith("BLOCKED_TOOLS:"):
+                    # Extract tool names after the colon
+                    tools_part = line.split(":", 1)[1].strip()
+                    if tools_part:
+                        # Split by comma and clean up whitespace
+                        blocked_tools = {tool.strip() for tool in tools_part.split(",") if tool.strip()}
+
+            # Fallback: If no structured format found, look for YES/NO in the response
+            if not found_irreversible_line:
+                print("⚠️  [WARNING] No 'IRREVERSIBLE:' line found, using fallback parsing", flush=True)
+                response_upper = response_clean.upper()
+                # Look for clear YES/NO indicators
+                if "YES" in response_upper and "NO" not in response_upper:
+                    has_irreversible = True
+                elif "NO" in response_upper:
+                    has_irreversible = False
+                else:
+                    # Default to safe mode if unclear
+                    has_irreversible = True
 
             log_orchestrator_activity(
                 self.orchestrator_id,
                 "Irreversibility analysis complete",
                 {
                     "analyzer_agent": analyzer_agent_id,
-                    "response": response_clean[:50],
+                    "response": response_clean[:100],
                     "has_irreversible": has_irreversible,
+                    "blocked_tools_count": len(blocked_tools),
                 },
             )
 
             print("=" * 80, flush=True)
             print(f"✅ [ANALYSIS COMPLETE] Irreversible operations detected: {has_irreversible}", flush=True)
+            if has_irreversible and blocked_tools:
+                print(f"🚫 Blocked tools ({len(blocked_tools)}): {', '.join(sorted(blocked_tools))}", flush=True)
+            elif has_irreversible:
+                print("🚫 Blocking ALL MCP tools (no specific tools identified)", flush=True)
             print(f"🎯 Planning mode will be: {'ENABLED' if has_irreversible else 'DISABLED'}", flush=True)
             print("=" * 80, flush=True)
 
-            return has_irreversible
+            return {"has_irreversible": has_irreversible, "blocked_tools": blocked_tools}
 
         except Exception as e:
-            # On error, default to safe mode (planning enabled)
+            # On error, default to safe mode (planning enabled, block ALL)
             log_orchestrator_activity(
                 self.orchestrator_id,
                 "Irreversibility analysis failed, defaulting to planning mode",
                 {"error": str(e)},
             )
-            return True
+            return {"has_irreversible": True, "blocked_tools": set()}
 
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute coordination with orchestrator-level timeout protection."""

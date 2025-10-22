@@ -855,7 +855,8 @@ async def run_question_with_history(
                 enable_planning_mode=coordination_settings.get("enable_planning_mode", False),
                 planning_mode_instruction=coordination_settings.get(
                     "planning_mode_instruction",
-                    "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+                    """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
+                    DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
             )
 
@@ -969,7 +970,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 enable_planning_mode=coordination_settings.get("enable_planning_mode", False),
                 planning_mode_instruction=coordination_settings.get(
                     "planning_mode_instruction",
-                    "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+                    """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
+                    DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
             )
 
