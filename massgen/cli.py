@@ -547,13 +547,8 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
         system_msg = agent_data.get("system_message")
         if system_msg:
             if backend_type_lower == "claude_code":
-                # For Claude Code, use system_prompt dict with append to preserve Claude Code capabilities
-                # This follows the claude-agent-sdk format: {"type": "preset", "preset": "claude_code", "append": "..."}
-                agent_config.backend_params["system_prompt"] = {
-                    "type": "preset",
-                    "preset": "claude_code",
-                    "append": system_msg,
-                }
+                # For Claude Code, use append_system_prompt to preserve Claude Code capabilities
+                agent_config.backend_params["append_system_prompt"] = system_msg
             else:
                 # For other backends, fall back to deprecated custom_system_instruction
                 # TODO: Add backend-specific routing for other backends
@@ -897,9 +892,6 @@ async def run_question_with_history(
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
             )
-
-        # Get orchestrator parameters from config
-        orchestrator_cfg = kwargs.get("orchestrator", {})
 
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
     print(f"Agents: {', '.join(agents.keys())}", flush=True)
