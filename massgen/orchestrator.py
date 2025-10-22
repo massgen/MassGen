@@ -268,27 +268,33 @@ class Orchestrator(ChatAgent):
             if conversation_context and conversation_context.get("conversation_history"):
                 self._clear_agent_workspaces()
 
-            # Analyze question for irreversibility and set planning mode accordingly
-            # This happens silently - users don't see this analysis
-            analysis_result = await self._analyze_question_irreversibility(user_message, conversation_context)
-            has_irreversible = analysis_result["has_irreversible"]
-            blocked_tools = analysis_result["blocked_tools"]
+            # Check if planning mode is enabled in config
+            planning_mode_config_exists = (
+                self.config.coordination_config and self.config.coordination_config.enable_planning_mode if self.config and hasattr(self.config, "coordination_config") else False
+            )
 
-            # Set planning mode and blocked tools for all agents based on analysis
-            for agent_id, agent in self.agents.items():
-                if hasattr(agent.backend, "set_planning_mode"):
-                    agent.backend.set_planning_mode(has_irreversible)
-                    if hasattr(agent.backend, "set_planning_mode_blocked_tools"):
-                        agent.backend.set_planning_mode_blocked_tools(blocked_tools)
-                    log_orchestrator_activity(
-                        self.orchestrator_id,
-                        f"Set planning mode for {agent_id}",
-                        {
-                            "planning_mode_enabled": has_irreversible,
-                            "blocked_tools_count": len(blocked_tools),
-                            "reason": "irreversibility analysis",
-                        },
-                    )
+            if planning_mode_config_exists:
+                # Analyze question for irreversibility and set planning mode accordingly
+                # This happens silently - users don't see this analysis
+                analysis_result = await self._analyze_question_irreversibility(user_message, conversation_context)
+                has_irreversible = analysis_result["has_irreversible"]
+                blocked_tools = analysis_result["blocked_tools"]
+
+                # Set planning mode and blocked tools for all agents based on analysis
+                for agent_id, agent in self.agents.items():
+                    if hasattr(agent.backend, "set_planning_mode"):
+                        agent.backend.set_planning_mode(has_irreversible)
+                        if hasattr(agent.backend, "set_planning_mode_blocked_tools"):
+                            agent.backend.set_planning_mode_blocked_tools(blocked_tools)
+                        log_orchestrator_activity(
+                            self.orchestrator_id,
+                            f"Set planning mode for {agent_id}",
+                            {
+                                "planning_mode_enabled": has_irreversible,
+                                "blocked_tools_count": len(blocked_tools),
+                                "reason": "irreversibility analysis",
+                            },
+                        )
 
             async for chunk in self._coordinate_agents_with_timeout(conversation_context):
                 yield chunk
@@ -359,21 +365,21 @@ class Orchestrator(ChatAgent):
             self.coordination_tracker.save_coordination_logs(log_session_dir)
 
     def _format_planning_mode_ui(
-        self, 
-        has_irreversible: bool, 
-        blocked_tools: set, 
+        self,
+        has_irreversible: bool,
+        blocked_tools: set,
         has_isolated_workspaces: bool,
-        user_question: str
+        user_question: str,
     ) -> str:
         """
         Format a nice UI box for planning mode status.
-        
+
         Args:
             has_irreversible: Whether irreversible operations were detected
             blocked_tools: Set of specific blocked tool names
             has_isolated_workspaces: Whether agents have isolated workspaces
             user_question: The user's question for context
-            
+
         Returns:
             Formatted string with nice box UI
         """
@@ -386,22 +392,22 @@ class Orchestrator(ChatAgent):
             box += "│ No irreversible operations detected.                      │\n"
             box += "╰────────────────────────────────────────────────────────────╯\n"
             return box
-        
+
         # Planning mode enabled
         box = "\n╭─ Coordination Mode ────────────────────────────────────────╮\n"
         box += "│ 🧠 Planning Mode: ENABLED                                  │\n"
         box += "│                                                            │\n"
-        
+
         if has_isolated_workspaces:
             box += "│ 🔒 Workspace: Isolated (filesystem ops allowed)           │\n"
             box += "│                                                            │\n"
-        
+
         # Description
         box += "│ Agents will plan and coordinate without executing         │\n"
         box += "│ irreversible actions. The winning agent will implement    │\n"
         box += "│ the plan during final presentation.                       │\n"
         box += "│                                                            │\n"
-        
+
         # Blocked tools section
         if blocked_tools:
             box += "│ 🚫 Blocked Tools:                                          │\n"
@@ -411,7 +417,7 @@ class Orchestrator(ChatAgent):
                 # Shorten tool name if too long
                 display_tool = tool if len(tool) <= 50 else tool[:47] + "..."
                 box += f"│   {i}. {display_tool:<54} │\n"
-            
+
             if len(sorted_tools) > 5:
                 remaining = len(sorted_tools) - 5
                 box += f"│   ... and {remaining} more tool(s)                              │\n"
@@ -419,7 +425,7 @@ class Orchestrator(ChatAgent):
         else:
             box += "│ 🚫 Blocking: ALL MCP tools                                 │\n"
             box += "│                                                            │\n"
-        
+
         # Add brief analysis summary
         box += "│ 📊 Analysis:                                               │\n"
         # Create a brief summary from the question
@@ -435,7 +441,7 @@ class Orchestrator(ChatAgent):
                 line += word + " "
         if len(line) > 4:  # If there's content
             box += line.ljust(61) + "│\n"
-        
+
         box += "╰────────────────────────────────────────────────────────────╯\n"
         return box
 
