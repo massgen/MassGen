@@ -1698,16 +1698,12 @@ Your answer:"""
             is_coordination_phase = self.workflow_phase == "coordinating"
             planning_mode_enabled = agent.backend.is_planning_mode_enabled() if is_coordination_phase else False
 
-            print(f"🔧 [{agent_id}] Planning mode check: is_planning_mode_enabled() = {planning_mode_enabled}", flush=True)
-
             # Add planning mode instructions to system message if enabled
             # Only add instructions if we have a coordination config with planning instruction
             if planning_mode_enabled and self.config and hasattr(self.config, "coordination_config") and self.config.coordination_config and self.config.coordination_config.planning_mode_instruction:
                 planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
                 agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
                 print(f"📝 [{agent_id}] Adding planning mode instructions to system message", flush=True)
-            else:
-                print(f"✅ [{agent_id}] No planning mode instructions added (planning mode disabled)", flush=True)
 
             # Build conversation with context support
             if conversation_context and conversation_context.get("conversation_history"):
