@@ -20,8 +20,10 @@
 agents:
   - id: "agent_a"
     backend:
-      type: "openai"
-      model: "gpt-5-nano"
+      # type: "openai"
+      # model: "gpt-5-nano"
+      type: "gemini"
+      model: "gemini-2.5-flash"
 
   # - id: "agent_b"
   #   backend:

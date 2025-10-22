@@ -220,6 +220,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
             # Analyze tool types
             is_coordination = self.formatter.has_coordination_tools(tools)
+            is_post_evaluation = self.formatter.has_post_evaluation_tools(tools)
 
             valid_agent_ids = None
 
@@ -239,6 +240,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
             # For coordination requests, modify the prompt to use structured output
             if is_coordination:
                 full_content = self.formatter.build_structured_output_prompt(full_content, valid_agent_ids)
+            elif is_post_evaluation:
+                # For post-evaluation, modify prompt to use structured output
+                full_content = self.formatter.build_post_evaluation_prompt(full_content)
 
             # Use google-genai package
             client = genai.Client(api_key=self.api_key)
@@ -274,6 +278,16 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 if (not using_sdk_mcp) and (not using_custom_tools) and (not all_tools):
                     config["response_mime_type"] = "application/json"
                     config["response_schema"] = CoordinationResponse.model_json_schema()
+                else:
+                    # Tools or sessions are present; fallback to text parsing
+                    pass
+            elif is_post_evaluation:
+                # For post-evaluation, use JSON response format for structured decisions
+                from .gemini_utils import PostEvaluationResponse
+
+                if (not using_sdk_mcp) and (not using_custom_tools) and (not all_tools):
+                    config["response_mime_type"] = "application/json"
+                    config["response_schema"] = PostEvaluationResponse.model_json_schema()
                 else:
                     # Tools or sessions are present; fallback to text parsing
                     pass
@@ -1567,11 +1581,11 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
             content = full_content_text
 
-            # Process tool calls - only coordination tool calls (MCP manual mode removed)
+            # Process tool calls - coordination and post-evaluation tool calls (MCP manual mode removed)
             tool_calls_detected: List[Dict[str, Any]] = []
 
-            # Then, process coordination tools if present
-            if is_coordination and content.strip() and not tool_calls_detected:
+            # Process coordination tools OR post-evaluation tools if present
+            if (is_coordination or is_post_evaluation) and content.strip() and not tool_calls_detected:
                 # For structured output mode, the entire content is JSON
                 structured_response = None
                 # Try multiple parsing strategies
@@ -1590,14 +1604,15 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         # Log conversion to tool calls (summary)
                         log_stream_chunk("backend.gemini", "tool_calls", tool_calls, agent_id)
 
-                        # Log each coordination tool call for analytics/debugging
+                        # Log each tool call for analytics/debugging
+                        tool_type = "post_evaluation" if is_post_evaluation else "coordination"
                         try:
                             for tool_call in tool_calls:
                                 log_tool_call(
                                     agent_id,
-                                    tool_call.get("function", {}).get("name", "unknown_coordination_tool"),
+                                    tool_call.get("function", {}).get("name", f"unknown_{tool_type}_tool"),
                                     tool_call.get("function", {}).get("arguments", {}),
-                                    result="coordination_tool_called",
+                                    result=f"{tool_type}_tool_called",
                                     backend_name="gemini",
                                 )
                         except Exception:
