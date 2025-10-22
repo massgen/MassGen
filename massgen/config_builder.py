@@ -2321,6 +2321,28 @@ class ConfigBuilder:
                     console.print()
                     console.print("  ✅ Planning mode enabled - MCP tools will plan without executing during coordination")
 
+            # Orchestration Restart Feature
+            console.print()
+            console.print("  [dim]Orchestration Restart: Allows automatic quality checks and retries[/dim]")
+            console.print("  [dim]• Post-evaluation checks if answer is complete after coordination[/dim]")
+            console.print("  [dim]• Can restart with specific instructions if improvements needed[/dim]")
+            console.print("  [dim]• 0 = no restarts (default), 1-3 = allow 1-3 restart attempts[/dim]")
+            console.print()
+
+            restart_input = Prompt.ask(
+                "  [prompt]Max orchestration restarts (0-3)[/prompt]",
+                choices=["0", "1", "2", "3"],
+                default="0",
+            )
+
+            max_restarts = int(restart_input)
+            if max_restarts > 0:
+                if "coordination" not in orchestrator_config:
+                    orchestrator_config["coordination"] = {}
+                orchestrator_config["coordination"]["max_orchestration_restarts"] = max_restarts
+                console.print()
+                console.print(f"  ✅ Orchestration restart enabled: up to {max_restarts} restart(s) allowed")
+
             # Voting Sensitivity - only ask for multi-agent setups
             if len(agents) > 1:
                 console.print()

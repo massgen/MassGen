@@ -43,7 +43,8 @@ MassGen configurations have a clear hierarchy of settings. Understanding this st
 
    - Workspace: ``snapshot_storage``, ``agent_temporary_workspace``, ``session_storage``
    - Project Integration: ``context_paths``
-   - Coordination: ``coordination.enable_planning_mode``, ``coordination.planning_mode_instruction``
+   - Coordination: ``coordination.enable_planning_mode``, ``coordination.planning_mode_instruction``, ``coordination.max_orchestration_restarts``
+   - Debug: ``debug_final_answer``
    - Advanced: ``skip_coordination_rounds``, ``timeout``
 
 6. **UI Level** - Display settings (top-level ``ui``)
@@ -408,6 +409,7 @@ Full multi-agent configuration demonstrating all 6 configuration levels:
      # Coordination settings
      coordination:
        enable_planning_mode: true           # Enable planning mode
+       max_orchestration_restarts: 2        # Allow up to 2 restarts (3 total attempts)
        planning_mode_instruction: |
          PLANNING MODE ACTIVE: You are in coordination phase.
          1. Describe your intended actions
@@ -670,6 +672,10 @@ Orchestrator
      - boolean
      - No
      - Debug/test mode: skip voting rounds and go straight to final presentation (default: false)
+   * - ``debug_final_answer``
+     - string
+     - No
+     - Debug mode for restart feature: override final answer on attempt 1 only to test restart flow (default: null). Example: "I only created one file."
    * - ``timeout``
      - object
      - No
@@ -693,6 +699,14 @@ Coordination Configuration
      - string
      - No
      - Custom instruction added to agent prompts when planning mode is enabled. Should explain to agents that they should describe intended actions without executing them.
+   * - ``max_orchestration_restarts``
+     - integer
+     - No
+     - Maximum number of orchestration restarts allowed (default: 0). When set > 0, enables post-evaluation where the winning agent reviews the final answer and can request a restart with specific improvement instructions. Recommended values: 1-2.
+
+.. note::
+
+   **New in v0.1.1:** Orchestration restart enables automatic quality checks after coordination. The winning agent evaluates its own answer and can trigger a restart if the answer is incomplete or incorrect, with specific instructions for improvement.
 
 .. note::
 

@@ -35,12 +35,17 @@ class CoordinationConfig:
                              Only the winning agent executes actions during final presentation.
                              If False, agents execute actions during coordination (default behavior).
         planning_mode_instruction: Custom instruction to add when planning mode is enabled.
+        max_orchestration_restarts: Maximum number of times orchestration can be restarted after
+                                   post-evaluation determines the answer is insufficient.
+                                   For example, max_orchestration_restarts=2 allows 3 total attempts
+                                   (initial + 2 restarts). Default is 0 (no restarts).
     """
 
     enable_planning_mode: bool = False
     planning_mode_instruction: str = (
         "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools."
     )
+    max_orchestration_restarts: int = 0
 
 
 @dataclass
@@ -86,6 +91,9 @@ class AgentConfig:
 
     # Debug/test mode - skip coordination rounds and go straight to final presentation
     skip_coordination_rounds: bool = False
+
+    # Debug mode for restart feature - override final answer on attempt 1 only
+    debug_final_answer: Optional[str] = None
 
     @property
     def custom_system_instruction(self) -> Optional[str]:
@@ -716,7 +724,11 @@ class AgentConfig:
         result["coordination_config"] = {
             "enable_planning_mode": self.coordination_config.enable_planning_mode,
             "planning_mode_instruction": self.coordination_config.planning_mode_instruction,
+            "max_orchestration_restarts": self.coordination_config.max_orchestration_restarts,
         }
+
+        # Handle debug fields
+        result["debug_final_answer"] = self.debug_final_answer
 
         # Handle message_templates serialization
         if self.message_templates is not None:
@@ -757,6 +769,9 @@ class AgentConfig:
         if coordination_data:
             coordination_config = CoordinationConfig(**coordination_data)
 
+        # Handle debug fields
+        debug_final_answer = data.get("debug_final_answer")
+
         # Handle message_templates
         message_templates = None
         template_data = data.get("message_templates")
@@ -765,7 +780,7 @@ class AgentConfig:
 
             message_templates = MessageTemplates(**template_data)
 
-        return cls(
+        config = cls(
             backend_params=backend_params,
             message_templates=message_templates,
             agent_id=agent_id,
@@ -776,6 +791,8 @@ class AgentConfig:
             timeout_config=timeout_config,
             coordination_config=coordination_config,
         )
+        config.debug_final_answer = debug_final_answer
+        return config
 
 
 # =============================================================================

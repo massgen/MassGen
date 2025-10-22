@@ -856,6 +856,23 @@ async def run_question_with_history(
     if orchestrator_cfg.get("skip_coordination_rounds", False):
         orchestrator_config.skip_coordination_rounds = True
 
+    if orchestrator_cfg.get("debug_final_answer"):
+        orchestrator_config.debug_final_answer = orchestrator_cfg["debug_final_answer"]
+
+    # Parse coordination config if present
+    if "coordination" in orchestrator_cfg:
+        from .agent_config import CoordinationConfig
+
+        coord_cfg = orchestrator_cfg["coordination"]
+        orchestrator_config.coordination_config = CoordinationConfig(
+            enable_planning_mode=coord_cfg.get("enable_planning_mode", False),
+            planning_mode_instruction=coord_cfg.get(
+                "planning_mode_instruction",
+                "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+            ),
+            max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+        )
+
     # Load previous turns from session storage for multi-turn conversations
     previous_turns = load_previous_turns(session_info, session_storage)
 
@@ -973,6 +990,23 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         # Get debug/test parameters
         if orchestrator_cfg.get("skip_coordination_rounds", False):
             orchestrator_config.skip_coordination_rounds = True
+
+        if orchestrator_cfg.get("debug_final_answer"):
+            orchestrator_config.debug_final_answer = orchestrator_cfg["debug_final_answer"]
+
+        # Parse coordination config if present
+        if "coordination" in orchestrator_cfg:
+            from .agent_config import CoordinationConfig
+
+            coord_cfg = orchestrator_cfg["coordination"]
+            orchestrator_config.coordination_config = CoordinationConfig(
+                enable_planning_mode=coord_cfg.get("enable_planning_mode", False),
+                planning_mode_instruction=coord_cfg.get(
+                    "planning_mode_instruction",
+                    "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+                ),
+                max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+            )
 
         orchestrator = Orchestrator(
             agents=agents,
