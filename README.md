@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/logo.png" alt="MassGen Logo" width="360" />
+  <img src="assets/logo.png" alt="MassGen Logo" width="360" />
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
-    <img src="https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/massgen-demo.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
+    <img src="assets/massgen-demo.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
 </p>
 
