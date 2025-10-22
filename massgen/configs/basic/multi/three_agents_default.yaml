@@ -17,7 +17,7 @@ agents:
       text:
         verbosity: "medium"
       reasoning:
-        effort: "medium"
+        effort: "low"
         summary: "auto"
       enable_web_search: true
       enable_code_interpreter: true
@@ -26,7 +26,7 @@ agents:
   - id: "grok3mini"
     backend:
       type: "grok"
-      model: "grok-3-mini"
+      model: "grok-4-fast"
       enable_web_search: true
     # system_message: "You are a helpful AI assistant with web search capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
