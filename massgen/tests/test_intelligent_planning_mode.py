@@ -40,7 +40,7 @@ def mock_backend():
 def orchestrator_with_agents(mock_backend):
     """Create an orchestrator with mock agents."""
     from massgen.agent_config import CoordinationConfig
-    
+
     # Create agent configs
     config1 = AgentConfig.create_openai_config(model="gpt-4")
     config2 = AgentConfig.create_openai_config(model="gpt-4")
@@ -58,7 +58,7 @@ def orchestrator_with_agents(mock_backend):
     orchestrator_config = AgentConfig.create_openai_config()
     orchestrator_config.coordination_config = CoordinationConfig()
     orchestrator_config.coordination_config.enable_planning_mode = True
-    
+
     orchestrator = Orchestrator(
         agents=agents,
         orchestrator_id="test_orchestrator",
