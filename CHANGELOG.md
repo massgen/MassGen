@@ -7,16 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.2 (October 2025)** - Intelligent Planning Mode & Model Updates
+Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
+
 **v0.1.1 (October 2025)** - Custom Tools, Voting Controls & Documentation
 Custom Python function tools, voting sensitivity controls, interactive config builder, and comprehensive Sphinx documentation.
 
 **v0.1.0 (October 2025)** - PyPI Package & Documentation
 Official PyPI release with enhanced documentation and installation via `pip install massgen`.
 
-**v0.0.32 (October 2025)** - Docker Execution Mode
-Isolated command execution in Docker containers with resource limits and multi-agent support.
-
 ---
+
+## [0.1.2] - 2025-10-22
+
+### Added
+- **Claude 4.5 Haiku Support**: Added latest Claude Haiku model
+  - New model: `claude-haiku-4-5-20251001`
+  - Updated model registry in `backend/capabilities.py`
+
+### Changed
+- **Planning Mode Enhancement**: Intelligent automatic MCP tool blocking based on operation safety
+  - New `_analyze_question_irreversibility()` method in orchestrator analyzes questions to determine if MCP operations are reversible
+  - New `set_planning_mode_blocked_tools()`, `get_planning_mode_blocked_tools()`, and `is_mcp_tool_blocked()` methods in backend for selective tool control
+  - Dynamically enables/disables planning mode - read-only operations allowed during coordination, write operations blocked
+  - Planning mode supports different workspaces without conflicts
+  - Zero configuration required - works transparently
+
+
+- **Claude Model Priority**: Reorganized model list in capabilities registry
+  - Changed default model from `claude-sonnet-4-20250514` to `claude-sonnet-4-5-20250929`
+  - Moved `claude-opus-4-1-20250805` higher in priority order
+  - Updated in both Claude and Claude Code backends
+
+### Fixed
+- **Grok Web Search**: Resolved web search functionality in Grok backend
+  - Fixed `extra_body` parameter handling for Grok's Live Search API
+  - New `_add_grok_search_params()` method for proper search parameter injection
+  - Enhanced `_stream_with_custom_and_mcp_tools()` to support Grok-specific parameters
+  - Improved error handling for conflicting search configurations
+  - Better integration with Chat Completions API params handler
+
+### Documentations, Configurations and Resources
+
+- **Intelligent Planning Mode Case Study**: Complete feature documentation
+  - `docs/case_studies/INTELLIGENT_PLANNING_MODE.md`: Comprehensive guide for automatic planning mode
+  - Demonstrates automatic irreversibility detection
+  - Shows read/write operation classification
+  - Includes examples for Discord, filesystem, and Twitter operations
+
+- **Configuration Updates**: Enhanced YAML examples
+  - Updated 5 planning mode configurations in `configs/tools/planning/` with selective blocking examples
+  - Updated `three_agents_default.yaml` with Grok-4-fast model
+  - Test coverage in `test_intelligent_planning_mode.py`
+
+### Technical Details
+- **Major Focus**: Intelligent planning mode with selective tool blocking, model support enhancements
+- **Contributors**: @franklinnwren @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.1] - 2025-10-20
 

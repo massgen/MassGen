@@ -1,8 +1,8 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.1
+**Current Version:** v0.1.2
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
-**Last Updated:** October 20, 2025
+**Last Updated:** October 23, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -29,56 +29,19 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 🚀 Upcoming Releases
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.1** | ✅ 10/20/25 | Custom Tools System | @qidanrui | User-defined Python functions as tools alongside MCP servers |
-| | | Voting Sensitivity Controls | @qidanrui | Three-tier voting system for multi-agent quality control |
-| | | Interactive Config Builder | @ncrispino | Wizard for creating YAML configurations |
-| **v0.1.2** | 10/22/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
+| **v0.1.3** | 10/24/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
 | | | Final Agent Submit/Restart Tools | @ncrispino | Multi-step task verification and intelligent restart decisions |
+| **v0.1.4** | 10/27/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
 | | | Memory Module (Phase 1) | @kitrakrev | Long-term memory for reasoning tasks and document understanding |
-| **v0.1.3** | 10/24/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Irreversible Actions Safety | @franklinnwren | Safety controls for production deployments with dangerous operations |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.1 - Custom Tools & Quality Controls ✅ COMPLETED
-
-**Released:** October 20, 2025
-
-### Features Delivered
-
-**1. Custom Tools System** (@qidanrui) ✅
-- Complete framework for registering user-defined Python functions as tools
-- New `ToolManager` class for centralized tool registration and lifecycle management
-- Support for custom tools alongside MCP servers across all backends
-- 40+ example configurations demonstrating custom tool usage
-- **Use Case**: Domain-specific workflows with custom Python functions (data processing, API integration, specialized computations)
-
-**2. Voting Sensitivity & Answer Novelty Controls** (@qidanrui) ✅
-- Three-tier voting system: "lenient", "balanced", "strict"
-- Answer novelty detection preventing duplicate submissions
-- Configurable quality thresholds for multi-agent coordination
-- **Use Case**: Quality control for multi-agent systems requiring high-quality consensus
-
-**3. Interactive Configuration Builder** (@ncrispino) ✅
-- Wizard for creating YAML configurations with step-by-step prompts
-- Backend selection, model configuration, and API key setup
-- Integration via `massgen --config-builder` command
-- **Use Case**: Simplified onboarding for new users and rapid prototyping
-
-### Success Criteria
-- ✅ Custom tools system fully functional across all backends
-- ✅ Voting sensitivity controls improving answer quality
-- ✅ Configuration builder simplifying setup process
-
----
-
-## 📋 v0.1.2 - General Interoperability & Enterprise Collaboration
+## 📋 v0.1.3 - General Interoperability & Enterprise Collaboration
 
 ### Features
 
@@ -100,7 +63,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.3 - Intelligent Optimization & Safety
+## 📋 v0.1.4 - Intelligent Optimization & Safety
 
 ### Features
 
@@ -226,5 +189,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 20, 2025
+**Last Updated:** October 22, 2025
 **Maintained By:** MassGen Team
