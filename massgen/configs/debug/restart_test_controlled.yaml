@@ -20,12 +20,17 @@
 agents:
   - id: "agent_a"
     backend:
-      # type: "openai"
-      # model: "gpt-5-nano"
+      type: "openai"
+      model: "gpt-5-nano"
       # type: "gemini"
       # model: "gemini-2.5-flash"
-      type: "grok"
-      model: "grok-4-fast"
+      # type: "grok"
+      # model: "grok-4-fast"
+      # type: "claude"
+      # model: "claude-sonnet-4-5-20250929"
+      # type: "claude_code"
+      # model: "claude-sonnet-4-5-20250929"
+      # cwd: "workspace1"
 
   - id: "agent_b"
     backend:
@@ -33,6 +38,9 @@ agents:
       model: "gpt-5-nano"
 
 orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
   # Restart configuration
   coordination:
     max_orchestration_restarts: 2  # Allow up to 2 restarts (3 total attempts)

@@ -3250,7 +3250,7 @@ class RichTerminalDisplay(TerminalDisplay):
             title="[bold bright_green]🎯 FINAL COORDINATED ANSWER[/bold bright_green]",
             border_style=self.colors["success"],
             box=DOUBLE,
-            expand=False,
+            expand=True,
         )
 
         self.console.print(final_panel)

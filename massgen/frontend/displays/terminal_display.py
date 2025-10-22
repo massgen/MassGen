@@ -220,8 +220,6 @@ class TerminalDisplay(BaseDisplay):
 
         # Add working indicator if transitioning to working
         if old_status != "working" and status == "working":
-            agent_prefix = f"[{agent_id}] " if self.num_agents > 1 else ""
-            print(f"\n{agent_prefix}⚡  Working...")
             if not self.agent_outputs[agent_id] or not self.agent_outputs[agent_id][-1].startswith("⚡"):
                 self.agent_outputs[agent_id].append("⚡  Working...")
 

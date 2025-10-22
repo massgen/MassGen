@@ -20,6 +20,7 @@ TECHNICAL SOLUTION:
 """
 
 import json
+import logging
 import os
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional
@@ -38,6 +39,19 @@ from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend
 from .gemini_mcp_manager import GeminiMCPManager
 from .gemini_trackers import MCPCallTracker, MCPResponseExtractor, MCPResponseTracker
 from .gemini_utils import CoordinationResponse
+
+
+# Suppress Gemini SDK logger warning about non-text parts in response
+# Using custom filter per https://github.com/googleapis/python-genai/issues/850
+class NoFunctionCallWarning(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "there are non-text parts in the response:" in message:
+            return False
+        return True
+
+
+logging.getLogger("google_genai.types").addFilter(NoFunctionCallWarning())
 
 try:
     from pydantic import BaseModel, Field

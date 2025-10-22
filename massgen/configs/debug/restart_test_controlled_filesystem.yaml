@@ -23,10 +23,16 @@
 agents:
   - id: "agent_a"
     backend:
-      # type: "openai"
-      # model: "gpt-5-nano"
-      type: "claude_code"
-      model: "claude-sonnet-4-5-20250929"
+      type: "openai"
+      model: "gpt-5-nano"
+      # type: "gemini"
+      # model: "gemini-2.5-flash"
+      # type: "grok"
+      # model: "grok-4-fast"
+      # type: "claude"
+      # model: "claude-sonnet-4-5-20250929"
+      # type: "claude_code"
+      # model: "claude-sonnet-4-5-20250929"
       cwd: "workspace1"
 
   # - id: "agent_b"
