@@ -1,0 +1,16 @@
+# Computer Use Tool Requirements
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+openai>=1.0.0
+python-dotenv>=0.19.0
+
+# Browser automation (Playwright)
+playwright>=1.40.0
+# After installing playwright, run: playwright install
+
+# Optional: Docker Python SDK (if managing containers programmatically)
+# docker>=6.0.0
+
+# Note: Docker itself must be installed separately from docker.com
+# Note: For Docker environments, the container must have xdotool and imagemagick installed

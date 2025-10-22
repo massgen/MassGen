@@ -1,0 +1,50 @@
+# MassGen Configuration: Computer Use Tool Example
+#
+# This configuration demonstrates how to use the computer_use tool for automating
+# browser and computer interactions using OpenAI's computer-use-preview model.
+#
+# Usage:
+#   massgen --config @examples/tools/custom_tools/computer_use_example "Search for Python documentation on Google"
+#
+# Prerequisites:
+#   1. Set OPENAI_API_KEY in your .env file
+#   2. For browser environment: pip install playwright && playwright install
+#   3. For Docker environment: Have Docker installed and running
+
+agents:
+  - id: "computer_use_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4.1"  # You can also use "computer-use-preview" for the main model
+      custom_tools:
+        - name: ["computer_use"]
+          category: "automation"
+          path: "massgen/tool/_computer_use/computer_use_tool.py"
+          function: ["computer_use"]
+
+    system_message: |
+      You are an AI assistant with access to computer automation capabilities.
+
+      The computer_use tool is available to you. This tool allows you to:
+      - Control a web browser (click, type, scroll, etc.)
+      - Automate computer tasks
+      - Search the web, fill forms, navigate websites
+      - Perform multi-step workflows
+
+      When a user asks you to perform a task that requires browser or computer interaction,
+      use the computer_use tool with a clear task description.
+
+      Important:
+      - Always provide clear, specific task descriptions
+      - The tool will execute actions step-by-step
+      - You will receive screenshots and action logs
+      - Safety checks may be triggered - acknowledge them when appropriate
+
+      Example usage:
+      - "Search for the latest AI news on Google"
+      - "Navigate to example.com and fill out the contact form"
+      - "Find Python documentation and save the URL"
+
+ui:
+  display_type: "simple"
+  logging_enabled: true

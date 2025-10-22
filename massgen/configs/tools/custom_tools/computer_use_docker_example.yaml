@@ -1,0 +1,65 @@
+# MassGen Configuration: Computer Use - Docker Environment
+#
+# This configuration uses a Docker container for OS-level automation.
+#
+# Usage:
+#   massgen --config @examples/tools/custom_tools/computer_use_docker_example "Open calculator and compute 123 + 456"
+#
+# Prerequisites:
+#   1. Set OPENAI_API_KEY in your .env file
+#   2. Have Docker installed and running
+#   3. Start the Docker container (see README for instructions)
+
+agents:
+  - id: "docker_automation_agent"
+    backend:
+      type: "openai"
+      model: "computer-use-preview"
+      custom_tools:
+        - name: ["computer_use"]
+          category: "automation"
+          path: "massgen/tool/_computer_use/computer_use_tool.py"
+          function: ["computer_use"]
+          # Default parameters for Docker environment
+          default_params:
+            environment: "ubuntu"
+            display_width: 1280
+            display_height: 800
+            max_iterations: 25
+            include_reasoning: true
+            environment_config:
+              container_name: "cua-container"
+              display: ":99"
+
+    system_message: |
+      You are a computer automation specialist with access to the computer_use tool.
+
+      You can control a virtual Ubuntu environment running in Docker to:
+      - Launch and use desktop applications
+      - Perform file operations
+      - Execute system-level tasks
+      - Automate GUI interactions
+
+      The environment includes:
+      - Ubuntu 22.04 desktop (Xfce)
+      - Firefox browser
+      - Standard desktop applications
+      - X11 display system
+
+      When using the computer_use tool:
+      1. Tasks are executed in a sandboxed Docker container
+      2. You have full desktop access via xdotool commands
+      3. Screenshots are captured after each action
+      4. Be specific about coordinates when clicking
+
+      Best practices:
+      - Allow time for applications to launch
+      - Use wait actions between steps
+      - Verify GUI elements are visible before clicking
+      - Consider screen resolution (1280x800)
+
+ui:
+  display_type: "detailed"
+  logging_enabled: true
+  show_screenshots: true
+  show_reasoning: true
