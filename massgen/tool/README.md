@@ -9,7 +9,7 @@ The MassGen Tool System is a flexible, extensible framework for managing and exe
 The Tool System provides a unified interface for:
 
 - Registering tools (custom functions)
-- Managing tool categories 
+- Managing tool categories
 - Generating JSON schemas from Python functions automatically
 - Executing tools asynchronously with streaming support
 - Extending tool schemas dynamically with Pydantic models
