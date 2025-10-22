@@ -31,7 +31,13 @@ class ChatCompletionsAPIParamsHandler(APIParamsHandlerBase):
         """Get provider tools for Chat Completions format."""
         provider_tools = []
 
-        if all_params.get("enable_web_search", False):
+        # Check if this is Grok backend - Grok uses extra_body.search_parameters instead of function tools
+        backend_provider = getattr(self.backend, "get_provider_name", lambda: "")()
+        is_grok = backend_provider.lower() == "grok"
+
+        # Add web_search function tool for non-Grok backends
+        # Grok handles web search via extra_body.search_parameters (set in grok.py)
+        if all_params.get("enable_web_search", False) and not is_grok:
             provider_tools.append(
                 {
                     "type": "function",

@@ -227,44 +227,56 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.1 - Latest
-**New Features:** Custom Tools System, Voting Sensitivity Controls, Interactive Configuration Builder, Backend Enhancements, Self-Evolution
+### v0.1.2 - Latest
+**New Features:** Intelligent Planning Mode, Claude 4.5 Haiku Support, Grok Web Search Improvements
 
 **Configuration Files:**
-- `massgen/configs/tools/custom_tools/` - 40+ custom tool examples (calculator, weather, data processing)
-- `massgen/configs/tools/custom_tools/github_issue_market_analysis.yaml` - GitHub issue market analysis with custom tools
-- `massgen/configs/voting/gemini_gpt_voting_sensitivity.yaml` - Voting sensitivity demonstration
+- `massgen/configs/tools/planning/` - 5 planning mode configurations with selective blocking
+- `massgen/configs/basic/multi/three_agents_default.yaml` - Updated with Grok-4-fast model
 
-**Case Study:**
-- [Custom Tools with GitHub Issue Market Analysis](../../docs/case_studies/github-issue-market-analysis.md)
+**Documentation:**
+- `docs/case_studies/INTELLIGENT_PLANNING_MODE.md` - Complete intelligent planning mode guide
 
 **Key Features:**
-- **Custom Tools**: Register your own Python functions as tools using `ToolManager` class
-- **Voting Controls**: Three-tier quality system (lenient/balanced/strict) for multi-agent consensus
-- **Backend Registry**: New capabilities tracking in `massgen/backend/capabilities.py`
-- **40+ Examples**: Custom tools configurations in `massgen/configs/tools/custom_tools/`
-- **Self-Evolution**: Agents autonomously analyze GitHub issues and market trends for data-driven roadmaps
-- **Gemini Refactoring**: Enhanced architecture with separate MCP manager and tracking modules
+- **Intelligent Planning Mode**: Automatic analysis of question irreversibility for dynamic MCP tool blocking
+- **Selective Tool Blocking**: Granular control over which MCP tools are blocked during planning
+- **Enhanced Safety**: Read-only operations allowed, write operations blocked during coordination
+- **Latest Models**: Claude 4.5 Haiku support with updated model priorities
 
 **Try it:**
 ```bash
 # Install or upgrade
 pip install --upgrade massgen
 
-# Create custom configuration interactively
-massgen --setup
+# Try intelligent planning mode with MCP tools
+# (Please read the YAML file for required API keys: DISCORD_TOKEN, OPENAI_API_KEY, etc.)
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
+  "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
 
+# Use latest Claude 4.5 Haiku model
+# (Requires ANTHROPIC_API_KEY in .env)
+massgen --model claude-haiku-4-5-20251001 \
+  "Summarize the latest AI developments"
+```
+
+### v0.1.1
+**New Features:** Custom Tools System, Voting Sensitivity Controls, Interactive Configuration Builder
+
+**Key Features:**
+- Custom tools registration using `ToolManager` class
+- Three-tier voting system (lenient/balanced/strict)
+- 40+ custom tool examples
+- Backend capabilities registry
+
+**Try it:**
+```bash
 # Try custom tools with agents
 massgen --config @examples/tools/custom_tools/claude_custom_tool_example \
-  "What's the sum of 123 and 456?"
+  "whats the sum of 123 and 456?"
 
 # Test voting sensitivity controls
 massgen --config @examples/voting/gemini_gpt_voting_sensitivity \
-  "What are the pros and cons of renewable energy?"
-
-# Self-evolution with GitHub issue analysis
-massgen --config @examples/tools/custom_tools/github_issue_market_analysis \
-  "Analyze the massgen dir and MassGen GitHub issues to understand what features users are requesting. Also research current trends in multi-agent AI systems and LLM orchestration. Based on the existing code, the open issues and market trends, write a prioritized recommendation report for the next release."
+  "Your question here"
 ```
 
 ### v0.1.0

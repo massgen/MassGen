@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/logo.png" alt="MassGen Logo" width="360" />
+  <img src="assets/logo.png" alt="MassGen Logo" width="360" />
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
-    <img src="https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/massgen-demo.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
+    <img src="assets/massgen-demo.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
 </p>
 
@@ -54,7 +54,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.1 Features](#-latest-features-v011)
+- [v0.1.2 Features](#-latest-features-v012)
 </details>
 
 <details open>
@@ -99,15 +99,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.1](#recent-achievements-v011)
-  - [v0.0.3 - v0.1.0](#previous-achievements-v003---v010)
+  - [v0.1.2](#recent-achievements-v012)
+  - [v0.0.3 - v0.1.1](#previous-achievements-v003---v011)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.2 Roadmap](#v012-roadmap)
+- [v0.1.3 Roadmap](#v013-roadmap)
 </details>
 
 <details open>
@@ -132,36 +132,36 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.1)
+## 🆕 Latest Features (v0.1.2)
 
-**🎉 Released: October 20, 2025**
+**🎉 Released: October 22, 2025**
 
-**What's New in v0.1.1:**
-- **🔧 Custom Tools System** - Register your own Python functions as tools
-- **⚖️ Voting Sensitivity Controls** - Three-tier quality control for multi-agent consensus
-- **🎯 Configuration Builder** - Interactive wizard to create custom configs
-- **📊 Backend Capabilities Registry** - Centralized feature support tracking
-- **🔬 Self-Evolution Capability** - Agents autonomously analyze GitHub issues and market trends for feature prioritization
+**What's New in v0.1.2:**
+- **🧠 Intelligent Planning Mode** - Automatic question analysis for safe MCP tool blocking
+- **🎭 Claude 4.5 Haiku Support** - Access to latest Claude Haiku model
+- **🔍 Grok Web Search Fix** - Improved web search functionality in Grok backend
 
-[![MassGen v0.1.1 Custom Tools & Voting Demo](https://img.youtube.com/vi/eXK_oF177zY/0.jpg)](https://youtu.be/eXK_oF177zY)
+**Key Improvements:**
+- Automatically determines if questions require irreversible operations
+- Read-only MCP operations allowed during coordination for better decisions
+- Write operations automatically blocked for safety
+- Zero configuration required - works transparently
+- Enhanced model support with latest Claude 4.5 Haiku
 
-*Watch the v0.1.1 demo showcasing custom Python tool registration and three-tier voting sensitivity controls for multi-agent quality assurance*
-
-**Get Started with v0.1.1:**
+**Get Started with v0.1.2:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Create a configuration with the interactive builder
-massgen --setup
+# Try intelligent planning mode with MCP tools
+# (Please read the YAML file for required API keys: DISCORD_TOKEN, OPENAI_API_KEY, etc.)
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
+  "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
 
-# Try custom tools with agents
-massgen --config @examples/tools/custom_tools/claude_custom_tool_example \
-  "What's the sum of 123 and 456?"
-
-# Use voting sensitivity controls for quality assurance
-massgen --config @examples/voting/gemini_gpt_voting_sensitivity \
-  "What are the pros and cons of renewable energy?"
+# Use latest Claude 4.5 Haiku model
+# (Requires ANTHROPIC_API_KEY in .env)
+massgen --model claude-haiku-4-5-20251001 \
+  "Summarize the latest AI developments"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -998,31 +998,33 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.1)
+### Recent Achievements (v0.1.2)
 
-**🎉 Released: October 20, 2025**
+**🎉 Released: October 22, 2025**
 
-#### Custom Tools System
-- **User-Defined Functions**: Register Python functions as tools using `ToolManager` class in `massgen/tool/_manager.py`
-- **Cross-Backend Support**: Works alongside MCP servers across all backends (Claude, Gemini, OpenAI, Chat Completions, Claude Code)
-- **Tool Categories**: Builtin, MCP, and custom tools with automatic discovery and conflict resolution
-- **40+ Examples**: Ready-to-use configurations in `massgen/configs/tools/custom_tools/`
+#### Intelligent Planning Mode
+- **Automatic Question Analysis**: New `_analyze_question_irreversibility()` method in orchestrator determines if MCP operations are reversible
+- **Selective Tool Blocking**: Granular control with `set_planning_mode_blocked_tools()`, `get_planning_mode_blocked_tools()`, and `is_mcp_tool_blocked()` methods
+- **Dynamic Behavior**: Read-only MCP operations allowed during coordination, write operations blocked for safety
+- **Zero Configuration**: Works transparently without setup
+- **Multi-Workspace Support**: Planning mode works across different workspaces without conflicts
+- **Test Coverage**: Comprehensive tests in `massgen/tests/test_intelligent_planning_mode.py`
+- **Documentation**: Complete guide in `docs/case_studies/INTELLIGENT_PLANNING_MODE.md`
 
-#### Voting Sensitivity & Answer Quality Controls
-- **Three-Tier System**: "lenient", "balanced", "strict" voting modes
-- **Answer Novelty Detection**: Prevents duplicate submissions with configurable similarity thresholds
-- **Quality Assurance**: Configurable `max_new_answers_per_agent` and token-based overlap detection
-- **Configuration**: `massgen/configs/voting/gemini_gpt_voting_sensitivity.yaml`
+#### Model Support & Improvements
+- **Claude 4.5 Haiku**: Added latest Claude Haiku model `claude-haiku-4-5-20251001`
+- **Model Priority Updates**: Reorganized Claude model list with updated defaults (`claude-sonnet-4-5-20250929`)
+- **Grok Web Search Fix**: Resolved `extra_body` parameter handling for Grok's Live Search API with new `_add_grok_search_params()` method
 
-#### Backend & Documentation Enhancements
-- **Gemini Refactoring**: Extracted MCP management (`gemini_mcp_manager.py`), tracking (`gemini_trackers.py`), and utilities
-- **Capabilities Registry**: New `massgen/backend/capabilities.py` documenting feature support across backends
-- **Documentation Updates**: Enhanced custom tools guide, reorganized case studies, updated configuration schema
-- **Case Studies**:
-  - `docs/case_studies/github-issue-market-analysis.md` - Custom tools with GitHub issue market analysis (v0.1.1)
-  - `docs/case_studies/universal-code-execution-mcp.md` - MCP code execution across backends (v0.0.31)
+#### Configuration Updates
+- **Planning Mode Configs**: Updated 5 configurations in `massgen/configs/tools/planning/` with selective blocking examples
+- **Default Configuration**: Updated `three_agents_default.yaml` with Grok-4-fast model
 
-### Previous Achievements (v0.0.3 - v0.1.0)
+### Previous Achievements (v0.0.3 - v0.1.1)
+
+✅ **Custom Tools System (v0.1.1)**: User-defined Python function registration using `ToolManager` class in `massgen/tool/_manager.py`, cross-backend support alongside MCP servers, builtin/MCP/custom tool categories with automatic discovery, 40+ examples in `massgen/configs/tools/custom_tools/`, voting sensitivity controls with three-tier quality system (lenient/balanced/strict), answer novelty detection preventing duplicates
+
+✅ **Backend Enhancements (v0.1.1)**: Gemini architecture refactoring with extracted MCP management (`gemini_mcp_manager.py`), tracking (`gemini_trackers.py`), and utilities, new capabilities registry in `massgen/backend/capabilities.py` documenting feature support across backends
 
 ✅ **PyPI Package Release (v0.1.0)**: Official distribution via `pip install massgen` with simplified installation, global `massgen` command accessible from any directory, comprehensive Sphinx documentation at [docs.massgen.ai](https://docs.massgen.ai/), interactive setup wizard with use case presets and API key management, enhanced CLI with `@examples/` prefix for built-in configurations
 
@@ -1122,21 +1124,19 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.2 Roadmap
+### v0.1.3 Roadmap
 
-Version 0.1.2 focuses on enterprise collaboration and intelligent agent workflows:
+Version 0.1.3 focuses on general interoperability and enterprise collaboration:
 
 #### Required Features
 - **General Interoperability**: Enable MassGen to orchestrate agents from multiple external frameworks with unified interface
 - **Final Agent Submit/Restart Tools**: Enable final agent to decide whether to submit or restart orchestration
-- **Memory Module - Phase 1**: Long-term memory implementation using mem0 for reasoning and document understanding
 
 Key technical approach:
 - **Framework Integration**: Multi-agent coordination supporting external agent frameworks with specialized agent roles (researcher, analyst, critic, synthesizer)
 - **Submit/Restart**: Multi-step task verification with access to previous agents' responses and workspaces
-- **Memory Module**: Session-based memory management with persistent context across conversations
 
-For detailed milestones and technical specifications, see the [full v0.1.2 roadmap](ROADMAP.md).
+For detailed milestones and technical specifications, see the [full v0.1.3 roadmap](ROADMAP.md).
 
 ---
 

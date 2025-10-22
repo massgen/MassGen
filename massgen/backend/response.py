@@ -356,18 +356,25 @@ class ResponseBackend(CustomToolAndMCPBackend):
             # Execute MCP function calls
             mcp_functions_executed = False
 
-            # Check if planning mode is enabled - block MCP tool execution during planning
+            # Check if planning mode is enabled - selectively block MCP tool execution during planning
             if self.is_planning_mode_enabled():
-                logger.info("[MCP] Planning mode enabled - blocking all MCP tool execution")
-                yield StreamChunk(
-                    type="mcp_status",
-                    status="planning_mode_blocked",
-                    content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
-                    source="planning_mode",
-                )
-                # Skip all MCP tool execution but still continue with workflow
-                yield StreamChunk(type="done")
-                return
+                blocked_tools = self.get_planning_mode_blocked_tools()
+
+                if not blocked_tools:
+                    # Empty set means block ALL MCP tools (backward compatible)
+                    logger.info("[Response] Planning mode enabled - blocking ALL MCP tool execution")
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="planning_mode_blocked",
+                        content="🚫 [MCP] Planning mode active - all MCP tools blocked during coordination",
+                        source="planning_mode",
+                    )
+                    # Skip all MCP tool execution but still continue with workflow
+                    yield StreamChunk(type="done")
+                    return
+                else:
+                    # Selective blocking - log but continue to check each tool individually
+                    logger.info(f"[Response] Planning mode enabled - selective blocking of {len(blocked_tools)} tools")
 
             # Ensure every captured function call gets a result to prevent hanging
             for call in captured_function_calls:
