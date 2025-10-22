@@ -427,7 +427,6 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         # Track MCP tool usage attempt
                         self._mcp_tool_calls_count += 1
 
-<<<<<<< HEAD
                     # Check planning mode - selectively block MCP tools during coordination phase
                     if self.is_planning_mode_enabled():
                         blocked_tools = self.get_planning_mode_blocked_tools()
@@ -440,7 +439,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 "gemini",
                                 "All MCP tools blocked in planning mode",
                                 {
-                                    "blocked_tools": len(available_tools),
+                                    "blocked_tools": len(available_mcp_tools),
                                     "session_count": len(mcp_sessions),
                                 },
                                 agent_id=agent_id,
@@ -458,9 +457,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 "gemini",
                                 "Selective MCP tools blocked in planning mode",
                                 {
-                                    "total_tools": len(available_tools),
+                                    "total_tools": len(available_mcp_tools),
                                     "blocked_tools": len(blocked_tools),
-                                    "allowed_tools": len(available_tools) - len(blocked_tools),
+                                    "allowed_tools": len(available_mcp_tools) - len(blocked_tools),
                                 },
                                 agent_id=agent_id,
                             )

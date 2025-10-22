@@ -900,7 +900,7 @@ async def run_question_with_history(
 
         # Get orchestrator parameters from config
         orchestrator_cfg = kwargs.get("orchestrator", {})
-    
+
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
     print(f"Agents: {', '.join(agents.keys())}", flush=True)
     if history:
