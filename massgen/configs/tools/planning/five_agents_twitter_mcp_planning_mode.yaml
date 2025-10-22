@@ -139,8 +139,8 @@ ui:
 
 # Orchestrator Settings with Coordination Configuration
 orchestrator:
-  snapshot_storage: "massgen_logs/snapshots"  # Directory for workspace snapshots
-  agent_temporary_workspace: "massgen_logs/temp_workspaces"  # Directory for temporary agent workspaces
+  snapshot_storage: "snapshots"  # Directory for workspace snapshots
+  agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
   coordination:
     enable_planning_mode: true
     planning_mode_instruction: |
