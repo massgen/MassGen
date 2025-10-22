@@ -207,6 +207,15 @@ class RichTerminalDisplay(TerminalDisplay):
         self._final_presentation_agent = None
         self._final_presentation_vote_results = None
 
+        # Post-evaluation display state
+        self._post_evaluation_active = False
+        self._post_evaluation_content = ""
+        self._post_evaluation_agent = None
+
+        # Restart context state (for attempt 2+)
+        self._restart_context_reason = None
+        self._restart_context_instructions = None
+
         # Code detection patterns
         self.code_patterns = [
             r"```(\w+)?\n(.*?)\n```",  # Markdown code blocks
@@ -1077,12 +1086,30 @@ class RichTerminalDisplay(TerminalDisplay):
                 Layout(footer, name="footer", size=8),
             )
         else:
-            # Arrange layout without final presentation
-            layout.split_column(
-                Layout(header, name="header", size=5),
-                Layout(agent_columns, name="main"),
-                Layout(footer, name="footer", size=8),
-            )
+            # Build layout components
+            layout_components = []
+
+            # Add restart context panel at top if present (attempt 2+)
+            restart_context_panel = self._create_restart_context_panel()
+            if restart_context_panel:
+                layout_components.append(Layout(restart_context_panel, name="restart_context", size=8))
+
+            # Add header
+            layout_components.append(Layout(header, name="header", size=5))
+
+            # Add agent columns
+            layout_components.append(Layout(agent_columns, name="main"))
+
+            # Add post-evaluation panel if active (below agents)
+            post_eval_panel = self._create_post_evaluation_panel()
+            if post_eval_panel:
+                layout_components.append(Layout(post_eval_panel, name="post_eval", size=6))
+
+            # Add footer
+            layout_components.append(Layout(footer, name="footer", size=8))
+
+            # Arrange layout
+            layout.split_column(*layout_components)
 
         return layout
 
@@ -2011,6 +2038,56 @@ class RichTerminalDisplay(TerminalDisplay):
             border_style=self.colors["success"],
             box=DOUBLE,
             expand=True,  # Full width
+        )
+
+    def _create_post_evaluation_panel(self) -> Optional[Panel]:
+        """Create a panel for post-evaluation display (below agent columns)."""
+        if not self._post_evaluation_active:
+            return None
+
+        content_text = Text()
+
+        if not self._post_evaluation_content:
+            content_text.append("Evaluating answer...", style=self.colors["text"])
+        else:
+            # Show last few lines of post-eval content
+            lines = self._post_evaluation_content.split("\n")
+            display_lines = lines[-5:] if len(lines) > 5 else lines
+
+            for line in display_lines:
+                if line.strip():
+                    formatted_line = self._format_content_line(line)
+                    content_text.append(formatted_line)
+                content_text.append("\n")
+
+        title = f"🔍 Post-Evaluation by {self._post_evaluation_agent}"
+
+        return Panel(
+            content_text,
+            title=f"[{self.colors['info']}]{title}[/{self.colors['info']}]",
+            border_style=self.colors["info"],
+            box=ROUNDED,
+            expand=True,
+            height=6,  # Fixed height to not take too much space
+        )
+
+    def _create_restart_context_panel(self) -> Optional[Panel]:
+        """Create restart context panel for attempt 2+ (yellow warning at top)."""
+        if not self._restart_context_reason or not self._restart_context_instructions:
+            return None
+
+        content_text = Text()
+        content_text.append("Reason: ", style="bold bright_yellow")
+        content_text.append(f"{self._restart_context_reason}\n\n", style="bright_yellow")
+        content_text.append("Instructions: ", style="bold bright_yellow")
+        content_text.append(f"{self._restart_context_instructions}", style="bright_yellow")
+
+        return Panel(
+            content_text,
+            title="[bold bright_yellow]⚠️  PREVIOUS ATTEMPT FEEDBACK[/bold bright_yellow]",
+            border_style="bright_yellow",
+            box=ROUNDED,
+            expand=True,
         )
 
     def _format_presentation_content(self, content: str) -> Text:
@@ -3244,9 +3321,82 @@ class RichTerminalDisplay(TerminalDisplay):
                 )
                 self.console.print(error_text)
 
-        # Show interactive options for viewing agent details (only if not in safe mode)
-        if self._keyboard_interactive_mode and hasattr(self, "_agent_keys") and not self._safe_keyboard_mode:
+        # Show interactive options for viewing agent details (only if not in safe mode and not restarting)
+        # Don't show inspection menu if orchestration is restarting
+        is_restarting = hasattr(self, "orchestrator") and hasattr(self.orchestrator, "restart_pending") and self.orchestrator.restart_pending
+        if self._keyboard_interactive_mode and hasattr(self, "_agent_keys") and not self._safe_keyboard_mode and not is_restarting:
             self.show_agent_selector()
+
+    def show_post_evaluation_content(self, content: str, agent_id: str):
+        """Display post-evaluation streaming content in a panel below agents."""
+        self._post_evaluation_active = True
+        self._post_evaluation_agent = agent_id
+        self._post_evaluation_content += content
+        # Panel will be created/updated in _update_display via layout
+
+    def show_restart_banner(self, reason: str, instructions: str, attempt: int, max_attempts: int):
+        """Display restart decision banner prominently (like final presentation)."""
+        # Stop live display temporarily for static banner
+        live_was_active = self.live is not None
+        if self.live:
+            self.live.stop()
+            self.live = None
+
+        # Create restart banner content
+        banner_content = Text()
+        banner_content.append("\nREASON:\n", style="bold bright_yellow")
+        banner_content.append(f"{reason}\n\n", style="bright_yellow")
+        banner_content.append("INSTRUCTIONS FOR NEXT ATTEMPT:\n", style="bold bright_yellow")
+        banner_content.append(f"{instructions}\n", style="bright_yellow")
+
+        restart_panel = Panel(
+            banner_content,
+            title=f"[bold bright_yellow]🔄 ORCHESTRATION RESTART (Attempt {attempt}/{max_attempts})[/bold bright_yellow]",
+            border_style="bright_yellow",
+            box=DOUBLE,
+            expand=True,
+        )
+
+        self.console.print(restart_panel)
+        time.sleep(2.0)  # Allow user to read restart banner
+
+        # Reset state for fresh attempt - clear all agent content and status
+        for agent_id in self.agent_ids:
+            self.agent_outputs[agent_id] = []
+            self.agent_status[agent_id] = "waiting"
+            # Clear text buffers
+            if hasattr(self, "_text_buffers") and agent_id in self._text_buffers:
+                self._text_buffers[agent_id] = ""
+
+        # Clear cached panels
+        self._agent_panels_cache.clear()
+
+        # Clear presentation state
+        self._final_presentation_active = False
+        self._final_presentation_content = ""
+        self._post_evaluation_active = False
+        self._post_evaluation_content = ""
+
+        # Restart live display with fresh state
+        if live_was_active:
+            # Clear screen and create fresh live display
+            self.console.clear()
+            self.live = Live(
+                self._create_layout(),
+                console=self.console,
+                refresh_per_second=self.refresh_rate,
+                vertical_overflow="ellipsis",
+                transient=False,
+            )
+            self.live.start()
+            # Force immediate update to show fresh display
+            self._schedule_async_update(force_update=True)
+
+    def show_restart_context_panel(self, reason: str, instructions: str):
+        """Display restart context panel at top of UI (for attempt 2+)."""
+        self._restart_context_reason = reason
+        self._restart_context_instructions = instructions
+        # Panel will be displayed in initialize() method before agent columns
 
     def _display_answer_with_flush(self, answer: str) -> None:
         """Display answer with flush output effect - streaming character by character."""

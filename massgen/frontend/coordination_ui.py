@@ -186,6 +186,14 @@ class CoordinationUI:
 
         self.display.initialize(question, log_filename)
 
+        # Show restart context panel if this is a restart attempt
+        if hasattr(orchestrator, "restart_reason") and orchestrator.restart_reason:
+            if hasattr(self.display, "show_restart_context_panel"):
+                self.display.show_restart_context_panel(
+                    orchestrator.restart_reason,
+                    orchestrator.restart_instructions or "No instructions provided",
+                )
+
         # Initialize variables to avoid reference before assignment error in finally block
         selected_agent = None
         vote_results = {}
@@ -282,12 +290,40 @@ class CoordinationUI:
                                 self.logger.log_agent_content(source, reasoning_content, "reasoning")
                     continue
 
+                # Handle restart banner
+                elif chunk_type == "restart_banner":
+                    # Extract restart info from orchestrator state
+                    reason = getattr(orchestrator, "restart_reason", "Answer needs improvement")
+                    instructions = getattr(orchestrator, "restart_instructions", "Please address the issues identified")
+                    # Next attempt number (current is 0-indexed, so current_attempt=0 means attempt 1 just finished, attempt 2 is next)
+                    attempt = getattr(orchestrator, "current_attempt", 0) + 2
+                    max_attempts = getattr(orchestrator, "max_attempts", 3)
+
+                    self.display.show_restart_banner(reason, instructions, attempt, max_attempts)
+                    continue
+
+                # Handle restart required signal (internal - don't display)
+                elif chunk_type == "restart_required":
+                    # Signal that orchestration will restart - UI will be reinitialized
+                    continue
+
                 # Reset reasoning prefix state when final presentation starts
                 if chunk_type == "status" and "presenting final answer" in content:
                     # Clear all summary active flags for final presentation
                     for attr_name in list(vars(self).keys()):
                         if attr_name.startswith("_summary_active_"):
                             delattr(self, attr_name)
+
+                # Handle post-evaluation content streaming
+                if source and content and chunk_type == "content":
+                    # Check if we're in post-evaluation
+                    if hasattr(self, "_in_post_evaluation") and self._in_post_evaluation:
+                        if self.display and hasattr(self.display, "show_post_evaluation_content"):
+                            self.display.show_post_evaluation_content(content, source)
+
+                # Detect post-evaluation start
+                if chunk_type == "status" and "Post-evaluation" in content:
+                    self._in_post_evaluation = True
 
                 if content:
                     full_response += content
@@ -473,7 +509,10 @@ class CoordinationUI:
             # Small delay to ensure display updates are processed
             await asyncio.sleep(0.1)
 
-            if self.display:
+            # Only cleanup (which shows inspection menu) if coordination is truly finished
+            # Check workflow_phase to see if we're in "presenting" state (finished) vs still coordinating (restarting)
+            is_finished = hasattr(orchestrator, "workflow_phase") and orchestrator.workflow_phase == "presenting"
+            if self.display and is_finished:
                 self.display.cleanup()
 
             # Don't print - display already showed this info
@@ -484,7 +523,7 @@ class CoordinationUI:
             #         print(f"🗳️ Vote results: {vote_summary}")
             # print()
 
-            if self.logger:
+            if self.logger and is_finished:
                 session_info = self.logger.finalize_session(
                     final_result if "final_result" in locals() else (final_answer if "final_answer" in locals() else ""),
                     success=True,
@@ -561,6 +600,14 @@ class CoordinationUI:
             print()
 
         self.display.initialize(question, log_filename)
+
+        # Show restart context panel if this is a restart attempt
+        if hasattr(orchestrator, "restart_reason") and orchestrator.restart_reason:
+            if hasattr(self.display, "show_restart_context_panel"):
+                self.display.show_restart_context_panel(
+                    orchestrator.restart_reason,
+                    orchestrator.restart_instructions or "No instructions provided",
+                )
 
         # Initialize variables to avoid reference before assignment error in finally block
         selected_agent = None
@@ -659,12 +706,40 @@ class CoordinationUI:
                                 self.logger.log_agent_content(source, reasoning_content, "reasoning")
                     continue
 
+                # Handle restart banner
+                elif chunk_type == "restart_banner":
+                    # Extract restart info from orchestrator state
+                    reason = getattr(orchestrator, "restart_reason", "Answer needs improvement")
+                    instructions = getattr(orchestrator, "restart_instructions", "Please address the issues identified")
+                    # Next attempt number (current is 0-indexed, so current_attempt=0 means attempt 1 just finished, attempt 2 is next)
+                    attempt = getattr(orchestrator, "current_attempt", 0) + 2
+                    max_attempts = getattr(orchestrator, "max_attempts", 3)
+
+                    self.display.show_restart_banner(reason, instructions, attempt, max_attempts)
+                    continue
+
+                # Handle restart required signal (internal - don't display)
+                elif chunk_type == "restart_required":
+                    # Signal that orchestration will restart - UI will be reinitialized
+                    continue
+
                 # Reset reasoning prefix state when final presentation starts
                 if chunk_type == "status" and "presenting final answer" in content:
                     # Clear all summary active flags for final presentation
                     for attr_name in list(vars(self).keys()):
                         if attr_name.startswith("_summary_active_"):
                             delattr(self, attr_name)
+
+                # Handle post-evaluation content streaming
+                if source and content and chunk_type == "content":
+                    # Check if we're in post-evaluation by looking for the status message
+                    if hasattr(self, "_in_post_evaluation") and self._in_post_evaluation:
+                        if self.display and hasattr(self.display, "show_post_evaluation_content"):
+                            self.display.show_post_evaluation_content(content, source)
+
+                # Detect post-evaluation start
+                if chunk_type == "status" and "Post-evaluation" in content:
+                    self._in_post_evaluation = True
 
                 if content:
                     full_response += content
@@ -842,7 +917,9 @@ class CoordinationUI:
             # Small delay to ensure display updates are processed
             await asyncio.sleep(0.1)
 
-            if self.display:
+            # Only cleanup (which shows inspection menu) if coordination is truly finished
+            is_finished = hasattr(orchestrator, "workflow_phase") and orchestrator.workflow_phase == "presenting"
+            if self.display and is_finished:
                 self.display.cleanup()
 
     def _display_vote_results(self, vote_results: Dict[str, Any]):

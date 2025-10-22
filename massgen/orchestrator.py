@@ -168,7 +168,6 @@ class Orchestrator(ChatAgent):
         self.current_attempt: int = 0
         max_restarts = self.config.coordination_config.max_orchestration_restarts
         self.max_attempts: int = 1 + max_restarts
-        logger.info(f"🔥 TEST: Orchestrator __init__ - max_orchestration_restarts={max_restarts}, max_attempts={self.max_attempts}")
         self.restart_pending: bool = False
         self.restart_reason: Optional[str] = None
         self.restart_instructions: Optional[str] = None
@@ -273,6 +272,9 @@ class Orchestrator(ChatAgent):
             self.coordination_tracker.initialize_session(list(self.agents.keys()), self.current_task)
             self.workflow_phase = "coordinating"
 
+            # Reset restart_pending flag at start of coordination (will be set again if restart needed)
+            self.restart_pending = False
+
             # Clear agent workspaces for new turn (if this is a multi-turn conversation with history)
             if conversation_context and conversation_context.get("conversation_history"):
                 self._clear_agent_workspaces()
@@ -346,69 +348,61 @@ class Orchestrator(ChatAgent):
             self.coordination_tracker.save_coordination_logs(log_session_dir)
 
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
-        """Execute coordination with orchestrator-level timeout protection and restart loop."""
-        # Restart loop - continues until no restart is pending
-        while True:
-            self.coordination_start_time = time.time()
-            self.total_tokens = 0
-            self.is_orchestrator_timeout = False
-            self.timeout_reason = None
-            self.restart_pending = False  # Reset restart flag at start of each attempt
+        """Execute coordination with orchestrator-level timeout protection.
 
-            log_orchestrator_activity(
-                self.orchestrator_id,
-                f"Starting coordination attempt {self.current_attempt + 1}/{self.max_attempts}",
-                {
-                    "timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds,
-                    "agents": list(self.agents.keys()),
-                    "has_restart_context": bool(self.restart_reason),
-                },
-            )
+        When restart is needed, this method completes and returns control to CLI,
+        which will call coordinate() again (similar to multiturn pattern).
+        """
+        # Reset timing and state for this attempt
+        self.coordination_start_time = time.time()
+        self.total_tokens = 0
+        self.is_orchestrator_timeout = False
+        self.timeout_reason = None
 
-            # Track active coordination state for cleanup
-            self._active_streams = {}
-            self._active_tasks = {}
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            f"Starting coordination attempt {self.current_attempt + 1}/{self.max_attempts}",
+            {
+                "timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds,
+                "agents": list(self.agents.keys()),
+                "has_restart_context": bool(self.restart_reason),
+            },
+        )
 
-            timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
+        # Track active coordination state for cleanup
+        self._active_streams = {}
+        self._active_tasks = {}
 
-            try:
-                # Use asyncio.timeout for timeout protection
-                async with asyncio.timeout(timeout_seconds):
-                    async for chunk in self._coordinate_agents(conversation_context):
-                        # Track tokens if this is a content chunk
-                        if hasattr(chunk, "content") and chunk.content:
-                            self.total_tokens += len(chunk.content.split())  # Rough token estimation
+        timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
 
-                        # Check for restart signal
-                        if chunk.type == "restart_required":
-                            # Don't yield restart_required - it's internal signal
-                            break
+        try:
+            # Use asyncio.timeout for timeout protection
+            async with asyncio.timeout(timeout_seconds):
+                async for chunk in self._coordinate_agents(conversation_context):
+                    # Track tokens if this is a content chunk
+                    if hasattr(chunk, "content") and chunk.content:
+                        self.total_tokens += len(chunk.content.split())  # Rough token estimation
 
-                        yield chunk
-
-            except asyncio.TimeoutError:
-                self.is_orchestrator_timeout = True
-                elapsed = time.time() - self.coordination_start_time
-                self.timeout_reason = f"Time limit exceeded ({elapsed:.1f}s/{timeout_seconds}s)"
-                # Track timeout for all agents that were still working
-                for agent_id in self.agent_states.keys():
-                    if not self.agent_states[agent_id].has_voted:
-                        self.coordination_tracker.track_agent_action(agent_id, ActionType.TIMEOUT, self.timeout_reason)
-
-                # Force cleanup of any active agent streams and tasks
-                await self._cleanup_active_coordination()
-
-            # Handle timeout by jumping to final presentation
-            if self.is_orchestrator_timeout:
-                async for chunk in self._handle_orchestrator_timeout():
                     yield chunk
-                break  # Exit restart loop on timeout
 
-            # Check if restart is pending
-            if not self.restart_pending:
-                break  # Exit restart loop if no restart needed
+        except asyncio.TimeoutError:
+            self.is_orchestrator_timeout = True
+            elapsed = time.time() - self.coordination_start_time
+            self.timeout_reason = f"Time limit exceeded ({elapsed:.1f}s/{timeout_seconds}s)"
+            # Track timeout for all agents that were still working
+            for agent_id in self.agent_states.keys():
+                if not self.agent_states[agent_id].has_voted:
+                    self.coordination_tracker.track_agent_action(agent_id, ActionType.TIMEOUT, self.timeout_reason)
 
-            # Continue to next iteration of restart loop
+            # Force cleanup of any active agent streams and tasks
+            await self._cleanup_active_coordination()
+
+        # Handle timeout by jumping to final presentation
+        if self.is_orchestrator_timeout:
+            async for chunk in self._handle_orchestrator_timeout():
+                yield chunk
+
+        # Exit here - if restart is needed, CLI will call coordinate() again
 
     async def _coordinate_agents(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
@@ -1926,7 +1920,6 @@ class Orchestrator(ChatAgent):
 
     async def _present_final_answer(self) -> AsyncGenerator[StreamChunk, None]:
         """Present the final coordinated answer with optional post-evaluation and restart loop."""
-        logger.info("🔥🔥🔥 TEST_RESTART_FEATURE: NEW CODE IS LOADED - RESTART FEATURE ACTIVE 🔥🔥🔥")
 
         # Select the best agent based on current state
         if not self._selected_agent:
@@ -1953,24 +1946,18 @@ class Orchestrator(ChatAgent):
         yield StreamChunk(type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n")
 
         # Stream the final presentation (with full tool support)
-        logger.info(f"🔥 TEST: About to call get_final_presentation for {self._selected_agent}")
         presentation_content = ""
         async for chunk in self.get_final_presentation(self._selected_agent, vote_results):
             if chunk.type == "content" and chunk.content:
                 presentation_content += chunk.content
             yield chunk
 
-        logger.info("🔥 TEST: Finished streaming get_final_presentation")
-
         # Check if post-evaluation should run
         # Skip post-evaluation on final attempt (user clarification #4)
         is_final_attempt = self.current_attempt >= (self.max_attempts - 1)
         should_evaluate = self.max_attempts > 1 and not is_final_attempt
 
-        logger.info(f"🔥 TEST: post_evaluation_check - current_attempt={self.current_attempt}, max_attempts={self.max_attempts}, is_final_attempt={is_final_attempt}, should_evaluate={should_evaluate}")
-
         if should_evaluate:
-            logger.info("🔥 TEST: Starting post-evaluation phase")
             # Run post-evaluation
             final_answer_to_evaluate = self._final_presentation_content or presentation_content
             async for chunk in self.post_evaluate_answer(self._selected_agent, final_answer_to_evaluate):
@@ -1997,12 +1984,11 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
                 log_stream_chunk("orchestrator", "status", restart_banner)
                 yield StreamChunk(type="restart_banner", content=restart_banner, source="orchestrator")
 
-                # Reset state for restart
+                # Reset state for restart (prepare for next coordinate() call)
                 self.handle_restart()
 
-                # Return early - the CLI/UI will call coordinate again
-                log_stream_chunk("orchestrator", "status", "Restart initiated - ready for next attempt")
-                yield StreamChunk(type="restart_required", content="Restart required", source="orchestrator")
+                # Don't add to history or set workflow phase - restart is pending
+                # Exit here - CLI will detect restart_pending and call coordinate() again
                 return
 
         # No restart - add final answer to conversation history
@@ -2435,9 +2421,7 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
             # Save logs
             self.save_coordination_logs()
 
-        # Signal completion of final presentation
-        log_stream_chunk("orchestrator", "done", None, selected_agent_id)
-        yield StreamChunk(type="done", source=selected_agent_id)
+        # Don't yield done here - let _present_final_answer handle final done after post-evaluation
 
     async def post_evaluate_answer(self, selected_agent_id: str, final_answer: str) -> AsyncGenerator[StreamChunk, None]:
         """Post-evaluation phase where winning agent evaluates its own answer.
@@ -2525,9 +2509,6 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
             api_format = agent.backend.api_format
         post_eval_tools = get_post_evaluation_tools(api_format=api_format)
 
-        logger.info(f"🔥 TEST: Post-eval tools count={len(post_eval_tools)}, api_format={api_format}")
-        logger.info(f"🔥 TEST: Post-eval tools={[t.get('function', {}).get('name') if 'function' in t else t.get('name') for t in post_eval_tools]}")
-
         log_stream_chunk("orchestrator", "status", "🔍 Post-evaluation: Reviewing final answer\n")
         yield StreamChunk(type="status", content="🔍 Post-evaluation: Reviewing final answer\n", source="orchestrator")
 
@@ -2540,7 +2521,6 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
             async with asyncio.timeout(timeout_seconds):
                 async for chunk in agent.chat(messages=evaluation_messages, tools=post_eval_tools, reset_chat=True):
                     chunk_type = self._get_chunk_type_value(chunk)
-                    logger.info(f"🔥 TEST POST-EVAL: Received chunk type={chunk_type}")
 
                     if chunk_type == "content" and chunk.content:
                         log_stream_chunk("orchestrator", "content", chunk.content, selected_agent_id)
@@ -2563,17 +2543,13 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
                     elif chunk_type == "tool_calls":
                         # Post-evaluation tool call detected
                         tool_call_detected = True
-                        logger.info(f"🔥 TEST POST-EVAL: tool_calls chunk received, has tool_calls={hasattr(chunk, 'tool_calls')}")
                         if hasattr(chunk, "tool_calls") and chunk.tool_calls:
-                            logger.info(f"🔥 TEST POST-EVAL: tool_calls count={len(chunk.tool_calls)}")
                             for tool_call in chunk.tool_calls:
                                 # Use backend's tool extraction (same as regular coordination)
                                 tool_name = agent.backend.extract_tool_name(tool_call)
                                 tool_args = agent.backend.extract_tool_arguments(tool_call)
-                                logger.info(f"🔥 TEST POST-EVAL: tool_name={tool_name}, args={tool_args}")
 
                                 if tool_name == "submit":
-                                    logger.info("🔥 TEST POST-EVAL: Submit tool called - answer approved!")
                                     log_stream_chunk("orchestrator", "status", "✅ Evaluation complete - answer approved\n")
                                     yield StreamChunk(type="status", content="✅ Evaluation complete - answer approved\n", source="orchestrator")
                                     evaluation_complete = True
@@ -2583,7 +2559,6 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
                                     self.restart_instructions = tool_args.get("instructions", "No instructions provided")
                                     self.restart_pending = True
 
-                                    logger.info(f"🔥 TEST POST-EVAL: Restart tool called! reason={self.restart_reason}")
                                     log_stream_chunk("orchestrator", "status", "🔄 Restart requested\n")
                                     yield StreamChunk(type="status", content="🔄 Restart requested\n", source="orchestrator")
                                     evaluation_complete = True
@@ -2633,6 +2608,9 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
         # Reset coordination tracker for new attempt
         self.coordination_tracker = CoordinationTracker()
         self.coordination_tracker.initialize_session(list(self.agents.keys()))
+
+        # Reset workflow phase to idle so next coordinate() call starts fresh
+        self.workflow_phase = "idle"
 
         # Increment attempt counter
         self.current_attempt += 1

@@ -906,16 +906,39 @@ async def run_question_with_history(
     # For multi-agent with history, we need to use a different approach
     # that maintains coordination UI display while supporting conversation context
 
-    if history and len(history) > 0:
-        # Use coordination UI with conversation context
-        # Extract current question from messages
-        current_question = messages[-1].get("content", question) if messages else question
+    # Restart loop (similar to multiturn pattern) - continues until no restart pending
+    response_content = None
+    while True:
+        if history and len(history) > 0:
+            # Use coordination UI with conversation context
+            # Extract current question from messages
+            current_question = messages[-1].get("content", question) if messages else question
 
-        # Pass the full message context to the UI coordination
-        response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
-    else:
-        # Standard coordination for new conversations
-        response_content = await ui.coordinate(orchestrator, question)
+            # Pass the full message context to the UI coordination
+            response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
+        else:
+            # Standard coordination for new conversations
+            response_content = await ui.coordinate(orchestrator, question)
+
+        # Check if restart is needed
+        if hasattr(orchestrator, "restart_pending") and orchestrator.restart_pending:
+            # Restart needed - create fresh UI for next attempt
+            print(f"\n{'='*80}")
+            print(f"🔄 Restarting coordination - Attempt {orchestrator.current_attempt + 1}/{orchestrator.max_attempts}")
+            print(f"{'='*80}\n")
+
+            # Create fresh UI instance for next attempt
+            ui = CoordinationUI(
+                display_type=ui_config.get("display_type", "rich_terminal"),
+                logging_enabled=ui_config.get("logging_enabled", True),
+                enable_final_presentation=True,
+            )
+
+            # Continue to next attempt
+            continue
+        else:
+            # Coordination complete - exit loop
+            break
 
     # Handle session persistence if applicable
     session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
@@ -1026,7 +1049,33 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
-        final_response = await ui.coordinate(orchestrator, question)
+        # Restart loop (similar to multiturn pattern)
+        # Continues calling coordinate() until no restart is pending
+        final_response = None
+        while True:
+            # Call coordinate with current orchestrator state
+            final_response = await ui.coordinate(orchestrator, question)
+
+            # Check if restart is needed
+            if hasattr(orchestrator, "restart_pending") and orchestrator.restart_pending:
+                # Restart needed - create fresh UI for next attempt
+                print(f"\n{'='*80}")
+                print(f"🔄 Restarting coordination - Attempt {orchestrator.current_attempt + 1}/{orchestrator.max_attempts}")
+                print(f"{'='*80}\n")
+
+                # Create fresh UI instance for next attempt
+                ui = CoordinationUI(
+                    display_type=ui_config.get("display_type", "rich_terminal"),
+                    logging_enabled=ui_config.get("logging_enabled", True),
+                    enable_final_presentation=True,
+                )
+
+                # Continue to next attempt
+                continue
+            else:
+                # Coordination complete - exit loop
+                break
+
         return final_response
 
 
