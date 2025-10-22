@@ -73,7 +73,9 @@ from ..logger_config import (
     log_backend_activity,
     log_backend_agent_message,
     log_stream_chunk,
+    logger,
 )
+from ..tool import ToolManager
 from .base import FilesystemSupport, LLMBackend, StreamChunk
 
 
@@ -147,6 +149,38 @@ class ClaudeCodeBackend(LLMBackend):
         self._cwd: str = str(Path(str(self.filesystem_manager.get_current_workspace())).resolve())
 
         self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
+
+        # Custom tools support - initialize ToolManager if custom_tools are provided
+        self._custom_tool_manager: Optional[ToolManager] = None
+        custom_tools = kwargs.get("custom_tools", [])
+        if custom_tools:
+            self._custom_tool_manager = ToolManager()
+            self._register_custom_tools(custom_tools)
+
+            # Create SDK MCP Server from custom tools and inject into mcp_servers
+            sdk_mcp_server = self._create_sdk_mcp_server_from_custom_tools()
+            if sdk_mcp_server:
+                # Ensure mcp_servers exists in config
+                if "mcp_servers" not in self.config:
+                    self.config["mcp_servers"] = {}
+
+                # Add SDK MCP server (convert to list format if dict format is used)
+                if isinstance(self.config["mcp_servers"], dict):
+                    # Already in dict format
+                    self.config["mcp_servers"]["massgen_custom_tools"] = sdk_mcp_server
+                elif isinstance(self.config["mcp_servers"], list):
+                    # List format - add as special entry with SDK server marker
+                    self.config["mcp_servers"].append(
+                        {
+                            "name": "massgen_custom_tools",
+                            "__sdk_server__": sdk_mcp_server,
+                        },
+                    )
+                else:
+                    # Initialize as dict with SDK server
+                    self.config["mcp_servers"] = {"massgen_custom_tools": sdk_mcp_server}
+
+                logger.info(f"Registered SDK MCP server with {len(self._custom_tool_manager.registered_tools)} custom tools")
 
     def _setup_windows_subprocess_cleanup_suppression(self):
         """Comprehensive Windows subprocess cleanup warning suppression."""
@@ -404,6 +438,327 @@ class ClaudeCodeBackend(LLMBackend):
     #     """Check if current agent has permission for path access."""
     #     # Will integrate with PermissionManager
     #     pass
+
+    def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
+        """Register custom tools with the tool manager.
+
+        Supports flexible configuration:
+        - function: str | List[str]
+        - description: str (shared) | List[str] (1-to-1 mapping)
+        - preset_args: dict (shared) | List[dict] (1-to-1 mapping)
+
+        Examples:
+            # Single function
+            function: "my_func"
+            description: "My description"
+
+            # Multiple functions with shared description
+            function: ["func1", "func2"]
+            description: "Shared description"
+
+            # Multiple functions with individual descriptions
+            function: ["func1", "func2"]
+            description: ["Description 1", "Description 2"]
+
+            # Multiple functions with mixed (shared desc, individual args)
+            function: ["func1", "func2"]
+            description: "Shared description"
+            preset_args: [{"arg1": "val1"}, {"arg1": "val2"}]
+
+        Args:
+            custom_tools: List of custom tool configurations
+        """
+        if not self._custom_tool_manager:
+            logger.warning("Custom tool manager not initialized, cannot register tools")
+            return
+
+        # Collect unique categories and create them if needed
+        categories = set()
+        for tool_config in custom_tools:
+            if isinstance(tool_config, dict):
+                category = tool_config.get("category", "default")
+                if category != "default":
+                    categories.add(category)
+
+        # Create categories that don't exist
+        for category in categories:
+            if category not in self._custom_tool_manager.tool_categories:
+                self._custom_tool_manager.setup_category(
+                    category_name=category,
+                    description=f"Custom {category} tools",
+                    enabled=True,
+                )
+
+        # Register each custom tool
+        for tool_config in custom_tools:
+            try:
+                if isinstance(tool_config, dict):
+                    # Extract base configuration
+                    path = tool_config.get("path")
+                    category = tool_config.get("category", "default")
+
+                    # Normalize function field to list
+                    func_field = tool_config.get("function")
+                    if isinstance(func_field, str):
+                        functions = [func_field]
+                    elif isinstance(func_field, list):
+                        functions = func_field
+                    else:
+                        logger.error(
+                            f"Invalid function field type: {type(func_field)}. " f"Must be str or List[str].",
+                        )
+                        continue
+
+                    if not functions:
+                        logger.error("Empty function list in tool config")
+                        continue
+
+                    num_functions = len(functions)
+
+                    # Process name field (can be str or List[str])
+                    name_field = tool_config.get("name")
+                    names = self._process_field_for_functions(
+                        name_field,
+                        num_functions,
+                        "name",
+                    )
+                    if names is None:
+                        continue  # Validation error, skip this tool
+
+                    # Process description field (can be str or List[str])
+                    desc_field = tool_config.get("description")
+                    descriptions = self._process_field_for_functions(
+                        desc_field,
+                        num_functions,
+                        "description",
+                    )
+                    if descriptions is None:
+                        continue  # Validation error, skip this tool
+
+                    # Process preset_args field (can be dict or List[dict])
+                    preset_field = tool_config.get("preset_args")
+                    preset_args_list = self._process_field_for_functions(
+                        preset_field,
+                        num_functions,
+                        "preset_args",
+                    )
+                    if preset_args_list is None:
+                        continue  # Validation error, skip this tool
+
+                    # Register each function with its corresponding values
+                    for i, func in enumerate(functions):
+                        # Load the function first if custom name is needed
+                        if names[i] and names[i] != func:
+                            # Need to load function and apply custom name
+                            if path:
+                                loaded_func = self._custom_tool_manager._load_function_from_path(path, func)
+                            else:
+                                loaded_func = self._custom_tool_manager._load_builtin_function(func)
+
+                            if loaded_func is None:
+                                logger.error(f"Could not load function '{func}' from path: {path}")
+                                continue
+
+                            # Apply custom name by modifying __name__ attribute
+                            loaded_func.__name__ = names[i]
+
+                            # Register with loaded function (no path needed)
+                            self._custom_tool_manager.add_tool_function(
+                                path=None,
+                                func=loaded_func,
+                                category=category,
+                                preset_args=preset_args_list[i],
+                                description=descriptions[i],
+                            )
+                        else:
+                            # No custom name or same as function name, use normal registration
+                            self._custom_tool_manager.add_tool_function(
+                                path=path,
+                                func=func,
+                                category=category,
+                                preset_args=preset_args_list[i],
+                                description=descriptions[i],
+                            )
+
+                        # Use custom name for logging if provided
+                        registered_name = names[i] if names[i] else func
+                        logger.info(
+                            f"Registered custom tool: {registered_name} from {path} " f"(category: {category}, " f"desc: '{descriptions[i][:50] if descriptions[i] else 'None'}...')",
+                        )
+
+            except Exception as e:
+                func_name = tool_config.get("function", "unknown")
+                logger.error(
+                    f"Failed to register custom tool {func_name}: {e}",
+                    exc_info=True,
+                )
+
+    def _process_field_for_functions(
+        self,
+        field_value: Any,
+        num_functions: int,
+        field_name: str,
+    ) -> Optional[List[Any]]:
+        """Process a config field that can be a single value or list.
+
+        Conversion rules:
+        - None → [None, None, ...] (repeated num_functions times)
+        - Single value (not list) → [value, value, ...] (shared)
+        - List with matching length → use as-is (1-to-1 mapping)
+        - List with wrong length → ERROR (return None)
+
+        Args:
+            field_value: The field value from config
+            num_functions: Number of functions being registered
+            field_name: Name of the field (for error messages)
+
+        Returns:
+            List of values (one per function), or None if validation fails
+
+        Examples:
+            _process_field_for_functions(None, 3, "desc")
+            → [None, None, None]
+
+            _process_field_for_functions("shared", 3, "desc")
+            → ["shared", "shared", "shared"]
+
+            _process_field_for_functions(["a", "b", "c"], 3, "desc")
+            → ["a", "b", "c"]
+
+            _process_field_for_functions(["a", "b"], 3, "desc")
+            → None (error logged)
+        """
+        # Case 1: None or missing field → use None for all functions
+        if field_value is None:
+            return [None] * num_functions
+
+        # Case 2: Single value (not a list) → share across all functions
+        if not isinstance(field_value, list):
+            return [field_value] * num_functions
+
+        # Case 3: List value → must match function count exactly
+        if len(field_value) == num_functions:
+            return field_value
+        else:
+            # Length mismatch → validation error
+            logger.error(
+                f"Configuration error: {field_name} is a list with "
+                f"{len(field_value)} items, but there are {num_functions} functions. "
+                f"Either use a single value (shared) or a list with exactly "
+                f"{num_functions} items (1-to-1 mapping).",
+            )
+            return None
+
+    async def _execute_massgen_custom_tool(self, tool_name: str, args: dict) -> dict:
+        """Execute a MassGen custom tool and convert result to MCP format.
+
+        Args:
+            tool_name: Name of the custom tool to execute
+            args: Arguments for the tool
+
+        Returns:
+            MCP-formatted response with content blocks
+        """
+        if not self._custom_tool_manager:
+            return {
+                "content": [
+                    {"type": "text", "text": "Error: Custom tool manager not initialized"},
+                ],
+            }
+
+        tool_request = {
+            "name": tool_name,
+            "input": args,
+        }
+
+        result_text = ""
+        try:
+            async for result in self._custom_tool_manager.execute_tool(tool_request):
+                # Accumulate ExecutionResult blocks
+                if hasattr(result, "output_blocks"):
+                    for block in result.output_blocks:
+                        if hasattr(block, "data"):
+                            result_text += str(block.data)
+                        elif hasattr(block, "content"):
+                            result_text += str(block.content)
+                elif hasattr(result, "content"):
+                    result_text += str(result.content)
+                else:
+                    result_text += str(result)
+        except Exception as e:
+            logger.error(f"Error executing custom tool {tool_name}: {e}")
+            result_text = f"Error: {str(e)}"
+
+        # Return MCP format response
+        return {
+            "content": [
+                {"type": "text", "text": result_text or "Tool executed successfully"},
+            ],
+        }
+
+    def _create_sdk_mcp_server_from_custom_tools(self):
+        """Convert MassGen custom tools to SDK MCP Server.
+
+        Returns:
+            SDK MCP Server instance or None if no tools or SDK unavailable
+        """
+        if not self._custom_tool_manager:
+            return None
+
+        try:
+            from claude_agent_sdk import create_sdk_mcp_server, tool
+        except ImportError:
+            logger.warning("claude-agent-sdk not available, custom tools will not be registered")
+            return None
+
+        # Get all registered custom tools
+        tool_schemas = self._custom_tool_manager.fetch_tool_schemas()
+        if not tool_schemas:
+            logger.info("No custom tools to register")
+            return None
+
+        # Convert each tool to MCP tool format
+        mcp_tools = []
+        for tool_schema in tool_schemas:
+            try:
+                tool_name = tool_schema["function"]["name"]
+                tool_desc = tool_schema["function"].get("description", "")
+                tool_params = tool_schema["function"]["parameters"]
+
+                # Create async wrapper for MassGen tool
+                # Use default argument to capture tool_name in closure
+                async def tool_wrapper(args, tool_name=tool_name):
+                    return await self._execute_massgen_custom_tool(tool_name, args)
+
+                # Register using SDK tool decorator
+                mcp_tool = tool(
+                    name=tool_name,
+                    description=tool_desc,
+                    input_schema=tool_params,
+                )(tool_wrapper)
+
+                mcp_tools.append(mcp_tool)
+                logger.info(f"Converted custom tool to MCP: {tool_name}")
+
+            except Exception as e:
+                logger.error(f"Failed to convert tool {tool_schema.get('function', {}).get('name', 'unknown')} to MCP: {e}")
+
+        if not mcp_tools:
+            logger.warning("No custom tools successfully converted to MCP")
+            return None
+
+        # Create SDK MCP server
+        try:
+            sdk_mcp_server = create_sdk_mcp_server(
+                name="massgen_custom_tools",
+                version="1.0.0",
+                tools=mcp_tools,
+            )
+            logger.info(f"Created SDK MCP server with {len(mcp_tools)} custom tools")
+            return sdk_mcp_server
+        except Exception as e:
+            logger.error(f"Failed to create SDK MCP server: {e}")
+            return None
 
     def _build_system_prompt_with_workflow_tools(self, tools: List[Dict[str, Any]], base_system: Optional[str] = None) -> str:
         """Build system prompt that includes workflow tools information.
@@ -703,6 +1058,7 @@ class ClaudeCodeBackend(LLMBackend):
             "api_key",
             "allowed_tools",
             "permission_mode",
+            "custom_tools",  # Handled separately via SDK MCP server conversion
         }
 
         # Get cwd from filesystem manager (always available since we require it in __init__)
@@ -720,10 +1076,15 @@ class ClaudeCodeBackend(LLMBackend):
             mcp_servers = options_kwargs["mcp_servers"]
             if isinstance(mcp_servers, list):
                 for server in mcp_servers:
-                    if isinstance(server, dict) and "name" in server:
-                        # Create a copy and remove "name" key
-                        server_config = {k: v for k, v in server.items() if k != "name"}
-                        mcp_servers_dict[server["name"]] = server_config
+                    if isinstance(server, dict):
+                        if "__sdk_server__" in server:
+                            # SDK MCP Server object (created via create_sdk_mcp_server)
+                            server_name = server["name"]
+                            mcp_servers_dict[server_name] = server["__sdk_server__"]
+                        elif "name" in server:
+                            # Regular dictionary configuration
+                            server_config = {k: v for k, v in server.items() if k != "name"}
+                            mcp_servers_dict[server["name"]] = server_config
             elif isinstance(mcp_servers, dict):
                 # Already in dict format
                 mcp_servers_dict = mcp_servers
@@ -806,14 +1167,16 @@ class ClaudeCodeBackend(LLMBackend):
         # Merge constructor config with stream kwargs (stream kwargs take priority)
         all_params = {**self.config, **kwargs}
 
-        # Extract system message from messages for append mode (always do this, even if reusing client)
+        # Extract system message from messages for append mode (always do this)
+        # This must be done BEFORE checking if we have a client to ensure workflow_system_prompt is always defined
         system_msg = next((msg for msg in messages if msg.get("role") == "system"), None)
         if system_msg:
             system_content = system_msg.get("content", "")  # noqa: E128
         else:
             system_content = ""
 
-        # Build system prompt with tools information (needed for logging and client creation)
+        # Build system prompt with tools information
+        # This must be done before any conditional paths to ensure it's always defined
         workflow_system_prompt = self._build_system_prompt_with_workflow_tools(tools or [], system_content)
 
         # Check if we already have a client

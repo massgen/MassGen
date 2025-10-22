@@ -1,0 +1,22 @@
+# MassGen Configuration: GPT-5 Nano with Custom Tool (No Path)
+# Usage:
+#   massgen --config @examples/tools/custom_tools/gpt5_nano_custom_tool_example_no_path "whats the sum of 123 and 456?"
+agents:
+  - id: "gpt5_nano_custom_tool" # OpenAI GPT-5 Nano
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["two_num_tool"]
+          function: ["two_num_tool"]
+    system_message: |
+      You are an AI assistant with access to a custom math calculation tool.
+
+      The two_num_tool is available as a custom tool that can add two numbers together.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about adding two numbers together, use the two_num_tool to calculate the sum and provide
+      a clear, accurate result.
+ui:
+  display_type: "simple"
+  logging_enabled: true

@@ -16,12 +16,20 @@ Color Scheme for Debug Logging:
 """
 
 import inspect
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+import yaml
 from loguru import logger
+
+# Try to import massgen for version info (optional)
+try:
+    import massgen
+except ImportError:
+    massgen = None
 
 # Remove default logger to have full control
 logger.remove()
@@ -93,7 +101,12 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
     return _LOG_SESSION_DIR
 
 
-def save_execution_metadata(query: str, config_path: Optional[str] = None, config_content: Optional[dict] = None):
+def save_execution_metadata(
+    query: str,
+    config_path: Optional[str] = None,
+    config_content: Optional[dict] = None,
+    cli_args: Optional[dict] = None,
+):
     """Save the query and config metadata to the log directory.
 
     This allows reconstructing what was executed in this session.
@@ -102,9 +115,8 @@ def save_execution_metadata(query: str, config_path: Optional[str] = None, confi
         query: The user's query/prompt
         config_path: Path to the config file that was used (optional)
         config_content: The actual config dictionary (optional)
+        cli_args: Command line arguments as dict (optional)
     """
-    import yaml
-
     log_dir = get_log_session_dir()
 
     # Create a single metadata file with all execution info
@@ -118,6 +130,26 @@ def save_execution_metadata(query: str, config_path: Optional[str] = None, confi
 
     if config_content:
         metadata["config"] = config_content
+
+    if cli_args:
+        metadata["cli_args"] = cli_args
+
+    # Try to get git information if in a git repository
+    try:
+        git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL, text=True).strip()
+        git_branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL, text=True).strip()
+        metadata["git"] = {"commit": git_commit, "branch": git_branch}
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Not in a git repo or git not available
+        pass
+
+    # Add Python version and package version
+    metadata["python_version"] = sys.version
+    if massgen is not None:
+        metadata["massgen_version"] = getattr(massgen, "__version__", "unknown")
+
+    # Add working directory
+    metadata["working_directory"] = str(Path.cwd())
 
     metadata_file = log_dir / "execution_metadata.yaml"
     try:

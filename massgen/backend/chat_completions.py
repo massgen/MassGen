@@ -31,10 +31,10 @@ from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 
 # Local imports
 from .base import FilesystemSupport, StreamChunk
-from .base_with_mcp import MCPBackend
+from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend
 
 
-class ChatCompletionsBackend(MCPBackend):
+class ChatCompletionsBackend(CustomToolAndMCPBackend):
     """Complete OpenAI-compatible Chat Completions API backend.
 
     Can be used directly with any OpenAI-compatible provider by setting provider name.
@@ -67,14 +67,14 @@ class ChatCompletionsBackend(MCPBackend):
         async for chunk in super().stream_with_tools(messages, tools, **kwargs):
             yield chunk
 
-    async def _stream_with_mcp_tools(
+    async def _stream_with_custom_and_mcp_tools(
         self,
         current_messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
         client,
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Recursively stream MCP responses, executing function calls as needed."""
+        """Recursively stream responses, executing custom and MCP tool calls as needed."""
 
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
@@ -193,14 +193,28 @@ class ChatCompletionsBackend(MCPBackend):
 
         # Execute any captured function calls
         if captured_function_calls and response_completed:
-            # Check if any of the function calls are NOT MCP functions
-            non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self._mcp_functions]
+            # Categorize function calls
+            mcp_calls = []
+            custom_calls = []
+            provider_calls = []
 
-            if non_mcp_functions:
-                logger.info(f"Non-MCP function calls detected (will be ignored in MCP execution): {[call['name'] for call in non_mcp_functions]}")
+            for call in captured_function_calls:
+                if call["name"] in self._mcp_functions:
+                    mcp_calls.append(call)
+                elif call["name"] in self._custom_tool_names:
+                    custom_calls.append(call)
+                else:
+                    provider_calls.append(call)
+
+            # If there are provider calls (non-MCP, non-custom), let API handle them
+            if provider_calls:
+                logger.info(f"Provider function calls detected: {[call['name'] for call in provider_calls]}. Ending local processing.")
+                yield StreamChunk(type="done")
+                return
 
             # Check circuit breaker status before executing MCP functions
-            if not await self._check_circuit_breaker_before_execution():
+            if mcp_calls and not await self._check_circuit_breaker_before_execution():
+                logger.warning("All MCP servers blocked by circuit breaker")
                 yield StreamChunk(
                     type="mcp_status",
                     status="mcp_blocked",
@@ -210,9 +224,10 @@ class ChatCompletionsBackend(MCPBackend):
                 yield StreamChunk(type="done")
                 return
 
-            # Execute only MCP function calls
-            mcp_functions_executed = False
+            # Initialize for execution
+            functions_executed = False
             updated_messages = current_messages.copy()
+            processed_call_ids = set()  # Track processed calls
 
             # Check if planning mode is enabled - selectively block MCP tool execution during planning
             if self.is_planning_mode_enabled():
@@ -259,11 +274,90 @@ class ChatCompletionsBackend(MCPBackend):
                     }
                     updated_messages.append(assistant_message)
 
-            # Execute functions and collect results
-            tool_results = []
-            for call in captured_function_calls:
+            # Execute custom tools first
+            for call in custom_calls:
+                try:
+                    # Yield custom tool call status
+                    yield StreamChunk(
+                        type="custom_tool_status",
+                        status="custom_tool_called",
+                        content=f"🔧 [Custom Tool] Calling {call['name']}...",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    # Yield custom tool arguments
+                    yield StreamChunk(
+                        type="custom_tool_status",
+                        status="function_call",
+                        content=f"Arguments for Calling {call['name']}: {call['arguments']}",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    # Execute custom tool
+                    result = await self._execute_custom_tool(call)
+
+                    # Add function result to messages
+                    function_output_msg = {
+                        "role": "tool",
+                        "tool_call_id": call["call_id"],
+                        "content": str(result),
+                    }
+                    updated_messages.append(function_output_msg)
+
+                    # Yield custom tool results
+                    yield StreamChunk(
+                        type="custom_tool_status",
+                        status="function_call_output",
+                        content=f"Results for Calling {call['name']}: {str(result)}",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    # Yield custom tool response status
+                    yield StreamChunk(
+                        type="custom_tool_status",
+                        status="custom_tool_response",
+                        content=f"✅ [Custom Tool] {call['name']} completed",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    processed_call_ids.add(call["call_id"])
+                    functions_executed = True
+                    logger.info(f"Executed custom tool: {call['name']}")
+
+                except Exception as e:
+                    logger.error(f"Error executing custom tool {call['name']}: {e}")
+                    error_msg = f"Error executing {call['name']}: {str(e)}"
+
+                    # Yield error with arguments shown
+                    yield StreamChunk(
+                        type="custom_tool_status",
+                        status="function_call",
+                        content=f"Arguments for Calling {call['name']}: {call['arguments']}",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    yield StreamChunk(
+                        type="custom_tool_status",
+                        status="custom_tool_error",
+                        content=f"❌ [Custom Tool Error] {error_msg}",
+                        source=f"custom_{call['name']}",
+                    )
+
+                    # Add error result to messages
+                    error_output_msg = {
+                        "role": "tool",
+                        "tool_call_id": call["call_id"],
+                        "content": error_msg,
+                    }
+                    updated_messages.append(error_output_msg)
+                    processed_call_ids.add(call["call_id"])
+                    functions_executed = True
+
+            # Execute MCP function calls
+            mcp_functions_executed = False
+            for call in mcp_calls:
                 function_name = call["name"]
-                if self.is_mcp_tool_call(function_name):
+                if function_name in self._mcp_functions:
                     yield StreamChunk(
                         type="mcp_status",
                         status="mcp_tool_called",
@@ -271,7 +365,7 @@ class ChatCompletionsBackend(MCPBackend):
                         source=f"mcp_{function_name}",
                     )
 
-                    # Yield detailed MCP status as StreamChunk (similar to gemini.py)
+                    # Yield detailed MCP status as StreamChunk
                     tools_info = f" ({len(self._mcp_functions)} tools available)" if self._mcp_functions else ""
                     yield StreamChunk(
                         type="mcp_status",
@@ -282,51 +376,40 @@ class ChatCompletionsBackend(MCPBackend):
 
                     try:
                         # Execute MCP function with retry and exponential backoff
-                        (
-                            result_str,
-                            result_obj,
-                        ) = await self._execute_mcp_function_with_retry(function_name, call["arguments"])
+                        result_str, result_obj = await self._execute_mcp_function_with_retry(function_name, call["arguments"])
 
                         # Check if function failed after all retries
                         if isinstance(result_str, str) and result_str.startswith("Error:"):
                             # Log failure but still create tool response
                             logger.warning(f"MCP function {function_name} failed after retries: {result_str}")
-                            tool_results.append(
-                                {
-                                    "tool_call_id": call["call_id"],
-                                    "content": result_str,
-                                    "success": False,
-                                },
-                            )
-                        else:
-                            # Yield MCP success status as StreamChunk (similar to gemini.py)
-                            yield StreamChunk(
-                                type="mcp_status",
-                                status="mcp_tools_success",
-                                content=f"MCP tool call succeeded (call #{self._mcp_tool_calls_count})",
-                                source=f"mcp_{function_name}",
-                            )
 
-                            tool_results.append(
-                                {
-                                    "tool_call_id": call["call_id"],
-                                    "content": result_str,
-                                    "success": True,
-                                    "result_obj": result_obj,
-                                },
-                            )
+                            # Add error result to messages
+                            function_output_msg = {
+                                "role": "tool",
+                                "tool_call_id": call["call_id"],
+                                "content": result_str,
+                            }
+                            updated_messages.append(function_output_msg)
+
+                            processed_call_ids.add(call["call_id"])
+                            mcp_functions_executed = True
+                            continue
 
                     except Exception as e:
                         # Only catch unexpected non-MCP system errors
                         logger.error(f"Unexpected error in MCP function execution: {e}")
                         error_msg = f"Error executing {function_name}: {str(e)}"
-                        tool_results.append(
-                            {
-                                "tool_call_id": call["call_id"],
-                                "content": error_msg,
-                                "success": False,
-                            },
-                        )
+
+                        # Add error result to messages
+                        function_output_msg = {
+                            "role": "tool",
+                            "tool_call_id": call["call_id"],
+                            "content": error_msg,
+                        }
+                        updated_messages.append(function_output_msg)
+
+                        processed_call_ids.add(call["call_id"])
+                        mcp_functions_executed = True
                         continue
 
                     # Yield function_call status
@@ -337,60 +420,66 @@ class ChatCompletionsBackend(MCPBackend):
                         source=f"mcp_{function_name}",
                     )
 
-                    logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
-                    mcp_functions_executed = True
-                else:
-                    # For non-MCP functions, add a dummy tool result to maintain message consistency
-                    logger.info(f"Non-MCP function {function_name} detected, creating placeholder response")
-                    tool_results.append(
-                        {
-                            "tool_call_id": call["call_id"],
-                            "content": f"Function {function_name} is not available in this MCP session.",
-                            "success": False,
-                        },
+                    # Add function output to messages and yield status chunk
+                    function_output_msg = {
+                        "role": "tool",
+                        "tool_call_id": call["call_id"],
+                        "content": str(result_str),
+                    }
+                    updated_messages.append(function_output_msg)
+
+                    # Yield function_call_output status with preview
+                    result_text = str(result_str)
+                    if hasattr(result_obj, "content") and result_obj.content:
+                        if isinstance(result_obj.content, list) and len(result_obj.content) > 0:
+                            first_item = result_obj.content[0]
+                            if hasattr(first_item, "text"):
+                                result_text = first_item.text
+
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="function_call_output",
+                        content=f"Results for Calling {function_name}: {result_text}",
+                        source=f"mcp_{function_name}",
                     )
 
-            # Add all tool response messages after the assistant message
-            for result in tool_results:
-                # Yield function_call_output status with preview
-                result_text = str(result["content"])
-                if result.get("success") and hasattr(result.get("result_obj"), "content") and result["result_obj"].content:
-                    obj = result["result_obj"]
-                    if isinstance(obj.content, list) and len(obj.content) > 0:
-                        first_item = obj.content[0]
-                        if hasattr(first_item, "text"):
-                            result_text = first_item.text
+                    logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
+                    processed_call_ids.add(call["call_id"])
 
-                yield StreamChunk(
-                    type="mcp_status",
-                    status="function_call_output",
-                    content=f"Results for Calling {function_name}: {result_text}",
-                    source=f"mcp_{function_name}",
-                )
+                    # Yield MCP tool response status
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="mcp_tool_response",
+                        content=f"✅ [MCP Tool] {function_name} completed",
+                        source=f"mcp_{function_name}",
+                    )
 
-                function_output_msg = {
-                    "role": "tool",
-                    "tool_call_id": result["tool_call_id"],
-                    "content": result["content"],
-                }
-                updated_messages.append(function_output_msg)
+                    mcp_functions_executed = True
+                    functions_executed = True
 
-                yield StreamChunk(
-                    type="mcp_status",
-                    status="mcp_tool_response",
-                    content=f"✅ [MCP Tool] {function_name} completed",
-                    source=f"mcp_{function_name}",
-                )
+            # Ensure all captured function calls have results to prevent hanging
+            for call in captured_function_calls:
+                if call["call_id"] not in processed_call_ids:
+                    logger.warning(f"Tool call {call['call_id']} for function {call['name']} was not processed - adding error result")
+
+                    # Add missing function call and error result to messages
+                    error_output_msg = {
+                        "role": "tool",
+                        "tool_call_id": call["call_id"],
+                        "content": f"Error: Tool call {call['call_id']} for function {call['name']} was not processed. This may indicate a validation or execution error.",
+                    }
+                    updated_messages.append(error_output_msg)
+                    mcp_functions_executed = True
 
             # Trim history after function executions to bound memory usage
-            if mcp_functions_executed:
+            if functions_executed or mcp_functions_executed:
                 updated_messages = self._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
-                async for chunk in self._stream_with_mcp_tools(updated_messages, tools, client, **kwargs):
+                async for chunk in self._stream_with_custom_and_mcp_tools(updated_messages, tools, client, **kwargs):
                     yield chunk
             else:
-                # No MCP functions were executed, we're done
+                # No functions were executed, we're done
                 yield StreamChunk(type="done")
                 return
 
@@ -402,6 +491,7 @@ class ChatCompletionsBackend(MCPBackend):
                 content="✅ [MCP] Session completed",
                 source="mcp_session",
             )
+            yield StreamChunk(type="done")
             return
 
     async def _process_stream(self, stream, all_params, agent_id) -> AsyncGenerator[StreamChunk, None]:

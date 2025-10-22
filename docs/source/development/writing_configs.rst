@@ -133,6 +133,7 @@ Property Placement Reference
 * ``snapshot_storage``, ``agent_temporary_workspace``
 * ``session_storage`` (only for multi-turn)
 * ``context_paths`` (shared read-only directories)
+* ``voting_sensitivity`` (multi-agent consensus threshold)
 * ``coordination.enable_planning_mode``
 * ``coordination.planning_mode_instruction``
 * ``skip_coordination_rounds``, ``timeout``
@@ -223,6 +224,11 @@ Here's a fully annotated config template showing all conventions:
 
      # Multi-turn mode (ONLY include if needed)
      # session_storage: "massgen_logs/sessions"
+
+     # Voting sensitivity (multi-agent only)
+     # Controls consensus threshold for agent voting
+     # Options: "lenient" (default, faster decisions) | "balanced" (moderate agreement) | "strict" (highest quality bar)
+     voting_sensitivity: "balanced"
 
      # Optional: Planning mode coordination
      coordination:

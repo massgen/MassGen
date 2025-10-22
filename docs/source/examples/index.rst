@@ -9,7 +9,6 @@ Practical examples demonstrating MassGen capabilities.
 
    basic_examples
    advanced_patterns
-   case_studies
 
 Quick Start Examples
 --------------------
@@ -37,4 +36,3 @@ More Examples
 
 * :doc:`basic_examples` - Fundamental patterns
 * :doc:`advanced_patterns` - Complex scenarios
-* :doc:`case_studies` - Real-world applications

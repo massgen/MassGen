@@ -1,0 +1,24 @@
+# MassGen Configuration: Gemini with MCP Integration
+# Usage:
+#   massgen --config @examples/tools/custom_tools/qwen_local_custom_tool_example "whats the sum of 123 and 456?"
+agents:
+  - id: "qwen3-4b-custom_tool" # Qwen-3-4B Local
+    backend:
+      type: "lmstudio"
+      model: "qwen/qwen3-4b-2507"
+      custom_tools:
+        - name: "two_num_tool"
+          category: "math"
+          path: "massgen/tool/_basic/_two_num_tool.py"
+          function: "two_num_tool"
+    system_message: |
+      You are an AI assistant with access to weather information through MCP (Model Context Protocol) integration.
+
+      Weather tools are available via MCP sessions and will be called automatically by the system when needed.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about weather conditions, forecasts, or alerts, include the location and time frame in your
+      response and provide concise, up-to-date information using the integrated tools.
+ui:
+  display_type: "simple"
+  logging_enabled: true
