@@ -154,10 +154,12 @@ This project started with the "threads of thought" and "iterative refinement" id
 pip install --upgrade massgen
 
 # Try intelligent planning mode with MCP tools
+# (Please read the YAML file for required API keys: DISCORD_TOKEN, OPENAI_API_KEY, etc.)
 massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
   "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
 
 # Use latest Claude 4.5 Haiku model
+# (Requires ANTHROPIC_API_KEY in .env)
 massgen --model claude-haiku-4-5-20251001 \
   "Summarize the latest AI developments"
 ```
