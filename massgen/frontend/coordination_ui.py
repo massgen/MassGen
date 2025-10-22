@@ -6,7 +6,6 @@ Main interface for coordinating agents with visual display.
 """
 
 import asyncio
-import time
 from typing import Any, Dict, List, Optional
 
 from .displays.base_display import BaseDisplay
@@ -186,14 +185,6 @@ class CoordinationUI:
 
         self.display.initialize(question, log_filename)
 
-        # Show restart context panel if this is a restart attempt
-        if hasattr(orchestrator, "restart_reason") and orchestrator.restart_reason:
-            if hasattr(self.display, "show_restart_context_panel"):
-                self.display.show_restart_context_panel(
-                    orchestrator.restart_reason,
-                    orchestrator.restart_instructions or "No instructions provided",
-                )
-
         # Initialize variables to avoid reference before assignment error in finally block
         selected_agent = None
         vote_results = {}
@@ -335,145 +326,26 @@ class CoordinationUI:
                     # Process content by source
                     await self._process_content(source, content)
 
-            # Display vote results and get final presentation
+            # Get final presentation content from orchestrator state
+            # Note: With restart feature, get_final_presentation is called INSIDE the orchestrator
+            # during _present_final_answer, so chunks already came through the main stream above.
+            # We just need to retrieve the final result for return value.
             status = orchestrator.get_status()
             vote_results = status.get("vote_results", {})
-            selected_agent = status.get("selected_agent")
+            selected_agent = status.get("selected_agent", "")
 
-            # Ensure selected_agent is not None to prevent UnboundLocalError
-            if selected_agent is None:
-                selected_agent = ""
-
-            # if vote_results.get('vote_counts'):
-            #     self._display_vote_results(vote_results)
-            #     # Allow time for voting results to be visible
-            #     import time
-            #     time.sleep(1.0)
-
-            # Get final presentation from winning agent
-            # Run final presentation if enabled and there's a selected agent (regardless of votes)
-            if self.enable_final_presentation and selected_agent:
-                # Don't print - let the display handle it
-                # print(f"\n🎤  Final Presentation from {selected_agent}:")
-                # print("=" * 60)
-
-                presentation_content = ""
-                try:
-                    async for chunk in orchestrator.get_final_presentation(selected_agent, vote_results):
-                        content = getattr(chunk, "content", "") or ""
-                        chunk_type = getattr(chunk, "type", "")
-
-                        # Use the same reasoning processing as main coordination
-                        if chunk_type in [
-                            "reasoning",
-                            "reasoning_done",
-                            "reasoning_summary",
-                            "reasoning_summary_done",
-                        ]:
-                            source = getattr(chunk, "source", selected_agent)
-
-                            reasoning_content = ""
-                            if chunk_type == "reasoning":
-                                # Stream reasoning delta as thinking content
-                                reasoning_delta = getattr(chunk, "reasoning_delta", "")
-                                if reasoning_delta:
-                                    # reasoning_content = reasoning_delta
-                                    reasoning_content = self._process_reasoning_content(chunk_type, reasoning_delta, source)
-                            elif chunk_type == "reasoning_done":
-                                # Complete reasoning text
-                                reasoning_text = getattr(chunk, "reasoning_text", "")
-                                if reasoning_text:
-                                    reasoning_content = f"\n🧠 [Reasoning Complete]\n{reasoning_text}\n"
-                                else:
-                                    reasoning_content = "\n🧠 [Reasoning Complete]\n"
-
-                                # Reset flag using helper method
-                                self._process_reasoning_content(chunk_type, reasoning_content, source)
-
-                                # Mark summary as complete - next summary can get a prefix
-                                reasoning_active_key = "_reasoning_active"
-                                if hasattr(self, reasoning_active_key):
-                                    delattr(self, reasoning_active_key)
-
-                            elif chunk_type == "reasoning_summary":
-                                # Stream reasoning summary delta
-                                summary_delta = getattr(chunk, "reasoning_summary_delta", "")
-                                if summary_delta:
-                                    reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
-                            elif chunk_type == "reasoning_summary_done":
-                                # Complete reasoning summary
-                                summary_text = getattr(chunk, "reasoning_summary_text", "")
-                                if summary_text:
-                                    reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
-
-                                # Reset flag using helper method
-                                self._process_reasoning_summary(chunk_type, "", source)
-
-                                # Reset the prefix flag so next summary can get a prefix
-                                summary_active_key = f"_summary_active_{source}"
-                                if hasattr(self, summary_active_key):
-                                    delattr(self, summary_active_key)
-
-                            if reasoning_content:
-                                # Add to presentation content and display
-                                content = reasoning_content
-
-                        if content:
-                            # Ensure content is a string
-                            if isinstance(content, list):
-                                content = " ".join(str(item) for item in content)
-                            elif not isinstance(content, str):
-                                content = str(content)
-
-                            # Simple content accumulation - let the display handle formatting
-                            presentation_content += content
-
-                            # Log presentation chunk
-                            if self.logger:
-                                self.logger.log_chunk(
-                                    selected_agent,
-                                    content,
-                                    getattr(chunk, "type", "presentation"),
-                                )
-
-                            # Display the presentation in real-time
-                            if self.display:
-                                try:
-                                    await self._process_content(selected_agent, content)
-                                except Exception:
-                                    # Error processing presentation content - continue gracefully
-                                    pass
-                                # Don't print - let the display handle it
-                                # self._print_with_flush(content)
-                            else:
-                                # Simple print for non-display mode (only if no display)
-                                print(content, end="", flush=True)
-                except AttributeError:
-                    # get_final_presentation method doesn't exist or failed
-                    # print("Final presentation not available - using coordination result")
-                    presentation_content = ""
-
-                final_answer = presentation_content
-                # Don't print - let the display handle it
-                # print("\n" + "=" * 60)
-                # Allow time for final presentation to be fully visible
-                time.sleep(1.5)
-
-            # Get the final presentation content (synthesis) or fall back to stored answer
+            # Get the final presentation content from orchestrator state
             orchestrator_final_answer = None
-
-            # First try to get the synthesized final presentation content
             if hasattr(orchestrator, "_final_presentation_content") and orchestrator._final_presentation_content:
                 orchestrator_final_answer = orchestrator._final_presentation_content.strip()
             elif selected_agent and hasattr(orchestrator, "agent_states") and selected_agent in orchestrator.agent_states:
                 # Fall back to stored answer if no final presentation content
                 stored_answer = orchestrator.agent_states[selected_agent].answer
                 if stored_answer:
-                    # Clean up the stored answer
-                    orchestrator_final_answer = stored_answer.replace("\\", "\n").replace("**", "").strip()
+                    orchestrator_final_answer = stored_answer.strip()
 
-            # Use orchestrator's clean answer if available, otherwise fall back to presentation
-            final_result = orchestrator_final_answer if orchestrator_final_answer else (final_answer if final_answer else full_response)
+            # Use orchestrator's clean answer or fall back to full response
+            final_result = orchestrator_final_answer if orchestrator_final_answer else full_response
 
             # Finalize session
             if self.logger:
@@ -600,14 +472,6 @@ class CoordinationUI:
             print()
 
         self.display.initialize(question, log_filename)
-
-        # Show restart context panel if this is a restart attempt
-        if hasattr(orchestrator, "restart_reason") and orchestrator.restart_reason:
-            if hasattr(self.display, "show_restart_context_panel"):
-                self.display.show_restart_context_panel(
-                    orchestrator.restart_reason,
-                    orchestrator.restart_instructions or "No instructions provided",
-                )
 
         # Initialize variables to avoid reference before assignment error in finally block
         selected_agent = None
@@ -766,122 +630,23 @@ class CoordinationUI:
             #     import time
             #     time.sleep(1.0)
 
-            # Get final presentation from winning agent
-            # Run final presentation if enabled and there's a selected agent (regardless of votes)
-            if self.enable_final_presentation and selected_agent:
-                # Don't print - let the display handle it
-                # print(f"\n🎤 Final Presentation from {selected_agent}:")
-                # print("=" * 60)
+            # Get final presentation content from orchestrator state
+            # Note: With restart feature, get_final_presentation is called INSIDE the orchestrator
+            # during _present_final_answer, so chunks already came through the main stream above.
+            # We just need to retrieve the final result for return value.
 
-                presentation_content = ""
-                try:
-                    async for chunk in orchestrator.get_final_presentation(selected_agent, vote_results):
-                        content = getattr(chunk, "content", "") or ""
-                        chunk_type = getattr(chunk, "type", "")
-
-                        # Use the same reasoning processing as main coordination
-                        if chunk_type in [
-                            "reasoning",
-                            "reasoning_done",
-                            "reasoning_summary",
-                            "reasoning_summary_done",
-                        ]:
-                            source = getattr(chunk, "source", selected_agent)
-
-                            reasoning_content = ""
-                            if chunk_type == "reasoning":
-                                # Stream reasoning delta as thinking content
-                                reasoning_delta = getattr(chunk, "reasoning_delta", "")
-                                if reasoning_delta:
-                                    # reasoning_content = reasoning_delta
-                                    reasoning_content = self._process_reasoning_content(chunk_type, reasoning_delta, source)
-                            elif chunk_type == "reasoning_done":
-                                # Complete reasoning text
-                                reasoning_text = getattr(chunk, "reasoning_text", "")
-                                if reasoning_text:
-                                    reasoning_content = f"\n🧠 [Reasoning Complete]\n{reasoning_text}\n"
-                                else:
-                                    reasoning_content = "\n🧠 [Reasoning Complete]\n"
-
-                                # Reset flag using helper method
-                                self._process_reasoning_content(chunk_type, reasoning_content, source)
-
-                                # Mark summary as complete - next summary can get a prefix
-                                reasoning_active_key = "_reasoning_active"
-                                if hasattr(self, reasoning_active_key):
-                                    delattr(self, reasoning_active_key)
-
-                            elif chunk_type == "reasoning_summary":
-                                # Stream reasoning summary delta
-                                summary_delta = getattr(chunk, "reasoning_summary_delta", "")
-                                if summary_delta:
-                                    reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
-                            elif chunk_type == "reasoning_summary_done":
-                                # Complete reasoning summary
-                                summary_text = getattr(chunk, "reasoning_summary_text", "")
-                                if summary_text:
-                                    reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
-
-                                # Reset flag using helper method
-                                self._process_reasoning_summary(chunk_type, "", source)
-
-                                # Reset the prefix flag so next summary can get a prefix
-                                summary_active_key = f"_summary_active_{source}"
-                                if hasattr(self, summary_active_key):
-                                    delattr(self, summary_active_key)
-
-                            if reasoning_content:
-                                # Add to presentation content and display
-                                content = reasoning_content
-
-                        if content:
-                            # Ensure content is a string
-                            if isinstance(content, list):
-                                content = " ".join(str(item) for item in content)
-                            elif not isinstance(content, str):
-                                content = str(content)
-
-                            # Simple content accumulation - let the display handle formatting
-                            presentation_content += content
-
-                            # Log presentation chunk
-                            if self.logger:
-                                self.logger.log_chunk(
-                                    selected_agent,
-                                    content,
-                                    getattr(chunk, "type", "presentation"),
-                                )
-
-                            # Don't print - let the display handle it
-                            # self._print_with_flush(content)
-
-                            # Update display
-                            await self._process_content(selected_agent, content)
-
-                            if getattr(chunk, "type", "") == "done":
-                                break
-
-                except Exception:
-                    # Don't print - let the display handle errors
-                    # print(f"\n❌ Error during final presentation: {e}")
-                    presentation_content = full_response  # Fallback
-
-                final_answer = presentation_content
-                # Don't print - let the display handle it
-                # print("\n" + "=" * 60)
-                # Allow time for final presentation to be fully visible
-                time.sleep(1.5)
-
-            # Get the clean final answer from orchestrator's stored state
+            # Get the final answer from orchestrator's stored state
             orchestrator_final_answer = None
-            if selected_agent and hasattr(orchestrator, "agent_states") and selected_agent in orchestrator.agent_states:
+            if hasattr(orchestrator, "_final_presentation_content") and orchestrator._final_presentation_content:
+                orchestrator_final_answer = orchestrator._final_presentation_content.strip()
+            elif selected_agent and hasattr(orchestrator, "agent_states") and selected_agent in orchestrator.agent_states:
+                # Fall back to stored answer if no final presentation content
                 stored_answer = orchestrator.agent_states[selected_agent].answer
                 if stored_answer:
-                    # Clean up the stored answer
-                    orchestrator_final_answer = stored_answer.replace("\\", "\n").replace("**", "").strip()
+                    orchestrator_final_answer = stored_answer.strip()
 
-            # Use orchestrator's clean answer if available, otherwise fall back to presentation
-            final_result = orchestrator_final_answer if orchestrator_final_answer else (final_answer if final_answer else full_response)
+            # Use orchestrator's clean answer or fall back to full response
+            final_result = orchestrator_final_answer if orchestrator_final_answer else full_response
 
             # Finalize session
             if self.logger:
@@ -1020,6 +785,16 @@ class CoordinationUI:
         if self._final_answer_shown or not self._answer_buffer.strip():
             return
 
+        # Don't show final answer (and inspection menu) if post-evaluation might still run
+        # Only show when orchestration is TRULY finished
+        if hasattr(self.orchestrator, "max_attempts"):
+            post_eval_enabled = self.orchestrator.max_attempts > 1
+            is_finished = hasattr(self.orchestrator, "workflow_phase") and self.orchestrator.workflow_phase == "presenting"
+
+            # If post-eval is enabled, only show after workflow is finished
+            if post_eval_enabled and not is_finished:
+                return
+
         # Get orchestrator status for voting results and winner
         status = self.orchestrator.get_status()
         selected_agent = status.get("selected_agent", "Unknown")
@@ -1028,7 +803,7 @@ class CoordinationUI:
         # Mark as shown to prevent duplicate calls
         self._final_answer_shown = True
 
-        # Show the final answer
+        # Show the final answer (which includes inspection menu)
         self.display.show_final_answer(
             self._answer_buffer.strip(),
             vote_results=vote_results,

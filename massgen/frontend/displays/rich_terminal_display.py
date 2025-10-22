@@ -1089,11 +1089,6 @@ class RichTerminalDisplay(TerminalDisplay):
             # Build layout components
             layout_components = []
 
-            # Add restart context panel at top if present (attempt 2+)
-            restart_context_panel = self._create_restart_context_panel()
-            if restart_context_panel:
-                layout_components.append(Layout(restart_context_panel, name="restart_context", size=8))
-
             # Add header
             layout_components.append(Layout(header, name="header", size=5))
 
@@ -3337,7 +3332,7 @@ class RichTerminalDisplay(TerminalDisplay):
     def show_restart_banner(self, reason: str, instructions: str, attempt: int, max_attempts: int):
         """Display restart decision banner prominently (like final presentation)."""
         # Stop live display temporarily for static banner
-        live_was_active = self.live is not None
+        self.live is not None
         if self.live:
             self.live.stop()
             self.live = None
@@ -3368,8 +3363,13 @@ class RichTerminalDisplay(TerminalDisplay):
             if hasattr(self, "_text_buffers") and agent_id in self._text_buffers:
                 self._text_buffers[agent_id] = ""
 
-        # Clear cached panels
+        # Clear cached panels and ALL cached state
         self._agent_panels_cache.clear()
+        self._footer_cache = None
+        self._header_cache = None
+
+        # Clear orchestrator events (from base class)
+        self.orchestrator_events = []
 
         # Clear presentation state
         self._final_presentation_active = False
@@ -3377,20 +3377,12 @@ class RichTerminalDisplay(TerminalDisplay):
         self._post_evaluation_active = False
         self._post_evaluation_content = ""
 
-        # Restart live display with fresh state
-        if live_was_active:
-            # Clear screen and create fresh live display
-            self.console.clear()
-            self.live = Live(
-                self._create_layout(),
-                console=self.console,
-                refresh_per_second=self.refresh_rate,
-                vertical_overflow="ellipsis",
-                transient=False,
-            )
-            self.live.start()
-            # Force immediate update to show fresh display
-            self._schedule_async_update(force_update=True)
+        # Clear restart context state (so it doesn't show on next attempt)
+        self._restart_context_reason = None
+        self._restart_context_instructions = None
+
+        # DON'T restart live display here - let the next coordinate() call handle it
+        # The CLI will create a fresh UI instance which will initialize its own display
 
     def show_restart_context_panel(self, reason: str, instructions: str):
         """Display restart context panel at top of UI (for attempt 2+)."""
