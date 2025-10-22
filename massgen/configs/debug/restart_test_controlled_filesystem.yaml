@@ -26,13 +26,13 @@ agents:
     backend:
       type: "openai"
       model: "gpt-5-nano"
-    cwd: "workspace1"
+      cwd: "workspace1"
 
   - id: "agent_b"
     backend:
       type: "openai"
       model: "gpt-5-nano"
-    cwd: "workspace2"
+      cwd: "workspace2"
 
 orchestrator:
   snapshot_storage: "snapshots"
@@ -44,7 +44,7 @@ orchestrator:
 
   # DEBUG MODE: Override final answer on attempt 1 to simulate incomplete file creation
   debug_final_answer: |
-    I created the main.py, utils.py, tests.py
+    I created a hello.txt file.
 
    #  file with the following content:
 

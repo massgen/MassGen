@@ -31,6 +31,7 @@ class CoordinationStage(Enum):
     INITIAL_ANSWER = "initial_answer"  # initial answer generation
     ENFORCEMENT = "enforcement"
     PRESENTATION = "presentation"
+    POST_EVALUATION = "post_evaluation"  # post-evaluation phase (MCP tools enabled)
 
 
 MODEL_MAPPINGS = {

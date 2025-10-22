@@ -2519,7 +2519,7 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
         try:
             timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
             async with asyncio.timeout(timeout_seconds):
-                async for chunk in agent.chat(messages=evaluation_messages, tools=post_eval_tools, reset_chat=True):
+                async for chunk in agent.chat(messages=evaluation_messages, tools=post_eval_tools, reset_chat=True, current_stage=CoordinationStage.POST_EVALUATION):
                     chunk_type = self._get_chunk_type_value(chunk)
 
                     if chunk_type == "content" and chunk.content:
