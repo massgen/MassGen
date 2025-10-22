@@ -193,6 +193,7 @@ class RichTerminalDisplay(TerminalDisplay):
         self._key_handler = None
         self._input_thread = None
         self._stop_input_thread = False
+        self._user_quit_requested = False  # Flag to signal user wants to quit
         self._original_settings = None
         self._agent_selector_active = False  # Flag to prevent duplicate agent selector calls
 
@@ -1365,7 +1366,10 @@ class RichTerminalDisplay(TerminalDisplay):
         elif key == "q":
             # Quit the application - restore terminal and stop
             self._stop_input_thread = True
+            self._user_quit_requested = True
             self._restore_terminal_settings()
+            # Print quit message
+            self.console.print("\n[yellow]Exiting coordination...[/yellow]")
 
     def _open_agent_in_default_text_editor(self, agent_id: str) -> None:
         """Open agent's txt file in default text editor."""

@@ -188,6 +188,7 @@ class CoordinationUI:
         # Initialize variables to avoid reference before assignment error in finally block
         selected_agent = None
         vote_results = {}
+        user_quit = False  # Track if user quit
 
         try:
             # Process coordination stream
@@ -195,6 +196,12 @@ class CoordinationUI:
             final_answer = ""
 
             async for chunk in orchestrator.chat_simple(question):
+                # Check if user requested quit
+                if self.display and hasattr(self.display, "_user_quit_requested") and self.display._user_quit_requested:
+                    # User pressed 'q' - exit gracefully
+                    user_quit = True
+                    raise SystemExit(0)
+
                 content = getattr(chunk, "content", "") or ""
                 source = getattr(chunk, "source", None)
                 chunk_type = getattr(chunk, "type", "")
@@ -358,28 +365,54 @@ class CoordinationUI:
 
             return final_result
 
+        except SystemExit:
+            # User pressed 'q' - cleanup and exit gracefully
+            if self.logger:
+                self.logger.finalize_session("User quit", success=True)
+            # Cleanup agent backends
+            if hasattr(orchestrator, "agents"):
+                for agent_id, agent in orchestrator.agents.items():
+                    if hasattr(agent.backend, "reset_state"):
+                        try:
+                            await agent.backend.reset_state()
+                        except Exception:
+                            pass
+            raise
         except Exception:
             if self.logger:
                 self.logger.finalize_session("", success=False)
             raise
         finally:
             # Wait for any pending timeout task to complete before cleanup
+            # Wrap in try-except to handle cancellation gracefully (e.g., when user presses 'q')
             if hasattr(self, "_answer_timeout_task") and self._answer_timeout_task:
                 try:
                     # Give the task a chance to complete
                     await asyncio.wait_for(self._answer_timeout_task, timeout=1.0)
                 except (asyncio.TimeoutError, asyncio.CancelledError):
                     # If it takes too long or was cancelled, force flush
-                    if hasattr(self, "_answer_buffer") and self._answer_buffer and not self._final_answer_shown:
-                        await self._flush_final_answer()
-                    self._answer_timeout_task.cancel()
+                    try:
+                        if hasattr(self, "_answer_buffer") and self._answer_buffer and not self._final_answer_shown:
+                            await self._flush_final_answer()
+                    except asyncio.CancelledError:
+                        pass  # Silently handle cancellation
+                    try:
+                        self._answer_timeout_task.cancel()
+                    except Exception:
+                        pass
 
             # Final check to flush any remaining buffered answer
-            if hasattr(self, "_answer_buffer") and self._answer_buffer and not self._final_answer_shown:
-                await self._flush_final_answer()
+            try:
+                if hasattr(self, "_answer_buffer") and self._answer_buffer and not self._final_answer_shown:
+                    await self._flush_final_answer()
+            except asyncio.CancelledError:
+                pass  # Silently handle cancellation
 
             # Small delay to ensure display updates are processed
-            await asyncio.sleep(0.1)
+            try:
+                await asyncio.sleep(0.1)
+            except asyncio.CancelledError:
+                pass  # Silently handle cancellation
 
             # Only cleanup (which shows inspection menu) if coordination is truly finished
             # Check workflow_phase to see if we're in "presenting" state (finished) vs still coordinating (restarting)
@@ -477,6 +510,7 @@ class CoordinationUI:
         selected_agent = None
         vote_results = {}
         orchestrator_final_answer = None
+        user_quit = False  # Track if user quit
 
         try:
             # Process coordination stream with conversation context
@@ -485,6 +519,12 @@ class CoordinationUI:
 
             # Use the orchestrator's chat method with full message context
             async for chunk in orchestrator.chat(messages):
+                # Check if user requested quit
+                if self.display and hasattr(self.display, "_user_quit_requested") and self.display._user_quit_requested:
+                    # User pressed 'q' - exit gracefully
+                    user_quit = True
+                    raise SystemExit(0)
+
                 content = getattr(chunk, "content", "") or ""
                 source = getattr(chunk, "source", None)
                 chunk_type = getattr(chunk, "type", "")
@@ -659,28 +699,54 @@ class CoordinationUI:
 
             return final_result
 
+        except SystemExit:
+            # User pressed 'q' - cleanup and exit gracefully
+            if self.logger:
+                self.logger.finalize_session("User quit", success=True)
+            # Cleanup agent backends
+            if hasattr(orchestrator, "agents"):
+                for agent_id, agent in orchestrator.agents.items():
+                    if hasattr(agent.backend, "reset_state"):
+                        try:
+                            await agent.backend.reset_state()
+                        except Exception:
+                            pass
+            raise
         except Exception:
             if self.logger:
                 self.logger.finalize_session("", success=False)
             raise
         finally:
             # Wait for any pending timeout task to complete before cleanup
+            # Wrap in try-except to handle cancellation gracefully (e.g., when user presses 'q')
             if hasattr(self, "_answer_timeout_task") and self._answer_timeout_task:
                 try:
                     # Give the task a chance to complete
                     await asyncio.wait_for(self._answer_timeout_task, timeout=1.0)
                 except (asyncio.TimeoutError, asyncio.CancelledError):
                     # If it takes too long or was cancelled, force flush
-                    if hasattr(self, "_answer_buffer") and self._answer_buffer and not self._final_answer_shown:
-                        await self._flush_final_answer()
-                    self._answer_timeout_task.cancel()
+                    try:
+                        if hasattr(self, "_answer_buffer") and self._answer_buffer and not self._final_answer_shown:
+                            await self._flush_final_answer()
+                    except asyncio.CancelledError:
+                        pass  # Silently handle cancellation
+                    try:
+                        self._answer_timeout_task.cancel()
+                    except Exception:
+                        pass
 
             # Final check to flush any remaining buffered answer
-            if hasattr(self, "_answer_buffer") and self._answer_buffer and not self._final_answer_shown:
-                await self._flush_final_answer()
+            try:
+                if hasattr(self, "_answer_buffer") and self._answer_buffer and not self._final_answer_shown:
+                    await self._flush_final_answer()
+            except asyncio.CancelledError:
+                pass  # Silently handle cancellation
 
             # Small delay to ensure display updates are processed
-            await asyncio.sleep(0.1)
+            try:
+                await asyncio.sleep(0.1)
+            except asyncio.CancelledError:
+                pass  # Silently handle cancellation
 
             # Only cleanup (which shows inspection menu) if coordination is truly finished
             is_finished = hasattr(orchestrator, "workflow_phase") and orchestrator.workflow_phase == "presenting"

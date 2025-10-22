@@ -927,6 +927,15 @@ async def run_question_with_history(
             print(f"🔄 Restarting coordination - Attempt {orchestrator.current_attempt + 1}/{orchestrator.max_attempts}")
             print(f"{'='*80}\n")
 
+            # Reset all agent backends to ensure clean state for next attempt
+            for agent_id, agent in orchestrator.agents.items():
+                if hasattr(agent.backend, "reset_state"):
+                    try:
+                        await agent.backend.reset_state()
+                        logger.info(f"Reset backend state for {agent_id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to reset backend for {agent_id}: {e}")
+
             # Create fresh UI instance for next attempt
             ui = CoordinationUI(
                 display_type=ui_config.get("display_type", "rich_terminal"),
@@ -1087,6 +1096,15 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 print(f"\n{'='*80}")
                 print(f"🔄 Restarting coordination - Attempt {orchestrator.current_attempt + 1}/{orchestrator.max_attempts}")
                 print(f"{'='*80}\n")
+
+                # Reset all agent backends to ensure clean state for next attempt
+                for agent_id, agent in orchestrator.agents.items():
+                    if hasattr(agent.backend, "reset_state"):
+                        try:
+                            await agent.backend.reset_state()
+                            logger.info(f"Reset backend state for {agent_id}")
+                        except Exception as e:
+                            logger.warning(f"Failed to reset backend for {agent_id}: {e}")
 
                 # Create fresh UI instance for next attempt
                 ui = CoordinationUI(
