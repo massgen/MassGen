@@ -138,7 +138,10 @@ class Orchestrator(ChatAgent):
         self.config = config or AgentConfig.create_openai_config()
 
         # Get message templates from config
-        self.message_templates = self.config.message_templates or MessageTemplates()
+        self.message_templates = self.config.message_templates or MessageTemplates(
+            voting_sensitivity=self.config.voting_sensitivity,
+            answer_novelty_requirement=self.config.answer_novelty_requirement,
+        )
         # Create workflow tools for agents (vote and new_answer) using new toolkit system
         self.workflow_tools = get_workflow_tools(
             valid_agent_ids=list(agents.keys()),
@@ -265,6 +268,34 @@ class Orchestrator(ChatAgent):
             if conversation_context and conversation_context.get("conversation_history"):
                 self._clear_agent_workspaces()
 
+            # Check if planning mode is enabled in config
+            planning_mode_config_exists = (
+                self.config.coordination_config and self.config.coordination_config.enable_planning_mode if self.config and hasattr(self.config, "coordination_config") else False
+            )
+
+            if planning_mode_config_exists:
+                # Analyze question for irreversibility and set planning mode accordingly
+                # This happens silently - users don't see this analysis
+                analysis_result = await self._analyze_question_irreversibility(user_message, conversation_context)
+                has_irreversible = analysis_result["has_irreversible"]
+                blocked_tools = analysis_result["blocked_tools"]
+
+                # Set planning mode and blocked tools for all agents based on analysis
+                for agent_id, agent in self.agents.items():
+                    if hasattr(agent.backend, "set_planning_mode"):
+                        agent.backend.set_planning_mode(has_irreversible)
+                        if hasattr(agent.backend, "set_planning_mode_blocked_tools"):
+                            agent.backend.set_planning_mode_blocked_tools(blocked_tools)
+                        log_orchestrator_activity(
+                            self.orchestrator_id,
+                            f"Set planning mode for {agent_id}",
+                            {
+                                "planning_mode_enabled": has_irreversible,
+                                "blocked_tools_count": len(blocked_tools),
+                                "reason": "irreversibility analysis",
+                            },
+                        )
+
             async for chunk in self._coordinate_agents_with_timeout(conversation_context):
                 yield chunk
 
@@ -332,6 +363,292 @@ class Orchestrator(ChatAgent):
         log_session_dir = get_log_session_dir()
         if log_session_dir:
             self.coordination_tracker.save_coordination_logs(log_session_dir)
+
+    def _format_planning_mode_ui(
+        self,
+        has_irreversible: bool,
+        blocked_tools: set,
+        has_isolated_workspaces: bool,
+        user_question: str,
+    ) -> str:
+        """
+        Format a nice UI box for planning mode status.
+
+        Args:
+            has_irreversible: Whether irreversible operations were detected
+            blocked_tools: Set of specific blocked tool names
+            has_isolated_workspaces: Whether agents have isolated workspaces
+            user_question: The user's question for context
+
+        Returns:
+            Formatted string with nice box UI
+        """
+        if not has_irreversible:
+            # Planning mode disabled - brief message
+            box = "\n╭─ Coordination Mode ────────────────────────────────────────╮\n"
+            box += "│ ✅ Planning Mode: DISABLED                                │\n"
+            box += "│                                                            │\n"
+            box += "│ All tools available during coordination.                  │\n"
+            box += "│ No irreversible operations detected.                      │\n"
+            box += "╰────────────────────────────────────────────────────────────╯\n"
+            return box
+
+        # Planning mode enabled
+        box = "\n╭─ Coordination Mode ────────────────────────────────────────╮\n"
+        box += "│ 🧠 Planning Mode: ENABLED                                  │\n"
+        box += "│                                                            │\n"
+
+        if has_isolated_workspaces:
+            box += "│ 🔒 Workspace: Isolated (filesystem ops allowed)           │\n"
+            box += "│                                                            │\n"
+
+        # Description
+        box += "│ Agents will plan and coordinate without executing         │\n"
+        box += "│ irreversible actions. The winning agent will implement    │\n"
+        box += "│ the plan during final presentation.                       │\n"
+        box += "│                                                            │\n"
+
+        # Blocked tools section
+        if blocked_tools:
+            box += "│ 🚫 Blocked Tools:                                          │\n"
+            # Format tools into nice columns
+            sorted_tools = sorted(blocked_tools)
+            for i, tool in enumerate(sorted_tools[:5], 1):  # Show max 5 tools
+                # Shorten tool name if too long
+                display_tool = tool if len(tool) <= 50 else tool[:47] + "..."
+                box += f"│   {i}. {display_tool:<54} │\n"
+
+            if len(sorted_tools) > 5:
+                remaining = len(sorted_tools) - 5
+                box += f"│   ... and {remaining} more tool(s)                              │\n"
+            box += "│                                                            │\n"
+        else:
+            box += "│ 🚫 Blocking: ALL MCP tools                                 │\n"
+            box += "│                                                            │\n"
+
+        # Add brief analysis summary
+        box += "│ 📊 Analysis:                                               │\n"
+        # Create a brief summary from the question
+        summary = user_question[:50] + "..." if len(user_question) > 50 else user_question
+        # Wrap text to fit in box
+        words = summary.split()
+        line = "│   "
+        for word in words:
+            if len(line) + len(word) + 1 > 60:
+                box += line.ljust(61) + "│\n"
+                line = "│   " + word + " "
+            else:
+                line += word + " "
+        if len(line) > 4:  # If there's content
+            box += line.ljust(61) + "│\n"
+
+        box += "╰────────────────────────────────────────────────────────────╯\n"
+        return box
+
+    async def _analyze_question_irreversibility(self, user_question: str, conversation_context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze if the user's question involves MCP tools with irreversible outcomes.
+
+        This method randomly selects an available agent to analyze whether executing
+        the user's question would involve MCP tool operations with irreversible outcomes
+        (e.g., sending Discord messages, posting tweets, deleting files) vs reversible
+        read operations (e.g., reading Discord messages, searching tweets, listing files).
+
+        Args:
+            user_question: The user's question/request
+            conversation_context: Full conversation context including history
+
+        Returns:
+            Dict with:
+                - has_irreversible (bool): True if irreversible operations detected
+                - blocked_tools (set): Set of MCP tool names to block (e.g., {'mcp__discord__discord_send'})
+                                      Empty set means block ALL MCP tools
+        """
+        import random
+
+        print("=" * 80, flush=True)
+        print("🔍 [INTELLIGENT PLANNING MODE] Analyzing question for irreversibility...", flush=True)
+        print(f"📝 Question: {user_question[:100]}{'...' if len(user_question) > 100 else ''}", flush=True)
+        print("=" * 80, flush=True)
+
+        # Select a random agent for analysis
+        available_agents = [aid for aid, agent in self.agents.items() if agent.backend is not None]
+        if not available_agents:
+            # No agents available, default to safe mode (planning enabled, block ALL)
+            log_orchestrator_activity(
+                self.orchestrator_id,
+                "No agents available for irreversibility analysis, defaulting to planning mode",
+                {},
+            )
+            return {"has_irreversible": True, "blocked_tools": set()}
+
+        analyzer_agent_id = random.choice(available_agents)
+        analyzer_agent = self.agents[analyzer_agent_id]
+
+        print(f"🤖 Selected analyzer agent: {analyzer_agent_id}", flush=True)
+
+        # Check if agents have isolated workspaces
+        has_isolated_workspaces = False
+        workspace_info = []
+        for agent_id, agent in self.agents.items():
+            if agent.backend and agent.backend.filesystem_manager:
+                cwd = agent.backend.filesystem_manager.cwd
+                if cwd and "workspace" in os.path.basename(cwd).lower():
+                    has_isolated_workspaces = True
+                    workspace_info.append(f"{agent_id}: {cwd}")
+
+        if has_isolated_workspaces:
+            print("🔒 Detected isolated agent workspaces - filesystem ops will be allowed", flush=True)
+
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            "Analyzing question irreversibility",
+            {
+                "analyzer_agent": analyzer_agent_id,
+                "question_preview": user_question[:100] + "..." if len(user_question) > 100 else user_question,
+                "has_isolated_workspaces": has_isolated_workspaces,
+            },
+        )
+
+        # Build analysis prompt - now asking for specific tool names
+        workspace_context = ""
+        if has_isolated_workspaces:
+            workspace_context = """
+IMPORTANT - ISOLATED WORKSPACES:
+The agents are working in isolated temporary workspaces (directories containing "workspace" in their name).
+Filesystem operations (read_file, write_file, delete_file, list_files, etc.) within these isolated workspaces are SAFE and REVERSIBLE.
+They should NOT be blocked because:
+- These are temporary directories specific to this coordination session
+- Files created/modified are isolated from external systems
+- Changes are contained within the agent's sandbox
+- The workspace can be cleared after coordination
+
+Only block filesystem operations if they explicitly target paths OUTSIDE the isolated workspace.
+"""
+
+        analysis_prompt = f"""You are analyzing whether a user's request involves operations with irreversible outcomes.
+
+USER REQUEST:
+{user_question}
+{workspace_context}
+CONTEXT:
+Your task is to determine if executing this request would involve MCP (Model Context Protocol) tools that have irreversible outcomes, and if so, identify which specific tools should be blocked.
+
+MCP tools follow the naming convention: mcp__<server>__<tool_name>
+Examples:
+- mcp__discord__discord_send (irreversible - sends messages)
+- mcp__discord__discord_read_channel (reversible - reads messages)
+- mcp__twitter__post_tweet (irreversible - posts publicly)
+- mcp__twitter__search_tweets (reversible - searches)
+- mcp__filesystem__write_file (SAFE in isolated workspace - writes to temporary files)
+- mcp__filesystem__read_file (reversible - reads files)
+
+IRREVERSIBLE OPERATIONS:
+- Sending messages (discord_send, slack_send, etc.)
+- Posting content publicly (post_tweet, create_post, etc.)
+- Deleting files or data OUTSIDE isolated workspace (delete_file on external paths, remove_data, etc.)
+- Modifying external systems (write_file to external paths, update_record, etc.)
+- Creating permanent records (create_issue, add_comment, etc.)
+- Executing commands that change state (run_command, execute_script, etc.)
+
+REVERSIBLE OPERATIONS (DO NOT BLOCK):
+- Reading messages or data (read_channel, get_messages, etc.)
+- Searching or querying information (search_tweets, query_data, etc.)
+- Listing files or resources (list_files, list_channels, etc.)
+- Fetching data from APIs (get_user, fetch_data, etc.)
+- Viewing information (view_channel, get_info, etc.)
+- Filesystem operations IN ISOLATED WORKSPACE (write_file, read_file, delete_file, list_files when in workspace*)
+
+Respond in this EXACT format:
+IRREVERSIBLE: YES/NO
+BLOCKED_TOOLS: tool1, tool2, tool3
+
+If IRREVERSIBLE is NO, leave BLOCKED_TOOLS empty.
+If IRREVERSIBLE is YES, list the specific MCP tool names that should be blocked (e.g., mcp__discord__discord_send).
+
+Your answer:"""
+
+        # Create messages for the analyzer
+        analysis_messages = [
+            {"role": "user", "content": analysis_prompt},
+        ]
+
+        try:
+            # Stream response from analyzer agent (but don't show to user)
+            response_text = ""
+            async for chunk in analyzer_agent.backend.stream_with_tools(
+                messages=analysis_messages,
+                tools=[],  # No tools needed for simple analysis
+                agent_id=analyzer_agent_id,
+            ):
+                if chunk.type == "content" and chunk.content:
+                    response_text += chunk.content
+
+            # Parse response
+            response_clean = response_text.strip()
+            has_irreversible = False
+            blocked_tools = set()
+
+            # Parse IRREVERSIBLE line
+            found_irreversible_line = False
+            for line in response_clean.split("\n"):
+                line = line.strip()
+                if line.startswith("IRREVERSIBLE:"):
+                    found_irreversible_line = True
+                    # Extract the value after the colon
+                    value = line.split(":", 1)[1].strip().upper()
+                    # Check if the first word is YES
+                    has_irreversible = value.startswith("YES")
+                elif line.startswith("BLOCKED_TOOLS:"):
+                    # Extract tool names after the colon
+                    tools_part = line.split(":", 1)[1].strip()
+                    if tools_part:
+                        # Split by comma and clean up whitespace
+                        blocked_tools = {tool.strip() for tool in tools_part.split(",") if tool.strip()}
+
+            # Fallback: If no structured format found, look for YES/NO in the response
+            if not found_irreversible_line:
+                print("⚠️  [WARNING] No 'IRREVERSIBLE:' line found, using fallback parsing", flush=True)
+                response_upper = response_clean.upper()
+                # Look for clear YES/NO indicators
+                if "YES" in response_upper and "NO" not in response_upper:
+                    has_irreversible = True
+                elif "NO" in response_upper:
+                    has_irreversible = False
+                else:
+                    # Default to safe mode if unclear
+                    has_irreversible = True
+
+            log_orchestrator_activity(
+                self.orchestrator_id,
+                "Irreversibility analysis complete",
+                {
+                    "analyzer_agent": analyzer_agent_id,
+                    "response": response_clean[:100],
+                    "has_irreversible": has_irreversible,
+                    "blocked_tools_count": len(blocked_tools),
+                },
+            )
+
+            # Display nice UI box for planning mode status
+            ui_box = self._format_planning_mode_ui(
+                has_irreversible=has_irreversible,
+                blocked_tools=blocked_tools,
+                has_isolated_workspaces=has_isolated_workspaces,
+                user_question=user_question,
+            )
+            print(ui_box, flush=True)
+
+            return {"has_irreversible": has_irreversible, "blocked_tools": blocked_tools}
+
+        except Exception as e:
+            # On error, default to safe mode (planning enabled, block ALL)
+            log_orchestrator_activity(
+                self.orchestrator_id,
+                "Irreversibility analysis failed, defaulting to planning mode",
+                {"error": str(e)},
+            )
+            return {"has_irreversible": True, "blocked_tools": set()}
 
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute coordination with orchestrator-level timeout protection."""
@@ -846,8 +1163,8 @@ class Orchestrator(ChatAgent):
         # Generate single timestamp for answer/vote and workspace
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
-        # Save answer if provided
-        if answer_content:
+        # Save answer if provided (or create final directory structure even if empty)
+        if answer_content is not None or is_final:
             try:
                 log_session_dir = get_log_session_dir()
                 if log_session_dir:
@@ -860,8 +1177,9 @@ class Orchestrator(ChatAgent):
                     timestamped_dir.mkdir(parents=True, exist_ok=True)
                     answer_file = timestamped_dir / "answer.txt"
 
-                    # Write the answer content
-                    answer_file.write_text(answer_content)
+                    # Write the answer content (even if empty for final snapshots)
+                    content_to_write = answer_content if answer_content is not None else ""
+                    answer_file.write_text(content_to_write)
                     logger.info(f"[Orchestrator._save_agent_snapshot] Saved answer to {answer_file}")
 
             except Exception as e:
@@ -940,7 +1258,7 @@ class Orchestrator(ChatAgent):
             logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager")
 
         # Save context if provided (unified context saving)
-        if context_data and (answer_content or vote_data):
+        if context_data:
             try:
                 log_session_dir = get_log_session_dir()
                 if log_session_dir:
@@ -949,6 +1267,8 @@ class Orchestrator(ChatAgent):
                     else:
                         timestamped_dir = log_session_dir / agent_id / timestamp
 
+                    # Ensure directory exists (may not have been created if no answer/vote)
+                    timestamped_dir.mkdir(parents=True, exist_ok=True)
                     context_file = timestamped_dir / "context.txt"
 
                     # Handle different types of context data
@@ -1127,6 +1447,91 @@ class Orchestrator(ChatAgent):
     #     # Implementation will check against PermissionManager
     #     pass
 
+    def _calculate_jaccard_similarity(self, text1: str, text2: str) -> float:
+        """Calculate Jaccard similarity between two texts based on word tokens.
+
+        Args:
+            text1: First text to compare
+            text2: Second text to compare
+
+        Returns:
+            Similarity score between 0.0 and 1.0
+        """
+        # Tokenize and normalize - simple word-based approach
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+
+        if not words1 and not words2:
+            return 1.0  # Both empty, consider identical
+        if not words1 or not words2:
+            return 0.0  # One empty, one not
+
+        intersection = len(words1 & words2)
+        union = len(words1 | words2)
+
+        return intersection / union if union > 0 else 0.0
+
+    def _check_answer_novelty(self, new_answer: str, existing_answers: Dict[str, str]) -> tuple[bool, Optional[str]]:
+        """Check if a new answer is sufficiently different from existing answers.
+
+        Args:
+            new_answer: The proposed new answer
+            existing_answers: Dictionary of existing answers {agent_id: answer_content}
+
+        Returns:
+            Tuple of (is_novel, error_message). is_novel=True if answer passes novelty check.
+        """
+        # Lenient mode: no checks (current behavior)
+        if self.config.answer_novelty_requirement == "lenient":
+            return (True, None)
+
+        # Determine threshold based on setting
+        if self.config.answer_novelty_requirement == "strict":
+            threshold = 0.50  # Reject if >50% overlap (strict)
+            error_msg = (
+                "Your answer is too similar to existing answers (>50% overlap). Please use a fundamentally different approach, employ different tools/techniques, or vote for an existing answer."
+            )
+        else:  # balanced
+            threshold = 0.70  # Reject if >70% overlap (balanced)
+            error_msg = (
+                "Your answer is too similar to existing answers (>70% overlap). "
+                "Please provide a meaningfully different solution with new insights, "
+                "approaches, or tools, or vote for an existing answer."
+            )
+
+        # Check similarity against all existing answers
+        for agent_id, existing_answer in existing_answers.items():
+            similarity = self._calculate_jaccard_similarity(new_answer, existing_answer)
+            if similarity > threshold:
+                logger.info(f"[Orchestrator] Answer rejected: {similarity:.2%} similar to {agent_id}'s answer (threshold: {threshold:.0%})")
+                return (False, error_msg)
+
+        # Answer is sufficiently novel
+        return (True, None)
+
+    def _check_answer_count_limit(self, agent_id: str) -> tuple[bool, Optional[str]]:
+        """Check if agent has reached their answer count limit.
+
+        Args:
+            agent_id: The agent attempting to provide a new answer
+
+        Returns:
+            Tuple of (can_answer, error_message). can_answer=True if agent can provide another answer.
+        """
+        # No limit set
+        if self.config.max_new_answers_per_agent is None:
+            return (True, None)
+
+        # Count how many answers this agent has provided
+        answer_count = len(self.coordination_tracker.answers_by_agent.get(agent_id, []))
+
+        if answer_count >= self.config.max_new_answers_per_agent:
+            error_msg = f"You've reached the maximum of {self.config.max_new_answers_per_agent} new answer(s). Please vote for the best existing answer using the `vote` tool."
+            logger.info(f"[Orchestrator] Answer rejected: {agent_id} has reached limit ({answer_count}/{self.config.max_new_answers_per_agent})")
+            return (False, error_msg)
+
+        return (True, None)
+
     def _create_tool_error_messages(
         self,
         agent: "ChatAgent",
@@ -1288,17 +1693,17 @@ class Orchestrator(ChatAgent):
                 logger.info(f"[Orchestrator] Agent {agent_id} sees no existing answers")
 
             # Check if planning mode is enabled for coordination phase
+            # Use the ACTUAL backend planning mode status (set by intelligent analysis)
+            # instead of the static config setting
             is_coordination_phase = self.workflow_phase == "coordinating"
-            planning_mode_enabled = (
-                self.config.coordination_config and self.config.coordination_config.enable_planning_mode and is_coordination_phase
-                if self.config and hasattr(self.config, "coordination_config")
-                else False
-            )
+            planning_mode_enabled = agent.backend.is_planning_mode_enabled() if is_coordination_phase else False
 
             # Add planning mode instructions to system message if enabled
-            if planning_mode_enabled and self.config.coordination_config.planning_mode_instruction:
+            # Only add instructions if we have a coordination config with planning instruction
+            if planning_mode_enabled and self.config and hasattr(self.config, "coordination_config") and self.config.coordination_config and self.config.coordination_config.planning_mode_instruction:
                 planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
                 agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
+                print(f"📝 [{agent_id}] Adding planning mode instructions to system message", flush=True)
 
             # Build conversation with context support
             if conversation_context and conversation_context.get("conversation_history"):
@@ -1668,6 +2073,54 @@ class Orchestrator(ChatAgent):
                             workflow_tool_found = True
                             # Agent provided new answer
                             content = tool_args.get("content", response_text.strip())
+
+                            # Check answer count limit
+                            can_answer, count_error = self._check_answer_count_limit(agent_id)
+                            if not can_answer:
+                                if attempt < max_attempts - 1:
+                                    if self._check_restart_pending(agent_id):
+                                        await self._save_partial_work_on_restart(agent_id)
+                                        yield (
+                                            "content",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                        )
+                                        yield ("done", None)
+                                        return
+                                    yield ("content", f"❌ {count_error}")
+                                    # Create proper tool error message for retry
+                                    enforcement_msg = self._create_tool_error_messages(agent, [tool_call], count_error)
+                                    continue
+                                else:
+                                    yield (
+                                        "error",
+                                        f"Answer count limit reached after {max_attempts} attempts",
+                                    )
+                                    yield ("done", None)
+                                    return
+
+                            # Check answer novelty (similarity to existing answers)
+                            is_novel, novelty_error = self._check_answer_novelty(content, answers)
+                            if not is_novel:
+                                if attempt < max_attempts - 1:
+                                    if self._check_restart_pending(agent_id):
+                                        await self._save_partial_work_on_restart(agent_id)
+                                        yield (
+                                            "content",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                        )
+                                        yield ("done", None)
+                                        return
+                                    yield ("content", f"❌ {novelty_error}")
+                                    # Create proper tool error message for retry
+                                    enforcement_msg = self._create_tool_error_messages(agent, [tool_call], novelty_error)
+                                    continue
+                                else:
+                                    yield (
+                                        "error",
+                                        f"Answer novelty requirement not met after {max_attempts} attempts",
+                                    )
+                                    yield ("done", None)
+                                    return
 
                             # Check for duplicate answer
                             # Normalize both new content and existing content to neutral paths for comparison
@@ -2068,6 +2521,7 @@ class Orchestrator(ChatAgent):
 
         # Use agent's chat method with proper system message (reset chat for clean presentation)
         presentation_content = ""
+        final_snapshot_saved = False  # Track whether snapshot was saved during stream
 
         try:
             # Track final round iterations (each chunk is like an iteration)
@@ -2133,6 +2587,9 @@ class Orchestrator(ChatAgent):
                     # Track the final answer in coordination tracker
                     self.coordination_tracker.set_final_answer(selected_agent_id, final_answer, snapshot_timestamp="final")
 
+                    # Mark snapshot as saved
+                    final_snapshot_saved = True
+
                     log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                     yield StreamChunk(type="done", source=selected_agent_id)
                 elif chunk_type == "error":
@@ -2168,6 +2625,20 @@ class Orchestrator(ChatAgent):
                         )
 
         finally:
+            # Ensure final snapshot is always saved (even if "done" chunk wasn't yielded)
+            if not final_snapshot_saved:
+                final_answer = presentation_content.strip() if presentation_content.strip() else self.agent_states[selected_agent_id].answer
+                final_context = self.get_last_context(selected_agent_id)
+                await self._save_agent_snapshot(
+                    self._selected_agent,
+                    answer_content=final_answer,
+                    is_final=True,
+                    context_data=final_context,
+                )
+
+                # Track the final answer in coordination tracker
+                self.coordination_tracker.set_final_answer(selected_agent_id, final_answer, snapshot_timestamp="final")
+
             # Store the final presentation content for logging
             if presentation_content.strip():
                 # Store the synthesized final answer
@@ -2271,6 +2742,19 @@ class Orchestrator(ChatAgent):
 
     async def _handle_followup(self, user_message: str, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Handle follow-up questions after presenting final answer with conversation context."""
+        # Analyze the follow-up question for irreversibility before re-coordinating
+        has_irreversible = await self._analyze_question_irreversibility(user_message, conversation_context or {})
+
+        # Set planning mode for all agents based on analysis
+        for agent_id, agent in self.agents.items():
+            if hasattr(agent.backend, "set_planning_mode"):
+                agent.backend.set_planning_mode(has_irreversible)
+                log_orchestrator_activity(
+                    self.orchestrator_id,
+                    f"Set planning mode for {agent_id} (follow-up)",
+                    {"planning_mode_enabled": has_irreversible, "reason": "follow-up irreversibility analysis"},
+                )
+
         # For now, acknowledge with context awareness
         # Future: implement full re-coordination with follow-up context
 

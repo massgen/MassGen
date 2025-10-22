@@ -7,18 +7,154 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.2 (October 2025)** - Intelligent Planning Mode & Model Updates
+Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
+
+**v0.1.1 (October 2025)** - Custom Tools, Voting Controls & Documentation
+Custom Python function tools, voting sensitivity controls, interactive config builder, and comprehensive Sphinx documentation.
+
 **v0.1.0 (October 2025)** - PyPI Package & Documentation
 Official PyPI release with enhanced documentation and installation via `pip install massgen`.
 
-**v0.0.32 (October 2025)** - Docker Execution Mode
-Isolated command execution in Docker containers with resource limits and multi-agent support.
-
-**v0.0.31 (October 2025)** - Code Execution, AG2 Integration, Multimodal
-MCP-based command execution across all backends, AG2 framework integration, and audio/video generation.
-
 ---
 
-## [0.1.0] - 2025-10-15 (PyPI Release)
+## [0.1.2] - 2025-10-22
+
+### Added
+- **Claude 4.5 Haiku Support**: Added latest Claude Haiku model
+  - New model: `claude-haiku-4-5-20251001`
+  - Updated model registry in `backend/capabilities.py`
+
+### Changed
+- **Planning Mode Enhancement**: Intelligent automatic MCP tool blocking based on operation safety
+  - New `_analyze_question_irreversibility()` method in orchestrator analyzes questions to determine if MCP operations are reversible
+  - New `set_planning_mode_blocked_tools()`, `get_planning_mode_blocked_tools()`, and `is_mcp_tool_blocked()` methods in backend for selective tool control
+  - Dynamically enables/disables planning mode - read-only operations allowed during coordination, write operations blocked
+  - Planning mode supports different workspaces without conflicts
+  - Zero configuration required - works transparently
+
+
+- **Claude Model Priority**: Reorganized model list in capabilities registry
+  - Changed default model from `claude-sonnet-4-20250514` to `claude-sonnet-4-5-20250929`
+  - Moved `claude-opus-4-1-20250805` higher in priority order
+  - Updated in both Claude and Claude Code backends
+
+### Fixed
+- **Grok Web Search**: Resolved web search functionality in Grok backend
+  - Fixed `extra_body` parameter handling for Grok's Live Search API
+  - New `_add_grok_search_params()` method for proper search parameter injection
+  - Enhanced `_stream_with_custom_and_mcp_tools()` to support Grok-specific parameters
+  - Improved error handling for conflicting search configurations
+  - Better integration with Chat Completions API params handler
+
+### Documentations, Configurations and Resources
+
+- **Intelligent Planning Mode Case Study**: Complete feature documentation
+  - `docs/case_studies/INTELLIGENT_PLANNING_MODE.md`: Comprehensive guide for automatic planning mode
+  - Demonstrates automatic irreversibility detection
+  - Shows read/write operation classification
+  - Includes examples for Discord, filesystem, and Twitter operations
+
+- **Configuration Updates**: Enhanced YAML examples
+  - Updated 5 planning mode configurations in `configs/tools/planning/` with selective blocking examples
+  - Updated `three_agents_default.yaml` with Grok-4-fast model
+  - Test coverage in `test_intelligent_planning_mode.py`
+
+### Technical Details
+- **Major Focus**: Intelligent planning mode with selective tool blocking, model support enhancements
+- **Contributors**: @franklinnwren @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.1.1] - 2025-10-20
+
+### Added
+- **Custom Tools System**: Complete framework for registering and executing user-defined Python functions as tools
+  - New `ToolManager` class in `massgen/tool/_manager.py` for centralized tool registration and lifecycle management
+  - Support for custom tools alongside MCP servers across all backends (Claude, Gemini, OpenAI Response API, Chat Completions, Claude Code)
+  - Three tool categories: builtin, mcp, and custom tools
+  - Automatic tool discovery with name prefixing and conflict resolution
+  - Tool validation with parameter schema enforcement
+  - Comprehensive test coverage in `test_custom_tools.py`
+
+- **Voting Sensitivity & Answer Novelty Controls**: Three-tier system for multi-agent coordination
+  - New `voting_sensitivity` parameter with three levels: "lenient", "balanced", "strict"
+  - "Lenient": Accepts any reasonable answer
+  - "Balanced": Default middle ground
+  - "Strict": High-quality requirement
+  - Answer novelty detection with `_check_answer_novelty()` method in `orchestrator.py` preventing duplicate answers
+  - Configurable `max_new_answers_per_agent` limiting submissions per agent
+  - Token-based similarity thresholds (50-70% overlap) for duplicate detection
+
+- **Interactive Configuration Builder**: Wizard for creating YAML configurations
+  - New `config_builder.py` module with step-by-step prompts
+  - Guided workflow for backend selection, model configuration, and API key setup
+  - Model-specific parameter handling (temperature, reasoning, verbosity)
+  - Tool enablement options (MCP servers, custom tools, builtin tools)
+  - Configuration validation and preview before saving
+  - Integration with `massgen --config-builder` command
+
+- **Backend Capabilities Registry**: Centralized feature support tracking
+  - New `capabilities.py` module in `massgen/backend/` documenting backend capabilities
+  - Feature matrix showing MCP, custom tools, multimodal, and code execution support
+  - Runtime capability queries for backend selection
+
+### Changed
+- **Gemini Backend Architecture**: Major refactoring for improved maintainability
+  - Extracted MCP management into `gemini_mcp_manager.py`
+  - Extracted tracking logic into `gemini_trackers.py`
+  - Extracted utilities into `gemini_utils.py`
+  - New API params handler `_gemini_api_params_handler.py`
+  - Improved session management and tool execution flow
+
+- **Python Version Requirements**: Updated minimum supported version
+  - Changed from Python 3.10+ to Python 3.11+ in `pyproject.toml`
+  - Ensures compatibility with modern type hints and async features
+
+- **API Key Setup Command**: Simplified command name
+  - Renamed `massgen --setup-keys` to `massgen --setup` for brevity
+  - Maintained all functionality for interactive API key configuration
+
+- **Configuration Examples**: Updated example commands
+  - Changed from `python -m massgen.cli` to simplified `massgen` command
+  - Updated 40+ configuration files for consistency
+
+### Fixed
+- **CLI Configuration Selection**: Resolved error with large config lists
+  - Fixed crash when using `massgen --select` with many available configurations
+  - Improved pagination and display of configuration options
+  - Enhanced error handling for configuration discovery
+
+- **CLI Help System**: Improved documentation display
+  - Fixed help text formatting in `massgen --help`
+  - Better organization of command options and examples
+
+### Documentations, Configurations and Resources
+
+- **Case Study: Universal Code Execution via MCP**: Comprehensive v0.0.31 feature documentation
+  - `docs/case_studies/universal-code-execution-mcp.md`
+  - Demonstrates pytest test creation and execution across backends
+  - Shows command validation, security layers, and result interpretation
+
+- **Documentation Updates**: Enhanced existing documentation
+  - Added custom tools user guide and integration examples
+  - Reorganized case studies for improved navigation
+  - Updated configuration schema with new voting and tools parameters
+
+- **Custom Tools Examples**: 40+ example configurations
+  - Basic single-tool setups for each backend
+  - Multi-agent configurations with custom tools
+  - Integration examples combining MCP and custom tools
+  - Located in `configs/tools/custom_tools/`
+
+- **Voting Sensitivity Examples**: Configuration examples for voting controls
+  - `configs/voting/gemini_gpt_voting_sensitivity.yaml`
+  - Demonstrates lenient, balanced, and strict voting modes
+  - Shows answer novelty threshold configuration
+
+### Technical Details
+- **Major Focus**: Custom tools system, voting sensitivity controls, interactive config builder, and comprehensive documentation
+- **Contributors**: @qidanrui @ncrispino @praneeth999 @sonichi @Eric-Shang @Henry-811 and the MassGen team
+
+## [0.1.0] - 2025-10-17 (PyPI Release)
 
 ### Added
 - **PyPI Package Release**: Official MassGen package available on PyPI for easy installation via pip

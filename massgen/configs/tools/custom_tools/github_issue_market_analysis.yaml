@@ -1,0 +1,94 @@
+# Example Configuration: GitHub Issue Market Analysis for Self-Evolution
+#
+# Use Case: Demonstrate Self-Evolution (Market Analysis) using custom tools
+#
+# This configuration showcases how MassGen agents can autonomously analyze
+# GitHub issues AND broader market trends to prioritize features and drive
+# market-driven development using access to the current MassGen code, custom tools + web search.
+#
+# Run with:
+#   uv run massgen --config massgen/configs/tools/custom_tools/github_issue_market_analysis.yaml "Analyze the massgen dir and MassGen GitHub issues to understand what features users are requesting. Also research current trends in multi-agent AI systems and LLM orchestration. Based on the existing code, the open issues and market trends, write a prioritized recommendation report for the next release."
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace1"
+
+      # Custom GitHub issue analyzer tool
+      custom_tools:
+        - name: ["fetch_github_issues"]
+          category: "market_analysis"
+          path: "massgen/tool/_self_evolution/_github_issue_analyzer.py"
+          function: ["fetch_github_issues"]
+          description: ["Fetch and analyze GitHub issues for market-driven feature prioritization"]
+
+      # Enable web search for market research
+      enable_web_search: true
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace2"
+
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "low"
+        summary: "auto"
+
+      # Same custom tool
+      custom_tools:
+        - name: ["fetch_github_issues"]
+          category: "market_analysis"
+          path: "massgen/tool/_self_evolution/_github_issue_analyzer.py"
+          function: ["fetch_github_issues"]
+
+      # Enable web search for market research
+      enable_web_search: true
+
+# Orchestrator configuration
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "massgen"
+      permission: "read"
+  # Adjust these settings to control collaboration behavior
+  # voting_sensitivity: Controls how critical agents are when voting
+  #   - "lenient": Agents vote for answers more readily (default)
+  #   - "balanced": Moderate voting threshold
+  #   - "strict": Agents are more critical, vote only for excellent answers
+  voting_sensitivity: "balanced"
+
+  # answer_novelty_requirement: How different new answers must be
+  #   - "lenient": Allow similar answers with minor variations (default)
+  #   - "balanced": Require moderate differences
+  #   - "strict": Require substantial novelty
+  answer_novelty_requirement: "lenient"
+
+  # max_new_answers_per_agent: Limit how many answers each agent can provide
+  # Uncomment to enable (useful for faster convergence)
+  max_new_answers_per_agent: 5
+
+  # coordination_config: Advanced coordination settings
+  # coordination_config:
+  #   enable_planning_mode: false  # If true, agents plan without executing during coordination
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# What happens:
+# 1. Both agents have access to:
+#    - Custom fetch_github_issues tool (analyzes user requests)
+#    - Web search (researches market trends and competitors)
+# 2. User asks agents to combine GitHub issues + market research
+# 3. Agents independently:
+#    - Fetch and analyze GitHub issues using custom tool
+#    - Research market trends using web search
+#    - Synthesize both sources into recommendations
+# 4. Agents collaborate through voting to reach consensus
+# 5. Final answer provides data-driven feature prioritization report

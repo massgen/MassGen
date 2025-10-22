@@ -267,7 +267,7 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 
 ## 🔧 Development Workflow
 
-> **Important**: Our next version is v0.1.1. If you want to contribute, please contribute to the `dev/v0.1.1` branch.
+> **Important**: Our next version is v0.1.3. If you want to contribute, please contribute to the `dev/v0.1.3` branch.
 
 ### 1. Create Feature Branch
 
@@ -275,8 +275,8 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 # Fetch latest changes from upstream
 git fetch upstream
 
-# Create feature branch from dev/v0.1.1
-git checkout -b feature/your-feature-name upstream/dev/v0.1.1
+# Create feature branch from dev/v0.1.3
+git checkout -b feature/your-feature-name upstream/dev/v0.1.3
 ```
 
 ### 2. Make Your Changes
@@ -373,7 +373,7 @@ git push origin feature/your-feature-name
 ```
 
 Then create a pull request on GitHub:
-- Base branch: `dev/v0.1.1`
+- Base branch: `dev/v0.1.2`
 - Compare branch: `feature/your-feature-name`
 - Add clear description of changes
 - Link any related issues
@@ -479,7 +479,7 @@ Have a significant feature idea not covered by existing tracks?
 - [ ] Tests pass locally
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow convention
-- [ ] PR targets `dev/v0.1.1` branch
+- [ ] PR targets `dev/v0.1.3` branch
 
 ### PR Description Should Include
 

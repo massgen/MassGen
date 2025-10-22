@@ -1,4 +1,4 @@
-# MassGen Case Study: AI News Synthesis - Cross-Verification and Content Aggregation Excellence
+# MassGen v0.0.3: AI News Synthesis - Cross-Verification and Content Aggregation Excellence
 
 This case study demonstrates MassGen's sophisticated ability to synthesize current events through extensive cross-verification, where agents conduct independent research and converge on a comprehensive, well-sourced news summary that integrates multiple perspectives and data points. This case study was run on version v0.0.3.
 

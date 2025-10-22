@@ -770,10 +770,10 @@ class CustomToolAndMCPBackend(LLMBackend):
         max_retries: int = 3,
     ) -> Tuple[str, Any]:
         """Execute MCP function with exponential backoff retry logic."""
-        # Check if planning mode is enabled - block MCP tool execution during planning
-        if self.is_planning_mode_enabled():
-            logger.info(f"[MCP] Planning mode enabled - blocking MCP tool execution: {function_name}")
-            error_str = "🚫 [MCP] Planning mode active - MCP tools blocked during coordination"
+        # Check if this specific MCP tool is blocked by planning mode
+        if self.is_mcp_tool_blocked(function_name):
+            logger.info(f"[MCP] Planning mode enabled - blocking MCP tool: {function_name}")
+            error_str = f"🚫 [MCP] Tool '{function_name}' blocked during coordination (planning mode active)"
             return error_str, {"error": error_str, "blocked_by": "planning_mode", "function_name": function_name}
 
         # Convert JSON string to dict for shared utility

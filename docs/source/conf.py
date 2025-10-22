@@ -68,6 +68,25 @@ myst_enable_extensions = [
     "tasklist",
 ]
 
+# Auto-generate heading anchors for deep linking
+myst_heading_anchors = 3
+
+# Configure heading slug generation to handle emojis better
+myst_heading_slug_func = None  # Use default slugification
+
+# Suppress duplicate label warnings for auto-generated TOC links
+suppress_warnings = ["myst.header"]
+
+# Configure MyST to parse markdown files
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+# Suppress MyST warnings for missing cross-references in markdown files
+suppress_warnings = [
+    "myst.xref_missing",  # Suppress missing cross-reference warnings in MyST
+]
+
 templates_path = ["_templates"]
 exclude_patterns = []
 

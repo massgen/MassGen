@@ -3,18 +3,19 @@
             <div class="icon">⚡</div>
             <h2>Get Started in 60 Seconds</h2>
             <div class="code-snippet">
-                # 1. Clone and setup<br>
-                git clone https://github.com/Leezekun/MassGen<br>
-                cd MassGen && pip install uv && uv venv<br><br>
+                # 1. Install via PyPI<br>
+                pip install massgen<br><br>
 
-                # 2. Configure API keys<br>
-                cp .env.example .env  # Add your API keys<br><br>
+                # 2. Interactive setup (first time only)<br>
+                massgen --setup  # Guided API key configuration<br><br>
 
                 # 3. Run single agent (quick test)<br>
-                uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"<br><br>
+                massgen --model gemini-2.5-flash "When is your knowledge up to"<br><br>
 
                 # 4. Run multi-agent collaboration<br>
-                uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
+                massgen --config @examples/basic/multi/three_agents_default "Summarize latest news of github.com/Leezekun/MassGen"<br><br>
+
+                <!-- # Documentation: https://docs.massgen.io -->
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; margin-top: 30px;">
                 <div style="text-align: center; padding: 20px; background: rgba(46, 204, 113, 0.1); border-radius: 15px;">

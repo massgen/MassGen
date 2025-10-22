@@ -1,8 +1,8 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.0
+**Current Version:** v0.1.2
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
-**Last Updated:** October 2025
+**Last Updated:** October 23, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -16,7 +16,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 |-------|--------|---------|
 | Tool System Refactoring | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Multimodal Support | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
-| AG2 Group Chat Patterns | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
+| General Interoperability | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
 | Memory Module | [@kitrakrev](https://github.com/kitrakrev) | kitrak_23536 |
@@ -29,53 +29,27 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 🚀 Upcoming Releases
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.1** | 10/20/25 | Tool System Refactoring | @qidanrui | Unified tool system for web scraping, data processing, and API integration |
-| | | Memory Module (Phase 1) | @kitrakrev | Long-term memory for reasoning tasks and document understanding |
-| **v0.1.2** | 10/22/25 | AG2 Group Chat Patterns | @Eric-Shang | Complex research workflows with specialized agent roles |
+| **v0.1.3** | 10/24/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
 | | | Final Agent Submit/Restart Tools | @ncrispino | Multi-step task verification and intelligent restart decisions |
-| | | Memory Module (Phase 2) | @kitrakrev | Advanced memory capabilities for multi-turn conversations |
-| **v0.1.3** | 10/24/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Irreversible Actions Safety | @franklinnwren | Safety controls for production deployments with dangerous operations |
+| **v0.1.4** | 10/27/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
+| | | Memory Module (Phase 1) | @kitrakrev | Long-term memory for reasoning tasks and document understanding |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.1 - Tool System & Infrastructure
+## 📋 v0.1.3 - General Interoperability & Enterprise Collaboration
 
 ### Features
 
-**1. Tool System Refactoring** (@qidanrui)
-- Migrate workflow tools into unified tool system
-- Migrate provider tools (web search, code execution) into tool system
-- Migrate multimodal tools into tool system
-- **Use Case**: Simplify adding new tools; enable custom tool plugins for domain-specific workflows
-
-**2. Memory Module - Phase 1** (@kitrakrev)
-- Long-term memory implementation using mem0 inspired by agentscope.
-- **Use Case**: Reasoning tasks, large document/code understanding, ensuring quality of many-turn conversations
-
-### Success Criteria
-- ✅ All tools migrated to unified system
-- ✅ Memory module handles basic context management
-
----
-
-## 📋 v0.1.2 - Enterprise Collaboration
-
-### Features
-
-**1. Finish AG2 Group Chat Integration** (@Eric-Shang)
-- Group chat orchestration patterns:
-  - Summarization method
-  - AutoPattern
-  - Round robin pattern
-  - Nested chat
-- **Use Case**: Complex research workflows requiring specialized agent roles (researcher, analyst, critic, synthesizer) in already-proven AG2 patterns
+**1. General Interoperability** (@qidanrui)
+- Issue: [#341](https://github.com/Leezekun/MassGen/issues/341)
+- Framework integration for external agent systems
+- Unified agent interface for seamless integration
+- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source
 
 **2. Final Agent Submit/Restart Tools** (@ncrispino)
 - Issue: [#325](https://github.com/Leezekun/MassGen/issues/325)
@@ -89,7 +63,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.3 - Intelligent Optimization & Safety
+## 📋 v0.1.4 - Intelligent Optimization & Safety
 
 ### Features
 
@@ -209,11 +183,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 - [CHANGELOG.md](CHANGELOG.md) - Complete release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
-- [Documentation](https://docs.massgen.io/en/latest/) - Full user guide
+- [Documentation](https://docs.massgen.ai/en/latest/) - Full user guide
 
 ---
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 16, 2025
+**Last Updated:** October 22, 2025
 **Maintained By:** MassGen Team

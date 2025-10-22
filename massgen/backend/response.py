@@ -371,31 +371,118 @@ class ResponseBackend(CustomToolAndMCPBackend):
                 yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                 return
 
-            # Check if planning mode is enabled - block MCP tool execution during planning
-            # Note: Custom tools should still execute, only MCP tools are blocked
-            if self.is_planning_mode_enabled() and mcp_calls:
-                logger.info("[MCP] Planning mode enabled - blocking MCP tool execution (custom tools will still execute)")
-                yield TextStreamChunk(
-                    type=ChunkType.MCP_STATUS,
-                    status="planning_mode_blocked",
-                    content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
-                    source="planning_mode",
-                )
-                # Clear MCP calls to prevent their execution, but continue with custom tools
-                mcp_calls = []
+            # Execute MCP function calls
+            mcp_functions_executed = False
 
-            # Execute MCP tools using unified method
-            for call in mcp_calls:
-                async for chunk in self._execute_tool_with_logging(
-                    call,
-                    MCP_TOOL_CONFIG,
-                    updated_messages,
-                    processed_call_ids,
-                ):
-                    # Convert StreamChunk to TextStreamChunk with enum mapping
-                    chunk_type_map = {
-                        "custom_tool_status": ChunkType.CUSTOM_TOOL_STATUS,
-                        "mcp_status": ChunkType.MCP_STATUS,
+            # Check if planning mode is enabled - selectively block MCP tool execution during planning
+            if self.is_planning_mode_enabled():
+                blocked_tools = self.get_planning_mode_blocked_tools()
+
+                if not blocked_tools:
+                    # Empty set means block ALL MCP tools (backward compatible)
+                    logger.info("[Response] Planning mode enabled - blocking ALL MCP tool execution")
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="planning_mode_blocked",
+                        content="🚫 [MCP] Planning mode active - all MCP tools blocked during coordination",
+                        source="planning_mode",
+                    )
+                    # Skip all MCP tool execution but still continue with workflow
+                    yield StreamChunk(type="done")
+                    return
+                else:
+                    # Selective blocking - log but continue to check each tool individually
+                    logger.info(f"[Response] Planning mode enabled - selective blocking of {len(blocked_tools)} tools")
+
+            # Ensure every captured function call gets a result to prevent hanging
+            for call in captured_function_calls:
+                function_name = call["name"]
+                if function_name in self._mcp_functions:
+                    # Yield MCP tool call status
+                    yield TextStreamChunk(
+                        type=ChunkType.MCP_STATUS,
+                        status="mcp_tool_called",
+                        content=f"🔧 [MCP Tool] Calling {function_name}...",
+                        source=f"mcp_{function_name}",
+                    )
+
+                    try:
+                        # Execute MCP function with retry and exponential backoff
+                        result, result_obj = await super()._execute_mcp_function_with_retry(
+                            function_name,
+                            call["arguments"],
+                        )
+
+                        # Check if function failed after all retries
+                        if isinstance(result, str) and result.startswith("Error:"):
+                            # Log failure but still create tool response
+                            logger.warning(f"MCP function {function_name} failed after retries: {result}")
+
+                            # Add error result to messages
+                            function_call_msg = {
+                                "type": "function_call",
+                                "call_id": call["call_id"],
+                                "name": function_name,
+                                "arguments": call["arguments"],
+                            }
+                            updated_messages.append(function_call_msg)
+
+                            error_output_msg = {
+                                "type": "function_call_output",
+                                "call_id": call["call_id"],
+                                "output": result,
+                            }
+                            updated_messages.append(error_output_msg)
+
+                            processed_call_ids.add(call["call_id"])
+                            mcp_functions_executed = True
+                            continue
+
+                    except Exception as e:
+                        # Only catch unexpected non-MCP system errors
+                        logger.error(f"Unexpected error in MCP function execution: {e}")
+                        error_msg = f"Error executing {function_name}: {str(e)}"
+
+                        # Add error result to messages
+                        function_call_msg = {
+                            "type": "function_call",
+                            "call_id": call["call_id"],
+                            "name": function_name,
+                            "arguments": call["arguments"],
+                        }
+                        updated_messages.append(function_call_msg)
+
+                        error_output_msg = {
+                            "type": "function_call_output",
+                            "call_id": call["call_id"],
+                            "output": error_msg,
+                        }
+                        updated_messages.append(error_output_msg)
+
+                        processed_call_ids.add(call["call_id"])
+                        mcp_functions_executed = True
+                        continue
+
+                    # Add function call to messages and yield status chunk
+                    function_call_msg = {
+                        "type": "function_call",
+                        "call_id": call["call_id"],
+                        "name": function_name,
+                        "arguments": call["arguments"],
+                    }
+                    updated_messages.append(function_call_msg)
+                    yield TextStreamChunk(
+                        type=ChunkType.MCP_STATUS,
+                        status="function_call",
+                        content=f"Arguments for Calling {function_name}: {call['arguments']}",
+                        source=f"mcp_{function_name}",
+                    )
+
+                    # Add function output to messages and yield status chunk
+                    function_output_msg = {
+                        "type": "function_call_output",
+                        "call_id": call["call_id"],
+                        "output": str(result),
                     }
                     yield TextStreamChunk(
                         type=chunk_type_map.get(chunk.type, chunk.type),

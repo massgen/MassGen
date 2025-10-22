@@ -300,7 +300,7 @@ Claude Backend
              command: "npx"
              args: ["-y", "@modelcontextprotocol/server-weather"]
 
-**Supported Models:** claude-sonnet-4, claude-opus-4, claude-3-5-sonnet-latest, claude-3-5-haiku-latest
+**Supported Models:** claude-haiku-4-5-20251001, claude-sonnet-4-5-20250929, claude-opus-4-1-20250805, claude-sonnet-4-20250514, claude-3-5-sonnet-latest, claude-3-5-haiku-latest
 
 Claude Code Backend
 ~~~~~~~~~~~~~~~~~~~
@@ -371,7 +371,7 @@ Grok Backend
          model: "grok-3-mini"
          enable_web_search: true
 
-**Supported Models:** grok-4, grok-3, grok-3-mini, grok-beta
+**Supported Models:** grok-4, grok-4-fast, grok-3, grok-3-mini
 
 Azure OpenAI Backend
 ~~~~~~~~~~~~~~~~~~~~

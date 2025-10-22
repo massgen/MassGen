@@ -9,7 +9,7 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
   </a>
-  <a href="https://docs.massgen.io">
+  <a href="https://docs.massgen.ai">
     <img src="https://img.shields.io/badge/docs-massgen.ai-blue.svg" alt="Documentation" style="margin-right: 5px;">
   </a>
   <a href="https://discord.massgen.ai">
@@ -54,7 +54,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.0 Features](#-latest-features-v010)
+- [v0.1.2 Features](#-latest-features-v012)
 </details>
 
 <details open>
@@ -99,15 +99,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.0](#recent-achievements-v010)
-  - [v0.0.3 - v0.0.32](#previous-achievements-v003---v0032)
+  - [v0.1.2](#recent-achievements-v012)
+  - [v0.0.3 - v0.1.1](#previous-achievements-v003---v011)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.1 Roadmap](#v011-roadmap)
+- [v0.1.3 Roadmap](#v013-roadmap)
 </details>
 
 <details open>
@@ -132,27 +132,36 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.0)
+## 🆕 Latest Features (v0.1.2)
 
-**🎉 Released: October 17, 2025**
+**🎉 Released: October 22, 2025**
 
-**What's New in v0.1.0:**
-- **📦 PyPI Package** - Official pip installation: `pip install massgen`
-- **📖 Comprehensive Documentation** - Full Sphinx docs at [MassGen Official Documentation](https://docs.massgen.io/)
-- **🎯 Interactive Setup Wizard** - Guided configuration for first-time users
-- **🚀 Simplified Commands** - Clean `massgen` CLI with `@examples/` prefix for built-in configs
+**What's New in v0.1.2:**
+- **🧠 Intelligent Planning Mode** - Automatic question analysis for safe MCP tool blocking
+- **🎭 Claude 4.5 Haiku Support** - Access to latest Claude Haiku model
+- **🔍 Grok Web Search Fix** - Improved web search functionality in Grok backend
 
-**Get Started with v0.1.0:**
+**Key Improvements:**
+- Automatically determines if questions require irreversible operations
+- Read-only MCP operations allowed during coordination for better decisions
+- Write operations automatically blocked for safety
+- Zero configuration required - works transparently
+- Enhanced model support with latest Claude 4.5 Haiku
+
+**Get Started with v0.1.2:**
 ```bash
-# Install from PyPI
-pip install massgen
+# Install or upgrade from PyPI
+pip install --upgrade massgen
 
-# Run the interactive setup wizard
-massgen
+# Try intelligent planning mode with MCP tools
+# (Please read the YAML file for required API keys: DISCORD_TOKEN, OPENAI_API_KEY, etc.)
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
+  "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
 
-# Start using with example configurations
-massgen --config @examples/basic/multi/three_agents_default \
-  "Analyze the pros and cons of renewable energy"
+# Use latest Claude 4.5 Haiku model
+# (Requires ANTHROPIC_API_KEY in .env)
+massgen --model claude-haiku-4-5-20251001 \
+  "Summarize the latest AI developments"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -202,7 +211,7 @@ This collaborative approach ensures that the final output leverages collective i
 
 ---
 
-> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[MassGen Official Documentation](https://docs.massgen.io/)**
+> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[MassGen Official Documentation](https://docs.massgen.ai/)**
 
 ---
 
@@ -241,7 +250,7 @@ massgen "Your question here"
 massgen --config @examples/basic/multi/three_agents_default "Your question"
 ```
 
-→ See [Installation Guide](https://docs.massgen.io/en/latest/quickstart/installation.html) for complete setup instructions.
+→ See [Installation Guide](https://docs.massgen.ai/en/latest/quickstart/installation.html) for complete setup instructions.
 
 **Method 2: Development Installation** (for contributors):
 
@@ -256,7 +265,7 @@ pip install -e .
 # Or with uv (faster)
 uv pip install -e .
 
-# Optional: AG2 framework integration
+# Optional: External framework integration
 pip install -e ".[external]"
 ```
 
@@ -331,11 +340,11 @@ OPENROUTER_API_KEY=...
 
 MassGen automatically loads API keys from `.env` in your current directory.
 
-→ **Complete setup guide with all providers:** See [API Key Configuration](https://docs.massgen.io/en/latest/quickstart/installation.html#api-key-configuration) in the docs
+→ **Complete setup guide with all providers:** See [API Key Configuration](https://docs.massgen.ai/en/latest/quickstart/installation.html#api-key-configuration) in the docs
 
 **Get API keys:**
  - [OpenAI](https://platform.openai.com/api-keys) | [Claude](https://docs.anthropic.com/en/api/overview) | [Gemini](https://ai.google.dev/gemini-api/docs) | [Grok](https://docs.x.ai/docs/overview)
- - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/) | [Cerebras](https://inference-docs.cerebras.ai/introduction) | [More providers...](https://docs.massgen.io/en/latest/reference/supported_models.html)
+ - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/) | [Cerebras](https://inference-docs.cerebras.ai/introduction) | [More providers...](https://docs.massgen.ai/en/latest/reference/supported_models.html)
 
 ### 3. 🧩 Supported Models and Tools
 
@@ -366,7 +375,7 @@ The system currently supports multiple model providers with advanced capabilitie
   - Zero-cost usage reporting
   - Support for LLaMA, Mistral, Qwen and other open-weight models
 
-→ For complete model list and configuration details, see [Supported Models](https://docs.massgen.io/en/latest/reference/supported_models.html)
+→ For complete model list and configuration details, see [Supported Models](https://docs.massgen.ai/en/latest/reference/supported_models.html)
 
 #### Tools
 
@@ -386,13 +395,13 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
 
-→ For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://docs.massgen.io/en/latest/user_guide/backends.html)
+→ For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://docs.massgen.ai/en/latest/user_guide/backends.html)
 
 ---
 
 ### 4. 🏃 Run MassGen
 
-> **Complete Usage Guide:** For all usage modes, advanced features, and interactive multi-turn sessions, see [Running MassGen](https://docs.massgen.io/en/latest/quickstart/running-massgen.html)
+> **Complete Usage Guide:** For all usage modes, advanced features, and interactive multi-turn sessions, see [Running MassGen](https://docs.massgen.ai/en/latest/quickstart/running-massgen.html)
 
 #### 🚀 Getting Started
 
@@ -556,7 +565,7 @@ agents:
 
 → [View more MCP examples](massgen/configs/tools/mcp/)
 
-→ For comprehensive MCP integration guide, see [MCP Integration](https://docs.massgen.io/en/latest/user_guide/mcp_integration.html)
+→ For comprehensive MCP integration guide, see [MCP Integration](https://docs.massgen.ai/en/latest/user_guide/mcp_integration.html)
 
 #### **4. File System Operations & Workspace Management**
 
@@ -635,7 +644,7 @@ orchestrator:
 >
 > The agents will execute file operations without additional confirmation once permissions are granted.
 
-→ For comprehensive file operations guide, see [File Operations](https://docs.massgen.io/en/latest/user_guide/file_operations.html)
+→ For comprehensive file operations guide, see [File Operations](https://docs.massgen.ai/en/latest/user_guide/file_operations.html)
 
 #### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
@@ -761,9 +770,7 @@ agents:
       cwd: "workspace1"                 # → .massgen/workspaces/workspace1/
 ```
 
-→ [Learn more about project integration](massgen/mcp_tools/permissions_and_context_files.md)
-
-→ For comprehensive project integration guide, see [Project Integration](https://docs.massgen.io/en/latest/user_guide/project_integration.html)
+→ For comprehensive project integration guide, see [Project Integration](https://docs.massgen.ai/en/latest/user_guide/project_integration.html)
 
 **Security Considerations:**
 - **Agent ID Safety**: Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
@@ -973,14 +980,14 @@ All sessions are automatically logged with detailed information for debugging an
 - **Agent Outputs** (`agent_outputs/`): Complete output history and final presentations from all agents
 - **Debug Log** (`massgen.log`): Complete system operations, API calls, tool usage, and error traces (use `--debug` for verbose logging)
 
-→ For comprehensive logging guide and debugging techniques, see [Logging & Debugging](https://docs.massgen.io/en/latest/user_guide/logging.html)
+→ For comprehensive logging guide and debugging techniques, see [Logging & Debugging](https://docs.massgen.ai/en/latest/user_guide/logging.html)
 
 ## 💡 Case Studies
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
 - [**MassGen Case Studies**](docs/case_studies/README.md)
-- [**Case Studies Documentation**](https://docs.massgen.io/en/latest/examples/case_studies.html) - Browse case studies online
+- [**Case Studies Documentation**](https://docs.massgen.ai/en/latest/examples/case_studies.html) - Browse case studies online
 
 ---
 
@@ -991,33 +998,35 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.0)
+### Recent Achievements (v0.1.2)
 
-**🎉 Released: October 17, 2025**
+**🎉 Released: October 22, 2025**
 
-#### PyPI Package Release
-- **Official Distribution**: MassGen now available via `pip install massgen`
-- **Simplified Installation**: No need to clone repository for standard usage
-- **Global Access**: Run `massgen` command from any directory after pip install
+#### Intelligent Planning Mode
+- **Automatic Question Analysis**: New `_analyze_question_irreversibility()` method in orchestrator determines if MCP operations are reversible
+- **Selective Tool Blocking**: Granular control with `set_planning_mode_blocked_tools()`, `get_planning_mode_blocked_tools()`, and `is_mcp_tool_blocked()` methods
+- **Dynamic Behavior**: Read-only MCP operations allowed during coordination, write operations blocked for safety
+- **Zero Configuration**: Works transparently without setup
+- **Multi-Workspace Support**: Planning mode works across different workspaces without conflicts
+- **Test Coverage**: Comprehensive tests in `massgen/tests/test_intelligent_planning_mode.py`
+- **Documentation**: Complete guide in `docs/case_studies/INTELLIGENT_PLANNING_MODE.md`
 
-#### Comprehensive Documentation
-- **Sphinx Documentation**: Full documentation site at [MassGen Official Documentation](https://docs.massgen.io/en/latest/)
-- **Complete User Guide**: Installation, configuration, usage modes, and API reference
-- **Case Studies**: Real-world examples with session logs and outcomes
-- **Structured Navigation**: Getting Started, User Guide, Reference, Examples, and Development sections
+#### Model Support & Improvements
+- **Claude 4.5 Haiku**: Added latest Claude Haiku model `claude-haiku-4-5-20251001`
+- **Model Priority Updates**: Reorganized Claude model list with updated defaults (`claude-sonnet-4-5-20250929`)
+- **Grok Web Search Fix**: Resolved `extra_body` parameter handling for Grok's Live Search API with new `_add_grok_search_params()` method
 
-#### Interactive Setup Wizard
-- **Guided Configuration**: Step-by-step wizard for first-time users
-- **Use Case Presets**: Research, Code, Q&A, Data Analysis, and more
-- **API Key Management**: Centralized configuration in `~/.config/massgen/`
-- **Smart Defaults**: Auto-configured tools based on selected use case
+#### Configuration Updates
+- **Planning Mode Configs**: Updated 5 configurations in `massgen/configs/tools/planning/` with selective blocking examples
+- **Default Configuration**: Updated `three_agents_default.yaml` with Grok-4-fast model
 
-#### Enhanced CLI Experience
-- **Simplified Commands**: Clean `massgen` command with intuitive syntax
-- **Built-in Examples**: `@examples/` prefix for instant access to configurations
-- **Backwards Compatibility**: Existing git clone workflows continue to work
+### Previous Achievements (v0.0.3 - v0.1.1)
 
-### Previous Achievements (v0.0.3 - v0.0.32)
+✅ **Custom Tools System (v0.1.1)**: User-defined Python function registration using `ToolManager` class in `massgen/tool/_manager.py`, cross-backend support alongside MCP servers, builtin/MCP/custom tool categories with automatic discovery, 40+ examples in `massgen/configs/tools/custom_tools/`, voting sensitivity controls with three-tier quality system (lenient/balanced/strict), answer novelty detection preventing duplicates
+
+✅ **Backend Enhancements (v0.1.1)**: Gemini architecture refactoring with extracted MCP management (`gemini_mcp_manager.py`), tracking (`gemini_trackers.py`), and utilities, new capabilities registry in `massgen/backend/capabilities.py` documenting feature support across backends
+
+✅ **PyPI Package Release (v0.1.0)**: Official distribution via `pip install massgen` with simplified installation, global `massgen` command accessible from any directory, comprehensive Sphinx documentation at [docs.massgen.ai](https://docs.massgen.ai/), interactive setup wizard with use case presets and API key management, enhanced CLI with `@examples/` prefix for built-in configurations
 
 ✅ **Docker Execution Mode (v0.0.32)**: Container-based isolation with secure command execution in isolated Docker containers preventing host filesystem access, persistent state management with packages and dependencies persisting across conversation turns, multi-agent support with dedicated isolated containers for each agent, configurable security with resource limits (CPU, memory), network isolation modes, and read-only volume mounts
 
@@ -1025,9 +1034,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Claude Code Docker Integration (v0.0.32)**: Automatic tool management with Bash tool automatically disabled in Docker mode routing commands through execute_command, MCP auto-permissions with automatic approval for MCP tools while preserving security validation, enhanced guidance with system messages preventing git repository confusion between host and container environments
 
-✅ **Universal Command Execution (v0.0.31)**: MCP-based execute_command tool works across Claude, Gemini, OpenAI, and Chat Completions providers, AG2-inspired security with permission management and command filtering, code execution in planning mode for safer coordination
+✅ **Universal Command Execution (v0.0.31)**: MCP-based execute_command tool works across Claude, Gemini, OpenAI, and Chat Completions providers, comprehensive security with permission management and command filtering, code execution in planning mode for safer coordination
 
-✅ **AG2 Group Chat Integration (v0.0.31)**: Multi-agent conversations using AG2's GroupChat and GroupChatManager frameworks, smart speaker selection (automatic, round-robin, manual) powered by LLMs, enhanced AG2 adapter supporting native group chat coordination
+✅ **External Framework Integration (v0.0.31)**: Multi-agent conversations using external framework group chat patterns, smart speaker selection (automatic, round-robin, manual) powered by LLMs, enhanced adapter supporting native group chat coordination
 
 ✅ **Audio & Video Generation (v0.0.31)**: Audio tools for text-to-speech and transcription, video generation using OpenAI's Sora-2 API, multimodal expansion beyond text and images
 
@@ -1041,7 +1050,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **File Operation Safety (v0.0.29)**: Read-before-delete enforcement with `FileOperationTracker` class, `PathPermissionManager` integration with operation tracking methods, enhanced file operation safety mechanisms
 
-✅ **AG2 Framework Integration (v0.0.28)**: Adapter system for external agent frameworks, AG2 ConversableAgent and AssistantAgent support with async execution, code execution in multiple environments (Local, Docker, Jupyter, YepCode), 4 ready-to-use AG2 configurations
+✅ **External Framework Integration (v0.0.28)**: Adapter system for external agent frameworks with async execution, code execution in multiple environments (Local, Docker, Jupyter, YepCode), ready-to-use configurations for framework integration
 
 ✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
 
@@ -1115,25 +1124,19 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.1 Roadmap
+### v0.1.3 Roadmap
 
-Version 0.1.1 focuses on developer experience improvements and PyPI distribution:
+Version 0.1.3 focuses on general interoperability and enterprise collaboration:
 
 #### Required Features
-- **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
-- **PyPI Package Release v0.1.0**: Official PyPI package representing new usage paradigm with easy pip installation
-
-#### Optional Features
-- **Nested Chat Integration**: Complete AG2 nested chat pattern support for hierarchical agent conversations
-- **DSPy Integration**: Framework integration for prompt optimization and systematic agent improvement
+- **General Interoperability**: Enable MassGen to orchestrate agents from multiple external frameworks with unified interface
+- **Final Agent Submit/Restart Tools**: Enable final agent to decide whether to submit or restart orchestration
 
 Key technical approach:
-- **Config Builder**: Interactive prompts, configuration templates, validation and error checking, preset support
-- **PyPI Package**: Production-ready distribution with proper dependencies, documentation, and migration guide
-- **Nested Chat**: AG2 integration for hierarchical conversations with parent-child agent relationships
-- **DSPy**: Prompt optimization, performance tuning, and systematic agent improvement workflows
+- **Framework Integration**: Multi-agent coordination supporting external agent frameworks with specialized agent roles (researcher, analyst, critic, synthesizer)
+- **Submit/Restart**: Multi-step task verification with access to previous agents' responses and workspaces
 
-For detailed milestones and technical specifications, see the [full v0.1.1 roadmap](ROADMAP.md).
+For detailed milestones and technical specifications, see the [full v0.1.3 roadmap](ROADMAP.md).
 
 ---
 
