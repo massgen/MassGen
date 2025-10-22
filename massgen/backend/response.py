@@ -23,7 +23,11 @@ from ..formatter import ResponseFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType, TextStreamChunk
 from .base import FilesystemSupport, StreamChunk
-from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, UploadFileError
+from .base_with_custom_tool_and_mcp import (
+    CustomToolAndMCPBackend,
+    ToolExecutionConfig,
+    UploadFileError,
+)
 
 
 class ResponseBackend(CustomToolAndMCPBackend):
@@ -137,6 +141,76 @@ class ResponseBackend(CustomToolAndMCPBackend):
         async for chunk in self._process_stream(stream, all_params, agent_id):
             yield chunk
 
+    def _append_tool_result_message(
+        self,
+        updated_messages: List[Dict[str, Any]],
+        call: Dict[str, Any],
+        result: Any,
+        tool_type: str,
+    ) -> None:
+        """Append tool result to messages in Response API format.
+
+        Args:
+            updated_messages: Message list to append to
+            call: Tool call dictionary with call_id, name, arguments
+            result: Tool execution result
+            tool_type: "custom" or "mcp"
+
+        Note:
+            Response API requires both function_call and function_call_output messages.
+        """
+        # Add function call message
+        function_call_msg = {
+            "type": "function_call",
+            "call_id": call.get("call_id", ""),
+            "name": call.get("name", ""),
+            "arguments": call.get("arguments", "{}"),
+        }
+        updated_messages.append(function_call_msg)
+
+        # Add function output message
+        function_output_msg = {
+            "type": "function_call_output",
+            "call_id": call.get("call_id", ""),
+            "output": str(result),
+        }
+        updated_messages.append(function_output_msg)
+
+    def _append_tool_error_message(
+        self,
+        updated_messages: List[Dict[str, Any]],
+        call: Dict[str, Any],
+        error_msg: str,
+        tool_type: str,
+    ) -> None:
+        """Append tool error to messages in Response API format.
+
+        Args:
+            updated_messages: Message list to append to
+            call: Tool call dictionary with call_id, name, arguments
+            error_msg: Error message string
+            tool_type: "custom" or "mcp"
+
+        Note:
+            Response API requires both function_call and function_call_output messages.
+        """
+        # Add function call message
+        function_call_msg = {
+            "type": "function_call",
+            "call_id": call.get("call_id", ""),
+            "name": call.get("name", ""),
+            "arguments": call.get("arguments", "{}"),
+        }
+        updated_messages.append(function_call_msg)
+
+        # Add error output message
+        error_output_msg = {
+            "type": "function_call_output",
+            "call_id": call.get("call_id", ""),
+            "output": error_msg,
+        }
+        updated_messages.append(error_output_msg)
+
     async def _stream_with_custom_and_mcp_tools(
         self,
         current_messages: List[Dict[str, Any]],
@@ -222,18 +296,8 @@ class ResponseBackend(CustomToolAndMCPBackend):
 
         # Execute any captured function calls
         if captured_function_calls and response_completed:
-            # Categorize function calls
-            mcp_calls = []
-            custom_calls = []
-            provider_calls = []
-
-            for call in captured_function_calls:
-                if call["name"] in self._mcp_functions:
-                    mcp_calls.append(call)
-                elif call["name"] in self._custom_tool_names:
-                    custom_calls.append(call)
-                else:
-                    provider_calls.append(call)
+            # Categorize function calls using helper method
+            mcp_calls, custom_calls, provider_calls = self._categorize_tool_calls(captured_function_calls)
 
             # If there are provider calls (non-MCP, non-custom), let API handle them
             if provider_calls:
@@ -246,100 +310,54 @@ class ResponseBackend(CustomToolAndMCPBackend):
             updated_messages = current_messages.copy()
             processed_call_ids = set()  # Initialize processed_call_ids here
 
-            # Execute custom tools first
+            # Configuration for custom tool execution
+            CUSTOM_TOOL_CONFIG = ToolExecutionConfig(
+                tool_type="custom",
+                chunk_type="custom_tool_status",
+                emoji_prefix="🔧 [Custom Tool]",
+                success_emoji="✅ [Custom Tool]",
+                error_emoji="❌ [Custom Tool Error]",
+                source_prefix="custom_",
+                status_called="custom_tool_called",
+                status_response="custom_tool_response",
+                status_error="custom_tool_error",
+                execution_callback=self._execute_custom_tool,
+            )
+
+            # Configuration for MCP tool execution
+            MCP_TOOL_CONFIG = ToolExecutionConfig(
+                tool_type="mcp",
+                chunk_type="mcp_status",
+                emoji_prefix="🔧 [MCP Tool]",
+                success_emoji="✅ [MCP Tool]",
+                error_emoji="❌ [MCP Tool Error]",
+                source_prefix="mcp_",
+                status_called="mcp_tool_called",
+                status_response="mcp_tool_response",
+                status_error="mcp_tool_error",
+                execution_callback=self._execute_mcp_function_with_retry,
+            )
+
+            # Execute custom tools using unified method
             for call in custom_calls:
-                try:
-                    # Yield custom tool call status
-                    yield TextStreamChunk(
-                        type=ChunkType.CUSTOM_TOOL_STATUS,
-                        status="custom_tool_called",
-                        content=f"🔧 [Custom Tool] Calling {call['name']}...",
-                        source=f"custom_{call['name']}",
-                    )
-
-                    # Yield custom tool arguments (like MCP tools)
-                    yield TextStreamChunk(
-                        type=ChunkType.CUSTOM_TOOL_STATUS,
-                        status="function_call",
-                        content=f"Arguments for Calling {call['name']}: {call['arguments']}",
-                        source=f"custom_{call['name']}",
-                    )
-
-                    # Execute custom tool
-                    result = await self._execute_custom_tool(call)
-
-                    # Add function call and result to messages
-                    function_call_msg = {
-                        "type": "function_call",
-                        "call_id": call["call_id"],
-                        "name": call["name"],
-                        "arguments": call["arguments"],
+                async for chunk in self._execute_tool_with_logging(
+                    call,
+                    CUSTOM_TOOL_CONFIG,
+                    updated_messages,
+                    processed_call_ids,
+                ):
+                    # Convert StreamChunk to TextStreamChunk with enum mapping
+                    chunk_type_map = {
+                        "custom_tool_status": ChunkType.CUSTOM_TOOL_STATUS,
+                        "mcp_status": ChunkType.MCP_STATUS,
                     }
-                    updated_messages.append(function_call_msg)
-
-                    function_output_msg = {
-                        "type": "function_call_output",
-                        "call_id": call["call_id"],
-                        "output": str(result),
-                    }
-                    updated_messages.append(function_output_msg)
-
-                    # Yield custom tool results (like MCP tools)
                     yield TextStreamChunk(
-                        type=ChunkType.CUSTOM_TOOL_STATUS,
-                        status="function_call_output",
-                        content=f"Results for Calling {call['name']}: {str(result)}",
-                        source=f"custom_{call['name']}",
+                        type=chunk_type_map.get(chunk.type, chunk.type),
+                        status=chunk.status if hasattr(chunk, "status") else None,
+                        content=chunk.content if hasattr(chunk, "content") else None,
+                        source=chunk.source if hasattr(chunk, "source") else None,
                     )
-
-                    # Yield custom tool response status
-                    yield TextStreamChunk(
-                        type=ChunkType.CUSTOM_TOOL_STATUS,
-                        status="custom_tool_response",
-                        content=f"✅ [Custom Tool] {call['name']} completed",
-                        source=f"custom_{call['name']}",
-                    )
-
-                    processed_call_ids.add(call["call_id"])
-                    functions_executed = True
-                    logger.info(f"Executed custom tool: {call['name']}")
-
-                except Exception as e:
-                    logger.error(f"Error executing custom tool {call['name']}: {e}")
-                    error_msg = f"Error executing {call['name']}: {str(e)}"
-
-                    # Yield error with arguments shown
-                    yield TextStreamChunk(
-                        type=ChunkType.CUSTOM_TOOL_STATUS,
-                        status="function_call",
-                        content=f"Arguments for Calling {call['name']}: {call['arguments']}",
-                        source=f"custom_{call['name']}",
-                    )
-
-                    yield TextStreamChunk(
-                        type=ChunkType.CUSTOM_TOOL_STATUS,
-                        status="custom_tool_error",
-                        content=f"❌ [Custom Tool Error] {error_msg}",
-                        source=f"custom_{call['name']}",
-                    )
-
-                    # Add error result to messages
-                    function_call_msg = {
-                        "type": "function_call",
-                        "call_id": call["call_id"],
-                        "name": call["name"],
-                        "arguments": call["arguments"],
-                    }
-                    updated_messages.append(function_call_msg)
-
-                    error_output_msg = {
-                        "type": "function_call_output",
-                        "call_id": call["call_id"],
-                        "output": error_msg,
-                    }
-                    updated_messages.append(error_output_msg)
-                    processed_call_ids.add(call["call_id"])
-                    functions_executed = True
+                functions_executed = True
 
             # Check circuit breaker status before executing MCP functions
             if mcp_calls and not await super()._check_circuit_breaker_before_execution():
@@ -353,133 +371,39 @@ class ResponseBackend(CustomToolAndMCPBackend):
                 yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                 return
 
-            # Execute MCP function calls
-            mcp_functions_executed = False
-
             # Check if planning mode is enabled - block MCP tool execution during planning
-            if self.is_planning_mode_enabled():
-                logger.info("[MCP] Planning mode enabled - blocking all MCP tool execution")
-                yield StreamChunk(
-                    type="mcp_status",
+            # Note: Custom tools should still execute, only MCP tools are blocked
+            if self.is_planning_mode_enabled() and mcp_calls:
+                logger.info("[MCP] Planning mode enabled - blocking MCP tool execution (custom tools will still execute)")
+                yield TextStreamChunk(
+                    type=ChunkType.MCP_STATUS,
                     status="planning_mode_blocked",
                     content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
                     source="planning_mode",
                 )
-                # Skip all MCP tool execution but still continue with workflow
-                yield StreamChunk(type="done")
-                return
+                # Clear MCP calls to prevent their execution, but continue with custom tools
+                mcp_calls = []
 
-            # Ensure every captured function call gets a result to prevent hanging
-            for call in captured_function_calls:
-                function_name = call["name"]
-                if function_name in self._mcp_functions:
-                    # Yield MCP tool call status
-                    yield TextStreamChunk(
-                        type=ChunkType.MCP_STATUS,
-                        status="mcp_tool_called",
-                        content=f"🔧 [MCP Tool] Calling {function_name}...",
-                        source=f"mcp_{function_name}",
-                    )
-
-                    try:
-                        # Execute MCP function with retry and exponential backoff
-                        result, result_obj = await super()._execute_mcp_function_with_retry(
-                            function_name,
-                            call["arguments"],
-                        )
-
-                        # Check if function failed after all retries
-                        if isinstance(result, str) and result.startswith("Error:"):
-                            # Log failure but still create tool response
-                            logger.warning(f"MCP function {function_name} failed after retries: {result}")
-
-                            # Add error result to messages
-                            function_call_msg = {
-                                "type": "function_call",
-                                "call_id": call["call_id"],
-                                "name": function_name,
-                                "arguments": call["arguments"],
-                            }
-                            updated_messages.append(function_call_msg)
-
-                            error_output_msg = {
-                                "type": "function_call_output",
-                                "call_id": call["call_id"],
-                                "output": result,
-                            }
-                            updated_messages.append(error_output_msg)
-
-                            processed_call_ids.add(call["call_id"])
-                            mcp_functions_executed = True
-                            continue
-
-                    except Exception as e:
-                        # Only catch unexpected non-MCP system errors
-                        logger.error(f"Unexpected error in MCP function execution: {e}")
-                        error_msg = f"Error executing {function_name}: {str(e)}"
-
-                        # Add error result to messages
-                        function_call_msg = {
-                            "type": "function_call",
-                            "call_id": call["call_id"],
-                            "name": function_name,
-                            "arguments": call["arguments"],
-                        }
-                        updated_messages.append(function_call_msg)
-
-                        error_output_msg = {
-                            "type": "function_call_output",
-                            "call_id": call["call_id"],
-                            "output": error_msg,
-                        }
-                        updated_messages.append(error_output_msg)
-
-                        processed_call_ids.add(call["call_id"])
-                        mcp_functions_executed = True
-                        continue
-
-                    # Add function call to messages and yield status chunk
-                    function_call_msg = {
-                        "type": "function_call",
-                        "call_id": call["call_id"],
-                        "name": function_name,
-                        "arguments": call["arguments"],
+            # Execute MCP tools using unified method
+            for call in mcp_calls:
+                async for chunk in self._execute_tool_with_logging(
+                    call,
+                    MCP_TOOL_CONFIG,
+                    updated_messages,
+                    processed_call_ids,
+                ):
+                    # Convert StreamChunk to TextStreamChunk with enum mapping
+                    chunk_type_map = {
+                        "custom_tool_status": ChunkType.CUSTOM_TOOL_STATUS,
+                        "mcp_status": ChunkType.MCP_STATUS,
                     }
-                    updated_messages.append(function_call_msg)
                     yield TextStreamChunk(
-                        type=ChunkType.MCP_STATUS,
-                        status="function_call",
-                        content=f"Arguments for Calling {function_name}: {call['arguments']}",
-                        source=f"mcp_{function_name}",
+                        type=chunk_type_map.get(chunk.type, chunk.type),
+                        status=chunk.status if hasattr(chunk, "status") else None,
+                        content=chunk.content if hasattr(chunk, "content") else None,
+                        source=chunk.source if hasattr(chunk, "source") else None,
                     )
-
-                    # Add function output to messages and yield status chunk
-                    function_output_msg = {
-                        "type": "function_call_output",
-                        "call_id": call["call_id"],
-                        "output": str(result),
-                    }
-                    updated_messages.append(function_output_msg)
-                    yield TextStreamChunk(
-                        type=ChunkType.MCP_STATUS,
-                        status="function_call_output",
-                        content=f"Results for Calling {function_name}: {str(result_obj.content[0].text)}",
-                        source=f"mcp_{function_name}",
-                    )
-
-                    logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
-                    processed_call_ids.add(call["call_id"])
-
-                    # Yield MCP tool response status
-                    yield TextStreamChunk(
-                        type=ChunkType.MCP_STATUS,
-                        status="mcp_tool_response",
-                        content=f"✅ [MCP Tool] {function_name} completed",
-                        source=f"mcp_{function_name}",
-                    )
-
-                    mcp_functions_executed = True
-                    functions_executed = True
+                functions_executed = True
 
             # Ensure all captured function calls have results to prevent hanging
             for call in captured_function_calls:
@@ -501,10 +425,10 @@ class ResponseBackend(CustomToolAndMCPBackend):
                         "output": f"Error: Tool call {call['call_id']} for function {call['name']} was not processed. This may indicate a validation or execution error.",
                     }
                     updated_messages.append(error_output_msg)
-                    mcp_functions_executed = True
+                    functions_executed = True
 
             # Trim history after function executions to bound memory usage
-            if functions_executed or mcp_functions_executed:
+            if functions_executed:
                 updated_messages = super()._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
