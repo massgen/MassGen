@@ -1,0 +1,25 @@
+# MassGen Configuration: Video to Video Generation Tool
+# Usage:
+#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/video_to_video_generation "Combine clip1.mp4 and clip2.mp4 into a cohesive story"
+agents:
+  - id: "video_to_video_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["video_to_video_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/video_to_video_generation.py"
+          function: ["video_to_video_generation"]
+    system_message: |
+      You are an AI assistant with access to video generation from video input capabilities.
+
+      The video_to_video_generation tool is available to generate video from multiple input videos
+      through understanding, synthesis, and video generation.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about combining, transforming, or generating new videos from existing video files,
+      use the video_to_video_generation tool to process the videos and provide the generated result.
+ui:
+  display_type: "simple"
+  logging_enabled: true

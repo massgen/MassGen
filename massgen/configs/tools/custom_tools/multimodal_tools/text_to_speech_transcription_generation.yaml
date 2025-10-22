@@ -1,0 +1,25 @@
+# MassGen Configuration: Text to Speech Transcription Generation Tool
+# Usage:
+#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_transcription_generation "Convert this text to speech: Welcome to MassGen"
+agents:
+  - id: "text_to_speech_transcription_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["text_to_speech_transcription_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_speech_transcription_generation.py"
+          function: ["text_to_speech_transcription_generation"]
+    system_message: |
+      You are an AI assistant with access to text-to-speech conversion capabilities.
+
+      The text_to_speech_transcription_generation tool is available to convert text directly to speech
+      using OpenAI's TTS API with streaming response.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about converting text to speech or generating audio from text, use the
+      text_to_speech_transcription_generation tool to create the audio file and provide the file path.
+ui:
+  display_type: "simple"
+  logging_enabled: true

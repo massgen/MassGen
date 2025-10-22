@@ -1,0 +1,25 @@
+# MassGen Configuration: Audio to Audio Generation Tool
+# Usage:
+#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/audio_to_audio_generation "Combine interview1.mp3 and interview2.mp3 into a summary"
+agents:
+  - id: "audio_to_audio_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["audio_to_audio_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/audio_to_audio_generation.py"
+          function: ["audio_to_audio_generation"]
+    system_message: |
+      You are an AI assistant with access to audio generation from audio input capabilities.
+
+      The audio_to_audio_generation tool is available to generate audio from multiple input audio files
+      by transcribing, synthesizing, and converting to speech.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about combining, transforming, or generating new audio from existing audio files,
+      use the audio_to_audio_generation tool to process the audio and provide the generated result.
+ui:
+  display_type: "simple"
+  logging_enabled: true

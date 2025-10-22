@@ -1,0 +1,25 @@
+# MassGen Configuration: Text Add Image to Video Generation Tool
+# Usage:
+#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/text_add_image_to_video_generation "Generate a video from this image with animation"
+agents:
+  - id: "text_add_image_to_video_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["text_add_image_to_video_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_add_image_to_video_generation.py"
+          function: ["text_add_image_to_video_generation"]
+    system_message: |
+      You are an AI assistant with access to video generation capabilities with image inputs.
+
+      The text_add_image_to_video_generation tool is available to generate videos from text prompts
+      with input images using OpenAI's Sora-2 API.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about generating videos from images or animating images, use the
+      text_add_image_to_video_generation tool to create the video and provide the file path.
+ui:
+  display_type: "simple"
+  logging_enabled: true

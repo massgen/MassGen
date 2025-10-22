@@ -1,0 +1,25 @@
+# MassGen Configuration: Understand Video Tool
+# Usage:
+#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/understand_video "What's happening in demo.mp4?"
+agents:
+  - id: "understand_video_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["understand_video"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_video.py"
+          function: ["understand_video"]
+    system_message: |
+      You are an AI assistant with access to video understanding capabilities.
+
+      The understand_video tool is available to analyze and understand videos by extracting key frames
+      and using OpenAI's gpt-4.1 API.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about analyzing or understanding videos, use the understand_video tool to process
+      the video and provide detailed descriptions or answers to their questions.
+ui:
+  display_type: "simple"
+  logging_enabled: true

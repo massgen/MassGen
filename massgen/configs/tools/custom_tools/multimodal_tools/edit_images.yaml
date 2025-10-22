@@ -1,0 +1,24 @@
+# MassGen Configuration: Edit Images Tool
+# Usage:
+#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/edit_images "Combine logo.png and background.png into a single image"
+agents:
+  - id: "edit_images_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["edit_images"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/edit_images.py"
+          function: ["edit_images"]
+    system_message: |
+      You are an AI assistant with access to image editing and combining capabilities.
+
+      The edit_images tool is available to edit and combine multiple images using OpenAI's gpt-image-1 API.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about editing, combining, or modifying images, use the edit_images tool to process
+      the images and generate the edited result.
+ui:
+  display_type: "simple"
+  logging_enabled: true

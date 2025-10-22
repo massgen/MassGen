@@ -1,0 +1,24 @@
+# MassGen Configuration: Understand Audio Tool
+# Usage:
+#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/understand_audio "Transcribe the audio file recording.wav"
+agents:
+  - id: "understand_audio_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["understand_audio"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_audio.py"
+          function: ["understand_audio"]
+    system_message: |
+      You are an AI assistant with access to audio transcription capabilities.
+
+      The understand_audio tool is available to transcribe audio files to text using OpenAI's Transcription API.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about transcribing or understanding audio files, use the understand_audio tool to
+      process the audio and provide the transcription.
+ui:
+  display_type: "simple"
+  logging_enabled: true

@@ -1,0 +1,25 @@
+# MassGen Configuration: Understand File Tool
+# Usage:
+#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/understand_file "Analyze the contents of report.pdf"
+agents:
+  - id: "understand_file_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["understand_file"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_file.py"
+          function: ["understand_file"]
+    system_message: |
+      You are an AI assistant with access to file understanding capabilities.
+
+      The understand_file tool is available to analyze and understand file contents using OpenAI's gpt-4.1 API.
+      It supports text files, PDF, DOCX, XLSX, PPTX, and more.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about analyzing or understanding files, use the understand_file tool to process
+      the file and provide detailed descriptions or answers to their questions.
+ui:
+  display_type: "simple"
+  logging_enabled: true
