@@ -154,7 +154,7 @@ Version 0.1.3 focuses on general interoperability and enterprise collaboration c
 | Phase 1 | General Interoperability | External framework integration, unified adapter interface | @qidanrui | **REQUIRED** |
 | Phase 2 | Submit/Restart | Decision tools, context access, verification workflows | @ncrispino | **REQUIRED** |
 
-**Target Release**: October 24, 2025 (Thursday @ 9am PT)
+**Target Release**: October 24, 2025 (Friday @ 9am PT)
 
 ---
 
