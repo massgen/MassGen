@@ -2302,7 +2302,7 @@ class ConfigBuilder:
                 orchestrator_config = {}
             orchestrator_config["session_storage"] = "sessions"
             console.print()
-            console.print("  ✅ Multi-turn sessions enabled (supports persistent conversations with memory)")
+            console.print("  ✅ Multi-turn sessions enabled (supports persistent conversations)")
 
             # Planning Mode (for MCP irreversible actions) - only ask if MCPs are configured
             has_mcp = any(a.get("backend", {}).get("mcp_servers") for a in agents)
@@ -2323,10 +2323,12 @@ class ConfigBuilder:
 
             # Orchestration Restart Feature
             console.print()
-            console.print("  [dim]Orchestration Restart: Allows automatic quality checks and retries[/dim]")
-            console.print("  [dim]• Post-evaluation checks if answer is complete after coordination[/dim]")
-            console.print("  [dim]• Can restart with specific instructions if improvements needed[/dim]")
-            console.print("  [dim]• 0 = no restarts (default), 1-3 = allow 1-3 restart attempts[/dim]")
+            console.print("  [dim]Orchestration Restart: Automatic quality checks with self-correction[/dim]")
+            console.print("  [dim]• Agent evaluates its own answer after coordination[/dim]")
+            console.print("  [dim]• Can restart with specific improvement instructions if incomplete[/dim]")
+            console.print("  [dim]• Each attempt gets isolated logs in attempt_1/, attempt_2/, etc.[/dim]")
+            console.print("  [dim]• Works with all backends (OpenAI, Claude, Gemini, Grok, etc.)[/dim]")
+            console.print("  [dim]• 0 = no restarts (default), 1-2 = recommended, 3 = maximum[/dim]")
             console.print()
 
             restart_input = Prompt.ask(

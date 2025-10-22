@@ -94,7 +94,7 @@ class AzureOpenAIBackend(LLMBackend):
                 raise ValueError("Azure OpenAI requires a deployment name. Pass it as the 'model' parameter.")
 
             # Check if workflow tools are present
-            workflow_tools = [t for t in tools if t.get("function", {}).get("name") in ["new_answer", "vote"]] if tools else []
+            workflow_tools = [t for t in tools if t.get("function", {}).get("name") in ["new_answer", "vote", "submit", "restart_orchestration"]] if tools else []
             has_workflow_tools = len(workflow_tools) > 0
 
             # Modify messages to include workflow tool instructions if needed
@@ -270,6 +270,14 @@ class AzureOpenAIBackend(LLMBackend):
                         system_parts.append(f'    Usage: {{"tool_name": "vote", ' f'"arguments": {{"agent_id": "agent1", ' f'"reason": "explanation"}}}} // Choose agent_id from: {agent_list}')
                     else:
                         system_parts.append('    Usage: {"tool_name": "vote", ' '"arguments": {"agent_id": "agent1", ' '"reason": "explanation"}}')
+                elif name == "submit":
+                    system_parts.append(
+                        '    Usage: {"tool_name": "submit", ' '"arguments": {"confirmed": true}}',
+                    )
+                elif name == "restart_orchestration":
+                    system_parts.append(
+                        '    Usage: {"tool_name": "restart_orchestration", ' '"arguments": {"reason": "The answer is incomplete because...", ' '"instructions": "In the next attempt, please..."}}',
+                    )
 
             system_parts.append("\n--- MassGen Workflow Instructions ---")
             system_parts.append("IMPORTANT: You must respond with a structured JSON decision at the end of your response.")

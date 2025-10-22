@@ -369,6 +369,11 @@ class Orchestrator(ChatAgent):
             },
         )
 
+        # Set log attempt for directory organization
+        from massgen.logger_config import set_log_attempt
+
+        set_log_attempt(self.current_attempt + 1)
+
         # Track active coordination state for cleanup
         self._active_streams = {}
         self._active_tasks = {}

@@ -290,6 +290,7 @@ Documentation Sections
    user_guide/tools
    user_guide/file_operations
    user_guide/multi_turn_mode
+   user_guide/orchestration_restart
    user_guide/multimodal
    user_guide/ag2_integration
    user_guide/logging

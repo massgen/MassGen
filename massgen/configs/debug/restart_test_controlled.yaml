@@ -12,7 +12,7 @@
 # Expected behavior:
 # - Attempt 1: Agents coordinate, final presentation shows debug override (incomplete answer)
 # - Post-evaluation detects incomplete answer and calls restart_orchestration()
-# - Yellow restart banner displays with reason and instructions
+# - Restart banner displays with reason and instructions
 # - Attempt 2: Agents see restart context and produce complete answer
 # - Post-evaluation approves and calls submit()
 # - Inspection menu appears
@@ -22,13 +22,15 @@ agents:
     backend:
       # type: "openai"
       # model: "gpt-5-nano"
-      type: "gemini"
-      model: "gemini-2.5-flash"
+      # type: "gemini"
+      # model: "gemini-2.5-flash"
+      type: "grok"
+      model: "grok-4-fast"
 
-  # - id: "agent_b"
-  #   backend:
-  #     type: "openai"
-  #     model: "gpt-5-nano"
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
 
 orchestrator:
   # Restart configuration

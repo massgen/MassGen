@@ -15,24 +15,25 @@
 # - Final presentation shows debug override claiming only main.py was created
 # - Post-evaluation uses MCP tools to verify files and detects missing files
 # - Calls restart_orchestration() with specific instructions
-# - Yellow restart banner displays
+# - Restart banner displays
 # - Attempt 2: Agents coordinate with restart instructions to create ALL files
-# - Winner executes and creates all 3 files
 # - Post-evaluation verifies all files exist using MCP tools
 # - Calls submit() - Inspection menu appears
 
 agents:
   - id: "agent_a"
     backend:
-      type: "openai"
-      model: "gpt-5-nano"
+      # type: "openai"
+      # model: "gpt-5-nano"
+      type: "claude_code"
+      model: "claude-sonnet-4-5-20250929"
       cwd: "workspace1"
 
-  - id: "agent_b"
-    backend:
-      type: "openai"
-      model: "gpt-5-nano"
-      cwd: "workspace2"
+  # - id: "agent_b"
+  #   backend:
+  #     type: "openai"
+  #     model: "gpt-5-nano"
+  #     cwd: "workspace2"
 
 orchestrator:
   snapshot_storage: "snapshots"

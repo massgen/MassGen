@@ -940,6 +940,31 @@ async def run_question_with_history(
             # Coordination complete - exit loop
             break
 
+    # Copy final results to root level for convenience
+    try:
+        import shutil
+
+        from massgen.logger_config import get_log_session_dir, get_log_session_dir_base
+
+        # Get the current attempt's final directory
+        attempt_final_dir = get_log_session_dir() / "final"
+
+        # Get the base directory (without attempt subdirectory)
+        base_dir = get_log_session_dir_base()
+        root_final_dir = base_dir / "final"
+
+        # Copy if the attempt's final directory exists
+        if attempt_final_dir.exists():
+            # Remove root final dir if it already exists
+            if root_final_dir.exists():
+                shutil.rmtree(root_final_dir)
+
+            # Copy attempt's final to root final
+            shutil.copytree(attempt_final_dir, root_final_dir)
+            logger.info(f"Copied final results from {attempt_final_dir} to {root_final_dir}")
+    except Exception as e:
+        logger.warning(f"Failed to copy final results to root: {e}")
+
     # Handle session persistence if applicable
     session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
         orchestrator,
@@ -1075,6 +1100,34 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             else:
                 # Coordination complete - exit loop
                 break
+
+        # Copy final results to root level for convenience
+        try:
+            import shutil
+
+            from massgen.logger_config import (
+                get_log_session_dir,
+                get_log_session_dir_base,
+            )
+
+            # Get the current attempt's final directory
+            attempt_final_dir = get_log_session_dir() / "final"
+
+            # Get the base directory (without attempt subdirectory)
+            base_dir = get_log_session_dir_base()
+            root_final_dir = base_dir / "final"
+
+            # Copy if the attempt's final directory exists
+            if attempt_final_dir.exists():
+                # Remove root final dir if it already exists
+                if root_final_dir.exists():
+                    shutil.rmtree(root_final_dir)
+
+                # Copy attempt's final to root final
+                shutil.copytree(attempt_final_dir, root_final_dir)
+                logger.info(f"Copied final results from {attempt_final_dir} to {root_final_dir}")
+        except Exception as e:
+            logger.warning(f"Failed to copy final results to root: {e}")
 
         return final_response
 
