@@ -70,6 +70,11 @@ class LLMBackend(ABC):
         # Planning mode flag - when True, MCP tools should be blocked during coordination
         self._planning_mode_enabled: bool = False
 
+        # Selective tool blocking - list of specific MCP tools to block during planning mode
+        # When planning_mode is enabled, only these specific tools are blocked
+        # If empty, ALL MCP tools are blocked (backward compatible behavior)
+        self._planning_mode_blocked_tools: set = set()
+
         self.token_calculator = TokenCostCalculator()
 
         # Filesystem manager integration
@@ -464,6 +469,53 @@ class LLMBackend(ABC):
             True if planning mode is enabled (MCP tools should be blocked)
         """
         return self._planning_mode_enabled
+
+    def set_planning_mode_blocked_tools(self, tool_names: set) -> None:
+        """
+        Set specific MCP tools to block during planning mode.
+
+        This enables selective tool blocking - only the specified tools will be blocked
+        when planning mode is enabled, allowing other MCP tools to be used.
+
+        Args:
+            tool_names: Set of MCP tool names to block (e.g., {'mcp__discord__discord_send'})
+                       If empty set, ALL MCP tools are blocked (backward compatible)
+        """
+        self._planning_mode_blocked_tools = set(tool_names)
+
+    def get_planning_mode_blocked_tools(self) -> set:
+        """
+        Get the set of MCP tools currently blocked in planning mode.
+
+        Returns:
+            Set of blocked MCP tool names. Empty set means ALL MCP tools are blocked.
+        """
+        return self._planning_mode_blocked_tools.copy()
+
+    def is_mcp_tool_blocked(self, tool_name: str) -> bool:
+        """
+        Check if a specific MCP tool is blocked in planning mode.
+
+        Args:
+            tool_name: Name of the MCP tool to check (e.g., 'mcp__discord__discord_send')
+
+        Returns:
+            True if the tool should be blocked, False otherwise
+
+        Note:
+            - If planning mode is disabled, returns False (no blocking)
+            - If planning mode is enabled and blocked_tools is empty, returns True (block ALL)
+            - If planning mode is enabled and blocked_tools is set, returns True only if tool is in the set
+        """
+        if not self._planning_mode_enabled:
+            return False
+
+        # Empty set means block ALL MCP tools (backward compatible behavior)
+        if not self._planning_mode_blocked_tools:
+            return True
+
+        # Otherwise, block only if tool is in the blocked set
+        return tool_name in self._planning_mode_blocked_tools
 
     async def _cleanup_client(self, client: Any) -> None:
         """Clean up OpenAI client resources."""

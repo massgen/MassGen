@@ -879,6 +879,20 @@ async def run_question_with_history(
     else:
         mode_text = "Multi-Agent"
 
+        # Get coordination config from YAML (if present)
+        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        if coordination_settings:
+            from .agent_config import CoordinationConfig
+
+            orchestrator_config.coordination_config = CoordinationConfig(
+                enable_planning_mode=coordination_settings.get("enable_planning_mode", False),
+                planning_mode_instruction=coordination_settings.get(
+                    "planning_mode_instruction",
+                    """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
+                    DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
+                ),
+            )
+
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
     print(f"Agents: {', '.join(agents.keys())}", flush=True)
     if history:
@@ -950,6 +964,20 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         orchestrator_config = AgentConfig()
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
+
+        # Get coordination config from YAML (if present)
+        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        if coordination_settings:
+            from .agent_config import CoordinationConfig
+
+            orchestrator_config.coordination_config = CoordinationConfig(
+                enable_planning_mode=coordination_settings.get("enable_planning_mode", False),
+                planning_mode_instruction=coordination_settings.get(
+                    "planning_mode_instruction",
+                    """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
+                    DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
+                ),
+            )
 
         # Get orchestrator parameters from config
         orchestrator_cfg = kwargs.get("orchestrator", {})

@@ -349,9 +349,9 @@ Merged Exclusions
 MCP Planning Mode
 -----------------
 
-**NEW in v0.0.29**
+**NEW in v0.1.2**: Intelligent LLM-based tool filtering automatically detects and blocks irreversible operations during coordination.
 
-Planning mode prevents irreversible actions during multi-agent coordination.
+Planning mode prevents irreversible actions during multi-agent coordination by intelligently analyzing your question and blocking tools with side effects.
 
 How It Works
 ~~~~~~~~~~~~
@@ -362,16 +362,37 @@ How It Works
 2. Risk of duplicate or premature actions
 3. Example: Multiple agents posting to Discord
 
-**With planning mode:**
+**With planning mode (v0.1.2):**
 
-1. During coordination: Agents **plan** tool usage without execution
-2. Agents discuss and vote on best approach
-3. Final agent: **Executes** the planned tools
+1. **LLM Analysis**: Question is analyzed to detect irreversible operations
+2. **Automatic Blocking**: Tools with side effects are automatically blocked during coordination
+3. **Coordination**: Agents plan and discuss with read-only tools available
+4. **Execution**: Winning agent executes the plan with full tool access
+
+**Example Analysis Output:**
+
+.. code-block:: text
+
+   ╭─ Coordination Mode ────────────────────────────────────────╮
+   │ 🧠 Planning Mode: ENABLED                                  │
+   │                                                            │
+   │ Agents will plan and coordinate without executing         │
+   │ irreversible actions. The winning agent will implement    │
+   │ the plan during final presentation.                       │
+   │                                                            │
+   │ 🚫 Blocked Tools:                                          │
+   │   1. mcp__discord__discord_send_message                    │
+   │                                                            │
+   │ 📊 Analysis:                                               │
+   │   Post a summary of recent AI discussions to Discord      │
+   ╰────────────────────────────────────────────────────────────╯
+
+The LLM identifies which tools have irreversible side effects (like sending messages) and blocks them during coordination, while keeping read-only tools (like reading messages) available.
 
 Configuration
 ~~~~~~~~~~~~~
 
-Enable planning mode in orchestrator config:
+Enable planning mode in orchestrator config - the LLM analysis happens automatically:
 
 .. code-block:: yaml
 
@@ -384,8 +405,17 @@ Enable planning mode in orchestrator config:
          1. Describe your intended actions and reasoning
          2. Analyze other agents' proposals
          3. Use only 'vote' or 'new_answer' tools for coordination
-         4. DO NOT execute any actual MCP commands
+         4. Read-only tools are available, but write operations are blocked
          5. Save execution for final presentation phase
+
+When ``enable_planning_mode: true`` is set:
+
+1. **Automatic Analysis**: An LLM analyzes your question before coordination starts
+2. **Smart Blocking**: Only tools with irreversible side effects are blocked
+3. **Read-Only Access**: Agents can still use read tools (e.g., ``discord_get_messages``)
+4. **Visual Feedback**: A UI box shows what's blocked and why
+
+No manual tool filtering needed - the system intelligently determines what to block based on your specific question.
 
 Example Configuration
 ~~~~~~~~~~~~~~~~~~~~~
@@ -393,19 +423,41 @@ Example Configuration
 .. code-block:: yaml
 
    agents:
-     - id: "gemini_agent"
+     - id: "gemini_discord_agent"
        backend:
          type: "gemini"
          model: "gemini-2.5-flash"
-         # MCP servers can be added here (e.g., weather, search)
-         # File operations are handled via cwd parameter
+         mcp_servers:
+           - name: "discord"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "mcp-discord"]
+             env:
+               DISCORD_TOKEN: "${DISCORD_TOKEN}"
+             security:
+               level: "high"
+
+     - id: "openai_discord_agent"
+       backend:
+         type: "openai"
+         model: "gpt-4o-mini"
+         mcp_servers:
+           - name: "discord"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "mcp-discord"]
+             env:
+               DISCORD_TOKEN: "${DISCORD_TOKEN}"
 
    orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
      coordination:
        enable_planning_mode: true
        planning_mode_instruction: |
-         Focus on planning and coordination rather than execution.
-         Describe what you would do, don't actually do it yet.
+         PLANNING MODE ACTIVE: Coordination phase - plan only.
+         Read-only operations are allowed (reading messages, files).
+         DO NOT execute write operations - those are blocked.
 
 Usage
 ~~~~~
@@ -517,9 +569,21 @@ Ensure the MCP server package is installed:
 
 **Planning mode not working:**
 
-* Ensure backend supports planning mode
 * Check ``enable_planning_mode: true`` in orchestrator config
-* Verify ``planning_mode_instruction`` is set
+* Look for the UI box showing analysis results at the start of coordination
+* If the box says "Planning Mode: DISABLED", the LLM didn't detect irreversible operations
+* Review logs to see what tools the LLM identified as blocked
+
+**Planning mode blocking too many/few tools:**
+
+* The LLM automatically analyzes your question to determine what to block
+* If too restrictive: Rephrase your question to emphasize read-only operations
+* If not restrictive enough: Make your question more explicit about write operations
+* The analysis UI box shows exactly what was blocked and why
+
+**Want to see the analysis:**
+
+The UI box appears automatically before coordination starts when planning mode is enabled.
 
 Next Steps
 ----------
