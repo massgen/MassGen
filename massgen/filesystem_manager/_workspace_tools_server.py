@@ -21,18 +21,14 @@ Tools provided:
 """
 
 import argparse
-import base64
 import difflib
 import filecmp
 import fnmatch
-import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import fastmcp
-from dotenv import load_dotenv
-from openai import OpenAI
 
 
 def get_copy_file_pairs(

@@ -6,7 +6,6 @@ Understand and analyze videos by extracting key frames and using OpenAI's gpt-4.
 import base64
 import json
 import os
-import tempfile
 from pathlib import Path
 from typing import List, Optional
 
@@ -59,8 +58,7 @@ def _extract_key_frames(video_path: Path, num_frames: int = 8) -> List[str]:
         import cv2
     except ImportError:
         raise ImportError(
-            "opencv-python is required for video frame extraction. "
-            "Please install it with: pip install opencv-python"
+            "opencv-python is required for video frame extraction. " "Please install it with: pip install opencv-python",
         )
 
     # Open the video file
@@ -263,7 +261,7 @@ async def understand_video(
                 {
                     "type": "input_image",
                     "image_url": f"data:image/jpeg;base64,{frame_base64}",
-                }
+                },
             )
 
         try:
@@ -274,7 +272,7 @@ async def understand_video(
                     {
                         "role": "user",
                         "content": content,
-                    }
+                    },
                 ],
             )
 

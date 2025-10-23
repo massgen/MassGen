@@ -339,15 +339,43 @@ async def understand_file(
 
         # Check if file is unsupported binary format
         unsupported_binary_extensions = {
-            ".exe", ".bin", ".dll", ".so", ".dylib", ".o", ".a",
+            ".exe",
+            ".bin",
+            ".dll",
+            ".so",
+            ".dylib",
+            ".o",
+            ".a",
             ".doc",  # Old Word format (use .docx instead)
             ".xls",  # Old Excel format (use .xlsx instead, though we try to support it)
             ".ppt",  # Old PowerPoint format (use .pptx instead)
-            ".zip", ".tar", ".gz", ".bz2", ".7z", ".rar",
-            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico", ".svg",
-            ".mp3", ".wav", ".ogg", ".flac", ".aac",
-            ".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv",
-            ".pyc", ".class", ".jar"
+            ".zip",
+            ".tar",
+            ".gz",
+            ".bz2",
+            ".7z",
+            ".rar",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".bmp",
+            ".ico",
+            ".svg",
+            ".mp3",
+            ".wav",
+            ".ogg",
+            ".flac",
+            ".aac",
+            ".mp4",
+            ".avi",
+            ".mov",
+            ".mkv",
+            ".flv",
+            ".wmv",
+            ".pyc",
+            ".class",
+            ".jar",
         }
 
         file_extension = f_path.suffix.lower()
@@ -356,8 +384,7 @@ async def understand_file(
             result = {
                 "success": False,
                 "operation": "understand_file",
-                "error": f"Unsupported file format: {f_path.suffix}. "
-                         f"For images use understand_image, for videos use understand_video, for audio use generate_text_with_input_audio.",
+                "error": f"Unsupported file format: {f_path.suffix}. " f"For images use understand_image, for videos use understand_video, for audio use generate_text_with_input_audio.",
             }
             return ExecutionResult(
                 output_blocks=[TextContent(data=json.dumps(result, indent=2))],
@@ -478,7 +505,7 @@ async def understand_file(
                         "content": [
                             {"type": "input_text", "text": full_prompt},
                         ],
-                    }
+                    },
                 ],
             )
 
