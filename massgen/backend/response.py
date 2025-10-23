@@ -338,6 +338,11 @@ class ResponseBackend(CustomToolAndMCPBackend):
                 execution_callback=self._execute_mcp_function_with_retry,
             )
 
+            chunk_type_map = {
+                "custom_tool_status": ChunkType.CUSTOM_TOOL_STATUS,
+                "mcp_status": ChunkType.MCP_STATUS,
+            }
+
             # Execute custom tools using unified method
             for call in custom_calls:
                 async for chunk in self._execute_tool_with_logging(
@@ -346,16 +351,11 @@ class ResponseBackend(CustomToolAndMCPBackend):
                     updated_messages,
                     processed_call_ids,
                 ):
-                    # Convert StreamChunk to TextStreamChunk with enum mapping
-                    chunk_type_map = {
-                        "custom_tool_status": ChunkType.CUSTOM_TOOL_STATUS,
-                        "mcp_status": ChunkType.MCP_STATUS,
-                    }
                     yield TextStreamChunk(
                         type=chunk_type_map.get(chunk.type, chunk.type),
-                        status=chunk.status if hasattr(chunk, "status") else None,
-                        content=chunk.content if hasattr(chunk, "content") else None,
-                        source=chunk.source if hasattr(chunk, "source") else None,
+                        status=getattr(chunk, "status", None),
+                        content=getattr(chunk, "content", None),
+                        source=getattr(chunk, "source", None),
                     )
                 functions_executed = True
 
@@ -368,11 +368,8 @@ class ResponseBackend(CustomToolAndMCPBackend):
                     content="⚠️ [MCP] All servers blocked by circuit breaker",
                     source="circuit_breaker",
                 )
-                yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
-                return
-
-            # Execute MCP function calls
-            mcp_functions_executed = False
+                # Skip MCP tool execution but continue with custom tool results
+                mcp_calls = []
 
             # Check if planning mode is enabled - selectively block MCP tool execution during planning
             if self.is_planning_mode_enabled():
@@ -388,107 +385,24 @@ class ResponseBackend(CustomToolAndMCPBackend):
                         source="planning_mode",
                     )
                     # Skip all MCP tool execution but still continue with workflow
-                    yield StreamChunk(type="done")
-                    return
+                    mcp_calls = []
                 else:
                     # Selective blocking - log but continue to check each tool individually
                     logger.info(f"[Response] Planning mode enabled - selective blocking of {len(blocked_tools)} tools")
 
-            # Ensure every captured function call gets a result to prevent hanging
-            for call in captured_function_calls:
-                function_name = call["name"]
-                if function_name in self._mcp_functions:
-                    # Yield MCP tool call status
-                    yield TextStreamChunk(
-                        type=ChunkType.MCP_STATUS,
-                        status="mcp_tool_called",
-                        content=f"🔧 [MCP Tool] Calling {function_name}...",
-                        source=f"mcp_{function_name}",
-                    )
-
-                    try:
-                        # Execute MCP function with retry and exponential backoff
-                        result, result_obj = await super()._execute_mcp_function_with_retry(
-                            function_name,
-                            call["arguments"],
-                        )
-
-                        # Check if function failed after all retries
-                        if isinstance(result, str) and result.startswith("Error:"):
-                            # Log failure but still create tool response
-                            logger.warning(f"MCP function {function_name} failed after retries: {result}")
-
-                            # Add error result to messages
-                            function_call_msg = {
-                                "type": "function_call",
-                                "call_id": call["call_id"],
-                                "name": function_name,
-                                "arguments": call["arguments"],
-                            }
-                            updated_messages.append(function_call_msg)
-
-                            error_output_msg = {
-                                "type": "function_call_output",
-                                "call_id": call["call_id"],
-                                "output": result,
-                            }
-                            updated_messages.append(error_output_msg)
-
-                            processed_call_ids.add(call["call_id"])
-                            mcp_functions_executed = True
-                            continue
-
-                    except Exception as e:
-                        # Only catch unexpected non-MCP system errors
-                        logger.error(f"Unexpected error in MCP function execution: {e}")
-                        error_msg = f"Error executing {function_name}: {str(e)}"
-
-                        # Add error result to messages
-                        function_call_msg = {
-                            "type": "function_call",
-                            "call_id": call["call_id"],
-                            "name": function_name,
-                            "arguments": call["arguments"],
-                        }
-                        updated_messages.append(function_call_msg)
-
-                        error_output_msg = {
-                            "type": "function_call_output",
-                            "call_id": call["call_id"],
-                            "output": error_msg,
-                        }
-                        updated_messages.append(error_output_msg)
-
-                        processed_call_ids.add(call["call_id"])
-                        mcp_functions_executed = True
-                        continue
-
-                    # Add function call to messages and yield status chunk
-                    function_call_msg = {
-                        "type": "function_call",
-                        "call_id": call["call_id"],
-                        "name": function_name,
-                        "arguments": call["arguments"],
-                    }
-                    updated_messages.append(function_call_msg)
-                    yield TextStreamChunk(
-                        type=ChunkType.MCP_STATUS,
-                        status="function_call",
-                        content=f"Arguments for Calling {function_name}: {call['arguments']}",
-                        source=f"mcp_{function_name}",
-                    )
-
-                    # Add function output to messages and yield status chunk
-                    function_output_msg = {
-                        "type": "function_call_output",
-                        "call_id": call["call_id"],
-                        "output": str(result),
-                    }
+            # Execute MCP tools using unified method
+            for call in mcp_calls:
+                async for chunk in self._execute_tool_with_logging(
+                    call,
+                    MCP_TOOL_CONFIG,
+                    updated_messages,
+                    processed_call_ids,
+                ):
                     yield TextStreamChunk(
                         type=chunk_type_map.get(chunk.type, chunk.type),
-                        status=chunk.status if hasattr(chunk, "status") else None,
-                        content=chunk.content if hasattr(chunk, "content") else None,
-                        source=chunk.source if hasattr(chunk, "source") else None,
+                        status=getattr(chunk, "status", None),
+                        content=getattr(chunk, "content", None),
+                        source=getattr(chunk, "source", None),
                     )
                 functions_executed = True
 

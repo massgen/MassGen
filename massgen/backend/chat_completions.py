@@ -255,8 +255,8 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                     content="⚠️ [MCP] All servers blocked by circuit breaker",
                     source="circuit_breaker",
                 )
-                yield StreamChunk(type="done")
-                return
+                # Skip MCP tool execution but continue with custom tools
+                mcp_calls = []
 
             # Initialize for execution
             functions_executed = False
@@ -277,8 +277,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         source="planning_mode",
                     )
                     # Skip all MCP tool execution but still continue with workflow
-                    yield StreamChunk(type="done")
-                    return
+                    mcp_calls = []
                 else:
                     # Selective blocking - log but continue to check each tool individually
                     logger.info(f"[ChatCompletions] Planning mode enabled - selective blocking of {len(blocked_tools)} tools")
