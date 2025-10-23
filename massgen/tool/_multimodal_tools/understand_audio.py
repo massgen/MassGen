@@ -11,7 +11,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from .._result import ExecutionResult, TextContent
+from massgen.tool._result import ExecutionResult, TextContent
 
 
 def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None) -> None:

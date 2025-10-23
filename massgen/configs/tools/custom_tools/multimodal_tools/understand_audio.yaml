@@ -1,11 +1,12 @@
 # MassGen Configuration: Understand Audio Tool
 # Usage:
-#   massgen --config @massgen/configs/tools/custom_tools/multimodal_tools/understand_audio "Transcribe the audio file recording.wav"
+#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/understand_audio.yaml "Please summarize the content in this audio."
 agents:
   - id: "understand_audio_tool"
     backend:
       type: "openai"
       model: "gpt-5-nano"
+      cwd: "workspace1"
       custom_tools:
         - name: ["understand_audio"]
           category: "multimodal"
@@ -19,6 +20,14 @@ agents:
 
       When users ask about transcribing or understanding audio files, use the understand_audio tool to
       process the audio and provide the transcription.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "massgen/configs/resources/v0.1.3-example/Sherlock_Holmes.mp3"
+      permission: "read"
+
 ui:
   display_type: "simple"
   logging_enabled: true
