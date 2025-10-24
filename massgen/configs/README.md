@@ -227,12 +227,58 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.2 - Latest
+### v0.1.3 - Latest
+**New Features:** Post-Evaluation Workflow, Custom Multimodal Understanding Tools, Docker Sudo Mode
+
+**Configuration Files:**
+- `configs/tools/custom_tools/multimodal_tools/understand_image.yaml` - Image analysis configuration
+- `configs/tools/custom_tools/multimodal_tools/understand_audio.yaml` - Audio transcription configuration
+- `configs/tools/custom_tools/multimodal_tools/understand_video.yaml` - Video analysis configuration
+- `configs/tools/custom_tools/multimodal_tools/understand_file.yaml` - Document processing configuration
+
+**Documentation:**
+- `massgen/tool/docs/multimodal_tools.md` - Complete 779-line multimodal tools guide
+- `docs/source/user_guide/multimodal.rst` - Updated multimodal documentation with custom tools
+- `docs/source/user_guide/code_execution.rst` - Enhanced with 98 lines documenting sudo mode
+- `massgen/docker/README.md` - Updated Docker documentation with sudo mode instructions
+
+**Example Resources:**
+- `configs/resources/v0.1.3-example/multimodality.jpg` - Image example
+- `configs/resources/v0.1.3-example/Sherlock_Holmes.mp3` - Audio example
+- `configs/resources/v0.1.3-example/oppenheimer_trailer_1920.mp4` - Video example
+- `configs/resources/v0.1.3-example/TUMIX.pdf` - PDF document example
+
+**Key Features:**
+- **Post-Evaluation Tools**: Submit and restart capabilities for winning agents with confidence assessments
+- **Multimodal Understanding**: Analyze images, audio, video, and documents using GPT-4.1
+- **Docker Sudo Mode**: Execute privileged commands in containerized environments
+- **Config Builder**: Improved workflow with auto-detection and better provider handling
+
+**Try it:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# Try multimodal image understanding
+# (Requires OPENAI_API_KEY in .env)
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_image \
+  "Please summarize the content in this image."
+
+# Try multimodal audio understanding
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_audio \
+  "Please summarize the content in this audio."
+
+# Try multimodal video understanding
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_video \
+  "What's happening in this video?"
+```
+
+### v0.1.2
 **New Features:** Intelligent Planning Mode, Claude 4.5 Haiku Support, Grok Web Search Improvements
 
 **Configuration Files:**
-- `massgen/configs/tools/planning/` - 5 planning mode configurations with selective blocking
-- `massgen/configs/basic/multi/three_agents_default.yaml` - Updated with Grok-4-fast model
+- `configs/tools/planning/` - 5 planning mode configurations with selective blocking
+- `configs/basic/multi/three_agents_default.yaml` - Updated with Grok-4-fast model
 
 **Documentation:**
 - `docs/case_studies/INTELLIGENT_PLANNING_MODE.md` - Complete intelligent planning mode guide
@@ -245,9 +291,6 @@ Most configurations use environment variables for API keys:so
 
 **Try it:**
 ```bash
-# Install or upgrade
-pip install --upgrade massgen
-
 # Try intelligent planning mode with MCP tools
 # (Please read the YAML file for required API keys: DISCORD_TOKEN, OPENAI_API_KEY, etc.)
 massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \

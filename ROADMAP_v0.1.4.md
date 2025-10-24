@@ -1,89 +1,91 @@
-# MassGen v0.1.3 Roadmap
+# MassGen v0.1.4 Roadmap
 
 ## Overview
 
-Version 0.1.3 focuses on general interoperability and enterprise collaboration capabilities. Key priorities include:
+Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Key priorities include:
 
-- **General Interoperability** (Required): 🔄 Enable MassGen to orchestrate agents from multiple frameworks with unified interface
-- **Final Agent Submit/Restart Tools** (Required): 🔁 Enable final agent to intelligently decide whether to submit or restart orchestration
+- **Running MCP Tools in Docker** (Required): 🐳 Containerized execution environment for MCP tools with enhanced security and isolation
+- **Enhanced File Operations** (Required): 📁 Advanced workspace management for coding agents
 
 ## Key Technical Priorities
 
-1. **General Interoperability**: Framework integration with external agent frameworks (nested/group chat patterns) and custom agent adapters
-2. **Final Agent Submit/Restart**: Multi-step task verification with intelligent restart capabilities
+1. **Running MCP Tools in Docker**: Containerized execution environment for MCP tools, enhanced security and isolation
+   **Use Case**: Secure execution of third-party tools in isolated environments
+2. **Enhanced File Operations**: Advanced file handling and workspace management for coding agents
+   **Use Case**: Complex coding tasks requiring sophisticated file manipulation
 
 ## Key Milestones
 
-### 🎯 Milestone 1: General Interoperability (REQUIRED)
+### 🎯 Milestone 1: Running MCP Tools in Docker (REQUIRED)
 
-**Goal**: Enable MassGen to orchestrate agents from multiple external frameworks and custom implementations
+**Goal**: Containerized execution environment for MCP tools with enhanced security and isolation
 
 **Owner**: @qidanrui (danrui2020)
 
-**Issue**: [#341](https://github.com/Leezekun/MassGen/issues/341)
+**Issue**: [#346](https://github.com/Leezekun/MassGen/issues/346)
 
-#### 1.1 Unified Agent Interface
-- [ ] Design framework-agnostic agent adapter interface
-- [ ] Implement base adapter class for external frameworks
-- [ ] Support message translation between frameworks
-- [ ] Handle framework-specific capabilities and tools
+#### 1.1 Docker Integration Architecture
+- [ ] Design containerized execution environment for MCP tools
+- [ ] Implement Docker manager for MCP tool execution
+- [ ] Support for isolated MCP server instances
+- [ ] Handle container lifecycle management
 
-#### 1.2 Framework Integration
-- [ ] Design and implement framework integration architecture
-- [ ] Support external agent systems with unified interface
-- [ ] Enable seamless orchestration across frameworks
-- [ ] Handle framework-specific communication patterns
+#### 1.2 Security and Isolation
+- [ ] Enhanced security layers for Docker execution
+- [ ] Network isolation for MCP servers
+- [ ] Resource limits (CPU, memory) for containers
+- [ ] Secure volume mounts for workspace access
 
 #### 1.3 Testing and Examples
-- [ ] Create tests for framework integration
-- [ ] Add example configurations for multi-framework teams
-- [ ] Document best practices for framework integration
-- [ ] Test with specialized agent roles from different frameworks
+- [ ] Create tests for Docker-based MCP execution
+- [ ] Add example configurations for Docker MCP servers
+- [ ] Document Docker setup and security best practices
+- [ ] Test with various MCP tools in isolated environments
 
 **Success Criteria**:
-- ✅ Framework integration functional with unified interface
-- ✅ Seamless orchestration across external agent systems
+- ✅ MCP tools run securely in Docker containers
+- ✅ Enhanced isolation for third-party tools
 - ✅ Comprehensive documentation with examples
 
 ---
 
-### 🎯 Milestone 2: Final Agent Submit/Restart Tools (REQUIRED)
+### 🎯 Milestone 2: Enhanced File Operations (REQUIRED)
 
-**Goal**: Enable final agent to intelligently decide whether to submit answer or restart orchestration for multi-step verification
+**Goal**: Advanced workspace management for coding agents with improved file handling capabilities
 
 **Owner**: @ncrispino (nickcrispino)
 
-**Issue**: [#325](https://github.com/Leezekun/MassGen/issues/325)
+**Issue**: [#357](https://github.com/Leezekun/MassGen/issues/357)
 
-#### 2.1 Submit/Restart Architecture
-- [ ] Design final agent decision-making interface
-- [ ] Implement restart tool allowing orchestration reset
-- [ ] Add submit tool for final answer presentation
-- [ ] Handle state management between restarts
+#### 2.1 Advanced File Operations
+- [ ] Implement sophisticated file handling capabilities
+- [ ] Add workspace context management
+- [ ] Support for complex file manipulation patterns
+- [ ] Enable efficient directory operations
 
-#### 2.2 Context Access
-- [ ] Enable final agent access to previous agents' responses
-- [ ] Support workspace access from prior orchestration rounds
-- [ ] Implement context aggregation for informed decisions
-- [ ] Add history tracking for restart decisions
+#### 2.2 Coding Agent Integration
+- [ ] Integrate enhanced file operations with coding agents
+- [ ] Support for multi-file editing workflows
+- [ ] Enable context-aware file suggestions
+- [ ] Add file operation validation and safety checks
 
-#### 2.3 Verification Workflows
-- [ ] Support multi-step task verification patterns
-- [ ] Enable planning-mode scenarios with restart logic
-- [ ] Add completion criteria evaluation
-- [ ] Implement intelligent retry strategies
+#### 2.3 Performance Optimization
+- [ ] Optimize file read/write operations
+- [ ] Implement caching for frequently accessed files
+- [ ] Add support for large file handling
+- [ ] Enable parallel file operations where safe
 
 #### 2.4 Testing and Examples
-- [ ] Create tests for submit/restart workflows
-- [ ] Add configuration examples for verification tasks
-- [ ] Document use cases (repository cloning + issue resolution)
-- [ ] Test with various multi-step scenarios
+- [ ] Create comprehensive tests for file operations
+- [ ] Add examples for common coding workflows
+- [ ] Document file operation patterns and best practices
+- [ ] Test with real-world coding scenarios
 
 **Success Criteria**:
-- ✅ Final agent can decide to restart when task incomplete
-- ✅ Previous context accessible during restarts
-- ✅ Verification workflows functional
-- ✅ Documentation with practical examples
+- ✅ Enhanced file operations improve coding agent capabilities
+- ✅ Complex coding tasks handled efficiently
+- ✅ Comprehensive documentation and examples
+- ✅ Performance improvements measurable
 
 ---
 
@@ -91,30 +93,31 @@ Version 0.1.3 focuses on general interoperability and enterprise collaboration c
 
 ### Functional Requirements
 
-**General Interoperability:**
-- [ ] Framework integration architecture implemented
-- [ ] Unified agent interface functional
-- [ ] External agent systems integrated seamlessly
-- [ ] Tool integration across frameworks
+**Docker Integration for MCP Tools:**
+- [ ] MCP tools run securely in Docker containers
+- [ ] Enhanced security and isolation implemented
+- [ ] Container lifecycle management functional
+- [ ] Resource limits and network isolation working
 - [ ] Documentation and examples complete
 
-**Final Agent Submit/Restart:**
-- [ ] Submit/restart decision making functional
-- [ ] Previous context accessible to final agent
-- [ ] Multi-step verification workflows working
-- [ ] Use case documentation available
+**Enhanced File Operations:**
+- [ ] Advanced file handling capabilities implemented
+- [ ] Workspace management functional for coding agents
+- [ ] Complex file manipulation patterns supported
+- [ ] Performance optimizations in place
+- [ ] Comprehensive testing and documentation
 
 ### Performance Requirements
-- [ ] Framework integration overhead minimal
-- [ ] Multi-framework orchestration performs efficiently
-- [ ] Restart mechanism completes efficiently
+- [ ] Docker container startup overhead minimal
+- [ ] File operations perform efficiently
+- [ ] Memory usage optimized for large workspaces
 - [ ] Overall system remains responsive
 
 ### Quality Requirements
 - [ ] Test coverage for all new features
-- [ ] Integration tests for framework integration
-- [ ] End-to-end tests for multi-framework orchestration
-- [ ] End-to-end tests for submit/restart workflows
+- [ ] Integration tests for Docker MCP execution
+- [ ] End-to-end tests for file operations
+- [ ] Security testing for containerized execution
 - [ ] Comprehensive documentation for all features
 
 ---
@@ -122,28 +125,33 @@ Version 0.1.3 focuses on general interoperability and enterprise collaboration c
 ## Dependencies & Risks
 
 ### Dependencies
-- **External Frameworks**: For agent system integration (implementation details TBD)
-- **Existing Infrastructure**: Custom tools system, MCP integration, orchestrator
+- **Docker**: Container runtime for MCP tool execution
+- **Existing Infrastructure**: MCP integration, tool system, orchestrator
+- **File System APIs**: Platform-specific file operations
 
 ### Risks & Mitigations
-1. **Framework API Changes**: *Mitigation*: Version pinning, compatibility testing, fallback mechanisms
-2. **Cross-Framework Compatibility**: *Mitigation*: Unified adapter interface, thorough testing, clear boundaries
-3. **Restart Complexity**: *Mitigation*: Clear state management, thorough testing, rollback capabilities
-4. **Integration Challenges**: *Mitigation*: Incremental development, modular design, extensive testing
+1. **Docker Configuration Complexity**: *Mitigation*: Provide pre-configured templates, comprehensive documentation, automated setup scripts
+2. **Container Security**: *Mitigation*: Follow Docker security best practices, implement resource limits, regular security audits
+3. **File Operation Safety**: *Mitigation*: Validation checks, operation sandboxing, rollback capabilities
+4. **Cross-Platform Compatibility**: *Mitigation*: Extensive testing on Windows/Linux/macOS, platform-specific adaptations
 
 ---
 
-## Future Enhancements (Post-v0.1.3)
+## Future Enhancements (Post-v0.1.4)
 
-### v0.1.4 Plans
-- **DSPy Integration**: Automated prompt optimization for domain-specific tasks
+### v0.1.5 Plans
+- **General Interoperability**: Framework integration for external agent systems
 - **Memory Module - Phase 1**: Long-term memory for reasoning tasks and document understanding
+
+### v0.1.6 Plans
+- **DSPy Integration**: Automated prompt optimization for domain-specific tasks
+- **Advanced Voting Mechanism**: Sophisticated voting strategies for multi-agent decision-making
 
 ### Long-term Vision
 - **Visual Workflow Designer**: No-code multi-agent workflow creation
 - **Enterprise Features**: RBAC, audit logs, multi-user collaboration
 - **Complete Multimodal Pipeline**: End-to-end audio/video processing
-- **Additional Framework Integrations**: Various external frameworks, custom adapters
+- **Additional Framework Integrations**: LangChain, CrewAI, custom adapters
 
 ---
 
@@ -151,10 +159,10 @@ Version 0.1.3 focuses on general interoperability and enterprise collaboration c
 
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
-| Phase 1 | General Interoperability | External framework integration, unified adapter interface | @qidanrui | **REQUIRED** |
-| Phase 2 | Submit/Restart | Decision tools, context access, verification workflows | @ncrispino | **REQUIRED** |
+| Phase 1 | Docker Integration | Containerized MCP tool execution, security and isolation | @qidanrui | **REQUIRED** |
+| Phase 2 | Enhanced File Operations | Advanced file handling, workspace management | @ncrispino | **REQUIRED** |
 
-**Target Release**: October 24, 2025 (Friday @ 9am PT)
+**Target Release**: October 27, 2025 (Monday @ 9am PT)
 
 ---
 
@@ -163,19 +171,19 @@ Version 0.1.3 focuses on general interoperability and enterprise collaboration c
 ### For Contributors
 
 **Required Work:**
-1. Implement general interoperability with external agent frameworks
-2. Create unified adapter interface for framework integration
-3. Implement final agent submit/restart tools with context access
+1. Implement Docker integration for MCP tool execution
+2. Create security and isolation layers for containerized execution
+3. Implement enhanced file operations for coding agents
 4. Add comprehensive tests for all features
 5. Create documentation and examples
 
 ### For Users
 
-- v0.1.3 enables orchestration of agents from external frameworks
-- Unified interface for seamless integration with proven agent systems
-- Final agent can now verify and restart tasks when needed
-- Submit/restart tools enable intelligent multi-step verification
-- Framework adapters allow integration of specialized agent systems
+- v0.1.4 enables secure execution of MCP tools in Docker containers
+- Enhanced security and isolation for third-party tools
+- Advanced file operations improve coding agent capabilities
+- Complex coding tasks handled with sophisticated file manipulation
+- Docker setup guides and security best practices included
 
 ---
 
@@ -188,12 +196,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Documentation guidelines
 
 **Contact Track Owners:**
-- General Interoperability: @qidanrui on Discord (danrui2020)
-- Submit/Restart: @ncrispino on Discord (nickcrispino)
+- Docker Integration: @qidanrui on Discord (danrui2020)
+- Enhanced File Operations: @ncrispino on Discord (nickcrispino)
 
 ---
 
-*This roadmap reflects v0.1.3 priorities focusing on general interoperability and enterprise collaboration. All features are required for this release.*
+*This roadmap reflects v0.1.4 priorities focusing on Docker integration and enhanced coding capabilities. All features are required for this release.*
 
-**Last Updated:** October 23, 2025
+**Last Updated:** October 24, 2025
 **Maintained By:** MassGen Team
