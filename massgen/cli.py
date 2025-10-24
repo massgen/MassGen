@@ -275,6 +275,21 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
         raise ConfigurationError(f"Error reading config file: {e}")
 
 
+def _api_key_error_message(provider_name: str, env_var: str, config_path: Optional[str] = None) -> str:
+    """Generate standard API key error message."""
+    msg = (
+        f"{provider_name} API key not found. Set {env_var} environment variable.\n"
+        "You can add it to a .env file in:\n"
+        "  - Current directory: .env\n"
+        "  - User config: ~/.config/massgen/.env\n"
+        "  - Global: ~/.massgen/.env\n"
+        "\nOr run: massgen --setup"
+    )
+    if config_path:
+        msg += f"\n\n📄 Using config: {config_path}"
+    return msg
+
+
 def create_backend(backend_type: str, **kwargs) -> Any:
     """Create backend instance from type and parameters.
 
@@ -303,6 +318,9 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     """
     backend_type = backend_type.lower()
 
+    # Extract config path for error messages (and remove it from kwargs so it doesn't interfere)
+    config_path = kwargs.pop("_config_path", None)
+
     # Check if this is a framework/adapter type
     from massgen.adapters import adapter_registry
 
@@ -315,33 +333,25 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     if backend_type == "openai":
         api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "OpenAI API key not found. Set OPENAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
-            )
+            raise ConfigurationError(_api_key_error_message("OpenAI", "OPENAI_API_KEY", config_path))
         return ResponseBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "grok":
         api_key = kwargs.get("api_key") or os.getenv("XAI_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "Grok API key not found. Set XAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
-            )
+            raise ConfigurationError(_api_key_error_message("Grok", "XAI_API_KEY", config_path))
         return GrokBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "claude":
         api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "Claude API key not found. Set ANTHROPIC_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
-            )
+            raise ConfigurationError(_api_key_error_message("Claude", "ANTHROPIC_API_KEY", config_path))
         return ClaudeBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "gemini":
         api_key = kwargs.get("api_key") or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "Gemini API key not found. Set GOOGLE_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
-            )
+            raise ConfigurationError(_api_key_error_message("Gemini", "GOOGLE_API_KEY", config_path))
         return GeminiBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "chatcompletion":
@@ -469,7 +479,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         api_key = kwargs.get("api_key") or os.getenv("AZURE_OPENAI_API_KEY")
         endpoint = kwargs.get("base_url") or os.getenv("AZURE_OPENAI_ENDPOINT")
         if not api_key:
-            raise ConfigurationError("Azure OpenAI API key not found. Set AZURE_OPENAI_API_KEY or provide in config.")
+            raise ConfigurationError(_api_key_error_message("Azure OpenAI", "AZURE_OPENAI_API_KEY", config_path))
         if not endpoint:
             raise ConfigurationError("Azure OpenAI endpoint not found. Set AZURE_OPENAI_ENDPOINT or provide base_url in config.")
         return AzureOpenAIBackend(**kwargs)
@@ -478,7 +488,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None) -> Dict[str, ConfigurableAgent]:
+def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None, config_path: Optional[str] = None) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration."""
     agents = {}
 
@@ -519,6 +529,10 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
                         merged_paths.append(agent_path)
 
                 backend_config["context_paths"] = merged_paths
+
+        # Add config path for better error messages
+        if config_path:
+            backend_config["_config_path"] = config_path
 
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}
@@ -1925,7 +1939,7 @@ async def run_interactive_mode(
         config_modified = prompt_for_context_paths(original_config, orchestrator_cfg)
         if config_modified:
             # Recreate agents with updated context paths
-            agents = create_agents_from_config(original_config, orchestrator_cfg)
+            agents = create_agents_from_config(original_config, orchestrator_cfg, config_path=config_path)
             print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
             print()
 
@@ -1983,7 +1997,7 @@ async def run_interactive_mode(
                                 backend_config["context_paths"] = existing_context_paths + [new_turn_config]
 
                         # Recreate agents from modified config
-                        agents = create_agents_from_config(modified_config, orchestrator_cfg)
+                        agents = create_agents_from_config(modified_config, orchestrator_cfg, config_path=config_path)
                         logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
 
                 question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
@@ -2275,7 +2289,7 @@ async def main(args):
                     '  agent_temporary_workspace: "your_temp_dir"  # Directory for temporary agent workspaces',
                 )
 
-        agents = create_agents_from_config(config, orchestrator_cfg)
+        agents = create_agents_from_config(config, orchestrator_cfg, config_path=str(resolved_path) if resolved_path else None)
 
         if not agents:
             raise ConfigurationError("No agents configured")
