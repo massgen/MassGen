@@ -12,7 +12,7 @@ from autogen import ConversableAgent, GroupChat, GroupChatManager
 from massgen.tool._result import ExecutionResult, TextContent
 
 
-async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> ExecutionResult:
+async def ag2_lesson_planner(user_prompt: str, context: Optional[str] = None) -> ExecutionResult:
     """
     Create a comprehensive lesson plan using AG2's nested chat architecture.
 
@@ -22,20 +22,19 @@ async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> Execu
     3. Format the final lesson plan in a standardized format
 
     Args:
-        topic: The lesson topic to create a plan for (e.g., "photosynthesis", "fractions")
-        api_key: OpenAI API key (optional, will use OPENAI_API_KEY env var if not provided)
+        user_prompt: The user's request or lesson topic (e.g., "photosynthesis", "fractions")
+        context: Additional context or background information (optional)
 
     Returns:
         ExecutionResult containing the formatted lesson plan
     """
-    # Get API key from parameter or environment
-    if api_key is None:
-        api_key = os.getenv("OPENAI_API_KEY")
+    # Get API key from environment
+    api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
         return ExecutionResult(
             output_blocks=[
-                TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable or pass it as a parameter."),
+                TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable."),
             ],
         )
 
@@ -138,11 +137,14 @@ async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> Execu
         )
 
         # Create nested chats configuration
+        # Build context message if provided
+        context_info = f"\n\nAdditional Context: {context}" if context else ""
+
         nested_chats = [
             {
                 # The first internal chat determines the standards and objectives
                 "recipient": curriculum_agent,
-                "message": f"Please provide fourth grade standards and objectives for the topic: {topic}",
+                "message": f"Please provide fourth grade standards and objectives for: {user_prompt}{context_info}",
                 "max_turns": 2,
                 "summary_method": "last_msg",
             },
@@ -179,7 +181,7 @@ async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> Execu
         # Initiate the chat and get the result
         result = assistant_agent.initiate_chat(
             recipient=lead_teacher_agent,
-            message=f"Create a lesson plan for: {topic}",
+            message=f"Create a lesson plan for: {user_prompt}",
             max_turns=1,
         )
 
@@ -188,7 +190,7 @@ async def ag2_lesson_planner(topic: str, api_key: Optional[str] = None) -> Execu
 
         return ExecutionResult(
             output_blocks=[
-                TextContent(data=f"AG2 Lesson Planner Result for '{topic}':\n\n{lesson_plan}"),
+                TextContent(data=f"AG2 Lesson Planner Result for '{user_prompt}':\n\n{lesson_plan}"),
             ],
         )
 

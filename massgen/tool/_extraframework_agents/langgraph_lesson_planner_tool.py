@@ -19,14 +19,15 @@ class LessonPlannerState(TypedDict):
     """State for the lesson planner workflow."""
 
     messages: Annotated[Sequence[BaseMessage], operator.add]
-    topic: str
+    user_prompt: str
+    context: str
     standards: str
     lesson_plan: str
     reviewed_plan: str
     final_plan: str
 
 
-async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) -> ExecutionResult:
+async def langgraph_lesson_planner(user_prompt: str, context: Optional[str] = None) -> ExecutionResult:
     """
     Create a comprehensive lesson plan using LangGraph's state graph architecture.
 
@@ -37,20 +38,19 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
     4. Format the final lesson plan in a standardized format
 
     Args:
-        topic: The lesson topic to create a plan for (e.g., "photosynthesis", "fractions")
-        api_key: OpenAI API key (optional, will use OPENAI_API_KEY env var if not provided)
+        user_prompt: The user's request or lesson topic (e.g., "photosynthesis", "fractions")
+        context: Additional context or background information (optional)
 
     Returns:
         ExecutionResult containing the formatted lesson plan
     """
-    # Get API key from parameter or environment
-    if api_key is None:
-        api_key = os.getenv("OPENAI_API_KEY")
+    # Get API key from environment
+    api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
         return ExecutionResult(
             output_blocks=[
-                TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable or pass it as a parameter."),
+                TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable."),
             ],
         )
 
@@ -77,7 +77,9 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
             - By the end of this lesson, students will be able to [objective 2]""",
             )
 
-            human_msg = HumanMessage(content=f"Please provide fourth grade standards and objectives for the topic: {state['topic']}")
+            # Build context message if provided
+            context_info = f"\n\nAdditional Context: {state['context']}" if state.get('context') else ""
+            human_msg = HumanMessage(content=f"Please provide fourth grade standards and objectives for: {state['user_prompt']}{context_info}")
 
             messages = [system_msg, human_msg]
             response = await llm.ainvoke(messages)
@@ -85,7 +87,8 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
             return {
                 "messages": [response],
                 "standards": response.content,
-                "topic": state["topic"],
+                "user_prompt": state["user_prompt"],
+                "context": state["context"],
                 "lesson_plan": "",
                 "reviewed_plan": "",
                 "final_plan": "",
@@ -112,7 +115,8 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
             return {
                 "messages": state["messages"] + [response],
                 "lesson_plan": response.content,
-                "topic": state["topic"],
+                "user_prompt": state["user_prompt"],
+                "context": state["context"],
                 "standards": state["standards"],
                 "reviewed_plan": "",
                 "final_plan": "",
@@ -140,7 +144,8 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
             return {
                 "messages": state["messages"] + [response],
                 "reviewed_plan": response.content,
-                "topic": state["topic"],
+                "user_prompt": state["user_prompt"],
+                "context": state["context"],
                 "standards": state["standards"],
                 "lesson_plan": state["lesson_plan"],
                 "final_plan": "",
@@ -167,7 +172,8 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
             return {
                 "messages": state["messages"] + [response],
                 "final_plan": response.content,
-                "topic": state["topic"],
+                "user_prompt": state["user_prompt"],
+                "context": state["context"],
                 "standards": state["standards"],
                 "lesson_plan": state["lesson_plan"],
                 "reviewed_plan": state["reviewed_plan"],
@@ -195,7 +201,8 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
         # Execute the workflow
         initial_state = {
             "messages": [],
-            "topic": topic,
+            "user_prompt": user_prompt,
+            "context": context or "",
             "standards": "",
             "lesson_plan": "",
             "reviewed_plan": "",
@@ -203,7 +210,7 @@ async def langgraph_lesson_planner(topic: str, api_key: Optional[str] = None) ->
         }
 
         # Stream intermediate results
-        output_parts = [f"LangGraph Lesson Planner - Streaming Progress for '{topic}':\n"]
+        output_parts = [f"LangGraph Lesson Planner - Streaming Progress for '{user_prompt}':\n"]
         final_state = None
 
         async for chunk in app.astream(initial_state):
