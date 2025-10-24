@@ -1,4 +1,5 @@
 include README.md
+include README_PYPI.md
 include LICENSE
 include CONTRIBUTING.md
 include CHANGELOG.md
