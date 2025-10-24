@@ -19,7 +19,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | General Interoperability | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
-| Memory Module | [@kitrakrev](https://github.com/kitrakrev) | kitrak_23536 |
+| Memory Module | [@qidanrui](https://github.com/qidanrui) [@ncrispino](https://github.com/ncrispino) | danrui2020, nickcrispino |
 | Final Agent Submit/Restart | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Coding Agent Enhancements | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | DSPy Integration | [@praneeth999](https://github.com/praneeth999) | ram2561 |
@@ -32,16 +32,40 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.3** | 10/24/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
-| | | Final Agent Submit/Restart Tools | @ncrispino | Multi-step task verification and intelligent restart decisions |
-| **v0.1.4** | 10/27/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Memory Module (Phase 1) | @kitrakrev | Long-term memory for reasoning tasks and document understanding |
+| **v0.1.4** | 10/27/25 | Running MCP Tools in Docker | @ncrispino | Enhanced security and isolation for MCP tool execution |
+| | | Move Image/Audio/Video Generation Tools to Customized Tool System | @qidanrui | Streamlined media generation tool management |
+| **v0.1.5** | 10/29/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
+| | | Memory Module (Phase 1) | @qidanrui @ncrispino | Long-term memory for reasoning tasks and document understanding |
+| **v0.1.6** | 10/31/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
+| | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.3 - General Interoperability & Enterprise Collaboration
+## 📋 v0.1.4 - Docker Integration & Enhanced Coding
+
+### Features
+
+**1. Running MCP Tools in Docker** (@ncrispino)
+- Issue: [#346](https://github.com/Leezekun/MassGen/issues/346)
+- Containerized execution environment for MCP tools
+- Enhanced security and isolation for tool operations
+- **Use Case**: Secure execution of third-party tools in isolated environments
+
+**2. Move Image/Audio/Video Generation Tools to Customized Tool System** (@qidanrui)
+- Issue: [#357](https://github.com/Leezekun/MassGen/issues/357)
+- Refactor existing image, audio, and video generation capabilities
+- Integrate generation tools with customized tool system
+- **Use Case**: Streamlined tool management and better integration of media generation capabilities
+
+### Success Criteria
+- ✅ MCP tools run securely in Docker containers
+- ✅ Media generation tools successfully integrated into custom tool system
+
+---
+
+## 📋 v0.1.5 - Interoperability & Memory
 
 ### Features
 
@@ -51,19 +75,18 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Unified agent interface for seamless integration
 - **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source
 
-**2. Final Agent Submit/Restart Tools** (@ncrispino)
-- Issue: [#325](https://github.com/Leezekun/MassGen/issues/325)
-- Enable final agent to decide whether to submit answer or restart orchestration
-- Agent can access previous agents' responses and workspaces when restarting
-- **Use Case**: Multi-step tasks where completion requires verification (repository cloning + issue resolution, planning-mode scenarios)
+**2. Memory Module (Phase 1)** (@qidanrui, @ncrispino)
+- Long-term memory implementation using mem0
+- Persistent context across sessions
+- **Use Case**: Long-term reasoning tasks and document understanding requiring memory persistence
 
 ### Success Criteria
-- ✅ Final agent can intelligently decide to restart when task is incomplete
-- ✅ Documentation with use case examples
+- ✅ External agents can be integrated seamlessly
+- ✅ Memory module provides persistent context across sessions
 
 ---
 
-## 📋 v0.1.4 - Intelligent Optimization & Safety
+## 📋 v0.1.6 - Intelligent Optimization & Advanced Voting
 
 ### Features
 
@@ -73,15 +96,15 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Issue: [#316](https://github.com/Leezekun/MassGen/issues/316)
 - **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
 
-**2. Irreversible Actions Safety** (@franklinnwren)
-- LLM-generated detection of irreversible MCP tools
-- Optional human-in-the-loop approval
-- Per-user customizable tool lists
-- **Use Case**: Writing to real-world documents, database operations, production deployments where safety is critical
+**2. Add Computer Use Agent to Custom Tools** (@qidanrui)
+- Issue: [#358](https://github.com/Leezekun/MassGen/issues/358)
+- Computer use agent integration with custom tools system
+- Enable agents to interact with computer interfaces
+- **Use Case**: Automated UI testing, browser automation, and desktop application interaction
 
 ### Success Criteria
 - ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
-- ✅ Safety controls prevent accidental irreversible operations
+- ✅ Computer use agent successfully integrated with custom tools
 
 ---
 
@@ -104,10 +127,10 @@ These features are being actively developed on **separate parallel tracks** and 
 - Image, audio, video processing across backends
 - **Shipping:** Incremental improvements each release
 
-### Track: Memory Module (@kitrakrev, kitrak_23536)
+### Track: Memory Module (@qidanrui, @ncrispino, danrui2020, nickcrispino)
 - PR: TODO
 - Long-term memory implementation using mem0
-- **Target:** v0.1.1 (Phase 1), v0.1.2 (Phase 2)
+- **Target:** v0.1.5 (Phase 1), later releases (Phase 2)
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
@@ -189,5 +212,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 22, 2025
+**Last Updated:** October 24, 2025
 **Maintained By:** MassGen Team
