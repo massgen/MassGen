@@ -189,8 +189,10 @@ class LLMBackend(ABC):
             # Filesystem manager parameters (handled by base class)
             "cwd",
             "agent_temporary_workspace",
+            "agent_temporary_workspace_parent",
             "context_paths",
             "context_write_access_enabled",
+            "enforce_read_before_delete",
             "enable_image_generation",
             "enable_mcp_command_line",
             "command_line_allowed_commands",
@@ -200,6 +202,7 @@ class LLMBackend(ABC):
             "command_line_docker_memory_limit",
             "command_line_docker_cpu_limit",
             "command_line_docker_network_mode",
+            "command_line_docker_enable_sudo",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",
