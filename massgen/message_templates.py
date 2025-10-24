@@ -378,6 +378,93 @@ Present the best possible coordinated answer by combining the strengths from all
         else:
             return presentation_instructions
 
+    def post_evaluation_system_message(
+        self,
+        original_system_message: Optional[str] = None,
+    ) -> str:
+        """System message for post-evaluation phase after final presentation.
+
+        The winning agent evaluates its own answer with a fresh perspective and decides
+        whether to submit or restart with specific improvement instructions.
+
+        Args:
+            original_system_message: The agent's original system message to preserve
+        """
+        if "post_evaluation_system_message" in self._template_overrides:
+            return str(self._template_overrides["post_evaluation_system_message"])
+
+        evaluation_instructions = """## Post-Presentation Evaluation
+
+You have just presented a final answer to the user. Now you must evaluate whether your answer fully addresses the original task.
+
+**Your Task:**
+Review the final answer that was presented and determine if it completely and accurately addresses the original task requirements.
+
+**Available Tools:**
+You have access to the same filesystem and MCP tools that were available during presentation. Use these tools to:
+- Verify that claimed files actually exist in the workspace
+- Check file contents to confirm they match what was described
+- Validate any technical claims or implementations
+
+**Decision:**
+You must call ONE of these tools:
+
+1. **submit(confirmed=True)** - Use this when:
+   - The answer fully addresses ALL parts of the original task
+   - All claims in the answer are accurate and verified
+   - The work is complete and ready for the user
+
+2. **restart_orchestration(reason, instructions)** - Use this when:
+   - The answer is incomplete (missing required elements)
+   - The answer contains errors or inaccuracies
+   - Important aspects of the task were not addressed
+
+   Provide:
+   - **reason**: Clear explanation of what's wrong (e.g., "The task required descriptions of two Beatles, but only John Lennon was described")
+   - **instructions**: Detailed, actionable guidance for the next attempt (e.g.,
+     "Provide two descriptions (John Lennon AND Paul McCartney). Each should include:
+     birth year, role in band, notable songs, impact on music. Use 4-6 sentences per person.")
+
+**Important Notes:**
+- Be honest and thorough in your evaluation
+- You are evaluating your own work with a fresh perspective
+- If you find problems, restarting with clear instructions will lead to a better result
+- The restart process gives you another opportunity to get it right
+"""
+
+        # Combine with original system message if provided
+        if original_system_message:
+            return f"""{original_system_message}
+
+{evaluation_instructions}"""
+        else:
+            return evaluation_instructions
+
+    def format_restart_context(self, reason: str, instructions: str) -> str:
+        """Format restart context for subsequent orchestration attempts.
+
+        This context is added to agent messages (like multi-turn context) on restart attempts.
+
+        Args:
+            reason: Why the previous attempt was insufficient
+            instructions: Detailed guidance for improvement
+        """
+        if "format_restart_context" in self._template_overrides:
+            override = self._template_overrides["format_restart_context"]
+            if callable(override):
+                return override(reason, instructions)
+            return str(override).format(reason=reason, instructions=instructions)
+
+        return f"""<PREVIOUS ATTEMPT FEEDBACK>
+The previous orchestration attempt was restarted because:
+{reason}
+
+**Instructions for this attempt:**
+{instructions}
+
+Please address these specific issues in your coordination and final answer.
+<END OF PREVIOUS ATTEMPT FEEDBACK>"""
+
     # =============================================================================
     # COMPLETE MESSAGE BUILDERS
     # =============================================================================
@@ -509,10 +596,36 @@ Based on the coordination process above, present your final answer:"""
         messages.append({"role": "user", "content": self.enforcement_message()})
         return messages
 
-    def command_execution_system_message(self) -> str:
-        """Generate concise command execution instructions when command line execution is enabled."""
+    def command_execution_system_message(
+        self,
+        docker_mode: bool = False,
+        enable_sudo: bool = False,
+    ) -> str:
+        """Generate concise command execution instructions when command line execution is enabled.
+
+        Args:
+            docker_mode: Whether commands execute in Docker containers
+            enable_sudo: Whether sudo is available in Docker containers
+        """
         parts = ["## Command Execution"]
         parts.append("You can run command line commands using the `execute_command` tool.\n")
+
+        if docker_mode:
+            parts.append("**IMPORTANT: Docker Execution Environment**")
+            parts.append("- You are running in a Linux Docker container (Debian-based)")
+            parts.append("- Base image: Python 3.11-slim with Node.js 20.x")
+            parts.append("- Pre-installed: git, curl, build-essential, pytest, requests, numpy, pandas")
+            parts.append("- Use `apt-get` for system packages (NOT brew, dnf, yum, etc.)")
+
+            if enable_sudo:
+                parts.append("- **Sudo is available**: You can install packages with `sudo apt-get install <package>`")
+                parts.append("- Example: `sudo apt-get update && sudo apt-get install -y ffmpeg`")
+            else:
+                parts.append("- Sudo is NOT available - use pip/npm for user-level packages only")
+                parts.append("- For system packages, ask the user to rebuild the Docker image with needed packages")
+
+            parts.append("")
+
         parts.append("If a `.venv` directory exists in your workspace, it will be automatically used.")
 
         return "\n".join(parts)
@@ -527,6 +640,8 @@ Based on the coordination process above, present your final answer:"""
         enable_image_generation: bool = False,
         agent_answers: Optional[Dict[str, str]] = None,
         enable_command_execution: bool = False,
+        docker_mode: bool = False,
+        enable_sudo: bool = False,
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
 
@@ -539,6 +654,8 @@ Based on the coordination process above, present your final answer:"""
             enable_image_generation: Whether image generation is enabled
             agent_answers: Dict of agent answers (keys are agent IDs) to show workspace structure
             enable_command_execution: Whether command line execution is enabled
+            docker_mode: Whether commands execute in Docker containers
+            enable_sudo: Whether sudo is available in Docker containers
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -704,7 +821,10 @@ Based on the coordination process above, present your final answer:"""
 
         # Add command execution instructions if enabled
         if enable_command_execution:
-            command_exec_message = self.command_execution_system_message()
+            command_exec_message = self.command_execution_system_message(
+                docker_mode=docker_mode,
+                enable_sudo=enable_sudo,
+            )
             parts.append(f"\n{command_exec_message}")
 
         return "\n".join(parts)

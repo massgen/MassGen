@@ -4,6 +4,12 @@ This directory contains detailed case studies demonstrating MassGen's capabiliti
 
 ## Available Case Studies
 
+### v0.1.3 Features
+
+*   [Downloading and Analyzing Existing MassGen Case Study Videos](multimodal-case-study-video-analysis.md) - Agents analyze their own case study videos to identify improvements and automation opportunities
+
+### Earlier Case Studies
+
 *   [The IMO 2025 Winner](imo_2025_winner.md)
 *   [Collaborative Creative Writing](collaborative_creative_writing.md)
 *   [AI News Synthesis](diverse_ai_news.md)

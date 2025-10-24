@@ -7,16 +7,134 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
+Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
+
+**v0.1.2 (October 2025)** - Intelligent Planning Mode & Model Updates
+Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
+
 **v0.1.1 (October 2025)** - Custom Tools, Voting Controls & Documentation
 Custom Python function tools, voting sensitivity controls, interactive config builder, and comprehensive Sphinx documentation.
 
-**v0.1.0 (October 2025)** - PyPI Package & Documentation
-Official PyPI release with enhanced documentation and installation via `pip install massgen`.
-
-**v0.0.32 (October 2025)** - Docker Execution Mode
-Isolated command execution in Docker containers with resource limits and multi-agent support.
-
 ---
+
+## [0.1.3] - 2025-10-24
+
+### Added
+- **Post-Evaluation Workflow Tools**: Submit and restart capabilities for winning agents
+  - New `PostEvaluationToolkit` class in `massgen/tool/workflow_toolkits/post_evaluation.py`
+  - `submit` tool for confirming final answers
+  - `restart_orchestration` tool for restarting with improvements and feedback
+  - Post-evaluation phase where winning agent evaluates its own answer
+  - Support for all API formats (Claude, Response API, Chat Completions)
+  - Configuration parameter `enable_post_evaluation_tools` for opt-in/out
+
+- **Custom Multimodal Understanding Tools**: Active tools for analyzing workspace files using OpenAI's GPT-4.1 API
+  - New `understand_image` tool for analyzing images (PNG, JPEG, JPG) with detailed metadata extraction
+  - New `understand_audio` tool for transcribing and analyzing audio files (WAV, MP3, FLAC, OGG)
+  - New `understand_video` tool for extracting frames and analyzing video content (MP4, AVI, MOV, WEBM)
+  - New `understand_file` tool for processing documents (PDF, DOCX, XLSX, PPTX) with text and metadata extraction
+  - Works with any backend (uses OpenAI for analysis)
+  - Returns structured JSON with comprehensive metadata
+
+- **Docker Sudo Mode**: Enhanced Docker execution with privileged command support
+  - New `use_sudo` parameter for Docker execution
+  - Sudo mode for commands requiring elevated privileges
+  - Enhanced security instructions and documentation
+  - Test coverage in `test_code_execution.py`
+
+### Changed
+- **Interactive Config Builder Enhancement**: Improved workflow and provider handling
+  - Better flow from automatic setup to config builder
+  - Auto-detection of environment variables
+  - Improved provider-specific configuration handling
+  - Integrated multimodal tools selection in config wizard
+
+### Fixed
+- **System Message Warning**: Resolved deprecated system message configuration warning
+  - Fixed system message handling in `agent_config.py`
+  - Updated chat agent to properly handle system messages
+  - Removed deprecated warning messages
+
+- **Config Builder Issues**: Multiple configuration builder improvements
+  - Fixed config display errors
+  - Improved config saving across different provider types
+  - Better error handling for missing configurations
+
+### Documentations, Configurations and Resources
+
+- **Multimodal Tools Documentation**: Comprehensive documentation for new multimodal tools
+  - `docs/source/user_guide/multimodal.rst`: Updated with custom tools section
+  - `massgen/tool/docs/multimodal_tools.md`: Complete 779-line technical documentation
+
+- **Docker Sudo Mode Documentation**: Enhanced Docker execution documentation
+  - `docs/source/user_guide/code_execution.rst`: Added 98 lines documenting sudo mode
+  - `massgen/docker/README.md`: Updated with sudo mode instructions
+
+- **Configuration Examples**: New example configurations
+  - `configs/tools/multimodal_tools/understand_image.yaml`: Image analysis configuration
+  - `configs/tools/multimodal_tools/understand_audio.yaml`: Audio transcription configuration
+  - `configs/tools/multimodal_tools/understand_video.yaml`: Video analysis configuration
+  - `configs/tools/multimodal_tools/understand_file.yaml`: Document processing configuration
+
+- **Example Resources**: New test resources for v0.1.3 features
+  - `massgen/configs/resources/v0.1.3-example/multimodality.jpg`: Image example
+  - `massgen/configs/resources/v0.1.3-example/Sherlock_Holmes.mp3`: Audio example
+  - `massgen/configs/resources/v0.1.3-example/oppenheimer_trailer_1920.mp4`: Video example
+  - `massgen/configs/resources/v0.1.3-example/TUMIX.pdf`: PDF document example
+
+- **Case Studies**: New case study demonstrating v0.1.3 features
+  - `docs/case_studies/multimodal-case-study-video-analysis.md`: Meta-level demonstration of multimodal video understanding with agents analyzing their own case study videos
+
+### Technical Details
+- **Major Focus**: Post-evaluation workflow tools, custom multimodal understanding tools, Docker sudo mode
+- **Contributors**: @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.1.2] - 2025-10-22
+
+### Added
+- **Claude 4.5 Haiku Support**: Added latest Claude Haiku model
+  - New model: `claude-haiku-4-5-20251001`
+  - Updated model registry in `backend/capabilities.py`
+
+### Changed
+- **Planning Mode Enhancement**: Intelligent automatic MCP tool blocking based on operation safety
+  - New `_analyze_question_irreversibility()` method in orchestrator analyzes questions to determine if MCP operations are reversible
+  - New `set_planning_mode_blocked_tools()`, `get_planning_mode_blocked_tools()`, and `is_mcp_tool_blocked()` methods in backend for selective tool control
+  - Dynamically enables/disables planning mode - read-only operations allowed during coordination, write operations blocked
+  - Planning mode supports different workspaces without conflicts
+  - Zero configuration required - works transparently
+
+
+- **Claude Model Priority**: Reorganized model list in capabilities registry
+  - Changed default model from `claude-sonnet-4-20250514` to `claude-sonnet-4-5-20250929`
+  - Moved `claude-opus-4-1-20250805` higher in priority order
+  - Updated in both Claude and Claude Code backends
+
+### Fixed
+- **Grok Web Search**: Resolved web search functionality in Grok backend
+  - Fixed `extra_body` parameter handling for Grok's Live Search API
+  - New `_add_grok_search_params()` method for proper search parameter injection
+  - Enhanced `_stream_with_custom_and_mcp_tools()` to support Grok-specific parameters
+  - Improved error handling for conflicting search configurations
+  - Better integration with Chat Completions API params handler
+
+### Documentations, Configurations and Resources
+
+- **Intelligent Planning Mode Case Study**: Complete feature documentation
+  - `docs/case_studies/INTELLIGENT_PLANNING_MODE.md`: Comprehensive guide for automatic planning mode
+  - Demonstrates automatic irreversibility detection
+  - Shows read/write operation classification
+  - Includes examples for Discord, filesystem, and Twitter operations
+
+- **Configuration Updates**: Enhanced YAML examples
+  - Updated 5 planning mode configurations in `configs/tools/planning/` with selective blocking examples
+  - Updated `three_agents_default.yaml` with Grok-4-fast model
+  - Test coverage in `test_intelligent_planning_mode.py`
+
+### Technical Details
+- **Major Focus**: Intelligent planning mode with selective tool blocking, model support enhancements
+- **Contributors**: @franklinnwren @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.1] - 2025-10-20
 

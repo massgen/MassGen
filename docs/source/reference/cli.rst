@@ -18,11 +18,27 @@ When running ``massgen`` with no arguments, configs are auto-discovered with thi
 2. ``~/.config/massgen/config.yaml`` (global default config)
 3. Launch setup wizard if no config found
 
-**Actions:**
+**First-Time Setup:**
 
-* **First time** (no config exists) → Launches interactive setup wizard
-* **After setup** (config exists) → Starts multi-turn conversation mode
-* **With question** → Runs single query using discovered config
+The wizard consists of two steps:
+
+1. **API Key Setup** (if no cloud provider keys detected)
+
+   * Prompts for OpenAI, Anthropic, Google, or other cloud provider API keys
+   * Saves to ``~/.config/massgen/.env``
+   * Skipped if keys already exist
+
+2. **Configuration Setup**
+
+   * Option to browse ready-to-use configs/examples
+   * Option to build from templates (Simple Q&A, Research, Code & Files, etc.)
+   * Asks "Save as default?" when browsing existing configs
+   * Launches directly into interactive mode
+
+**After Setup:**
+
+* **No arguments** → Starts multi-turn conversation mode if default config chosen
+* **With question** → Runs single query using default config
 
 CLI Parameters
 --------------
