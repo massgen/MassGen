@@ -552,7 +552,8 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             else:
                 # For other backends, fall back to deprecated custom_system_instruction
                 # TODO: Add backend-specific routing for other backends
-                agent_config.custom_system_instruction = system_msg
+                # Set private attribute directly to avoid deprecation warning
+                agent_config._custom_system_instruction = system_msg
 
         # Timeout configuration will be applied to orchestrator instead of individual agents
 

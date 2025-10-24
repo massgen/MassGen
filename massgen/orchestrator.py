@@ -2540,8 +2540,9 @@ class Orchestrator(ChatAgent):
         """
         if self.config and hasattr(self.config, "get_configurable_system_message"):
             return self.config.get_configurable_system_message()
-        elif self.config and hasattr(self.config, "custom_system_instruction"):
-            return self.config.custom_system_instruction
+        elif self.config and hasattr(self.config, "_custom_system_instruction"):
+            # Access private attribute to avoid deprecation warning
+            return self.config._custom_system_instruction
         elif self.config and self.config.backend_params:
             # Check for backend-specific system prompts
             backend_params = self.config.backend_params
