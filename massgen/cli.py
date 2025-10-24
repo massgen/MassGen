@@ -2582,7 +2582,10 @@ Environment Variables:
             # Check if API keys already exist
             builder = ConfigBuilder(default_mode=True)
             existing_api_keys = builder.detect_api_keys()
-            has_api_keys = any(existing_api_keys.values())
+
+            # Only check for cloud provider API keys (exclude local models and Claude Code)
+            cloud_providers = ["openai", "anthropic", "gemini", "grok", "azure_openai"]
+            has_api_keys = any(existing_api_keys.get(provider, False) for provider in cloud_providers)
 
             # Step 1: API key setup (only if no keys found)
             if not has_api_keys:
