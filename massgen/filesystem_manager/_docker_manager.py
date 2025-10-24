@@ -45,6 +45,7 @@ class DockerManager:
         network_mode: str = "none",
         memory_limit: Optional[str] = None,
         cpu_limit: Optional[float] = None,
+        enable_sudo: bool = False,
     ):
         """
         Initialize Docker manager.
@@ -54,6 +55,7 @@ class DockerManager:
             network_mode: Network mode (none/bridge/host)
             memory_limit: Memory limit (e.g., "2g", "512m")
             cpu_limit: CPU limit (e.g., 2.0 for 2 CPUs)
+            enable_sudo: Enable sudo access in containers (WARNING: less secure, see docs)
 
         Raises:
             RuntimeError: If Docker is not available or cannot connect
@@ -61,7 +63,26 @@ class DockerManager:
         if not DOCKER_AVAILABLE:
             raise RuntimeError("Docker Python library not available. Install with: pip install docker")
 
-        self.image = image
+        # If sudo is enabled and user is using default image, switch to sudo variant
+        self.enable_sudo = enable_sudo
+        if enable_sudo and image == "massgen/mcp-runtime:latest":
+            self.image = "massgen/mcp-runtime-sudo:latest"
+            logger.warning(
+                "⚠️ [Docker] SECURITY WARNING: Sudo enabled - using 'massgen/mcp-runtime-sudo:latest' image.",
+            )
+            logger.warning(
+                "    This reduces security compared to the default image. " "Prefer building custom images with pre-installed packages.",
+            )
+            logger.warning(
+                "    See: https://docs.massgen.ai/docker-security for best practices.",
+            )
+        elif enable_sudo:
+            logger.warning(
+                "⚠️ [Docker] SECURITY WARNING: Sudo enabled with custom image. " "Ensure your image properly configures sudo access.",
+            )
+        else:
+            self.image = image
+
         self.network_mode = network_mode
         self.memory_limit = memory_limit
         self.cpu_limit = cpu_limit
@@ -103,6 +124,11 @@ class DockerManager:
                 self.client.images.pull(self.image)
                 logger.info(f"✅ [Docker] Successfully pulled image '{self.image}'")
             except DockerException as e:
+                # Special handling for sudo image - it's built locally, not pulled
+                if "mcp-runtime-sudo" in self.image:
+                    raise RuntimeError(
+                        f"Failed to pull Docker image '{self.image}': {e}\n" f"The sudo image must be built locally. Run:\n" f"    bash massgen/docker/build.sh --sudo",
+                    )
                 raise RuntimeError(f"Failed to pull Docker image '{self.image}': {e}")
 
     def create_container(

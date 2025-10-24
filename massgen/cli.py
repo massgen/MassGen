@@ -203,7 +203,8 @@ def resolve_config_path(config_arg: Optional[str]) -> Optional[Path]:
 
     # Try in user config directory (~/.config/massgen/agents/)
     user_agents_dir = Path.home() / ".config/massgen/agents"
-    user_config = user_agents_dir / f"{config_arg}.yaml"
+    # Try with config_arg as-is first
+    user_config = user_agents_dir / config_arg
     if user_config.exists():
         return user_config
 
@@ -212,13 +213,15 @@ def resolve_config_path(config_arg: Optional[str]) -> Optional[Path]:
         user_config_with_ext = user_agents_dir / f"{config_arg}.yaml"
         if user_config_with_ext.exists():
             return user_config_with_ext
+        # For error message, show the path with .yaml extension
+        user_config = user_config_with_ext
 
     # Config not found anywhere
     raise ConfigurationError(
         f"Configuration file not found: {config_arg}\n"
         f"Searched in:\n"
         f"  - Current directory: {Path.cwd() / config_arg}\n"
-        f"  - User configs: {user_agents_dir / config_arg}.yaml\n"
+        f"  - User configs: {user_config}\n"
         f"Use --list-examples to see available package configs.",
     )
 

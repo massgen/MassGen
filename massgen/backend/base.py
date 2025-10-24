@@ -107,6 +107,7 @@ class LLMBackend(ABC):
                     "command_line_docker_memory_limit": kwargs.get("command_line_docker_memory_limit"),
                     "command_line_docker_cpu_limit": kwargs.get("command_line_docker_cpu_limit"),
                     "command_line_docker_network_mode": network_mode,
+                    "command_line_docker_enable_sudo": kwargs.get("command_line_docker_enable_sudo", False),
                     "enable_audio_generation": kwargs.get("enable_audio_generation", False),
                 }
 

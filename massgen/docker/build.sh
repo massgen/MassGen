@@ -13,6 +13,7 @@ NC='\033[0m' # No Color
 IMAGE_NAME="massgen/mcp-runtime"
 TAG="latest"
 DOCKERFILE="massgen/docker/Dockerfile"
+BUILD_SUDO=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -25,18 +26,29 @@ while [[ $# -gt 0 ]]; do
             IMAGE_NAME="$2"
             shift 2
             ;;
+        --sudo)
+            BUILD_SUDO=true
+            shift
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  -t, --tag TAG       Image tag (default: latest)"
             echo "  -n, --name NAME     Image name (default: massgen/mcp-runtime)"
+            echo "  --sudo              Build sudo variant (enables runtime package installation)"
             echo "  -h, --help          Show this help message"
             echo ""
             echo "Examples:"
-            echo "  $0                                    # Build with default settings"
+            echo "  $0                                    # Build default image (no sudo)"
+            echo "  $0 --sudo                             # Build sudo variant"
             echo "  $0 -t v1.0.0                          # Build with specific tag"
             echo "  $0 -n custom-runtime -t dev           # Custom name and tag"
+            echo ""
+            echo "Security Note:"
+            echo "  The --sudo variant includes sudo access for runtime package installation."
+            echo "  This is less secure than the default image. Prefer building custom images"
+            echo "  with pre-installed packages instead."
             exit 0
             ;;
         *)
@@ -46,6 +58,17 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Adjust image name and Dockerfile for sudo variant
+if [ "$BUILD_SUDO" = true ]; then
+    if [ "$IMAGE_NAME" = "massgen/mcp-runtime" ]; then
+        IMAGE_NAME="massgen/mcp-runtime-sudo"
+    fi
+    DOCKERFILE="massgen/docker/Dockerfile.sudo"
+    echo -e "${BLUE}⚠️  Building SUDO VARIANT - includes sudo access for runtime package installation${NC}"
+    echo -e "${BLUE}    This is less secure than the default image. Use with caution.${NC}"
+    echo ""
+fi
 
 # Check if Docker is available
 if ! command -v docker &> /dev/null; then
@@ -80,8 +103,16 @@ docker images "${IMAGE_NAME}:${TAG}" --format "table {{.Repository}}\t{{.Tag}}\t
 echo ""
 echo -e "${BLUE}To use this image:${NC}"
 echo -e "1. Set command_line_execution_mode: \"docker\" in your config"
-echo -e "2. (Optional) Set command_line_docker_image: \"${IMAGE_NAME}:${TAG}\""
+if [ "$BUILD_SUDO" = true ]; then
+    echo -e "2. Set command_line_docker_enable_sudo: true in your config"
+    echo -e "3. (Optional) Set command_line_docker_image: \"${IMAGE_NAME}:${TAG}\""
+else
+    echo -e "2. (Optional) Set command_line_docker_image: \"${IMAGE_NAME}:${TAG}\""
+fi
 echo ""
 echo -e "${BLUE}Test the image:${NC}"
 echo -e "  docker run --rm ${IMAGE_NAME}:${TAG} python --version"
 echo -e "  docker run --rm ${IMAGE_NAME}:${TAG} node --version"
+if [ "$BUILD_SUDO" = true ]; then
+    echo -e "  docker run --rm ${IMAGE_NAME}:${TAG} sudo apt-get update"
+fi

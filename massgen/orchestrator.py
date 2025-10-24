@@ -1376,10 +1376,16 @@ class Orchestrator(ChatAgent):
 
                 # Extract command execution parameters
                 enable_command_execution = False
+                docker_mode = False
+                enable_sudo = False
                 if hasattr(agent, "config") and agent.config:
                     enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+                    docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
+                    enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
                 elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
                     enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+                    docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
+                    enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
 
                 filesystem_system_message = self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
@@ -1390,6 +1396,8 @@ class Orchestrator(ChatAgent):
                     enable_image_generation=enable_image_generation,
                     agent_answers=answers,
                     enable_command_execution=enable_command_execution,
+                    docker_mode=docker_mode,
+                    enable_sudo=enable_sudo,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -2174,10 +2182,16 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
 
         # Extract command execution parameters
         enable_command_execution = False
+        docker_mode = False
+        enable_sudo = False
         if hasattr(agent, "config") and agent.config:
             enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+            docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
+            enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+            docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
+            enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
         # Check if audio generation is enabled for this agent
         enable_audio_generation = False
         if hasattr(agent, "config") and agent.config:
@@ -2235,6 +2249,8 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
                     enable_image_generation=enable_image_generation,
                     agent_answers=all_answers,
                     enable_command_execution=enable_command_execution,
+                    docker_mode=docker_mode,
+                    enable_sudo=enable_sudo,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message
@@ -2497,6 +2513,8 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
                     enable_image_generation=False,
                     agent_answers=all_answers,
                     enable_command_execution=False,
+                    docker_mode=False,
+                    enable_sudo=False,
                 )
                 + "\n\n## Post-Evaluation Task\n"
                 + base_system_message

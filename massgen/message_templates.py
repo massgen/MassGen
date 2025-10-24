@@ -596,10 +596,36 @@ Based on the coordination process above, present your final answer:"""
         messages.append({"role": "user", "content": self.enforcement_message()})
         return messages
 
-    def command_execution_system_message(self) -> str:
-        """Generate concise command execution instructions when command line execution is enabled."""
+    def command_execution_system_message(
+        self,
+        docker_mode: bool = False,
+        enable_sudo: bool = False,
+    ) -> str:
+        """Generate concise command execution instructions when command line execution is enabled.
+
+        Args:
+            docker_mode: Whether commands execute in Docker containers
+            enable_sudo: Whether sudo is available in Docker containers
+        """
         parts = ["## Command Execution"]
         parts.append("You can run command line commands using the `execute_command` tool.\n")
+
+        if docker_mode:
+            parts.append("**IMPORTANT: Docker Execution Environment**")
+            parts.append("- You are running in a Linux Docker container (Debian-based)")
+            parts.append("- Base image: Python 3.11-slim with Node.js 20.x")
+            parts.append("- Pre-installed: git, curl, build-essential, pytest, requests, numpy, pandas")
+            parts.append("- Use `apt-get` for system packages (NOT brew, dnf, yum, etc.)")
+
+            if enable_sudo:
+                parts.append("- **Sudo is available**: You can install packages with `sudo apt-get install <package>`")
+                parts.append("- Example: `sudo apt-get update && sudo apt-get install -y ffmpeg`")
+            else:
+                parts.append("- Sudo is NOT available - use pip/npm for user-level packages only")
+                parts.append("- For system packages, ask the user to rebuild the Docker image with needed packages")
+
+            parts.append("")
+
         parts.append("If a `.venv` directory exists in your workspace, it will be automatically used.")
 
         return "\n".join(parts)
@@ -614,6 +640,8 @@ Based on the coordination process above, present your final answer:"""
         enable_image_generation: bool = False,
         agent_answers: Optional[Dict[str, str]] = None,
         enable_command_execution: bool = False,
+        docker_mode: bool = False,
+        enable_sudo: bool = False,
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
 
@@ -626,6 +654,8 @@ Based on the coordination process above, present your final answer:"""
             enable_image_generation: Whether image generation is enabled
             agent_answers: Dict of agent answers (keys are agent IDs) to show workspace structure
             enable_command_execution: Whether command line execution is enabled
+            docker_mode: Whether commands execute in Docker containers
+            enable_sudo: Whether sudo is available in Docker containers
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -791,7 +821,10 @@ Based on the coordination process above, present your final answer:"""
 
         # Add command execution instructions if enabled
         if enable_command_execution:
-            command_exec_message = self.command_execution_system_message()
+            command_exec_message = self.command_execution_system_message(
+                docker_mode=docker_mode,
+                enable_sudo=enable_sudo,
+            )
             parts.append(f"\n{command_exec_message}")
 
         return "\n".join(parts)

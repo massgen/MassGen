@@ -55,6 +55,7 @@ class FilesystemManager:
         command_line_docker_memory_limit: Optional[str] = None,
         command_line_docker_cpu_limit: Optional[float] = None,
         command_line_docker_network_mode: str = "none",
+        command_line_docker_enable_sudo: bool = False,
         enable_audio_generation: bool = False,
     ):
         """
@@ -75,6 +76,7 @@ class FilesystemManager:
             command_line_docker_memory_limit: Memory limit for Docker containers (e.g., "2g")
             command_line_docker_cpu_limit: CPU limit for Docker containers (e.g., 2.0 for 2 CPUs)
             command_line_docker_network_mode: Network mode for Docker containers (none/bridge/host)
+            command_line_docker_enable_sudo: Enable sudo access in Docker containers (WARNING: less secure, see docs)
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         self.enable_image_generation = enable_image_generation
@@ -86,6 +88,7 @@ class FilesystemManager:
         self.command_line_docker_memory_limit = command_line_docker_memory_limit
         self.command_line_docker_cpu_limit = command_line_docker_cpu_limit
         self.command_line_docker_network_mode = command_line_docker_network_mode
+        self.command_line_docker_enable_sudo = command_line_docker_enable_sudo
 
         # Initialize Docker manager if Docker mode enabled
         self.docker_manager = None
@@ -97,6 +100,7 @@ class FilesystemManager:
                 network_mode=command_line_docker_network_mode,
                 memory_limit=command_line_docker_memory_limit,
                 cpu_limit=command_line_docker_cpu_limit,
+                enable_sudo=command_line_docker_enable_sudo,
             )
         self.enable_audio_generation = enable_audio_generation
 
@@ -359,6 +363,10 @@ class FilesystemManager:
         # Add agent ID for Docker mode
         if self.command_line_execution_mode == "docker" and self.agent_id:
             config["args"].extend(["--agent-id", self.agent_id])
+
+        # Add sudo flag for Docker mode
+        if self.command_line_execution_mode == "docker" and self.command_line_docker_enable_sudo:
+            config["args"].append("--enable-sudo")
 
         # Add command filters if specified
         if self.command_line_allowed_commands:

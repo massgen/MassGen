@@ -67,6 +67,7 @@ class APIParamsHandlerBase(ABC):
             "command_line_docker_memory_limit",
             "command_line_docker_cpu_limit",
             "command_line_docker_network_mode",
+            "command_line_docker_enable_sudo",
             # Backend identification (handled by orchestrator)
             "enable_audio_generation",  # Audio generation parameter
             "type",
