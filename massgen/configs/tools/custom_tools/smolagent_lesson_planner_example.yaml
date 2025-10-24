@@ -1,0 +1,48 @@
+# MassGen Configuration: SmolAgent Lesson Planner Tool
+# This demonstrates interoperability by using HuggingFace's SmolAgent as a custom tool
+#
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/smolagent_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#
+# Description:
+#   This configuration uses SmolAgent (HuggingFace's lightweight agent framework) to create comprehensive
+#   lesson plans. The tool uses SmolAgent's CodeAgent with custom tools:
+#   - get_curriculum_standards: Determines standards and objectives
+#   - create_lesson_plan: Creates detailed lesson plans
+#   - review_lesson_plan: Reviews and provides feedback
+#   - format_lesson_plan: Formats the final output
+#
+# Requirements:
+#   - pip install smolagents
+#   - OPENAI_API_KEY environment variable must be set
+
+agents:
+  - id: "smolagent_lesson_planner" # OpenAI GPT-4o with SmolAgent custom tool
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      custom_tools:
+        - name: ["smolagent_lesson_planner"]
+          category: "education"
+          path: "massgen/tool/_extraframework_agents/smolagent_lesson_planner_tool.py"
+          function: ["smolagent_lesson_planner"]
+    system_message: |
+      You are an AI assistant with access to an advanced lesson planning tool powered by SmolAgent.
+
+      The smolagent_lesson_planner tool is available as a custom tool that creates comprehensive fourth-grade
+      lesson plans using HuggingFace's SmolAgent framework. This tool demonstrates interoperability
+      between MassGen and SmolAgent.
+
+      When users ask for a lesson plan on any topic, use the smolagent_lesson_planner tool. The tool will use
+      multiple custom tools to:
+      1. Identify relevant curriculum standards and learning objectives
+      2. Design engaging lesson activities with proper timing
+      3. Review the plan for age-appropriateness and effectiveness
+      4. Format the final lesson plan in a structured format
+
+      After receiving the lesson plan, present it clearly to the user and offer to make any adjustments
+      they'd like.
+
+ui:
+  display_type: "simple"
+  logging_enabled: true

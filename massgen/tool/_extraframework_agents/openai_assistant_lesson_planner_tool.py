@@ -6,59 +6,43 @@ This tool demonstrates interoperability by wrapping OpenAI's Assistants API as a
 
 import asyncio
 import os
-from typing import Optional
+from typing import Any, Dict, List
 
 from openai import AsyncOpenAI
 
 from massgen.tool._result import ExecutionResult, TextContent
 
 
-async def openai_assistant_lesson_planner(
-    user_prompt: str,
-    context: Optional[str] = None,
-    system_message: Optional[str] = None,
-    user_message: Optional[str] = None,
-) -> ExecutionResult:
+async def run_openai_assistant_lesson_planner_agent(
+    messages: List[Dict[str, Any]],
+    api_key: str,
+) -> str:
     """
-    Create a comprehensive lesson plan using OpenAI's Assistants API.
+    Core OpenAI Assistant lesson planner agent - pure OpenAI Assistants API implementation.
 
-    This tool uses OpenAI Assistants with custom instructions to:
-    1. Determine curriculum standards and learning objectives
-    2. Create a detailed lesson plan
-    3. Review and refine the plan
-    4. Format the final lesson plan in a standardized format
+    This function contains the pure OpenAI Assistants API logic for creating lesson plans
+    using an assistant with specialized instructions.
 
     Args:
-        user_prompt: The user's request
-        context: Additional context or background information (optional)
-        system_message: System message from orchestrator (optional, auto-injected)
-        user_message: User message from orchestrator (optional, auto-injected)
+        messages: Complete message history from orchestrator
+        api_key: OpenAI API key for the assistant
 
     Returns:
-        ExecutionResult containing the formatted lesson plan
+        The formatted lesson plan as a string
+
+    Raises:
+        Exception: Any errors during agent execution
     """
-    # Optional: Use messages from orchestrator for additional context
-    _ = system_message  # Available but not used in this implementation
-    _ = user_message  # Available but not used in this implementation
+    if not messages:
+        raise ValueError("No messages provided for lesson planning.")
 
-    # Get API key from environment
-    api_key = os.getenv("OPENAI_API_KEY")
+    # Initialize OpenAI client
+    client = AsyncOpenAI(api_key=api_key)
 
-    if not api_key:
-        return ExecutionResult(
-            output_blocks=[
-                TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable."),
-            ],
-        )
-
-    try:
-        # Initialize OpenAI client
-        client = AsyncOpenAI(api_key=api_key)
-
-        # Create an assistant with specialized instructions
-        assistant = await client.beta.assistants.create(
-            name="Lesson Planner Assistant",
-            instructions="""You are an expert fourth grade lesson planner. When given a topic, you should:
+    # Create an assistant with specialized instructions
+    assistant = await client.beta.assistants.create(
+        name="Lesson Planner Assistant",
+        instructions="""You are an expert fourth grade lesson planner. When given a topic, you should:
 
 1. First, identify relevant curriculum standards and learning objectives for fourth grade
 2. Create a detailed lesson plan including:
@@ -77,75 +61,97 @@ async def openai_assistant_lesson_planner(
 <assessment>Assessment details</assessment>
 
 Ensure the lesson plan is practical, engaging, and aligned with fourth grade standards.""",
-            model="gpt-4o",
+        model="gpt-4o",
+    )
+
+    # Create a thread
+    thread = await client.beta.threads.create()
+
+    # Add a message to the thread
+    await client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=f"Please create a comprehensive fourth grade lesson plan for: {messages}",
+    )
+
+    # Run the assistant
+    run = await client.beta.threads.runs.create(
+        thread_id=thread.id,
+        assistant_id=assistant.id,
+    )
+
+    # Wait for completion
+    max_attempts = 30
+    attempt = 0
+    while attempt < max_attempts:
+        run_status = await client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+
+        if run_status.status == "completed":
+            break
+        elif run_status.status in ["failed", "cancelled", "expired"]:
+            raise Exception(f"Assistant run {run_status.status}")
+
+        await asyncio.sleep(2)
+        attempt += 1
+
+    if attempt >= max_attempts:
+        raise Exception("Assistant run timed out")
+
+    # Retrieve the messages
+    message_list = await client.beta.threads.messages.list(thread_id=thread.id)
+
+    # Get the assistant's response (most recent message)
+    lesson_plan = ""
+    for message in message_list.data:
+        if message.role == "assistant":
+            for content in message.content:
+                if hasattr(content, "text"):
+                    lesson_plan = content.text.value
+                    break
+            break
+
+    # Clean up - delete the assistant and thread
+    await client.beta.assistants.delete(assistant.id)
+    await client.beta.threads.delete(thread.id)
+
+    return lesson_plan
+
+
+async def openai_assistant_lesson_planner(
+    messages: List[Dict[str, Any]],
+) -> ExecutionResult:
+    """
+    MassGen custom tool wrapper for OpenAI Assistant lesson planner.
+
+    This is the interface exposed to MassGen's backend. It handles environment setup,
+    error handling, and wraps the core agent logic in ExecutionResult.
+
+    Args:
+        messages: Complete message list from orchestrator (auto-injected via execution_context)
+
+    Returns:
+        ExecutionResult containing the formatted lesson plan or error message
+    """
+    # Get API key from environment
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        return ExecutionResult(
+            output_blocks=[
+                TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable."),
+            ],
         )
 
-        # Create a thread
-        thread = await client.beta.threads.create()
-
-        # Build the message with context if provided
-        message_content = user_prompt
-        if context:
-            message_content = f"{user_prompt}\n\nAdditional Context: {context}"
-
-        # Add a message to the thread
-        await client.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content=f"Please create a comprehensive fourth grade lesson plan for: {message_content}",
+    try:
+        # Call the core agent function with complete messages
+        lesson_plan = await run_openai_assistant_lesson_planner_agent(
+            messages=messages,
+            api_key=api_key,
         )
-
-        # Run the assistant
-        run = await client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant.id,
-        )
-
-        # Wait for completion
-        max_attempts = 30
-        attempt = 0
-        while attempt < max_attempts:
-            run_status = await client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
-
-            if run_status.status == "completed":
-                break
-            elif run_status.status in ["failed", "cancelled", "expired"]:
-                return ExecutionResult(
-                    output_blocks=[
-                        TextContent(data=f"Error: Assistant run {run_status.status}"),
-                    ],
-                )
-
-            await asyncio.sleep(2)
-            attempt += 1
-
-        if attempt >= max_attempts:
-            return ExecutionResult(
-                output_blocks=[
-                    TextContent(data="Error: Assistant run timed out"),
-                ],
-            )
-
-        # Retrieve the messages
-        messages = await client.beta.threads.messages.list(thread_id=thread.id)
-
-        # Get the assistant's response (most recent message)
-        lesson_plan = ""
-        for message in messages.data:
-            if message.role == "assistant":
-                for content in message.content:
-                    if hasattr(content, "text"):
-                        lesson_plan = content.text.value
-                        break
-                break
-
-        # Clean up - delete the assistant and thread
-        await client.beta.assistants.delete(assistant.id)
-        await client.beta.threads.delete(thread.id)
 
         return ExecutionResult(
             output_blocks=[
-                TextContent(data=f"OpenAI Assistant Lesson Planner Result for '{user_prompt}':\n\n{lesson_plan}"),
+                TextContent(data=f"OpenAI Assistant Lesson Planner Result:\n\n{lesson_plan}"),
             ],
         )
 

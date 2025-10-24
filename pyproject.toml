@@ -56,7 +56,7 @@ dependencies = [
     "langgraph>=1.0.0",
     "langchain-core>=1.0.0",
     "agentscope>=1.0.6",
-    "smolagents>=1.22.0",
+    "smolagents[litellm]>=1.22.0",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,50 @@
+# MassGen Configuration: OpenAI Assistant Lesson Planner Tool
+# This demonstrates interoperability by using OpenAI's Assistants API as a custom tool
+#
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/openai_assistant_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#
+# Description:
+#   This configuration uses OpenAI's Assistants API to create comprehensive lesson plans.
+#   The tool creates a specialized assistant with instructions to:
+#   1. Identify relevant curriculum standards and learning objectives
+#   2. Design engaging lesson activities with proper timing
+#   3. Review the plan for age-appropriateness and effectiveness
+#   4. Format the final lesson plan in a structured format
+#
+#   The assistant handles all steps internally through its advanced instruction-following capabilities.
+#
+# Requirements:
+#   - pip install openai
+#   - OPENAI_API_KEY environment variable must be set
+
+agents:
+  - id: "openai_assistant_lesson_planner" # OpenAI GPT-4o with OpenAI Assistant custom tool
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      custom_tools:
+        - name: ["openai_assistant_lesson_planner"]
+          category: "education"
+          path: "massgen/tool/_extraframework_agents/openai_assistant_lesson_planner_tool.py"
+          function: ["openai_assistant_lesson_planner"]
+    system_message: |
+      You are an AI assistant with access to an advanced lesson planning tool powered by OpenAI's Assistants API.
+
+      The openai_assistant_lesson_planner tool is available as a custom tool that creates comprehensive fourth-grade
+      lesson plans using OpenAI's Assistants API. This tool demonstrates interoperability
+      between MassGen and OpenAI's Assistant framework.
+
+      When users ask for a lesson plan on any topic, use the openai_assistant_lesson_planner tool. The tool will create
+      a specialized assistant that:
+      1. Identifies relevant curriculum standards and learning objectives
+      2. Designs engaging lesson activities with proper timing
+      3. Reviews the plan for age-appropriateness and effectiveness
+      4. Formats the final lesson plan in a structured format
+
+      After receiving the lesson plan, present it clearly to the user and offer to make any adjustments
+      they'd like.
+
+ui:
+  display_type: "simple"
+  logging_enabled: true
