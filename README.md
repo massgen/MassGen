@@ -148,6 +148,10 @@ This project started with the "threads of thought" and "iterative refinement" id
 - Works with any backend - multimodal analysis via OpenAI API
 - Interactive config builder improvements with better provider handling
 
+**Watch the Demo:**
+
+[![MassGen v0.1.3 Demo](https://img.youtube.com/vi/nRP34Bqz-D4/0.jpg)](https://youtu.be/nRP34Bqz-D4)
+
 **Get Started with v0.1.3:**
 ```bash
 # Install or upgrade from PyPI
@@ -1034,6 +1038,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Example Configurations**: 4 new YAML files in `configs/tools/custom_tools/multimodal_tools/`
 - **Example Resources**: Test files in `configs/resources/v0.1.3-example/` (image, audio, video, PDF)
 - **Documentation Updates**: Enhanced `docs/source/user_guide/multimodal.rst` and `code_execution.rst`
+- **Case Study**: New `docs/case_studies/multimodal-case-study-video-analysis.md` demonstrating multimodal video understanding
 
 ### Previous Achievements (v0.0.3 - v0.1.2)
 

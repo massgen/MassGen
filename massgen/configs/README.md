@@ -242,6 +242,9 @@ Most configurations use environment variables for API keys:so
 - `docs/source/user_guide/code_execution.rst` - Enhanced with 98 lines documenting sudo mode
 - `massgen/docker/README.md` - Updated Docker documentation with sudo mode instructions
 
+**Case Study:**
+- [Multimodal Video Understanding](../../docs/case_studies/multimodal-case-study-video-analysis.md)
+
 **Example Resources:**
 - `configs/resources/v0.1.3-example/multimodality.jpg` - Image example
 - `configs/resources/v0.1.3-example/Sherlock_Holmes.mp3` - Audio example

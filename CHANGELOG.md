@@ -83,6 +83,9 @@ Custom Python function tools, voting sensitivity controls, interactive config bu
   - `massgen/configs/resources/v0.1.3-example/oppenheimer_trailer_1920.mp4`: Video example
   - `massgen/configs/resources/v0.1.3-example/TUMIX.pdf`: PDF document example
 
+- **Case Studies**: New case study demonstrating v0.1.3 features
+  - `docs/case_studies/multimodal-case-study-video-analysis.md`: Meta-level demonstration of multimodal video understanding with agents analyzing their own case study videos
+
 ### Technical Details
 - **Major Focus**: Post-evaluation workflow tools, custom multimodal understanding tools, Docker sudo mode
 - **Contributors**: @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
