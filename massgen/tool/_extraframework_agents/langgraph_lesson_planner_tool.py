@@ -89,7 +89,7 @@ async def langgraph_lesson_planner(
             )
 
             # Build context message if provided
-            context_info = f"\n\nAdditional Context: {state['context']}" if state.get('context') else ""
+            context_info = f"\n\nAdditional Context: {state['context']}" if state.get("context") else ""
             human_msg = HumanMessage(content=f"Please provide fourth grade standards and objectives for: {state['user_prompt']}{context_info}")
 
             messages = [system_msg, human_msg]

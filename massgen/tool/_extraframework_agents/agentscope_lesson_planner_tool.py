@@ -10,10 +10,10 @@ from typing import Any, Dict, List
 
 import agentscope
 from agentscope.agent import AgentBase
-from agentscope.message import Msg
-from agentscope.model import OpenAIChatModel
 from agentscope.formatter import OpenAIChatFormatter
 from agentscope.memory import InMemoryMemory
+from agentscope.message import Msg
+from agentscope.model import OpenAIChatModel
 
 from massgen.tool._result import ExecutionResult, TextContent
 
@@ -75,10 +75,12 @@ class SimpleDialogAgent(AgentBase):
         # Format messages for the model
         formatted_msgs = []
         for msg in history:
-            formatted_msgs.append({
-                "role": msg.role,
-                "content": msg.content if isinstance(msg.content, str) else str(msg.content)
-            })
+            formatted_msgs.append(
+                {
+                    "role": msg.role,
+                    "content": msg.content if isinstance(msg.content, str) else str(msg.content),
+                },
+            )
 
         # Generate response using the model
         response = await self.model(formatted_msgs)
@@ -86,11 +88,11 @@ class SimpleDialogAgent(AgentBase):
         # Extract content from ChatResponse
         # response.content is a list like [{'type': 'text', 'text': '...'}]
         content = ""
-        if hasattr(response, 'content') and isinstance(response.content, list):
+        if hasattr(response, "content") and isinstance(response.content, list):
             for item in response.content:
-                if isinstance(item, dict) and item.get('type') == 'text':
-                    content += item.get('text', '')
-        elif hasattr(response, 'content'):
+                if isinstance(item, dict) and item.get("type") == "text":
+                    content += item.get("text", "")
+        elif hasattr(response, "content"):
             content = str(response.content)
         else:
             content = str(response)
@@ -99,7 +101,7 @@ class SimpleDialogAgent(AgentBase):
         response_msg = Msg(
             name=self.name,
             content=content,
-            role="assistant"
+            role="assistant",
         )
 
         # Add response to memory
@@ -147,7 +149,7 @@ async def run_agentscope_lesson_planner_agent(
     agentscope.init(
         project="massgen_lesson_planner",
         name="agentscope_lesson_planner_run",
-        logging_level="WARNING"
+        logging_level="WARNING",
     )
 
     # Create shared model instance
@@ -157,7 +159,7 @@ async def run_agentscope_lesson_planner_agent(
         stream=False,
         generate_kwargs={
             "temperature": 0.7,
-        }
+        },
     )
 
     # Create specialized agents for each step
@@ -289,6 +291,7 @@ async def agentscope_lesson_planner(
 
     except Exception as e:
         import traceback
+
         error_details = traceback.format_exc()
         return ExecutionResult(
             output_blocks=[
