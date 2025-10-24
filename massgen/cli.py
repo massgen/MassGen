@@ -2340,8 +2340,6 @@ async def main(args):
 
     except ConfigurationError as e:
         print(f"❌ Configuration error: {e}", flush=True)
-        if resolved_path:
-            print(f"\n📄 Config file: {resolved_path}", flush=True)
         sys.exit(1)
     except KeyboardInterrupt:
         print("\n👋 Goodbye!", flush=True)
