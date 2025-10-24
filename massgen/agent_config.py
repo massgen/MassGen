@@ -35,12 +35,17 @@ class CoordinationConfig:
                              Only the winning agent executes actions during final presentation.
                              If False, agents execute actions during coordination (default behavior).
         planning_mode_instruction: Custom instruction to add when planning mode is enabled.
+        max_orchestration_restarts: Maximum number of times orchestration can be restarted after
+                                   post-evaluation determines the answer is insufficient.
+                                   For example, max_orchestration_restarts=2 allows 3 total attempts
+                                   (initial + 2 restarts). Default is 0 (no restarts).
     """
 
     enable_planning_mode: bool = False
     planning_mode_instruction: str = (
         "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools."
     )
+    max_orchestration_restarts: int = 0
 
 
 @dataclass
@@ -86,6 +91,9 @@ class AgentConfig:
 
     # Debug/test mode - skip coordination rounds and go straight to final presentation
     skip_coordination_rounds: bool = False
+
+    # Debug mode for restart feature - override final answer on attempt 1 only
+    debug_final_answer: Optional[str] = None
 
     @property
     def custom_system_instruction(self) -> Optional[str]:
@@ -432,7 +440,8 @@ class AgentConfig:
         import copy
 
         new_config = copy.deepcopy(self)
-        new_config.custom_system_instruction = instruction
+        # Set private attribute directly to avoid deprecation warning
+        new_config._custom_system_instruction = instruction
         return new_config
 
     def with_agent_id(self, agent_id: str) -> "AgentConfig":
@@ -538,7 +547,8 @@ class AgentConfig:
         else:
             raise ValueError(f"Domain expert configuration not available for backend: {backend}")
 
-        config.custom_system_instruction = instruction
+        # Set private attribute directly to avoid deprecation warning
+        config._custom_system_instruction = instruction
         return config
 
     # =============================================================================
@@ -567,9 +577,10 @@ class AgentConfig:
         conversation = templates.build_initial_conversation(task=task, agent_summaries=agent_summaries, valid_agent_ids=valid_agent_ids)
 
         # Add custom system instruction if provided
-        if self.custom_system_instruction:
+        # Access private attribute to avoid deprecation warning
+        if self._custom_system_instruction:
             base_system = conversation["system_message"]
-            conversation["system_message"] = f"{self.custom_system_instruction}\n\n{base_system}"
+            conversation["system_message"] = f"{self._custom_system_instruction}\n\n{base_system}"
 
         # Add backend configuration
         conversation.update(
@@ -703,7 +714,8 @@ class AgentConfig:
         result = {
             "backend_params": self.backend_params,
             "agent_id": self.agent_id,
-            "custom_system_instruction": self.custom_system_instruction,
+            # Access private attribute to avoid deprecation warning
+            "custom_system_instruction": self._custom_system_instruction,
             "voting_sensitivity": self.voting_sensitivity,
             "max_new_answers_per_agent": self.max_new_answers_per_agent,
             "answer_novelty_requirement": self.answer_novelty_requirement,
@@ -716,7 +728,11 @@ class AgentConfig:
         result["coordination_config"] = {
             "enable_planning_mode": self.coordination_config.enable_planning_mode,
             "planning_mode_instruction": self.coordination_config.planning_mode_instruction,
+            "max_orchestration_restarts": self.coordination_config.max_orchestration_restarts,
         }
+
+        # Handle debug fields
+        result["debug_final_answer"] = self.debug_final_answer
 
         # Handle message_templates serialization
         if self.message_templates is not None:
@@ -757,6 +773,9 @@ class AgentConfig:
         if coordination_data:
             coordination_config = CoordinationConfig(**coordination_data)
 
+        # Handle debug fields
+        debug_final_answer = data.get("debug_final_answer")
+
         # Handle message_templates
         message_templates = None
         template_data = data.get("message_templates")
@@ -765,17 +784,24 @@ class AgentConfig:
 
             message_templates = MessageTemplates(**template_data)
 
-        return cls(
+        config = cls(
             backend_params=backend_params,
             message_templates=message_templates,
             agent_id=agent_id,
-            custom_system_instruction=custom_system_instruction,
             voting_sensitivity=voting_sensitivity,
             max_new_answers_per_agent=max_new_answers_per_agent,
             answer_novelty_requirement=answer_novelty_requirement,
             timeout_config=timeout_config,
             coordination_config=coordination_config,
         )
+        config.debug_final_answer = debug_final_answer
+        return config
+
+        # Set custom_system_instruction separately to avoid deprecation warning
+        if custom_system_instruction is not None:
+            config._custom_system_instruction = custom_system_instruction
+
+        return config
 
 
 # =============================================================================

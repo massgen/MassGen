@@ -365,10 +365,15 @@ class ConfigurableAgent(SingleAgent):
             backend: LLM backend
             session_id: Optional session identifier
         """
+        # Extract system message without triggering deprecation warning
+        system_message = None
+        if hasattr(config, "_custom_system_instruction"):
+            system_message = config._custom_system_instruction
+
         super().__init__(
             backend=backend,
             agent_id=config.agent_id,
-            system_message=config.custom_system_instruction,
+            system_message=system_message,
             session_id=session_id,
         )
         self.config = config
@@ -411,8 +416,9 @@ class ConfigurableAgent(SingleAgent):
                 return backend_params["append_system_prompt"]
 
         # Fall back to custom_system_instruction (deprecated but still supported)
-        if self.config and self.config.custom_system_instruction:
-            return self.config.custom_system_instruction
+        # Access private attribute directly to avoid deprecation warning
+        if self.config and hasattr(self.config, "_custom_system_instruction") and self.config._custom_system_instruction:
+            return self.config._custom_system_instruction
 
         # Finally fall back to parent class implementation
         return super().get_configurable_system_message()

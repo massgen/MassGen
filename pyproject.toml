@@ -57,6 +57,11 @@ dependencies = [
     "langchain-core>=1.0.0",
     "agentscope>=1.0.6",
     "smolagents[litellm]>=1.22.0",
+    "python-docx>=1.2.0",
+    "openpyxl>=3.1.5",
+    "python-pptx>=1.0.2",
+    "opencv-python>=4.12.0.88",
+    "pypdf2>=3.0.1",
 ]
 
 [project.optional-dependencies]
@@ -105,7 +110,7 @@ Homepage = "https://github.com/Leezekun/MassGen"
 Repository = "https://github.com/Leezekun/MassGen"
 "Bug Reports" = "https://github.com/Leezekun/MassGen/issues"
 Source = "https://github.com/Leezekun/MassGen"
-Documentation = "https://docs.massgen.io/en/latest/"
+Documentation = "https://docs.massgen.ai/en/latest/"
 
 [tool.setuptools]
 include-package-data = true
@@ -217,6 +222,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "asyncio: mark test as requiring asyncio",
+    "docker: marks tests that require Docker to be installed and running",
 ]
 asyncio_mode = "auto"
 filterwarnings = [

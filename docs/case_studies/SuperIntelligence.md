@@ -1,4 +1,4 @@
-# MassGen Case Study: Super Intelligence Approaches
+# MassGen v0.0.4: Super Intelligence Approaches
 
 This case study demonstrates MassGen's ability to tackle complex philosophical and technical questions by leveraging different reasoning capacities. The agents collaborate to explore the multifaceted challenge of achieving super intelligence from various perspectives. This case study was run on version v0.0.4.
 

@@ -220,37 +220,124 @@ backend:
 
 ## Environment Variables
 
-Most configurations use environment variables for API keys:
+Most configurations use environment variables for API keys:so
 - Set up your `.env` file based on `.env.example`
 - Provider-specific keys: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.
 - MCP server keys: `DISCORD_BOT_TOKEN`, `BRAVE_API_KEY`, etc.
 
 ## Release History & Examples
 
-### v0.1.0 - Latest
-**New Features:** PyPI Package Release, Comprehensive Documentation, Interactive Setup Wizard, Enhanced CLI Experience
+### v0.1.3 - Latest
+**New Features:** Post-Evaluation Workflow, Custom Multimodal Understanding Tools, Docker Sudo Mode
+
+**Configuration Files:**
+- `configs/tools/custom_tools/multimodal_tools/understand_image.yaml` - Image analysis configuration
+- `configs/tools/custom_tools/multimodal_tools/understand_audio.yaml` - Audio transcription configuration
+- `configs/tools/custom_tools/multimodal_tools/understand_video.yaml` - Video analysis configuration
+- `configs/tools/custom_tools/multimodal_tools/understand_file.yaml` - Document processing configuration
+
+**Documentation:**
+- `massgen/tool/docs/multimodal_tools.md` - Complete 779-line multimodal tools guide
+- `docs/source/user_guide/multimodal.rst` - Updated multimodal documentation with custom tools
+- `docs/source/user_guide/code_execution.rst` - Enhanced with 98 lines documenting sudo mode
+- `massgen/docker/README.md` - Updated Docker documentation with sudo mode instructions
+
+**Case Study:**
+- [Multimodal Video Understanding](../../docs/case_studies/multimodal-case-study-video-analysis.md)
+
+**Example Resources:**
+- `configs/resources/v0.1.3-example/multimodality.jpg` - Image example
+- `configs/resources/v0.1.3-example/Sherlock_Holmes.mp3` - Audio example
+- `configs/resources/v0.1.3-example/oppenheimer_trailer_1920.mp4` - Video example
+- `configs/resources/v0.1.3-example/TUMIX.pdf` - PDF document example
 
 **Key Features:**
-- Official PyPI distribution: `pip install massgen` (no repo clone needed)
-- Global CLI command: Run `massgen` from any directory with centralized config in `~/.config/massgen/`
-- Simplified command syntax: `massgen "question"` replaces `uv run python -m massgen.cli`
-- Built-in examples: `@examples/` prefix for instant access (e.g., `@examples/basic/multi/three_agents_default`)
-- Interactive Setup Wizard: Step-by-step first-run with smart defaults (API keys, use case, model)
-- Documentation site at [docs.massgen.io](https://docs.massgen.io/en/latest/)
-- Backward compatibility: Existing git/`uv run` workflows still work
+- **Post-Evaluation Tools**: Submit and restart capabilities for winning agents with confidence assessments
+- **Multimodal Understanding**: Analyze images, audio, video, and documents using GPT-4.1
+- **Docker Sudo Mode**: Execute privileged commands in containerized environments
+- **Config Builder**: Improved workflow with auto-detection and better provider handling
 
 **Try it:**
 ```bash
-# Install and run setup wizard
-pip install massgen
-massgen
+# Install or upgrade
+pip install --upgrade massgen
 
-# Quick multi-agent collaboration
-massgen --config @examples/basic/multi/three_agents_default \
-  "Analyze the pros and cons of renewable energy"
+# Try multimodal image understanding
+# (Requires OPENAI_API_KEY in .env)
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_image \
+  "Please summarize the content in this image."
 
-# Single agent quick start
-massgen --model gpt-5-nano "What is machine learning?"
+# Try multimodal audio understanding
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_audio \
+  "Please summarize the content in this audio."
+
+# Try multimodal video understanding
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_video \
+  "What's happening in this video?"
+```
+
+### v0.1.2
+**New Features:** Intelligent Planning Mode, Claude 4.5 Haiku Support, Grok Web Search Improvements
+
+**Configuration Files:**
+- `configs/tools/planning/` - 5 planning mode configurations with selective blocking
+- `configs/basic/multi/three_agents_default.yaml` - Updated with Grok-4-fast model
+
+**Documentation:**
+- `docs/case_studies/INTELLIGENT_PLANNING_MODE.md` - Complete intelligent planning mode guide
+
+**Key Features:**
+- **Intelligent Planning Mode**: Automatic analysis of question irreversibility for dynamic MCP tool blocking
+- **Selective Tool Blocking**: Granular control over which MCP tools are blocked during planning
+- **Enhanced Safety**: Read-only operations allowed, write operations blocked during coordination
+- **Latest Models**: Claude 4.5 Haiku support with updated model priorities
+
+**Try it:**
+```bash
+# Try intelligent planning mode with MCP tools
+# (Please read the YAML file for required API keys: DISCORD_TOKEN, OPENAI_API_KEY, etc.)
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
+  "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
+
+# Use latest Claude 4.5 Haiku model
+# (Requires ANTHROPIC_API_KEY in .env)
+massgen --model claude-haiku-4-5-20251001 \
+  "Summarize the latest AI developments"
+```
+
+### v0.1.1
+**New Features:** Custom Tools System, Voting Sensitivity Controls, Interactive Configuration Builder
+
+**Key Features:**
+- Custom tools registration using `ToolManager` class
+- Three-tier voting system (lenient/balanced/strict)
+- 40+ custom tool examples
+- Backend capabilities registry
+
+**Try it:**
+```bash
+# Try custom tools with agents
+massgen --config @examples/tools/custom_tools/claude_custom_tool_example \
+  "whats the sum of 123 and 456?"
+
+# Test voting sensitivity controls
+massgen --config @examples/voting/gemini_gpt_voting_sensitivity \
+  "Your question here"
+```
+
+### v0.1.0
+**New Features:** PyPI Package Release, Comprehensive Documentation, Interactive Setup Wizard, Enhanced CLI
+
+**Key Features:**
+- Official PyPI distribution: `pip install massgen` with global CLI command
+- Interactive Setup Wizard with smart defaults for API keys and model selection
+- Comprehensive documentation at [docs.massgen.ai](https://docs.massgen.ai/)
+- Simplified command syntax: `massgen "question"` with `@examples/` prefix
+
+**Try it:**
+```bash
+pip install massgen && massgen
+massgen --config @examples/basic/multi/three_agents_default "What is 2+2?"
 ```
 
 ### v0.0.32
@@ -304,9 +391,11 @@ massgen --config @examples/tools/code-execution/docker_with_resource_limits \
 - `massgen/configs/basic/multi/gpt4o_audio_generation.yaml` - Multi-agent audio generation with GPT-4o
 - `massgen/configs/basic/single/single_gpt4o_video_generation.yaml` - Video generation with OpenAI Sora-2
 
+**Case Study:**
+- [Universal Code Execution via MCP](../../docs/case_studies/universal-code-execution-mcp.md)
+
 **Key Features:**
 - Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
-- AG2 group chat integration with speaker selection modes (auto, round-robin, manual)
 - Audio tools: text-to-speech, audio transcription, audio generation
 - Video tools: text-to-video generation via Sora-2 API
 - Code execution in planning mode for safer coordination

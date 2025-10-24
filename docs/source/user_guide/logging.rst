@@ -40,6 +40,24 @@ All logs are stored in the ``.massgen/massgen_logs/`` directory with timestamped
 .. note::
    When agents use filesystem tools, each coordination step will also contain a ``workspace/`` directory showing the files the agent created or modified during that step.
 
+Per-Attempt Logging (Orchestration Restart)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When **orchestration restart** is enabled, each restart attempt gets its own isolated directory:
+
+.. code-block:: text
+
+   .massgen/massgen_logs/log_YYYYMMDD_HHMMSS/
+   ├── attempt_1/          # First attempt (complete log structure)
+   ├── attempt_2/          # Second attempt after restart
+   ├── attempt_3/          # Third attempt if needed
+   └── final/              # Copy of accepted result
+
+For multi-turn: ``turn_1/attempt_1/``, ``turn_1/attempt_2/``, ``turn_1/final/``
+
+.. seealso::
+   :doc:`orchestration_restart` - Learn about automatic quality checks and restart workflows
+
 Log Files Explained
 -------------------
 

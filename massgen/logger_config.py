@@ -41,6 +41,7 @@ _DEBUG_MODE = False
 _LOG_SESSION_DIR = None
 _LOG_BASE_SESSION_DIR = None  # Base session dir (without turn subdirectory)
 _CURRENT_TURN = None
+_CURRENT_ATTEMPT = None  # Current attempt number for restart tracking
 
 # Console logging suppression (for Rich Live display compatibility)
 _CONSOLE_HANDLER_ID = None
@@ -48,15 +49,15 @@ _CONSOLE_SUPPRESSED = False
 
 
 def get_log_session_dir(turn: Optional[int] = None) -> Path:
-    """Get the current log session directory.
+    """Get the current log session directory, including attempt subdirectory if set.
 
     Args:
         turn: Optional turn number for multi-turn conversations
 
     Returns:
-        Path to the log directory
+        Path to the log directory (includes attempt subdirectory if _CURRENT_ATTEMPT is set)
     """
-    global _LOG_SESSION_DIR, _LOG_BASE_SESSION_DIR, _CURRENT_TURN
+    global _LOG_SESSION_DIR, _LOG_BASE_SESSION_DIR, _CURRENT_TURN, _CURRENT_ATTEMPT
 
     # Initialize base session dir once per session
     if _LOG_BASE_SESSION_DIR is None:
@@ -88,17 +89,60 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
         _LOG_SESSION_DIR = None  # Force recreation
 
     if _LOG_SESSION_DIR is None:
-        # Create directory structure based on turn
+        # Build directory structure based on turn and attempt
         if _CURRENT_TURN and _CURRENT_TURN > 0:
             # Multi-turn conversation: organize by turn within session
-            _LOG_SESSION_DIR = _LOG_BASE_SESSION_DIR / f"turn_{_CURRENT_TURN}"
+            base_dir = _LOG_BASE_SESSION_DIR / f"turn_{_CURRENT_TURN}"
         else:
             # First execution or single execution: use base session dir
-            _LOG_SESSION_DIR = _LOG_BASE_SESSION_DIR
+            base_dir = _LOG_BASE_SESSION_DIR
+
+        # Add attempt subdirectory if attempt is set
+        if _CURRENT_ATTEMPT and _CURRENT_ATTEMPT > 0:
+            _LOG_SESSION_DIR = base_dir / f"attempt_{_CURRENT_ATTEMPT}"
+        else:
+            _LOG_SESSION_DIR = base_dir
 
         _LOG_SESSION_DIR.mkdir(parents=True, exist_ok=True)
 
     return _LOG_SESSION_DIR
+
+
+def set_log_attempt(attempt: int) -> None:
+    """Set the current attempt number for restart tracking.
+
+    This forces the log directory to be recreated with the new attempt subdirectory.
+
+    Args:
+        attempt: Attempt number (1-indexed)
+    """
+    global _LOG_SESSION_DIR, _CURRENT_ATTEMPT
+    _CURRENT_ATTEMPT = attempt
+    _LOG_SESSION_DIR = None  # Force recreation with new attempt subdirectory
+
+
+def get_log_session_dir_base() -> Path:
+    """Get the base log session directory without attempt subdirectory.
+
+    This is useful for copying final results to the root level after all attempts complete.
+
+    Returns:
+        Path to the base log directory (turn level or session root, without attempt)
+    """
+    global _LOG_BASE_SESSION_DIR, _CURRENT_TURN
+
+    # Ensure base session dir is initialized
+    if _LOG_BASE_SESSION_DIR is None:
+        # Initialize by calling get_log_session_dir
+        get_log_session_dir()
+
+    # Build base directory based on turn (without attempt)
+    if _CURRENT_TURN and _CURRENT_TURN > 0:
+        # Multi-turn conversation: return turn directory
+        return _LOG_BASE_SESSION_DIR / f"turn_{_CURRENT_TURN}"
+    else:
+        # Single turn: return base session dir
+        return _LOG_BASE_SESSION_DIR
 
 
 def save_execution_metadata(

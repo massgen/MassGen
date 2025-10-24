@@ -67,7 +67,7 @@ orchestrator:
       2. Analyze other agents' proposals
       3. Use only the 'vote' or 'new_answer' tools for coordination
       4. You CAN use web search for information gathering
-      5. DO NOT execute Discord operations (sending messages, reading channels, etc.) - save these for execution phase
-      6. Save tool execution for the final presentation phase when the winning agent will implement the plan
+      5. DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)
+      6. Save actions that have side effects for the final presentation phase when the winning agent will implement the plan
 
       Focus on planning, analysis, and coordination rather than execution.
