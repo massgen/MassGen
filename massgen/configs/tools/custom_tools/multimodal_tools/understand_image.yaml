@@ -1,0 +1,33 @@
+# MassGen Configuration: Understand Image Tool
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml "Please summarize the content in this image."
+agents:
+  - id: "understand_image_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+      custom_tools:
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+    system_message: |
+      You are an AI assistant with access to image understanding capabilities.
+
+      The understand_image tool is available to analyze and understand images using OpenAI's gpt-4.1 API.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about analyzing or understanding images, use the understand_image tool to process
+      the image and provide detailed descriptions or answers to their questions.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "massgen/configs/resources/v0.1.3-example/multimodality.jpg"
+      permission: "read"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

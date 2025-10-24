@@ -440,7 +440,8 @@ class AgentConfig:
         import copy
 
         new_config = copy.deepcopy(self)
-        new_config.custom_system_instruction = instruction
+        # Set private attribute directly to avoid deprecation warning
+        new_config._custom_system_instruction = instruction
         return new_config
 
     def with_agent_id(self, agent_id: str) -> "AgentConfig":
@@ -546,7 +547,8 @@ class AgentConfig:
         else:
             raise ValueError(f"Domain expert configuration not available for backend: {backend}")
 
-        config.custom_system_instruction = instruction
+        # Set private attribute directly to avoid deprecation warning
+        config._custom_system_instruction = instruction
         return config
 
     # =============================================================================
@@ -575,9 +577,10 @@ class AgentConfig:
         conversation = templates.build_initial_conversation(task=task, agent_summaries=agent_summaries, valid_agent_ids=valid_agent_ids)
 
         # Add custom system instruction if provided
-        if self.custom_system_instruction:
+        # Access private attribute to avoid deprecation warning
+        if self._custom_system_instruction:
             base_system = conversation["system_message"]
-            conversation["system_message"] = f"{self.custom_system_instruction}\n\n{base_system}"
+            conversation["system_message"] = f"{self._custom_system_instruction}\n\n{base_system}"
 
         # Add backend configuration
         conversation.update(
@@ -711,7 +714,8 @@ class AgentConfig:
         result = {
             "backend_params": self.backend_params,
             "agent_id": self.agent_id,
-            "custom_system_instruction": self.custom_system_instruction,
+            # Access private attribute to avoid deprecation warning
+            "custom_system_instruction": self._custom_system_instruction,
             "voting_sensitivity": self.voting_sensitivity,
             "max_new_answers_per_agent": self.max_new_answers_per_agent,
             "answer_novelty_requirement": self.answer_novelty_requirement,
@@ -784,7 +788,6 @@ class AgentConfig:
             backend_params=backend_params,
             message_templates=message_templates,
             agent_id=agent_id,
-            custom_system_instruction=custom_system_instruction,
             voting_sensitivity=voting_sensitivity,
             max_new_answers_per_agent=max_new_answers_per_agent,
             answer_novelty_requirement=answer_novelty_requirement,
@@ -792,6 +795,12 @@ class AgentConfig:
             coordination_config=coordination_config,
         )
         config.debug_final_answer = debug_final_answer
+        return config
+
+        # Set custom_system_instruction separately to avoid deprecation warning
+        if custom_system_instruction is not None:
+            config._custom_system_instruction = custom_system_instruction
+
         return config
 
 

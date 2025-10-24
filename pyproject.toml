@@ -52,6 +52,11 @@ dependencies = [
     "pyautogen>=0.10.0",
     "vertexai>=1.71.1",
     "pytest>=8.4.2",
+    "python-docx>=1.2.0",
+    "openpyxl>=3.1.5",
+    "python-pptx>=1.0.2",
+    "opencv-python>=4.12.0.88",
+    "pypdf2>=3.0.1",
 ]
 
 [project.optional-dependencies]

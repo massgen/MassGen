@@ -191,27 +191,27 @@ class ConfigBuilder:
         },
         "multimodal": {
             "name": "Multimodal Analysis",
-            "description": "Analyze images, audio, and video content",
+            "description": "Analyze images, audio, video, and documents",
             "recommended_agents": 2,
             "recommended_tools": ["image_understanding", "audio_understanding", "video_understanding"],
             "agent_types": "all",
-            "notes": "Different backends support different modalities",
+            "notes": "Combines custom tools + built-in backend capabilities",
             "info": """[bold cyan]Features auto-configured for this preset:[/bold cyan]
 
-  [green]✓[/green] [bold]Image Understanding[/bold]
-    • Analyze images, screenshots, charts
-    • OCR and text extraction
-    • Available for: OpenAI, Claude Code, Gemini, Azure OpenAI
+  [green]✓[/green] [bold]Custom Multimodal Tools (New v0.1.3+)[/bold]
+    • understand_image - Analyze workspace images with gpt-4.1
+    • understand_audio - Transcribe and analyze audio files
+    • understand_video - Extract frames and analyze videos
+    • understand_file - Process documents (PDF, DOCX, XLSX, PPTX)
+    • Works with any backend, processes workspace files
 
-  [green]✓[/green] [bold]Audio Understanding[/bold] [dim](where supported)[/dim]
-    • Transcribe and analyze audio
-    • Available for: Claude, ChatCompletion
+  [green]✓[/green] [bold]Built-in Backend Capabilities[/bold] [dim](passive)[/dim]
+    • Image understanding via upload_files (OpenAI, Claude, Gemini, Azure)
+    • Audio understanding via upload_files (Claude, ChatCompletion)
+    • Video understanding via upload_files (Claude, ChatCompletion, OpenAI)
+    • Image/audio/video generation (where supported)
 
-  [green]✓[/green] [bold]Video Understanding[/bold] [dim](where supported)[/dim]
-    • Analyze video content
-    • Available for: Claude, ChatCompletion, OpenAI
-
-[dim]Use this for:[/dim] Image analysis, screenshot interpretation, multimedia content analysis.""",
+[dim]Use this for:[/dim] Image analysis, audio transcription, video analysis, document processing.""",
         },
     }
 
@@ -1539,6 +1539,83 @@ class ConfigBuilder:
 
                         console.print(f"✅ Enabled {len(selected_gen)} generation capability(ies)")
 
+            # Custom multimodal understanding tools (new in v0.1.3+)
+            # Available for ALL use cases - these are active tools that process workspace files
+            console.print()
+            console.print("[cyan]Custom Multimodal Understanding Tools (New in v0.1.3+):[/cyan]")
+            console.print("[dim]These tools let agents analyze workspace files using OpenAI's gpt-4.1 API:[/dim]")
+            console.print("[dim]  • Works with any backend (uses OpenAI for analysis)[/dim]")
+            console.print("[dim]  • Processes files agents generate or discover during execution[/dim]")
+            console.print("[dim]  • Returns structured JSON with detailed metadata[/dim]")
+            console.print("[dim]  • Requires OPENAI_API_KEY in your .env file[/dim]")
+
+            # Default to True for multimodal use case, False for others
+            default_add_mm = use_case == "multimodal"
+
+            if questionary.confirm("Add custom multimodal understanding tools?", default=default_add_mm).ask():
+                # Determine default selections based on use case
+                if use_case == "multimodal":
+                    # For multimodal preset, select all by default
+                    pass
+                elif use_case == "data_analysis":
+                    # For data analysis, suggest image and file tools
+                    pass
+                else:
+                    # For other use cases, none selected by default (let user choose)
+                    pass
+
+                if use_case == "multimodal":
+                    multimodal_tool_choices = [
+                        questionary.Choice("understand_image - Analyze images (PNG, JPEG, JPG)", value="understand_image", checked=True),
+                        questionary.Choice("understand_audio - Transcribe and analyze audio", value="understand_audio", checked=True),
+                        questionary.Choice("understand_video - Extract frames and analyze video", value="understand_video", checked=True),
+                        questionary.Choice("understand_file - Process documents (PDF, DOCX, XLSX, PPTX)", value="understand_file", checked=True),
+                    ]
+                elif use_case == "data_analysis":
+                    multimodal_tool_choices = [
+                        questionary.Choice("understand_image - Analyze images (PNG, JPEG, JPG)", value="understand_image", checked=True),
+                        questionary.Choice("understand_audio - Transcribe and analyze audio", value="understand_audio", checked=False),
+                        questionary.Choice("understand_video - Extract frames and analyze video", value="understand_video", checked=False),
+                        questionary.Choice("understand_file - Process documents (PDF, DOCX, XLSX, PPTX)", value="understand_file", checked=True),
+                    ]
+                else:
+                    multimodal_tool_choices = [
+                        questionary.Choice("understand_image - Analyze images (PNG, JPEG, JPG)", value="understand_image", checked=False),
+                        questionary.Choice("understand_audio - Transcribe and analyze audio", value="understand_audio", checked=False),
+                        questionary.Choice("understand_video - Extract frames and analyze video", value="understand_video", checked=False),
+                        questionary.Choice("understand_file - Process documents (PDF, DOCX, XLSX, PPTX)", value="understand_file", checked=False),
+                    ]
+
+                selected_mm_tools = questionary.checkbox(
+                    "Select custom multimodal tools (Space to select, Enter to confirm):",
+                    choices=multimodal_tool_choices,
+                    style=questionary.Style(
+                        [
+                            ("selected", "fg:cyan"),
+                            ("pointer", "fg:cyan bold"),
+                            ("highlighted", "fg:cyan"),
+                        ],
+                    ),
+                    use_arrow_keys=True,
+                ).ask()
+
+                if selected_mm_tools:
+                    # Initialize custom_tools list if not exists
+                    if "custom_tools" not in agent["backend"]:
+                        agent["backend"]["custom_tools"] = []
+
+                    # Add selected tools
+                    for tool_name in selected_mm_tools:
+                        tool_config = {
+                            "name": [tool_name],
+                            "category": "multimodal",
+                            "path": f"massgen/tool/_multimodal_tools/{tool_name}.py",
+                            "function": [tool_name],
+                        }
+                        agent["backend"]["custom_tools"].append(tool_config)
+
+                    console.print(f"✅ Added {len(selected_mm_tools)} custom multimodal tool(s)")
+
             # MCP servers (custom only)
             # Note: Filesystem is handled internally above, NOT as external MCP
             if "mcp" in provider_info.get("supports", []):
@@ -1825,11 +1902,17 @@ class ConfigBuilder:
                             "code_execution": "💻 Code execution",
                             "web_search": "🔍 Web search",
                             "mcp": "🔌 MCP servers",
+                            "image_understanding": "📷 Image understanding (backend capability)",
+                            "audio_understanding": "🎵 Audio understanding (backend capability)",
+                            "video_understanding": "🎬 Video understanding (backend capability)",
                         }.get(tool, tool)
                         console.print(f"    • {tool_display}")
 
                     if use_case == "coding_docker":
                         console.print("    • 🐳 Docker isolated execution")
+
+                    if use_case == "multimodal":
+                        console.print("    • 🎨 Custom multimodal tools (understand_image, understand_audio, understand_video, understand_file)")
 
                     console.print()
 
