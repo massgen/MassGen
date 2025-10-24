@@ -285,6 +285,10 @@ Both agents have identical capabilities, ensuring diverse perspectives on video 
 
 <h2 id="demo">🎥 Demo</h2>
 
+Watch the v0.1.3 Multimodal Video Analysis demonstration:
+
+[![MassGen v0.1.3 Multimodal Video Analysis Demo](https://img.youtube.com/vi/nRP34Bqz-D4/0.jpg)](https://youtu.be/nRP34Bqz-D4)
+
 **Session Logs:** `.massgen/massgen_logs/log_20251024_075151`
 
 **Duration:** ~24 minutes
