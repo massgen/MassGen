@@ -617,6 +617,20 @@ class ConfigBuilder:
             # Build choices for questionary - organized with tool hints
             choices = []
 
+            # Add spacing before first option (using spaces to avoid line)
+            choices.append(questionary.Separator(" "))
+
+            # First option: Browse existing configs (most common for new users)
+            choices.append(
+                questionary.Choice(
+                    title="📦  Browse ready-to-use configs / examples",
+                    value="__browse_existing__",
+                ),
+            )
+            choices.append(questionary.Separator(" "))
+            choices.append(questionary.Separator("┄┄ or build from template ┄┄"))
+            choices.append(questionary.Separator(" "))
+
             # Define display with brief tool descriptions
             display_info = [
                 ("custom", "⚙️", "Custom Configuration", "Choose your own tools"),
@@ -643,12 +657,12 @@ class ConfigBuilder:
                             value=use_case_id,
                         ),
                     )
+
                 except Exception as e:
                     console.print(f"[warning]⚠️  Could not display use case: {e}[/warning]")
 
             # Add helpful context before the prompt
-            console.print("[dim]Choose a preset that matches your task. Each preset auto-configures tools and capabilities.[/dim]")
-            console.print("[dim]You can customize everything in later steps.[/dim]\n")
+            console.print("[dim]Browse ready-to-use configs, or pick a template to build your own.[/dim]\n")
 
             use_case_id = questionary.select(
                 "Select your use case:",
@@ -665,6 +679,10 @@ class ConfigBuilder:
 
             if use_case_id is None:
                 raise KeyboardInterrupt  # User cancelled, exit immediately
+
+            # Handle special value for browsing existing configs
+            if use_case_id == "__browse_existing__":
+                return "__browse_existing__"
 
             # Show selection with description
             selected_info = self.USE_CASES[use_case_id]
@@ -2657,6 +2675,21 @@ class ConfigBuilder:
                 if not use_case:
                     console.print("[warning]⚠️  No use case selected.[/warning]")
                     return None
+
+                # Handle special case: user wants to browse existing configs
+                if use_case == "__browse_existing__":
+                    console.print("\n[cyan]Opening config selector...[/cyan]\n")
+                    # Import here to avoid circular dependency
+                    from .cli import interactive_config_selector
+
+                    selected_config = interactive_config_selector()
+                    if selected_config:
+                        console.print(f"\n[green]✓ Selected config: {selected_config}[/green]\n")
+                        # Return the selected config as if it was created
+                        return (selected_config, None)
+                    else:
+                        console.print("\n[yellow]⚠️  No config selected[/yellow]\n")
+                        return None
 
                 # Step 2: Configure agents
                 agents = self.configure_agents(use_case, api_keys)

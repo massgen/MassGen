@@ -51,6 +51,7 @@ from .backend.inference import InferenceBackend
 from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
+from .config_builder import ConfigBuilder
 from .frontend.coordination_ui import CoordinationUI
 from .logger_config import _DEBUG_MODE, logger, save_execution_metadata, setup_logging
 from .orchestrator import Orchestrator
@@ -2502,8 +2503,6 @@ Environment Variables:
 
     # Launch interactive API key setup if requested
     if args.setup:
-        from .config_builder import ConfigBuilder
-
         builder = ConfigBuilder()
         api_keys = builder.interactive_api_key_setup()
 
@@ -2528,8 +2527,6 @@ Environment Variables:
 
     # Launch interactive config builder if requested
     if args.init:
-        from .config_builder import ConfigBuilder
-
         builder = ConfigBuilder()
         result = builder.run()
 
@@ -2551,7 +2548,7 @@ Environment Variables:
             # Builder returned None (cancelled or error)
             return
 
-    # First-run detection: auto-trigger builder if no config specified and first run
+    # First-run detection: auto-trigger setup wizard and config builder if no config specified
     if not args.question and not args.config and not args.model and not args.backend:
         if should_run_builder():
             print()
@@ -2560,12 +2557,33 @@ Environment Variables:
             print(f"{BRIGHT_CYAN}  👋  Welcome to MassGen!{RESET}")
             print(f"{BRIGHT_CYAN}{'=' * 60}{RESET}")
             print()
+
+            # Check if API keys already exist
+            builder = ConfigBuilder()
+            existing_api_keys = builder.detect_api_keys()
+            has_api_keys = any(existing_api_keys.values())
+
+            # Step 1: API key setup (only if no keys found)
+            if not has_api_keys:
+                print("  Let's first set up your API keys...")
+                print()
+
+                api_keys = builder.interactive_api_key_setup()
+
+                if any(api_keys.values()):
+                    print(f"\n{BRIGHT_GREEN}✅ API key setup complete!{RESET}")
+                    print(f"{BRIGHT_CYAN}💡 You can now use MassGen with these providers{RESET}\n")
+                else:
+                    print(f"\n{BRIGHT_YELLOW}⚠️  No API keys configured{RESET}")
+                    print(f"{BRIGHT_CYAN}💡 You can use local models (vLLM, Ollama) without API keys{RESET}\n")
+            else:
+                print(f"{BRIGHT_GREEN}✅ API keys detected{RESET}")
+                print()
+
+            # Step 2: Launch config builder
             print("  Let's set up your default configuration...")
             print()
 
-            from .config_builder import ConfigBuilder
-
-            builder = ConfigBuilder(default_mode=True)
             result = builder.run()
 
             if result and len(result) == 2:
