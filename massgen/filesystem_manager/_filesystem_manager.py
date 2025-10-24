@@ -76,7 +76,7 @@ class FilesystemManager:
             command_line_docker_memory_limit: Memory limit for Docker containers (e.g., "2g")
             command_line_docker_cpu_limit: CPU limit for Docker containers (e.g., 2.0 for 2 CPUs)
             command_line_docker_network_mode: Network mode for Docker containers (none/bridge/host)
-            command_line_docker_enable_sudo: Enable sudo access in Docker containers (WARNING: less secure, see docs)
+            command_line_docker_enable_sudo: Enable sudo access in Docker containers (isolated from host system)
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         self.enable_image_generation = enable_image_generation

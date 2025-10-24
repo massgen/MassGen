@@ -126,18 +126,13 @@ Programmatic Configuration
 Setting Restart Limits
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Consider these factors when choosing ``max_orchestration_restarts``:
-
-- **Token Budget**: Each restart = full coordination run
-- **Time Budget**: Each attempt gets full timeout
-- **Task Complexity**: Complex tasks may benefit from more attempts
-- **Cost**: More restarts = higher API costs
+Each restart runs the full coordination process again. More restarts mean more time and API costs, but better results for complex tasks.
 
 Recommended values:
 
-- Simple tasks: ``max_orchestration_restarts: 1``
-- Standard tasks: ``max_orchestration_restarts: 2`` (default)
-- Complex tasks: ``max_orchestration_restarts: 3``
+- ``max_orchestration_restarts: 0`` - No restarts (previous behavior)
+- ``max_orchestration_restarts: 2`` - Standard tasks
+- ``max_orchestration_restarts: 3`` - Complex tasks
 
 Use Cases
 ---------
@@ -328,9 +323,7 @@ Troubleshooting
 
 **Max restarts exceeded**: Increase ``max_orchestration_restarts`` or provide more detailed initial instructions
 
-**Agent doesn't restart when it should**: Use a more capable model for final agent or provide explicit success criteria
-
-**Restarts don't improve results**: Provide more specific restart instructions or enable additional tools
+**Agent doesn't restart when it should**: Use a more capable model in your config or provide explicit success criteria
 
 See Also
 --------

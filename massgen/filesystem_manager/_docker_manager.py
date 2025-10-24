@@ -55,7 +55,7 @@ class DockerManager:
             network_mode: Network mode (none/bridge/host)
             memory_limit: Memory limit (e.g., "2g", "512m")
             cpu_limit: CPU limit (e.g., 2.0 for 2 CPUs)
-            enable_sudo: Enable sudo access in containers (WARNING: less secure, see docs)
+            enable_sudo: Enable sudo access in containers (isolated from host system)
 
         Raises:
             RuntimeError: If Docker is not available or cannot connect
@@ -67,18 +67,12 @@ class DockerManager:
         self.enable_sudo = enable_sudo
         if enable_sudo and image == "massgen/mcp-runtime:latest":
             self.image = "massgen/mcp-runtime-sudo:latest"
-            logger.warning(
-                "⚠️ [Docker] SECURITY WARNING: Sudo enabled - using 'massgen/mcp-runtime-sudo:latest' image.",
-            )
-            logger.warning(
-                "    This reduces security compared to the default image. " "Prefer building custom images with pre-installed packages.",
-            )
-            logger.warning(
-                "    See: https://docs.massgen.ai/docker-security for best practices.",
+            logger.info(
+                "ℹ️ [Docker] Sudo access enabled in container (isolated from host) - using 'massgen/mcp-runtime-sudo:latest' image.",
             )
         elif enable_sudo:
-            logger.warning(
-                "⚠️ [Docker] SECURITY WARNING: Sudo enabled with custom image. " "Ensure your image properly configures sudo access.",
+            logger.info(
+                "ℹ️ [Docker] Sudo access enabled in container (isolated from host) with custom image.",
             )
         else:
             self.image = image
