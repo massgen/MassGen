@@ -2709,7 +2709,12 @@ class ConfigBuilder:
                 filepath = self.review_and_save(agents, orchestrator_config)
 
                 if filepath:
-                    # Ask if user wants to run now
+                    # In default_mode (first-run), skip "Run now?" and go straight to interactive mode
+                    if self.default_mode:
+                        # Config already saved by review_and_save(), just return to launch interactive mode
+                        return (filepath, None)
+
+                    # In regular --init mode, ask if user wants to run now
                     run_choice = Confirm.ask("\n[prompt]Run MassGen with this configuration now?[/prompt]", default=True)
                     if run_choice is None:
                         raise KeyboardInterrupt  # User cancelled

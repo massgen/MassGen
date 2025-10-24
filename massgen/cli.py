@@ -535,7 +535,7 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             backend_config["_config_path"] = config_path
 
         backend = create_backend(backend_type, **backend_config)
-        backend_params = {k: v for k, v in backend_config.items() if k != "type"}
+        backend_params = {k: v for k, v in backend_config.items() if k not in ("type", "_config_path")}
 
         backend_type_lower = backend_type.lower()
         if backend_type_lower == "openai":
@@ -2576,7 +2576,7 @@ Environment Variables:
             print()
 
             # Check if API keys already exist
-            builder = ConfigBuilder()
+            builder = ConfigBuilder(default_mode=True)
             existing_api_keys = builder.detect_api_keys()
             has_api_keys = any(existing_api_keys.values())
 
@@ -2606,16 +2606,64 @@ Environment Variables:
             if result and len(result) == 2:
                 filepath, question = result
                 if filepath:
+                    # Set the config path
                     args.config = filepath
+
+                    # If user provided a question, set it
                     if question:
                         args.question = question
+                        # Will run single question mode
                     else:
-                        print("\n✅ Configuration saved! You can now run queries.")
-                        print('Example: massgen "Your question here"')
-                        return
+                        # No question - will launch interactive mode
+                        # Check if this is NOT already the default config
+                        default_config = Path.home() / ".config/massgen/config.yaml"
+                        is_default = Path(filepath).resolve() == default_config.resolve()
+
+                        if not is_default:
+                            # Ask if they want to save as default (for any non-default config)
+                            # Determine what type of config this is for messaging
+                            is_example = False
+                            try:
+                                from importlib.resources import files
+
+                                package_configs = files("massgen").joinpath("configs")
+                                filepath_path = Path(filepath).resolve()
+                                package_path = Path(str(package_configs)).resolve()
+                                is_example = str(filepath_path).startswith(str(package_path))
+                            except Exception:
+                                pass
+
+                            if is_example:
+                                print(f"\n{BRIGHT_CYAN}📦 You selected a package example{RESET}")
+                            else:
+                                print(f"\n{BRIGHT_CYAN}📄 You selected a config{RESET}")
+                            print(f"   {filepath}")
+
+                            from rich.prompt import Confirm
+
+                            save_as_default = Confirm.ask(
+                                "\n[prompt]Save this as your default config?[/prompt]",
+                                default=False,
+                            )
+
+                            if save_as_default:
+                                # Copy to default location
+                                default_config.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.copy(filepath, default_config)
+                                print(f"\n{BRIGHT_GREEN}✅ Config saved to: {default_config}{RESET}")
+                                args.config = str(default_config)
+                            else:
+                                # Just use for this session
+                                print(f"\n{BRIGHT_CYAN}💡 Using for this session only{RESET}")
+
+                        # Launch into interactive mode
+                        print(f"\n{BRIGHT_GREEN}🚀 Launching interactive mode...{RESET}\n")
+                        # Don't return - continue to main() below
                 else:
+                    # No filepath - user cancelled
                     return
             else:
+                # Builder returned None - user cancelled
                 return
 
     # Now call the async main with the parsed arguments
