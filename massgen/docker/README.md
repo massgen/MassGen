@@ -115,7 +115,7 @@ agents:
 | `command_line_docker_memory_limit` | None | Memory limit (e.g., `"2g"`, `"512m"`) |
 | `command_line_docker_cpu_limit` | None | CPU cores limit (e.g., `2.0`) |
 | `command_line_docker_network_mode` | `"none"` | `"none"`, `"bridge"`, or `"host"` |
-| `command_line_docker_enable_sudo` | `false` | Enable sudo in containers (⚠️ see security notes) |
+| `command_line_docker_enable_sudo` | `false` | Enable sudo in containers (isolated from host) |
 
 ## How It Works
 
@@ -257,11 +257,9 @@ sudo apt-get install -y postgresql-client
 - ❌ Cannot: Affect your host system
 - ❌ Cannot: Break out of the container (unless Docker vulnerability exists)
 
-⚠️ **Theoretical risks (extremely rare):**
-- Container escape vulnerabilities (CVEs in Docker/kernel)
-  - These are very rare and quickly patched
-  - Sudo increases attack surface slightly if escape exists
-  - Still requires exploit code, not just malicious intent
+ℹ️ **Note:**
+- Container escape vulnerabilities (CVEs in Docker/kernel) are extremely rare and quickly patched
+- Standard Docker security practices apply
 
 ❌ **Don't do this (makes it unsafe):**
 - Enabling privileged mode (not exposed in MassGen, would need code changes)

@@ -1,6 +1,6 @@
 # MassGen MCP Runtime Environment (with sudo)
-# WARNING: This variant includes sudo access for runtime package installation
-# SECURITY: Only use this if you understand the risks. Prefer building custom images instead.
+# This variant includes sudo access for runtime package installation
+# Container is isolated from host system
 # Base image: Python 3.11 slim for balance of features and size
 
 FROM python:3.11-slim
@@ -9,7 +9,7 @@ FROM python:3.11-slim
 LABEL maintainer="MassGen Team"
 LABEL description="Isolated runtime environment for MassGen command execution (with sudo support)"
 LABEL version="1.0.0"
-LABEL security.warning="This image includes sudo access. Use with caution and proper Docker configuration."
+LABEL info="This image includes sudo access for runtime package installation. Container is isolated from host."
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -22,7 +22,7 @@ ENV PYTHONUNBUFFERED=1 \
 # - git: Version control operations
 # - curl: HTTP operations and downloads
 # - build-essential: Compiling Python packages with C extensions
-# - sudo: For runtime package installation (security warning!)
+# - sudo: For runtime package installation
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -56,8 +56,7 @@ RUN mkdir -p /workspace /context /temp_workspaces
 WORKDIR /workspace
 
 # Setup non-root user with sudo access
-# Commands run as this user to prevent some privilege escalation
-# But user can use sudo for package installation (SECURITY WARNING)
+# User can use sudo for package installation within container
 RUN useradd -m -u 1000 -s /bin/bash massgen && \
     chown -R massgen:massgen /workspace /context /temp_workspaces /app && \
     usermod -aG sudo massgen && \

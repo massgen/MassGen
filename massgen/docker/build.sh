@@ -45,10 +45,9 @@ while [[ $# -gt 0 ]]; do
             echo "  $0 -t v1.0.0                          # Build with specific tag"
             echo "  $0 -n custom-runtime -t dev           # Custom name and tag"
             echo ""
-            echo "Security Note:"
+            echo "Note:"
             echo "  The --sudo variant includes sudo access for runtime package installation."
-            echo "  This is less secure than the default image. Prefer building custom images"
-            echo "  with pre-installed packages instead."
+            echo "  Container is isolated from host system."
             exit 0
             ;;
         *)
@@ -65,8 +64,7 @@ if [ "$BUILD_SUDO" = true ]; then
         IMAGE_NAME="massgen/mcp-runtime-sudo"
     fi
     DOCKERFILE="massgen/docker/Dockerfile.sudo"
-    echo -e "${BLUE}⚠️  Building SUDO VARIANT - includes sudo access for runtime package installation${NC}"
-    echo -e "${BLUE}    This is less secure than the default image. Use with caution.${NC}"
+    echo -e "${BLUE}ℹ️  Building SUDO VARIANT - includes sudo access for runtime package installation (isolated from host)${NC}"
     echo ""
 fi
 
