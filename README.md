@@ -1145,15 +1145,15 @@ We welcome community contributions to achieve these goals.
 
 ### v0.1.4 Roadmap
 
-Version 0.1.4 focuses on Docker integration and enhanced coding capabilities:
+Version 0.1.4 focuses on Docker integration and media tool system refactoring:
 
 #### Required Features
 - **Running MCP Tools in Docker**: Containerized execution environment for MCP tools with enhanced security and isolation
-- **Enhanced File Operations**: Advanced workspace management for coding agents
+- **Move Image/Audio/Video Generation Tools to Customized Tool System**: Refactor media generation capabilities into unified custom tool system
 
 Key technical approach:
 - **Docker Integration**: Secure execution of third-party tools in isolated Docker containers with resource limits and network isolation
-- **Enhanced File Operations**: Complex coding tasks requiring sophisticated file manipulation with improved workspace management
+- **Media Tools Migration**: Integrate image, audio, and video generation tools with custom tool system for better maintainability and extensibility
 
 **Target Release**: October 27, 2025 (Monday @ 9am PT)
 

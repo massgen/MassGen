@@ -32,12 +32,12 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.4** | 10/27/25 | Running MCP Tools in Docker | @qidanrui | Enhanced security and isolation for MCP tool execution |
-| | | Enhanced File Operations | @ncrispino | Advanced coding agent workspace management |
+| **v0.1.4** | 10/27/25 | Running MCP Tools in Docker | @ncrispino | Enhanced security and isolation for MCP tool execution |
+| | | Move Image/Audio/Video Generation Tools to Customized Tool System | @qidanrui | Streamlined media generation tool management |
 | **v0.1.5** | 10/29/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
 | | | Memory Module (Phase 1) | @qidanrui @ncrispino | Long-term memory for reasoning tasks and document understanding |
 | **v0.1.6** | 10/31/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Advanced Voting Mechanism | @qidanrui | Improved decision-making in multi-agent scenarios |
+| | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
@@ -47,21 +47,21 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ### Features
 
-**1. Running MCP Tools in Docker** (@qidanrui)
+**1. Running MCP Tools in Docker** (@ncrispino)
 - Issue: [#346](https://github.com/Leezekun/MassGen/issues/346)
 - Containerized execution environment for MCP tools
 - Enhanced security and isolation for tool operations
 - **Use Case**: Secure execution of third-party tools in isolated environments
 
-**2. Enhanced File Operations** (@ncrispino)
+**2. Move Image/Audio/Video Generation Tools to Customized Tool System** (@qidanrui)
 - Issue: [#357](https://github.com/Leezekun/MassGen/issues/357)
-- Advanced workspace management for coding agents
-- Improved file handling and operations
-- **Use Case**: Complex coding tasks requiring sophisticated file manipulation
+- Refactor existing image, audio, and video generation capabilities
+- Integrate generation tools with customized tool system
+- **Use Case**: Streamlined tool management and better integration of media generation capabilities
 
 ### Success Criteria
 - ✅ MCP tools run securely in Docker containers
-- ✅ Enhanced file operations improve coding agent capabilities
+- ✅ Media generation tools successfully integrated into custom tool system
 
 ---
 
@@ -96,15 +96,15 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Issue: [#316](https://github.com/Leezekun/MassGen/issues/316)
 - **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
 
-**2. Advanced Voting Mechanism** (@qidanrui)
+**2. Add Computer Use Agent to Custom Tools** (@qidanrui)
 - Issue: [#358](https://github.com/Leezekun/MassGen/issues/358)
-- Sophisticated voting strategies for multi-agent decision-making
-- Configurable voting rules and consensus mechanisms
-- **Use Case**: Complex scenarios requiring nuanced decision-making across multiple agents
+- Computer use agent integration with custom tools system
+- Enable agents to interact with computer interfaces
+- **Use Case**: Automated UI testing, browser automation, and desktop application interaction
 
 ### Success Criteria
 - ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
-- ✅ Advanced voting improves multi-agent coordination quality
+- ✅ Computer use agent successfully integrated with custom tools
 
 ---
 

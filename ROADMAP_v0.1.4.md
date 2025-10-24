@@ -20,7 +20,7 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 
 **Goal**: Containerized execution environment for MCP tools with enhanced security and isolation
 
-**Owner**: @qidanrui (danrui2020)
+**Owner**: @ncrispino (nickcrispino)
 
 **Issue**: [#346](https://github.com/Leezekun/MassGen/issues/346)
 
@@ -49,43 +49,43 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 
 ---
 
-### 🎯 Milestone 2: Enhanced File Operations (REQUIRED)
+### 🎯 Milestone 2: Move Image/Audio/Video Generation Tools to Customized Tool System (REQUIRED)
 
-**Goal**: Advanced workspace management for coding agents with improved file handling capabilities
+**Goal**: Refactor existing media generation capabilities to integrate with customized tool system
 
-**Owner**: @ncrispino (nickcrispino)
+**Owner**: @qidanrui (danrui2020)
 
 **Issue**: [#357](https://github.com/Leezekun/MassGen/issues/357)
 
-#### 2.1 Advanced File Operations
-- [ ] Implement sophisticated file handling capabilities
-- [ ] Add workspace context management
-- [ ] Support for complex file manipulation patterns
-- [ ] Enable efficient directory operations
+#### 2.1 Tool System Refactoring
+- [ ] Extract image generation tools to custom tool system
+- [ ] Extract audio generation tools to custom tool system
+- [ ] Extract video generation tools to custom tool system
+- [ ] Standardize tool interface across media types
 
-#### 2.2 Coding Agent Integration
-- [ ] Integrate enhanced file operations with coding agents
-- [ ] Support for multi-file editing workflows
-- [ ] Enable context-aware file suggestions
-- [ ] Add file operation validation and safety checks
+#### 2.2 Integration and Compatibility
+- [ ] Ensure backward compatibility with existing implementations
+- [ ] Update backend configurations to use new tool system
+- [ ] Maintain feature parity with current generation tools
+- [ ] Add tool discovery and registration mechanisms
 
-#### 2.3 Performance Optimization
-- [ ] Optimize file read/write operations
-- [ ] Implement caching for frequently accessed files
-- [ ] Add support for large file handling
-- [ ] Enable parallel file operations where safe
+#### 2.3 Documentation and Examples
+- [ ] Document new tool system architecture
+- [ ] Provide migration guide for existing users
+- [ ] Create example configurations using new tools
+- [ ] Update API documentation
 
-#### 2.4 Testing and Examples
-- [ ] Create comprehensive tests for file operations
-- [ ] Add examples for common coding workflows
-- [ ] Document file operation patterns and best practices
-- [ ] Test with real-world coding scenarios
+#### 2.4 Testing and Validation
+- [ ] Comprehensive tests for media generation tools
+- [ ] Validate output quality matches previous implementation
+- [ ] Performance benchmarking
+- [ ] Cross-backend compatibility testing
 
 **Success Criteria**:
-- ✅ Enhanced file operations improve coding agent capabilities
-- ✅ Complex coding tasks handled efficiently
-- ✅ Comprehensive documentation and examples
-- ✅ Performance improvements measurable
+- ✅ All media generation tools successfully migrated to custom tool system
+- ✅ No regression in functionality or quality
+- ✅ Improved maintainability and extensibility
+- ✅ Complete documentation and examples
 
 ---
 
@@ -100,11 +100,11 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 - [ ] Resource limits and network isolation working
 - [ ] Documentation and examples complete
 
-**Enhanced File Operations:**
-- [ ] Advanced file handling capabilities implemented
-- [ ] Workspace management functional for coding agents
-- [ ] Complex file manipulation patterns supported
-- [ ] Performance optimizations in place
+**Media Generation Tools Migration:**
+- [ ] Image generation tools migrated to custom tool system
+- [ ] Audio generation tools migrated to custom tool system
+- [ ] Video generation tools migrated to custom tool system
+- [ ] Backward compatibility maintained
 - [ ] Comprehensive testing and documentation
 
 ### Performance Requirements
@@ -116,7 +116,7 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 ### Quality Requirements
 - [ ] Test coverage for all new features
 - [ ] Integration tests for Docker MCP execution
-- [ ] End-to-end tests for file operations
+- [ ] End-to-end tests for media generation tools
 - [ ] Security testing for containerized execution
 - [ ] Comprehensive documentation for all features
 
@@ -127,13 +127,13 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 ### Dependencies
 - **Docker**: Container runtime for MCP tool execution
 - **Existing Infrastructure**: MCP integration, tool system, orchestrator
-- **File System APIs**: Platform-specific file operations
+- **Custom Tool System**: Framework for tool registration and management
 
 ### Risks & Mitigations
 1. **Docker Configuration Complexity**: *Mitigation*: Provide pre-configured templates, comprehensive documentation, automated setup scripts
 2. **Container Security**: *Mitigation*: Follow Docker security best practices, implement resource limits, regular security audits
-3. **File Operation Safety**: *Mitigation*: Validation checks, operation sandboxing, rollback capabilities
-4. **Cross-Platform Compatibility**: *Mitigation*: Extensive testing on Windows/Linux/macOS, platform-specific adaptations
+3. **Tool Migration Compatibility**: *Mitigation*: Comprehensive backward compatibility testing, gradual migration path, fallback mechanisms
+4. **API Breaking Changes**: *Mitigation*: Version management, deprecation notices, migration guides for users
 
 ---
 
@@ -159,8 +159,8 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
-| Phase 1 | Docker Integration | Containerized MCP tool execution, security and isolation | @qidanrui | **REQUIRED** |
-| Phase 2 | Enhanced File Operations | Advanced file handling, workspace management | @ncrispino | **REQUIRED** |
+| Phase 1 | Docker Integration | Containerized MCP tool execution, security and isolation | @ncrispino | **REQUIRED** |
+| Phase 2 | Media Tools Migration | Image/audio/video generation tools to custom tool system | @qidanrui | **REQUIRED** |
 
 **Target Release**: October 27, 2025 (Monday @ 9am PT)
 
@@ -173,7 +173,7 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 **Required Work:**
 1. Implement Docker integration for MCP tool execution
 2. Create security and isolation layers for containerized execution
-3. Implement enhanced file operations for coding agents
+3. Migrate media generation tools to custom tool system
 4. Add comprehensive tests for all features
 5. Create documentation and examples
 
@@ -181,8 +181,8 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 
 - v0.1.4 enables secure execution of MCP tools in Docker containers
 - Enhanced security and isolation for third-party tools
-- Advanced file operations improve coding agent capabilities
-- Complex coding tasks handled with sophisticated file manipulation
+- Streamlined media generation through unified custom tool system
+- Better maintainability and extensibility for generation capabilities
 - Docker setup guides and security best practices included
 
 ---
@@ -196,8 +196,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Documentation guidelines
 
 **Contact Track Owners:**
-- Docker Integration: @qidanrui on Discord (danrui2020)
-- Enhanced File Operations: @ncrispino on Discord (nickcrispino)
+- Docker Integration: @ncrispino on Discord (nickcrispino)
+- Media Tools Migration: @qidanrui on Discord (danrui2020)
 
 ---
 
