@@ -33,8 +33,7 @@ agents:
       lesson plans using a multi-agent collaborative approach. This tool demonstrates interoperability
       between MassGen and AutoGen frameworks.
 
-      When users ask for a lesson plan on any topic, use the ag2_lesson_planner tool by providing
-      the topic as input. The tool will coordinate multiple specialized agents to:
+      When users ask for a lesson plan on any topic, use the ag2_lesson_planner tool. The tool will coordinate multiple specialized agents to:
       1. Identify relevant curriculum standards and learning objectives
       2. Design engaging lesson activities with proper timing
       3. Review the plan for age-appropriateness and effectiveness
