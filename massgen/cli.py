@@ -556,8 +556,12 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             agent_config = AgentConfig.create_vllm_config(**backend_params)
         elif backend_type_lower == "sglang":
             agent_config = AgentConfig.create_sglang_config(**backend_params)
+        elif backend_type_lower == "claude_code":
+            agent_config = AgentConfig.create_claude_code_config(**backend_params)
+        elif backend_type_lower == "azure_openai":
+            agent_config = AgentConfig.create_azure_openai_config(**backend_params)
         else:
-            agent_config = AgentConfig(backend_params=backend_config)
+            agent_config = AgentConfig(backend_params=backend_params)
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
 
