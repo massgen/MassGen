@@ -290,11 +290,13 @@ class ToolManager:
     async def execute_tool(
         self,
         tool_request: dict,
+        execution_context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[ExecutionResult, None]:
         """Execute a tool and return results as async generator.
 
         Args:
             tool_request: Tool execution request with name and input
+            execution_context: Optional execution context (messages, agent_id, etc.)
 
         Yields:
             ExecutionResult objects (accumulated)
@@ -312,10 +314,33 @@ class ToolManager:
             return
 
         tool_entry = self.registered_tools[tool_name]
-        exec_kwargs = {
+
+        # Merge all available parameters: preset_params + tool input + execution context
+        all_available_params = {
             **tool_entry.preset_params,
             **(tool_request.get("input", {}) or {}),
+            **(execution_context or {}),
         }
+
+        # 🔑 Automatic parameter filtering based on function signature
+        # Only pass parameters that the function actually accepts
+        sig = inspect.signature(tool_entry.base_function)
+        exec_kwargs = {}
+
+        for param_name, param in sig.parameters.items():
+            # Skip self and cls
+            if param_name in ["self", "cls"]:
+                continue
+
+            # If parameter exists in available params, include it
+            if param_name in all_available_params:
+                exec_kwargs[param_name] = all_available_params[param_name]
+            # If parameter has VAR_KEYWORD kind (**kwargs), pass all remaining params
+            elif param.kind == inspect.Parameter.VAR_KEYWORD:
+                # Pass all params that weren't already included
+                for key, value in all_available_params.items():
+                    if key not in exec_kwargs:
+                        exec_kwargs[key] = value
 
         # Prepare post-processor if exists
         if tool_entry.post_processor:

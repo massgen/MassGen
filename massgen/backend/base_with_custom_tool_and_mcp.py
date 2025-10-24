@@ -119,6 +119,9 @@ class CustomToolAndMCPBackend(LLMBackend):
         self.custom_tool_manager = ToolManager()
         self._custom_tool_names: set[str] = set()
 
+        # Store current messages for execution context
+        self._current_messages: Optional[List[Dict[str, Any]]] = None
+
         # Register custom tools if provided
         custom_tools = kwargs.get("custom_tools", [])
         if custom_tools:
@@ -409,9 +412,36 @@ class CustomToolAndMCPBackend(LLMBackend):
             "input": json.loads(call["arguments"]) if isinstance(call["arguments"], str) else call["arguments"],
         }
 
+        # Build execution context for tools (generic, not tool-specific)
+        execution_context = {}
+
+        if self._current_messages:
+            # Provide full messages list
+            execution_context["messages"] = self._current_messages
+
+            # Extract commonly used fields for convenience
+            execution_context["system_message"] = next(
+                (msg["content"] for msg in self._current_messages if msg.get("role") == "system"),
+                None,
+            )
+            execution_context["user_message"] = next(
+                (msg["content"] for msg in self._current_messages if msg.get("role") == "user"),
+                None,
+            )
+
+        # Add other useful context information
+        if hasattr(self, "agent_id") and self.agent_id:
+            execution_context["agent_id"] = self.agent_id
+        if hasattr(self, "backend_name") and self.backend_name:
+            execution_context["backend_name"] = self.backend_name
+
         result_text = ""
         try:
-            async for result in self.custom_tool_manager.execute_tool(tool_request):
+            # Pass execution context to ToolManager
+            async for result in self.custom_tool_manager.execute_tool(
+                tool_request,
+                execution_context=execution_context,
+            ):
                 # Accumulate results
                 if hasattr(result, "output_blocks"):
                     for block in result.output_blocks:
@@ -1026,6 +1056,9 @@ class CustomToolAndMCPBackend(LLMBackend):
         """Stream response using OpenAI Response API with unified MCP/non-MCP processing."""
 
         agent_id = kwargs.get("agent_id", None)
+
+        # Store current messages for execution context (for custom tools)
+        self._current_messages = messages.copy() if messages else None
 
         log_backend_activity(
             self.get_provider_name(),

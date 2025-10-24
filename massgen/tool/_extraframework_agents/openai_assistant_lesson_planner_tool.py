@@ -13,7 +13,12 @@ from openai import AsyncOpenAI
 from massgen.tool._result import ExecutionResult, TextContent
 
 
-async def openai_assistant_lesson_planner(user_prompt: str, context: Optional[str] = None) -> ExecutionResult:
+async def openai_assistant_lesson_planner(
+    user_prompt: str,
+    context: Optional[str] = None,
+    system_message: Optional[str] = None,
+    user_message: Optional[str] = None,
+) -> ExecutionResult:
     """
     Create a comprehensive lesson plan using OpenAI's Assistants API.
 
@@ -24,12 +29,18 @@ async def openai_assistant_lesson_planner(user_prompt: str, context: Optional[st
     4. Format the final lesson plan in a standardized format
 
     Args:
-        user_prompt: The user's request or lesson topic (e.g., "photosynthesis", "fractions")
+        user_prompt: The user's request
         context: Additional context or background information (optional)
+        system_message: System message from orchestrator (optional, auto-injected)
+        user_message: User message from orchestrator (optional, auto-injected)
 
     Returns:
         ExecutionResult containing the formatted lesson plan
     """
+    # Optional: Use messages from orchestrator for additional context
+    _ = system_message  # Available but not used in this implementation
+    _ = user_message  # Available but not used in this implementation
+
     # Get API key from environment
     api_key = os.getenv("OPENAI_API_KEY")
 
