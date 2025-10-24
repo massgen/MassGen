@@ -6,7 +6,7 @@ This directory contains detailed case studies demonstrating MassGen's capabiliti
 
 ### v0.1.3 Features
 
-*   [Self-Improvement Through Multimodal Video Analysis](multimodal-case-study-video-analysis.md) - Agents analyze their own case study videos to identify improvements and automation opportunities
+*   [Downloading and Analyzing Existing MassGen Case Study Videos](multimodal-case-study-video-analysis.md) - Agents analyze their own case study videos to identify improvements and automation opportunities
 
 ### Earlier Case Studies
 
