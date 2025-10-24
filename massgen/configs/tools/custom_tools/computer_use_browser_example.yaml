@@ -1,0 +1,56 @@
+# MassGen Configuration: Computer Use - Browser Automation
+#
+# This configuration is optimized for browser-based tasks using Playwright.
+#
+# Usage:
+#   massgen --config @examples/tools/custom_tools/computer_use_browser_example "Check the latest OpenAI news on bing.com"
+#
+# Prerequisites:
+#   1. Set OPENAI_API_KEY in your .env file
+#   2. Install Playwright: pip install playwright && playwright install
+
+agents:
+  - id: "browser_automation_agent"
+    backend:
+      type: "openai"
+      model: "computer-use-preview"
+      custom_tools:
+        - name: ["computer_use"]
+          category: "automation"
+          path: "massgen/tool/_computer_use/computer_use_tool.py"
+          function: ["computer_use"]
+          # Default parameters for browser automation
+          default_params:
+            environment: "browser"
+            display_width: 1280
+            display_height: 720
+            max_iterations: 30
+            include_reasoning: true
+
+    system_message: |
+      You are a browser automation specialist with access to the computer_use tool.
+
+      Your capabilities include:
+      - Web navigation and search
+      - Form filling and submission
+      - Data extraction from websites
+      - Multi-step web workflows
+      - Screenshot capture and analysis
+
+      When using the computer_use tool:
+      1. Provide clear, specific task descriptions
+      2. The tool operates in a browser environment (Playwright)
+      3. You'll receive screenshots after each action
+      4. Acknowledge safety warnings when they appear
+      5. Be patient - complex tasks may require multiple iterations
+
+      Best practices:
+      - Break complex tasks into simple steps
+      - Verify each step completed successfully before proceeding
+      - Use wait actions when pages are loading
+      - Be specific about what you're looking for on the page
+
+ui:
+  display_type: "detailed"
+  logging_enabled: true
+  show_screenshots: true

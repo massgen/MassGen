@@ -189,6 +189,14 @@ Full configuration with planning mode for filesystem operations:
      display_type: "rich_terminal"
      logging_enabled: true
 
+Orchestration Restart
+---------------------
+
+Planning mode works well with **orchestration restart** - a feature that automatically restarts coordination when answers are incomplete.
+
+.. seealso::
+   :doc:`orchestration_restart` - Complete guide to automatic quality checks, per-attempt logging, and self-correcting workflows
+
 How Planning Mode Works
 ------------------------
 

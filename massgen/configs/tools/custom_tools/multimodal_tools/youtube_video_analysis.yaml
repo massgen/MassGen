@@ -1,0 +1,59 @@
+# MassGen Configuration: YouTube Video Analysis with Multimodal Understanding
+#
+# Use Case: Download and analyze YouTube videos from MassGen case studies
+#
+# This demonstrates MassGen's self-evolution capabilities by having agents:
+# 1. Read local case study documentation to discover video URLs
+# 2. Download YouTube videos using yt-dlp via command-line execution
+# 3. Analyze video content using the understand_video multimodal tool
+# 4. Extract insights that could inform future feature development
+#
+# Run with:
+#   uv run massgen --config massgen/configs/tools/custom_tools/multimodal_tools/youtube_video_analysis.yaml "Download recent MassGen case study videos listed in the case study md files, analyze them, find out how to improve them and automate their creation."
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      custom_tools:
+        - name: ["understand_video"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_video.py"
+          function: ["understand_video"]
+      enable_mcp_command_line: true
+      command_line_execution_mode: docker
+      command_line_docker_enable_sudo: true
+      command_line_docker_network_mode: "bridge"
+      cwd: "workspace1"
+
+  - id: "agent_b"
+    backend:
+      type: "claude_code"
+      model: "claude-sonnet-4-5-20250929"
+      custom_tools:
+        - name: ["understand_video"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_video.py"
+          function: ["understand_video"]
+      enable_mcp_command_line: true
+      command_line_execution_mode: docker
+      command_line_docker_enable_sudo: true
+      command_line_docker_network_mode: "bridge"
+      cwd: "workspace2"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "docs/case_studies"
+      permission: "read"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

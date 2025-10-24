@@ -62,6 +62,35 @@ class BaseDisplay(ABC):
         """
 
     @abstractmethod
+    def show_post_evaluation_content(self, content: str, agent_id: str):
+        """Display post-evaluation streaming content.
+
+        Args:
+            content: Post-evaluation content from the agent
+            agent_id: The agent performing the evaluation
+        """
+
+    @abstractmethod
+    def show_restart_banner(self, reason: str, instructions: str, attempt: int, max_attempts: int):
+        """Display restart decision banner.
+
+        Args:
+            reason: Why the restart was triggered
+            instructions: Instructions for the next attempt
+            attempt: Next attempt number
+            max_attempts: Maximum attempts allowed
+        """
+
+    @abstractmethod
+    def show_restart_context_panel(self, reason: str, instructions: str):
+        """Display restart context panel at top of UI (for attempt 2+).
+
+        Args:
+            reason: Why the previous attempt restarted
+            instructions: Instructions for this attempt
+        """
+
+    @abstractmethod
     def cleanup(self):
         """Clean up display resources."""
 

@@ -508,10 +508,83 @@ Example 3: Custom Tool + MCP Integration
      display_type: "simple"
      logging_enabled: true
 
+Example 4: Multimodal Understanding Tools
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**New in v0.1.3+**: MassGen provides custom tools for analyzing multimodal content (images, audio, video, documents) using OpenAI's gpt-4.1 API.
+
+.. code-block:: bash
+
+   # Analyze an image
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml \
+     "Describe the content in this image"
+
+   # Transcribe audio
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/understand_audio.yaml \
+     "What is being said in this audio?"
+
+   # Analyze video
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/understand_video.yaml \
+     "What's happening in this video?"
+
+   # Process documents
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/understand_file.yaml \
+     "Summarize this PDF document"
+
+**Config Example:** ``understand_image.yaml``
+
+.. code-block:: yaml
+
+   agents:
+     - id: "understand_image_tool"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         cwd: "workspace1"
+         custom_tools:
+           - name: ["understand_image"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_image.py"
+             function: ["understand_image"]
+       system_message: |
+         You are an AI assistant with access to image understanding capabilities.
+         Use the understand_image tool to analyze and understand images using OpenAI's gpt-4.1 API.
+
+   orchestrator:
+     context_paths:
+       - path: "massgen/configs/resources/v0.1.3-example/multimodality.jpg"
+         permission: "read"
+
+   ui:
+     display_type: "rich_terminal"
+     logging_enabled: true
+
+**Available Multimodal Tools:**
+
+* ``understand_image`` - Analyze images (PNG, JPEG, JPG)
+* ``understand_audio`` - Transcribe and analyze audio files
+* ``understand_video`` - Extract key frames and analyze videos
+* ``understand_file`` - Process documents (PDF, DOCX, XLSX, PPTX)
+
+**Key Features:**
+
+* Works with any backend - uses OpenAI's gpt-4.1 for analysis
+* Processes files from agent workspaces
+* Structured JSON responses with detailed metadata
+* Path validation for security
+
+See :doc:`multimodal` for complete multimodal capabilities documentation.
+
 Available Example Configs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``massgen/configs/tools/custom_tools/`` directory contains examples for all backends:
+
+**Basic Custom Tools:**
 
 * **Claude API**: ``claude_custom_tool_example.yaml``
 * **Claude Code**: ``claude_code_custom_tool_example.yaml``
@@ -521,7 +594,14 @@ The ``massgen/configs/tools/custom_tools/`` directory contains examples for all 
 * **Qwen**: ``qwen_api_custom_tool_example.yaml``, ``qwen_local_custom_tool_example.yaml``
 * **With MCP**: ``*_custom_tool_with_mcp_example.yaml`` variants for each backend
 
-Each example demonstrates the same ``two_num_tool`` adapted for different backends.
+**Multimodal Understanding Tools:**
+
+* ``multimodal_tools/understand_image.yaml`` - Image analysis
+* ``multimodal_tools/understand_audio.yaml`` - Audio transcription
+* ``multimodal_tools/understand_video.yaml`` - Video analysis
+* ``multimodal_tools/understand_file.yaml`` - Document processing
+
+Each basic example demonstrates the same ``two_num_tool`` adapted for different backends.
 
 Backend Support
 ---------------
