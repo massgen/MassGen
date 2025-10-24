@@ -395,9 +395,9 @@ Full multi-agent configuration demonstrating all 6 configuration levels:
    # ========================================
    orchestrator:
      # Workspace management
-     snapshot_storage: "massgen_logs/snapshots"
-     agent_temporary_workspace: "massgen_logs/temp_workspaces"
-     session_storage: "massgen_logs/sessions"
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+     session_storage: "sessions"
 
      # Project integration
      context_paths:
@@ -706,7 +706,7 @@ Coordination Configuration
 
 .. note::
 
-   **New in v0.1.1:** Orchestration restart enables automatic quality checks after coordination. The winning agent evaluates its own answer and can trigger a restart if the answer is incomplete or incorrect, with specific instructions for improvement.
+   **New in v0.1.3:** Orchestration restart enables automatic quality checks after coordination. The winning agent evaluates its own answer and can trigger a restart if the answer is incomplete or incorrect, with specific instructions for improvement.
 
 .. note::
 
