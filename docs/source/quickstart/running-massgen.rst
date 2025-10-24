@@ -27,11 +27,25 @@ The simplest way to use MassGen - no configuration needed on first run:
    # First time: Launches setup wizard
    massgen
 
-The wizard helps you:
+The first-run wizard walks you through a two-step setup:
 
-* Configure API keys for your preferred AI models
-* Create your default agent team
-* Save configuration to ``~/.config/massgen/config.yaml`` (Windows: ``%USERPROFILE%\.config\massgen\config.yaml``)
+**Step 1: API Keys (if needed)**
+
+* Detects existing API keys in your environment
+* Prompts for cloud provider keys (OpenAI, Anthropic, Google, etc.) if none found
+* Saves keys to ``~/.config/massgen/.env``
+* Skipped if you already have API keys configured
+
+**Step 2: Configuration**
+
+* **Browse ready-to-use configs / examples** - Try pre-built configurations immediately
+* **Build from template** - Create custom agent teams with guided setup
+* Selected configurations saved to ``~/.config/massgen/config.yaml``
+
+When browsing examples or existing configs, you'll be asked:
+
+* "Save this as your default config?" - Choose yes to reuse it on future runs by default without needing to specify it again
+* Then launches directly into interactive mode
 
 **After setup:**
 

@@ -174,6 +174,9 @@ Configuration Parameters
    * - ``command_line_docker_network_mode``
      - ``"none"``
      - Network mode: ``"none"``, ``"bridge"``, or ``"host"``
+   * - ``command_line_docker_enable_sudo``
+     - ``false``
+     - Enable sudo in containers (⚠️ less secure, see docs)
    * - ``command_line_whitelist_patterns``
      - None
      - Regex patterns for allowed commands
@@ -459,6 +462,101 @@ Build and use:
 .. code-block:: yaml
 
    command_line_docker_image: "my-custom-runtime:latest"
+
+Sudo Variant (Runtime Package Installation)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The sudo variant allows agents to install system packages at runtime inside their Docker container.
+
+**IMPORTANT: Build the image before first use:**
+
+.. code-block:: bash
+
+   bash massgen/docker/build.sh --sudo
+
+This builds ``massgen/mcp-runtime-sudo:latest`` with sudo access locally. (This image is not available on Docker Hub - you must build it yourself.)
+
+**Enable in config:**
+
+.. code-block:: yaml
+
+   agent:
+     backend:
+       cwd: "workspace"
+       enable_mcp_command_line: true
+       command_line_execution_mode: "docker"
+       command_line_docker_enable_sudo: true  # Automatically uses sudo image
+
+**What agents can do with sudo:**
+
+.. code-block:: bash
+
+   # Install system packages at runtime
+   sudo apt-get update && sudo apt-get install -y ffmpeg
+
+   # Install additional Python packages
+   sudo pip install tensorflow
+
+**Is this safe?**
+
+**YES**, because Docker container isolation is the primary security boundary:
+
+**Container is fully isolated from your host:**
+
+- Sudo inside container ≠ sudo on your computer
+- Agent can only access mounted volumes (workspace, context paths)
+- Cannot access your host filesystem outside mounts
+- Cannot affect host processes or system configuration
+- Docker namespaces/cgroups provide strong isolation
+
+**What sudo can and cannot do:**
+
+- ✅ Can: Install packages inside the container (apt, pip, npm)
+- ✅ Can: Modify container system configuration
+- ✅ Can: Read/write mounted workspace (same as without sudo)
+- ❌ Cannot: Access your host filesystem outside mounts
+- ❌ Cannot: Affect your host system
+- ❌ Cannot: Break out of the container (unless Docker vulnerability exists)
+
+**Theoretical risks (extremely rare):**
+
+- Container escape vulnerabilities (CVEs in Docker/kernel) are very rare and quickly patched
+- Sudo increases attack surface slightly if escape exists
+- Still requires exploit code, not just malicious intent
+
+**When to use sudo variant vs custom images:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 30 25 25
+
+   * - Approach
+     - Use When
+     - Performance
+     - Security
+   * - **Sudo variant**
+     - Need flexibility, unknown packages, prototyping
+     - Slower (runtime install)
+     - Good (container isolated)
+   * - **Custom image**
+     - Know packages, production use
+     - Fast (pre-installed)
+     - Best (minimal attack surface)
+
+**Custom image example (recommended for production):**
+
+.. code-block:: dockerfile
+
+   FROM massgen/mcp-runtime:latest
+   USER root
+   RUN apt-get update && apt-get install -y ffmpeg postgresql-client
+   USER massgen
+
+Build: ``docker build -t my-runtime:latest .``
+
+Use: ``command_line_docker_image: "my-runtime:latest"``
+
+**Bottom line:** The sudo variant is safe for most use cases because Docker container isolation is strong. Custom images are preferred for production because they're faster and have a smaller attack surface, but sudo is fine for development and prototyping.
 
 Troubleshooting
 ---------------

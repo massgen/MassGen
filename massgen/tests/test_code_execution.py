@@ -154,6 +154,112 @@ class TestCommandSanitization:
             _sanitize_command(cmd)
 
 
+class TestSudoSanitization:
+    """Test sudo sanitization respects enable_sudo flag."""
+
+    def test_sudo_blocked_by_default(self):
+        """Test that sudo is blocked when enable_sudo=False (default)."""
+        from massgen.filesystem_manager._code_execution_server import _sanitize_command
+
+        sudo_commands = [
+            "sudo apt-get update",
+            "sudo apt-get install -y ffmpeg",
+            "sudo pip install tensorflow",
+            "sudo npm install -g typescript",
+            "sudo chmod 755 file.txt",
+            "echo 'test' && sudo apt update",
+        ]
+
+        for cmd in sudo_commands:
+            with pytest.raises(ValueError, match="sudo.*not allowed"):
+                _sanitize_command(cmd, enable_sudo=False)
+
+    def test_sudo_allowed_when_enabled(self):
+        """Test that sudo is allowed when enable_sudo=True."""
+        from massgen.filesystem_manager._code_execution_server import _sanitize_command
+
+        sudo_commands = [
+            "sudo apt-get update",
+            "sudo apt-get install -y ffmpeg",
+            "sudo pip install tensorflow",
+            "sudo npm install -g typescript",
+            "sudo chown user:group file.txt",  # chown allowed with sudo enabled
+            "sudo chmod 755 file.txt",  # chmod allowed with sudo enabled
+        ]
+
+        for cmd in sudo_commands:
+            # Should not raise when enable_sudo=True
+            _sanitize_command(cmd, enable_sudo=True)
+
+    def test_other_dangerous_patterns_still_blocked_with_sudo(self):
+        """Test that other dangerous patterns are still blocked even with sudo enabled."""
+        from massgen.filesystem_manager._code_execution_server import _sanitize_command
+
+        # These should ALWAYS be blocked, regardless of enable_sudo
+        dangerous_commands = [
+            "sudo rm -rf /",  # Still blocked - root deletion
+            "rm -rf /",  # Still blocked
+            "dd if=/dev/zero of=/dev/sda",  # Still blocked - dd command
+            "sudo dd if=/dev/zero of=/dev/sda",  # Still blocked
+            ":(){ :|:& };:",  # Still blocked - fork bomb
+            "mv file /dev/null",  # Still blocked
+            "sudo mv file /dev/null",  # Still blocked
+            "echo test > /dev/sda1",  # Still blocked - writing to disk
+        ]
+
+        for cmd in dangerous_commands:
+            with pytest.raises(ValueError, match="dangerous|not allowed"):
+                _sanitize_command(cmd, enable_sudo=True)
+
+    def test_su_chown_chmod_blocked_without_sudo_flag(self):
+        """Test that su, chown, chmod are blocked when enable_sudo=False."""
+        from massgen.filesystem_manager._code_execution_server import _sanitize_command
+
+        commands = [
+            "su root",
+            "su - postgres",
+            "chown root:root file.txt",
+            "chmod 777 file.txt",
+            "chmod +x script.sh",
+        ]
+
+        for cmd in commands:
+            with pytest.raises(ValueError, match="not allowed"):
+                _sanitize_command(cmd, enable_sudo=False)
+
+    def test_su_chown_chmod_allowed_with_sudo_flag(self):
+        """Test that su, chown, chmod are allowed when enable_sudo=True (Docker sudo mode)."""
+        from massgen.filesystem_manager._code_execution_server import _sanitize_command
+
+        # In Docker sudo mode, these are safe because they're confined to container
+        commands = [
+            "su postgres",
+            "chown user:group file.txt",
+            "chmod 755 file.txt",
+            "chmod +x script.sh",
+        ]
+
+        for cmd in commands:
+            # Should not raise when enable_sudo=True
+            _sanitize_command(cmd, enable_sudo=True)
+
+    def test_local_mode_blocks_sudo(self):
+        """Test that local mode (non-Docker) blocks sudo commands."""
+        from massgen.filesystem_manager._code_execution_server import _sanitize_command
+
+        # In local mode (enable_sudo=False), sudo should be blocked for safety
+        with pytest.raises(ValueError, match="sudo.*not allowed"):
+            _sanitize_command("sudo apt-get install malicious-package", enable_sudo=False)
+
+    def test_docker_sudo_mode_allows_sudo(self):
+        """Test that Docker sudo mode allows sudo commands."""
+        from massgen.filesystem_manager._code_execution_server import _sanitize_command
+
+        # In Docker mode with enable_sudo=True, sudo should be allowed
+        # (safe because it's inside container)
+        _sanitize_command("sudo apt-get install gh", enable_sudo=True)
+
+
 class TestOutputHandling:
     """Test output capture and size limits."""
 
@@ -673,6 +779,78 @@ class TestDockerExecution:
 
         # Cleanup
         manager.cleanup("test_context")
+
+    @pytest.mark.docker
+    def test_docker_sudo_enabled_image_selection(self):
+        """Test that enabling sudo automatically selects the sudo image variant."""
+        from massgen.filesystem_manager._docker_manager import DockerManager
+
+        # Test 1: Default image with sudo=False should use regular image
+        manager_no_sudo = DockerManager(enable_sudo=False)
+        assert manager_no_sudo.image == "massgen/mcp-runtime:latest"
+        assert manager_no_sudo.enable_sudo is False
+
+        # Test 2: Default image with sudo=True should auto-switch to sudo variant
+        manager_with_sudo = DockerManager(enable_sudo=True)
+        assert manager_with_sudo.image == "massgen/mcp-runtime-sudo:latest"
+        assert manager_with_sudo.enable_sudo is True
+
+        # Test 3: Custom image with sudo=True should keep custom image
+        manager_custom = DockerManager(
+            image="my-custom-image:latest",
+            enable_sudo=True,
+        )
+        assert manager_custom.image == "my-custom-image:latest"
+        assert manager_custom.enable_sudo is True
+
+    @pytest.mark.docker
+    def test_docker_sudo_functionality(self, tmp_path):
+        """Test that sudo commands work in sudo-enabled container."""
+        from massgen.filesystem_manager._docker_manager import DockerManager
+
+        # Skip if sudo image not built
+        manager = DockerManager(enable_sudo=True)
+        try:
+            manager.ensure_image_exists()
+        except RuntimeError:
+            pytest.skip("Sudo Docker image not built. Run: bash massgen/docker/build.sh --sudo")
+
+        workspace = tmp_path / "workspace_sudo"
+        workspace.mkdir()
+
+        # Create container with sudo enabled
+        manager.create_container(
+            agent_id="test_sudo",
+            workspace_path=workspace,
+        )
+
+        # Test 1: Verify whoami returns 'massgen' (non-root user)
+        result_whoami = manager.exec_command(
+            agent_id="test_sudo",
+            command="whoami",
+        )
+        assert result_whoami["success"] is True
+        assert "massgen" in result_whoami["stdout"]
+
+        # Test 2: Verify sudo whoami returns 'root' (sudo works)
+        result_sudo_whoami = manager.exec_command(
+            agent_id="test_sudo",
+            command="sudo whoami",
+        )
+        assert result_sudo_whoami["success"] is True
+        assert "root" in result_sudo_whoami["stdout"]
+
+        # Test 3: Verify sudo apt-get update works (package installation capability)
+        result_apt = manager.exec_command(
+            agent_id="test_sudo",
+            command="sudo apt-get update",
+            timeout=60,
+        )
+        # This should succeed in sudo image (may fail in network=none, but command should run)
+        assert result_apt["exit_code"] is not None
+
+        # Cleanup
+        manager.cleanup("test_sudo")
 
 
 if __name__ == "__main__":

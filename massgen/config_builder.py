@@ -617,6 +617,20 @@ class ConfigBuilder:
             # Build choices for questionary - organized with tool hints
             choices = []
 
+            # Add spacing before first option (using spaces to avoid line)
+            choices.append(questionary.Separator(" "))
+
+            # First option: Browse existing configs (most common for new users)
+            choices.append(
+                questionary.Choice(
+                    title="📦  Browse ready-to-use configs / examples",
+                    value="__browse_existing__",
+                ),
+            )
+            choices.append(questionary.Separator(" "))
+            choices.append(questionary.Separator("┄┄ or build from template ┄┄"))
+            choices.append(questionary.Separator(" "))
+
             # Define display with brief tool descriptions
             display_info = [
                 ("custom", "⚙️", "Custom Configuration", "Choose your own tools"),
@@ -643,12 +657,12 @@ class ConfigBuilder:
                             value=use_case_id,
                         ),
                     )
+
                 except Exception as e:
                     console.print(f"[warning]⚠️  Could not display use case: {e}[/warning]")
 
             # Add helpful context before the prompt
-            console.print("[dim]Choose a preset that matches your task. Each preset auto-configures tools and capabilities.[/dim]")
-            console.print("[dim]You can customize everything in later steps.[/dim]\n")
+            console.print("[dim]Browse ready-to-use configs, or pick a template to build your own.[/dim]\n")
 
             use_case_id = questionary.select(
                 "Select your use case:",
@@ -665,6 +679,10 @@ class ConfigBuilder:
 
             if use_case_id is None:
                 raise KeyboardInterrupt  # User cancelled, exit immediately
+
+            # Handle special value for browsing existing configs
+            if use_case_id == "__browse_existing__":
+                return "__browse_existing__"
 
             # Show selection with description
             selected_info = self.USE_CASES[use_case_id]
@@ -2302,7 +2320,7 @@ class ConfigBuilder:
                 orchestrator_config = {}
             orchestrator_config["session_storage"] = "sessions"
             console.print()
-            console.print("  ✅ Multi-turn sessions enabled (supports persistent conversations with memory)")
+            console.print("  ✅ Multi-turn sessions enabled (supports persistent conversations)")
 
             # Planning Mode (for MCP irreversible actions) - only ask if MCPs are configured
             has_mcp = any(a.get("backend", {}).get("mcp_servers") for a in agents)
@@ -2320,6 +2338,30 @@ class ConfigBuilder:
                     }
                     console.print()
                     console.print("  ✅ Planning mode enabled - MCP tools will plan without executing during coordination")
+
+            # Orchestration Restart Feature
+            console.print()
+            console.print("  [dim]Orchestration Restart: Automatic quality checks with self-correction[/dim]")
+            console.print("  [dim]• Agent evaluates its own answer after coordination[/dim]")
+            console.print("  [dim]• Can restart with specific improvement instructions if incomplete[/dim]")
+            console.print("  [dim]• Each attempt gets isolated logs in attempt_1/, attempt_2/, etc.[/dim]")
+            console.print("  [dim]• Works with all backends (OpenAI, Claude, Gemini, Grok, etc.)[/dim]")
+            console.print("  [dim]• 0 = no restarts (default), 1-2 = recommended, 3 = maximum[/dim]")
+            console.print()
+
+            restart_input = Prompt.ask(
+                "  [prompt]Max orchestration restarts (0-3)[/prompt]",
+                choices=["0", "1", "2", "3"],
+                default="0",
+            )
+
+            max_restarts = int(restart_input)
+            if max_restarts > 0:
+                if "coordination" not in orchestrator_config:
+                    orchestrator_config["coordination"] = {}
+                orchestrator_config["coordination"]["max_orchestration_restarts"] = max_restarts
+                console.print()
+                console.print(f"  ✅ Orchestration restart enabled: up to {max_restarts} restart(s) allowed")
 
             # Voting Sensitivity - only ask for multi-agent setups
             if len(agents) > 1:
@@ -2634,6 +2676,21 @@ class ConfigBuilder:
                     console.print("[warning]⚠️  No use case selected.[/warning]")
                     return None
 
+                # Handle special case: user wants to browse existing configs
+                if use_case == "__browse_existing__":
+                    console.print("\n[cyan]Opening config selector...[/cyan]\n")
+                    # Import here to avoid circular dependency
+                    from .cli import interactive_config_selector
+
+                    selected_config = interactive_config_selector()
+                    if selected_config:
+                        console.print(f"\n[green]✓ Selected config: {selected_config}[/green]\n")
+                        # Return the selected config as if it was created
+                        return (selected_config, None)
+                    else:
+                        console.print("\n[yellow]⚠️  No config selected[/yellow]\n")
+                        return None
+
                 # Step 2: Configure agents
                 agents = self.configure_agents(use_case, api_keys)
                 if not agents:
@@ -2652,7 +2709,12 @@ class ConfigBuilder:
                 filepath = self.review_and_save(agents, orchestrator_config)
 
                 if filepath:
-                    # Ask if user wants to run now
+                    # In default_mode (first-run), skip "Run now?" and go straight to interactive mode
+                    if self.default_mode:
+                        # Config already saved by review_and_save(), just return to launch interactive mode
+                        return (filepath, None)
+
+                    # In regular --init mode, ask if user wants to run now
                     run_choice = Confirm.ask("\n[prompt]Run MassGen with this configuration now?[/prompt]", default=True)
                     if run_choice is None:
                         raise KeyboardInterrupt  # User cancelled

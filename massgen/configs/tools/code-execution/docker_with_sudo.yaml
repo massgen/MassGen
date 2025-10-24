@@ -1,0 +1,35 @@
+# Docker Isolation with Sudo Support
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/docker_with_sudo.yaml "Write a factorial function and test it"
+# Expected behavior: Commands execute in isolated Docker container with sudo access for runtime package installation
+#
+# Prerequisites:
+#   1. Docker installed and running
+#   2. Build sudo image FIRST: bash massgen/docker/build.sh --sudo
+#
+# Security: Safe for most use cases - Docker container isolation prevents host access even with sudo.
+
+agent:
+  id: "docker_sudo_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace1"
+
+    # Enable command execution with Docker isolation and sudo
+    enable_mcp_command_line: true
+    command_line_execution_mode: "docker"
+    command_line_docker_enable_sudo: true  # Enables sudo in container
+
+    # Optional: Specify custom image (default auto-switches to sudo variant)
+    # command_line_docker_image: "massgen/mcp-runtime-sudo:latest"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 180  # Docker startup adds ~5-10s overhead
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

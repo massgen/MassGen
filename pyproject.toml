@@ -212,6 +212,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "asyncio: mark test as requiring asyncio",
+    "docker: marks tests that require Docker to be installed and running",
 ]
 asyncio_mode = "auto"
 filterwarnings = [

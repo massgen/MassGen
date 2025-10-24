@@ -44,7 +44,7 @@ from .logger_config import (
 )
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
-from .tool import get_workflow_tools
+from .tool import get_post_evaluation_tools, get_workflow_tools
 from .utils import ActionType, AgentStatus, CoordinationStage
 
 
@@ -164,6 +164,14 @@ class Orchestrator(ChatAgent):
         self.is_orchestrator_timeout: bool = False
         self.timeout_reason: Optional[str] = None
 
+        # Restart feature state tracking
+        self.current_attempt: int = 0
+        max_restarts = self.config.coordination_config.max_orchestration_restarts
+        self.max_attempts: int = 1 + max_restarts
+        self.restart_pending: bool = False
+        self.restart_reason: Optional[str] = None
+        self.restart_instructions: Optional[str] = None
+
         # Coordination state tracking for cleanup
         self._active_streams: Dict = {}
         self._active_tasks: Dict = {}
@@ -263,6 +271,9 @@ class Orchestrator(ChatAgent):
             # Reinitialize session with user prompt now that we have it
             self.coordination_tracker.initialize_session(list(self.agents.keys()), self.current_task)
             self.workflow_phase = "coordinating"
+
+            # Reset restart_pending flag at start of coordination (will be set again if restart needed)
+            self.restart_pending = False
 
             # Clear agent workspaces for new turn (if this is a multi-turn conversation with history)
             if conversation_context and conversation_context.get("conversation_history"):
@@ -651,7 +662,12 @@ Your answer:"""
             return {"has_irreversible": True, "blocked_tools": set()}
 
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
-        """Execute coordination with orchestrator-level timeout protection."""
+        """Execute coordination with orchestrator-level timeout protection.
+
+        When restart is needed, this method completes and returns control to CLI,
+        which will call coordinate() again (similar to multiturn pattern).
+        """
+        # Reset timing and state for this attempt
         self.coordination_start_time = time.time()
         self.total_tokens = 0
         self.is_orchestrator_timeout = False
@@ -659,12 +675,18 @@ Your answer:"""
 
         log_orchestrator_activity(
             self.orchestrator_id,
-            "Starting coordination with timeout",
+            f"Starting coordination attempt {self.current_attempt + 1}/{self.max_attempts}",
             {
                 "timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds,
                 "agents": list(self.agents.keys()),
+                "has_restart_context": bool(self.restart_reason),
             },
         )
+
+        # Set log attempt for directory organization
+        from massgen.logger_config import set_log_attempt
+
+        set_log_attempt(self.current_attempt + 1)
 
         # Track active coordination state for cleanup
         self._active_streams = {}
@@ -698,6 +720,8 @@ Your answer:"""
         if self.is_orchestrator_timeout:
             async for chunk in self._handle_orchestrator_timeout():
                 yield chunk
+
+        # Exit here - if restart is needed, CLI will call coordinate() again
 
     async def _coordinate_agents(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
@@ -1666,10 +1690,16 @@ Your answer:"""
 
                 # Extract command execution parameters
                 enable_command_execution = False
+                docker_mode = False
+                enable_sudo = False
                 if hasattr(agent, "config") and agent.config:
                     enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+                    docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
+                    enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
                 elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
                     enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+                    docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
+                    enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
 
                 filesystem_system_message = self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
@@ -1680,6 +1710,8 @@ Your answer:"""
                     enable_image_generation=enable_image_generation,
                     agent_answers=answers,
                     enable_command_execution=enable_command_execution,
+                    docker_mode=docker_mode,
+                    enable_sudo=enable_sudo,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -1723,6 +1755,15 @@ Your answer:"""
                     valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
                 )
+
+            # Inject restart context if this is a restart attempt (like multi-turn context)
+            if self.restart_reason and self.restart_instructions:
+                restart_context = self.message_templates.format_restart_context(
+                    self.restart_reason,
+                    self.restart_instructions,
+                )
+                # Prepend restart context to user message
+                conversation["user_message"] = restart_context + "\n\n" + conversation["user_message"]
 
             # Track all the context used for this agent execution
             self.coordination_tracker.track_agent_context(
@@ -2205,48 +2246,81 @@ Your answer:"""
             return ("error", str(e))
 
     async def _present_final_answer(self) -> AsyncGenerator[StreamChunk, None]:
-        """Present the final coordinated answer."""
-        log_stream_chunk("orchestrator", "content", "## 🎯 Final Coordinated Answer\n")
-        yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
+        """Present the final coordinated answer with optional post-evaluation and restart loop."""
 
         # Select the best agent based on current state
         if not self._selected_agent:
             self._selected_agent = self._determine_final_agent_from_states()
-            if self._selected_agent:
-                log_stream_chunk(
-                    "orchestrator",
-                    "content",
-                    f"🏆 Selected Agent: {self._selected_agent}\n",
-                )
-                yield StreamChunk(
-                    type="content",
-                    content=f"🏆 Selected Agent: {self._selected_agent}\n",
-                )
 
-        if self._selected_agent and self._selected_agent in self.agent_states and self.agent_states[self._selected_agent].answer:
-            final_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
-
-            # Add to conversation history
-            self.add_to_history("assistant", final_answer)
-
-            log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
-            yield StreamChunk(type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n")
-            log_stream_chunk("orchestrator", "content", final_answer)
-            yield StreamChunk(type="content", content=final_answer)
-            log_stream_chunk(
-                "orchestrator",
-                "content",
-                f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*",
-            )
-            yield StreamChunk(
-                type="content",
-                content=f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*",
-            )
-        else:
+        if not self._selected_agent:
             error_msg = "❌ Unable to provide coordinated answer - no successful agents"
             self.add_to_history("assistant", error_msg)
             log_stream_chunk("orchestrator", "error", error_msg)
             yield StreamChunk(type="content", content=error_msg)
+            self.workflow_phase = "presenting"
+            log_stream_chunk("orchestrator", "done", None)
+            yield StreamChunk(type="done")
+            return
+
+        # Get vote results for presentation
+        vote_results = self._get_vote_results()
+
+        log_stream_chunk("orchestrator", "content", "## 🎯 Final Coordinated Answer\n")
+        yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
+
+        # Stream final presentation from winning agent
+        log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
+        yield StreamChunk(type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n")
+
+        # Stream the final presentation (with full tool support)
+        presentation_content = ""
+        async for chunk in self.get_final_presentation(self._selected_agent, vote_results):
+            if chunk.type == "content" and chunk.content:
+                presentation_content += chunk.content
+            yield chunk
+
+        # Check if post-evaluation should run
+        # Skip post-evaluation on final attempt (user clarification #4)
+        is_final_attempt = self.current_attempt >= (self.max_attempts - 1)
+        should_evaluate = self.max_attempts > 1 and not is_final_attempt
+
+        if should_evaluate:
+            # Run post-evaluation
+            final_answer_to_evaluate = self._final_presentation_content or presentation_content
+            async for chunk in self.post_evaluate_answer(self._selected_agent, final_answer_to_evaluate):
+                yield chunk
+
+            # Check if restart was requested
+            if self.restart_pending and self.current_attempt < (self.max_attempts - 1):
+                # Show restart banner
+                restart_banner = f"""
+
+🔄 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ORCHESTRATION RESTART (Attempt {self.current_attempt + 2}/{self.max_attempts})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REASON:
+{self.restart_reason}
+
+INSTRUCTIONS FOR NEXT ATTEMPT:
+{self.restart_instructions}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+                log_stream_chunk("orchestrator", "status", restart_banner)
+                yield StreamChunk(type="restart_banner", content=restart_banner, source="orchestrator")
+
+                # Reset state for restart (prepare for next coordinate() call)
+                self.handle_restart()
+
+                # Don't add to history or set workflow phase - restart is pending
+                # Exit here - CLI will detect restart_pending and call coordinate() again
+                return
+
+        # No restart - add final answer to conversation history
+        if self._final_presentation_content:
+            self.add_to_history("assistant", self._final_presentation_content)
 
         # Update workflow phase
         self.workflow_phase = "presenting"
@@ -2422,10 +2496,16 @@ Your answer:"""
 
         # Extract command execution parameters
         enable_command_execution = False
+        docker_mode = False
+        enable_sudo = False
         if hasattr(agent, "config") and agent.config:
             enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+            docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
+            enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+            docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
+            enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
         # Check if audio generation is enabled for this agent
         enable_audio_generation = False
         if hasattr(agent, "config") and agent.config:
@@ -2483,6 +2563,8 @@ Your answer:"""
                     enable_image_generation=enable_image_generation,
                     agent_answers=all_answers,
                     enable_command_execution=enable_command_execution,
+                    docker_mode=docker_mode,
+                    enable_sudo=enable_sudo,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message
@@ -2673,6 +2755,204 @@ Your answer:"""
 
             # Save logs
             self.save_coordination_logs()
+
+        # Don't yield done here - let _present_final_answer handle final done after post-evaluation
+
+    async def post_evaluate_answer(self, selected_agent_id: str, final_answer: str) -> AsyncGenerator[StreamChunk, None]:
+        """Post-evaluation phase where winning agent evaluates its own answer.
+
+        The agent reviews the final answer and decides whether to submit or restart
+        with specific improvement instructions.
+
+        Args:
+            selected_agent_id: The agent that won the vote and presented the answer
+            final_answer: The final answer that was presented
+
+        Yields:
+            StreamChunk: Stream chunks from the evaluation process
+        """
+        if selected_agent_id not in self.agents:
+            log_stream_chunk("orchestrator", "error", f"Selected agent {selected_agent_id} not found for post-evaluation")
+            yield StreamChunk(type="error", error=f"Selected agent {selected_agent_id} not found")
+            return
+
+        agent = self.agents[selected_agent_id]
+
+        # Use debug override on first attempt if configured
+        eval_answer = final_answer
+        if self.config.debug_final_answer and self.current_attempt == 0:
+            eval_answer = self.config.debug_final_answer
+            log_stream_chunk("orchestrator", "debug", f"Using debug override for post-evaluation: {self.config.debug_final_answer}")
+            yield StreamChunk(
+                type="debug",
+                content=f"[DEBUG MODE] Overriding answer for evaluation: {self.config.debug_final_answer}",
+                source="orchestrator",
+            )
+
+        # Build evaluation message
+        evaluation_content = f"""{self.message_templates.format_original_message(self.current_task or "Task")}
+
+FINAL ANSWER TO EVALUATE:
+{eval_answer}
+
+Review this answer carefully and determine if it fully addresses the original task. Use your available tools to verify claims and check files as needed.
+Then call either submit(confirmed=True) if the answer is satisfactory, or restart_orchestration(reason, instructions) if improvements are needed."""
+
+        # Get agent's configurable system message
+        agent_system_message = agent.get_configurable_system_message()
+
+        # Build post-evaluation system message
+        base_system_message = self.message_templates.post_evaluation_system_message(agent_system_message)
+
+        # Add filesystem context if available (same as final presentation)
+        if agent.backend.filesystem_manager:
+            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
+            previous_turns_context = self._get_previous_turns_context_paths()
+            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
+            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
+            workspace_prepopulated = len(previous_turns_context) > 0
+
+            # Get all answers for context
+            all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
+
+            base_system_message = (
+                self.message_templates.filesystem_system_message(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace,
+                    context_paths=context_paths,
+                    previous_turns=turns_to_show,
+                    workspace_prepopulated=workspace_prepopulated,
+                    enable_image_generation=False,
+                    agent_answers=all_answers,
+                    enable_command_execution=False,
+                    docker_mode=False,
+                    enable_sudo=False,
+                )
+                + "\n\n## Post-Evaluation Task\n"
+                + base_system_message
+            )
+
+        # Create evaluation messages
+        evaluation_messages = [
+            {"role": "system", "content": base_system_message},
+            {"role": "user", "content": evaluation_content},
+        ]
+
+        # Get post-evaluation tools
+        api_format = "chat_completions"  # Default format
+        if hasattr(agent.backend, "api_format"):
+            api_format = agent.backend.api_format
+        post_eval_tools = get_post_evaluation_tools(api_format=api_format)
+
+        log_stream_chunk("orchestrator", "status", "🔍 Post-evaluation: Reviewing final answer\n")
+        yield StreamChunk(type="status", content="🔍 Post-evaluation: Reviewing final answer\n", source="orchestrator")
+
+        # Stream evaluation with tools (with timeout protection)
+        evaluation_complete = False
+        tool_call_detected = False
+
+        try:
+            timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
+            async with asyncio.timeout(timeout_seconds):
+                async for chunk in agent.chat(messages=evaluation_messages, tools=post_eval_tools, reset_chat=True, current_stage=CoordinationStage.POST_EVALUATION):
+                    chunk_type = self._get_chunk_type_value(chunk)
+
+                    if chunk_type == "content" and chunk.content:
+                        log_stream_chunk("orchestrator", "content", chunk.content, selected_agent_id)
+                        yield StreamChunk(type="content", content=chunk.content, source=selected_agent_id)
+                    elif chunk_type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                        reasoning_chunk = StreamChunk(
+                            type=chunk_type,
+                            content=chunk.content,
+                            source=selected_agent_id,
+                            reasoning_delta=getattr(chunk, "reasoning_delta", None),
+                            reasoning_text=getattr(chunk, "reasoning_text", None),
+                            reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
+                            reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
+                            item_id=getattr(chunk, "item_id", None),
+                            content_index=getattr(chunk, "content_index", None),
+                            summary_index=getattr(chunk, "summary_index", None),
+                        )
+                        log_stream_chunk("orchestrator", chunk.type, chunk.content, selected_agent_id)
+                        yield reasoning_chunk
+                    elif chunk_type == "tool_calls":
+                        # Post-evaluation tool call detected
+                        tool_call_detected = True
+                        if hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                            for tool_call in chunk.tool_calls:
+                                # Use backend's tool extraction (same as regular coordination)
+                                tool_name = agent.backend.extract_tool_name(tool_call)
+                                tool_args = agent.backend.extract_tool_arguments(tool_call)
+
+                                if tool_name == "submit":
+                                    log_stream_chunk("orchestrator", "status", "✅ Evaluation complete - answer approved\n")
+                                    yield StreamChunk(type="status", content="✅ Evaluation complete - answer approved\n", source="orchestrator")
+                                    evaluation_complete = True
+                                elif tool_name == "restart_orchestration":
+                                    # Parse restart parameters from extracted args
+                                    self.restart_reason = tool_args.get("reason", "No reason provided")
+                                    self.restart_instructions = tool_args.get("instructions", "No instructions provided")
+                                    self.restart_pending = True
+
+                                    log_stream_chunk("orchestrator", "status", "🔄 Restart requested\n")
+                                    yield StreamChunk(type="status", content="🔄 Restart requested\n", source="orchestrator")
+                                    evaluation_complete = True
+                    elif chunk_type == "done":
+                        log_stream_chunk("orchestrator", "done", None, selected_agent_id)
+                        yield StreamChunk(type="done", source=selected_agent_id)
+                    elif chunk_type == "error":
+                        log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
+                        yield StreamChunk(type="error", error=chunk.error, source=selected_agent_id)
+                    else:
+                        # Pass through other chunk types
+                        log_stream_chunk("orchestrator", chunk_type, getattr(chunk, "content", ""), selected_agent_id)
+                        yield StreamChunk(
+                            type=chunk_type,
+                            content=getattr(chunk, "content", ""),
+                            source=selected_agent_id,
+                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source", "timestamp", "sequence_number"]},
+                        )
+        except asyncio.TimeoutError:
+            log_stream_chunk("orchestrator", "status", "⏱️ Post-evaluation timed out - auto-submitting answer\n")
+            yield StreamChunk(type="status", content="⏱️ Post-evaluation timed out - auto-submitting answer\n", source="orchestrator")
+            evaluation_complete = True
+            # Don't set restart_pending - let it default to False (auto-submit)
+        finally:
+            # If no tool was called and evaluation didn't complete, auto-submit
+            if not evaluation_complete and not tool_call_detected:
+                log_stream_chunk("orchestrator", "status", "✅ Auto-submitting answer (no tool call detected)\n")
+                yield StreamChunk(type="status", content="✅ Auto-submitting answer (no tool call detected)\n", source="orchestrator")
+
+    def handle_restart(self):
+        """Reset orchestration state for restart attempt.
+
+        Clears agent states and coordination messages while preserving
+        restart reason and instructions for the next attempt.
+        """
+        log_orchestrator_activity("handle_restart", f"Resetting state for restart attempt {self.current_attempt + 1}")
+
+        # Reset agent states
+        for agent_id in self.agent_states:
+            self.agent_states[agent_id] = AgentState()
+
+        # Clear coordination messages
+        self._coordination_messages = []
+        self._selected_agent = None
+        self._final_presentation_content = None
+
+        # Reset coordination tracker for new attempt
+        self.coordination_tracker = CoordinationTracker()
+        self.coordination_tracker.initialize_session(list(self.agents.keys()))
+
+        # Reset workflow phase to idle so next coordinate() call starts fresh
+        self.workflow_phase = "idle"
+
+        # Increment attempt counter
+        self.current_attempt += 1
+
+        log_orchestrator_activity("handle_restart", f"State reset complete - starting attempt {self.current_attempt + 1}")
 
     def _get_vote_results(self) -> Dict[str, Any]:
         """Get current vote results and statistics."""

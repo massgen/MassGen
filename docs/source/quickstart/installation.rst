@@ -29,62 +29,87 @@ The easiest way to get started with MassGen is via pip or uv:
    # Or with pip
    pip install massgen
 
-.. important::
-   **Before running MassGen:** Set up your API keys first.
+Getting Started - Complete First-Run Flow
+------------------------------------------
 
-   See `API Key Configuration`_ below for instructions (environment variables or .env file).
-
-API Key Configuration
----------------------
-
-MassGen looks for API keys in the following order:
-
-1. Environment variables (``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, etc.)
-2. ``~/.massgen/.env`` file (recommended - global user config)
-
-   * Windows: ``%USERPROFILE%\.massgen\.env``
-
-3. Project-specific ``.env`` file in current directory (highest priority)
-
-**Option 1: Interactive Setup** (Recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Use the interactive API key wizard to set up credentials:
+**The simplest way to start:** Just run ``massgen`` and you'll be guided through everything:
 
 .. code-block:: bash
 
-   # Launch API key setup wizard
-   massgen --setup
+   massgen
 
-The wizard will:
+**What happens next:**
 
-1. Show a checkbox list of all 15+ supported providers
-2. Let you select which providers to configure (Space to toggle, Enter to confirm)
-3. Prompt for API keys only for selected providers (password-masked input)
-4. Save to ``~/.massgen/.env`` (global) or ``./.env`` (project-specific)
-5. Merge with existing keys if the file already exists
+1. **API Key Setup** (only if needed)
 
-**Supported providers:**
+   * MassGen detects if you have cloud provider API keys configured
+   * If not, shows an interactive wizard to configure OpenAI, Anthropic, Google, etc.
+   * Keys are saved to ``~/.config/massgen/.env`` for future use
+   * If you already have keys, this step is skipped automatically
 
-* **Main backends:** OpenAI, Anthropic (Claude), Google Gemini, xAI (Grok)
-* **Azure:** Azure OpenAI
-* **ChatCompletion providers:** Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, ZAI (Zhipu.ai), Kimi/Moonshot AI, POE, Qwen (Alibaba)
+2. **Choose Your Configuration**
+
+   You'll see two options:
+
+   * **📦 Browse ready-to-use configs/examples** - Select from 100+ pre-built configurations
+   * **Build from template** - Create custom agents with guided setup (Simple Q&A, Research & Analysis, Code & Files, etc.)
+
+3. **Save as Default** (optional)
+
+   * When browsing existing configs or examples, you'll be asked: "Save this as your default config?"
+   * Choose **Yes** to use it automatically on future ``massgen`` runs
+   * Choose **No** to try it once without saving
+
+4. **Start Chatting Immediately**
+
+   * After selection, you're **launched directly into interactive mode**
+   * Multi-turn conversation with your chosen configuration
+   * Type your questions and get collaborative agent responses
+   * Session history is automatically saved
+
+**After first-run setup:**
+
+.. code-block:: bash
+
+   # Start conversation with your default config
+   massgen
+
+   # Or run a single query
+   massgen "Your question here"
+
+.. tip::
+   **The entire flow takes 1-2 minutes.** You'll be in an interactive conversation with your agents immediately after setup!
+
+Supported API Key Providers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Main backends:**
+
+* OpenAI, Anthropic (Claude), Google Gemini, xAI (Grok)
+* Azure OpenAI
+
+**ChatCompletion providers:**
+
+* Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter
+* ZAI (Zhipu.ai), Kimi/Moonshot AI, POE, Qwen (Alibaba)
 
 .. note::
    You can skip all providers if you're using local models (vLLM, Ollama, etc.) which don't require API keys.
 
-**Option 2: Manual Setup**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Manual API Key Setup (Optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To set up API keys manually:
+If you prefer to set up API keys manually before running MassGen:
 
 .. code-block:: bash
 
-   # Unix/Mac: Create or edit the .env file
-   vim ~/.massgen/.env
+   # Unix/Mac: Create the .env file
+   mkdir -p ~/.config/massgen
+   vim ~/.config/massgen/.env
 
-   # Windows: Create or edit the .env file
-   notepad %USERPROFILE%\.massgen\.env
+   # Windows: Create the .env file
+   mkdir %USERPROFILE%\.config\massgen
+   notepad %USERPROFILE%\.config\massgen\.env
 
    # Add your API keys (same format for all platforms)
    OPENAI_API_KEY=sk-your-key-here
@@ -118,60 +143,49 @@ To set up API keys manually:
    POE_API_KEY=...
    QWEN_API_KEY=...
 
-Running MassGen
----------------------
-Once your API keys are configured, you have two ways to get started:
+MassGen API Key Lookup Order
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Option 1: Use Pre-Built Examples** (Fastest)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+MassGen looks for API keys in this order:
 
-Jump right in with ready-to-use configurations:
+1. Environment variables (``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, etc.)
+2. ``~/.config/massgen/.env`` (user config - recommended)
+3. Project-specific ``.env`` file in current directory (highest priority)
 
-.. code-block:: bash
+Reconfiguring API Keys
+~~~~~~~~~~~~~~~~~~~~~~~
 
-   # Try a basic multi-agent query
-   massgen --config @examples/three_agents_default "What is quantum computing?"
-
-   # Or see all 100+ available examples
-   massgen --list-examples
-
-.. seealso::
-   Browse the complete catalog: :doc:`../reference/configuration_examples`
-
-**Option 2: Run the Setup Wizard** (Customized)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Create a personalized configuration for your needs:
+You can re-run the API key wizard anytime:
 
 .. code-block:: bash
 
-   # Launch the interactive setup wizard
-   massgen
+   # Launch API key setup
+   massgen --setup
 
-.. note::
-   **Why the setup wizard?**
+First-Run Setup Flow Walkthrough
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   MassGen's power comes from thoughtfully configured multi-agent teams. Rather than requiring you to learn YAML syntax or understand complex configuration options upfront, the wizard guides you through creating an effective setup in minutes. You choose your use case (Research, Coding, Q&A, etc.), select your preferred AI models, and enable tools—all through simple prompts. This ensures you start with a configuration optimized for your needs, which you can refine later as you learn more.
-
-First-Run Experience
-~~~~~~~~~~~~~~~~~~~~
-
-When you run ``massgen`` for the first time (after configuring API keys), you'll see a friendly setup wizard:
+When you run ``massgen`` for the first time, here's what you'll see:
 
 .. code-block:: text
 
-   ╔═══════════════════════════════════════════════════════════════╗
-   ║       🚀  MassGen Interactive Configuration Builder  🚀       ║
-   ║                                                               ║
-   ║     Create custom multi-agent configurations in minutes!     ║
-   ╚═══════════════════════════════════════════════════════════════╝
+   ╔══════════════════════════════════════════════════════════╗
+   ║             👋  Welcome to MassGen!                      ║
+   ╚══════════════════════════════════════════════════════════╝
 
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     Step 1 of 4: Select Your Use Case
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ✅ API keys detected
 
-   Choose your use case:
-   ⚙️  Custom Configuration          [Choose your own tools]
+   Let's set up your default configuration...
+
+   Step 1 of 4: Select Your Use Case
+
+   Browse ready-to-use configs, or pick a template to build your own.
+
+ » 📦  Browse ready-to-use configs / examples
+
+   ─ or build from template ─
+
+   ⚙️  Custom Configuration           [Choose your own tools]
    💬  Simple Q&A                     [Basic chat (no special tools)]
    🔍  Research & Analysis            [Web search enabled]
    💻  Code & Files                   [File ops + code execution]
@@ -179,59 +193,68 @@ When you run ``massgen`` for the first time (after configuring API keys), you'll
    📊  Data Analysis                  [Files + code + image analysis]
    🎨  Multimodal Analysis            [Images, audio, video understanding]
 
-   ✅ Selected: Research & Analysis
+**Option 1: Browse Ready-to-Use Configs** (Fastest)
 
-   ╔════════════════════════════════ Preset Configuration ═════════════════════════════╗
-   ║                                                                                    ║
-   ║   Features auto-configured for this preset:                                       ║
-   ║                                                                                    ║
-   ║     ✓ Web Search                                                                  ║
-   ║       • Real-time internet search for current information                         ║
-   ║       • Fact-checking and source verification                                     ║
-   ║       • Available for: OpenAI, Claude, Gemini, Grok                               ║
-   ║                                                                                    ║
-   ║     ✓ Multi-Agent Collaboration                                                   ║
-   ║       • 3 agents recommended for diverse perspectives                             ║
-   ║       • Cross-verification of facts and sources                                   ║
-   ║                                                                                    ║
-   ║   Use this for: Research queries, current events, fact-checking, comparative      ║
-   ║                 analysis                                                           ║
-   ║                                                                                    ║
-   ╚════════════════════════════════════════════════════════════════════════════════════╝
+Select this to browse 100+ pre-built configurations organized by category:
 
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.. code-block:: text
+
+   📦  Browse ready-to-use configs / examples
+
+   ┌─────────────────────────────────────────────────────────┐
+   │ 👤 Your Configs                    1                    │
+   │ 📂 Project Configs                 0                    │
+   │ 📂 Current Directory               2                    │
+   │ 📦 Package Examples                107                  │
+   └─────────────────────────────────────────────────────────┘
+
+   Select a configuration:
+   » three_agents_default.yaml  (3 agents, diverse perspectives)
+     research_team.yaml          (Web search + analysis)
+     coding_assistant.yaml       (File ops + code execution)
+
+After selecting, you'll be asked:
+
+.. code-block:: text
+
+   📦 You selected a package example
+      /path/to/massgen/configs/basic/multi/three_agents_default.yaml
+
+   Save this as your default config? [y/N]:
+
+* Choose **y** to save and use automatically on future runs
+* Choose **n** to try it once without saving
+
+Then immediately launches into interactive mode! 🚀
+
+**Option 2: Build from Template** (Customized)
+
+Select a template to create a custom configuration with guided setup:
+
+.. code-block:: text
+
+   🔍  Research & Analysis            [Web search enabled]
+
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
      Step 2 of 4: Agent Setup
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    Available providers:
    • ✅ OpenAI - gpt-5, gpt-5-mini, gpt-5-nano...
-   • ✅ Claude - claude-sonnet-4-20250514, claude-opus-4-20250514...
+   • ✅ Claude - claude-sonnet-4, claude-opus-4...
    • ✅ Gemini - gemini-2.5-flash, gemini-2.5-pro...
-   • ❌ Claude Code - Need: ANTHROPIC_API_KEY
 
-   How many agents? 3 agents (recommended for diverse perspectives)
+   How many agents? 3 agents (recommended)
    Select provider: OpenAI
-
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     Step 3 of 4: Agent Configuration
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   Select models for your agents:
-   Agent 1: gpt-5-mini
-   Agent 2: gpt-5-mini
-   Agent 3: gpt-5-mini
-
-   ✅ 3 agent(s) configured with preset
-
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     ✅  Review & Save Configuration
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Select models: gpt-5-mini, gpt-5-mini, gpt-5-mini
 
    ✅ Configuration saved to: ~/.config/massgen/config.yaml
 
-Your configuration is saved to ``~/.config/massgen/config.yaml`` (Unix/Mac) or ``%USERPROFILE%\.config\massgen\config.yaml`` (Windows) and will be used for all future runs.
+   🚀 Launching interactive mode...
 
-Understanding Preset Configurations
+Your configuration is saved to ``~/.config/massgen/config.yaml`` and will be used for all future runs.
+
+Available Build Templates
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The wizard offers several **preset configurations** that auto-configure tools and capabilities for common use cases:

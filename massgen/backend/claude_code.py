@@ -795,7 +795,7 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Add workflow tools information if present
         if tools:
-            workflow_tools = [t for t in tools if t.get("function", {}).get("name") in ["new_answer", "vote"]]
+            workflow_tools = [t for t in tools if t.get("function", {}).get("name") in ["new_answer", "vote", "submit", "restart_orchestration"]]
             if workflow_tools:
                 system_parts.append("\n--- Coordination Actions ---")
                 for tool in workflow_tools:
@@ -823,6 +823,14 @@ class ClaudeCodeBackend(LLMBackend):
                             system_parts.append(f'    Usage: {{"tool_name": "vote", ' f'"arguments": {{"agent_id": "agent1", ' f'"reason": "explanation"}}}} // Choose agent_id from: {agent_list}')
                         else:
                             system_parts.append('    Usage: {"tool_name": "vote", ' '"arguments": {"agent_id": "agent1", ' '"reason": "explanation"}}')
+                    elif name == "submit":
+                        system_parts.append(
+                            '    Usage: {"tool_name": "submit", ' '"arguments": {"confirmed": true}}',
+                        )
+                    elif name == "restart_orchestration":
+                        system_parts.append(
+                            '    Usage: {"tool_name": "restart_orchestration", ' '"arguments": {"reason": "The answer is incomplete because...", ' '"instructions": "In the next attempt, please..."}}',
+                        )
 
                 system_parts.append("\n--- MassGen Coordination Instructions ---")
                 system_parts.append("IMPORTANT: You must respond with a structured JSON decision at the end of your response.")
