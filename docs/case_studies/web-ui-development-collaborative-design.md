@@ -1,4 +1,3 @@
-````markdown
 # MassGen Case Study: Collaborative Web UI Development from Concept to Deployment
 
 MassGen is focused on **case-driven development**. This case study demonstrates how MassGen orchestrates multiple AI agents with complementary capabilities to collaboratively design, develop, and deploy a complete web user interface - from initial concept through final production deployment.
@@ -617,5 +616,3 @@ python3 -m http.server 8000
 uv run python -m massgen.cli --config massgen/configs/case_studies/web_ui_collaborative_design.yaml \
   "Design and build a modern, responsive web UI for a 'MassGen Dashboard' that visualizes multi-agent coordination in real-time. The dashboard should include: 1) A header with navigation and branding, 2) A main grid showing live agent cards with status indicators (thinking/generating/voting), 3) An interactive timeline visualization of the coordination process, 4) A comparison panel for viewing and voting on agent outputs, 5) Dark/light theme support with smooth transitions, 6) Fully responsive design (mobile, tablet, desktop), 7) Accessibility features (ARIA labels, keyboard navigation), and 8) Modern animations and micro-interactions. Use vanilla HTML, CSS, and JavaScript with no external frameworks. Include mock data for demonstration."
 ```
-
-````
