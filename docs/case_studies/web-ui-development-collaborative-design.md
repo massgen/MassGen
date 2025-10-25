@@ -139,7 +139,12 @@ The web UI collaborative design case study was successfully executed with three 
 2. **Claude 3.5 Haiku (claude_solution_b)** - Focused on accessibility-first implementation with WCAG compliance
 3. **Gemini 2.5 Flash (gemini_solution_c)** - Emphasized visual design with modern aesthetics and animations
 
+<img width="856" height="322" alt="Screenshot 2025-10-25 at 3 35 14 PM" src="https://github.com/user-attachments/assets/4e5ccb48-6f49-40fb-8038-551536df7729" />
+<img width="852" height="660" alt="Screenshot 2025-10-25 at 3 34 52 PM" src="https://github.com/user-attachments/assets/4a18b3ed-4077-4720-adcd-ba503edc35ed" />
+
 **Winner: Gemini Solution C** 🏆
+
+<img width="856" height="322" alt="Screenshot 2025-10-25 at 3 35 14 PM" src="https://github.com/user-attachments/assets/6080b7c9-9d6a-4d99-b582-130b8c9e9969" />
 
 After collaborative review and consensus voting, Gemini's solution was selected as the best implementation. The winning dashboard features:
 - Complete HTML/CSS/JavaScript implementation (97 KB total)
@@ -155,6 +160,8 @@ cd massgen/configs/resources/dashboard_demo
 python3 -m http.server 8000
 # Visit: http://localhost:8000
 ```
+<img width="1393" height="632" alt="Screenshot 2025-10-25 at 3 46 59 PM" src="https://github.com/user-attachments/assets/d8bb5311-d6e5-4b90-8ae6-2e204680ac39" />
+<img width="1292" height="499" alt="Screenshot 2025-10-25 at 3 47 16 PM" src="https://github.com/user-attachments/assets/82e7e3b0-bb68-4f80-8847-7ea256f84833" />
 
 ---
 
@@ -357,14 +364,6 @@ With this validation, MassGen can be applied to:
 - **Internationalization**: Agents ensure proper i18n implementation
 - **Testing**: Automated generation of comprehensive test suites
 - **Documentation Sites**: Complete docs sites with examples and tutorials
-
-**Quick Start:**
-```bash
-# View the generated dashboard
-cd massgen/configs/resources/dashboard_demo
-python3 -m http.server 8000
-# Visit: http://localhost:8000
-```
 
 **Reproduce This Case Study:**
 ```bash
