@@ -53,7 +53,7 @@ def sync_readme_pypi(readme_path: Path, readme_pypi_path: Path, dry_run: bool = 
 
     # Remove PyPI badge from the first row (redundant on PyPI)
     # Replace the entire first badge row to exclude PyPI badge
-    old_badge_row = """<p align="center">
+    old_badge_row = """<div align="center">
 
 [![PyPI](https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9)](https://pypi.org/project/massgen/)
 [![Docs](https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.massgen.ai)
@@ -61,16 +61,16 @@ def sync_readme_pypi(readme_path: Path, readme_pypi_path: Path, dry_run: bool = 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square)](LICENSE)
 
-</p>"""
+</div>"""
 
-    new_badge_row = """<p align="center">
+    new_badge_row = """<div align="center">
 
 [![Docs](https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.massgen.ai)
 [![GitHub Stars](https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white)](https://github.com/Leezekun/MassGen)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square)](LICENSE)
 
-</p>"""
+</div>"""
 
     pypi_content = pypi_content.replace(old_badge_row, new_badge_row)
 
