@@ -11,8 +11,6 @@ To guide future versions of MassGen, we encourage **anyone** to submit an issue 
 
 - [📋 PLANNING PHASE](#planning-phase)
   - [📝 Evaluation Design](#evaluation-design)
-    - [Prompt](#prompt)
-    - [Baseline Config](#baseline-config)
     - [Baseline Command](#baseline-command)
   - [🔧 Evaluation Analysis](#evaluation-analysis)
     - [Results & Failure Modes](#results--failure-modes)
