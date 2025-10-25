@@ -1,0 +1,27 @@
+# Test configuration with 7 Gemini agents (within rate limit)
+# This should complete quickly without rate limit errors
+
+agents:
+  - id: "agent_1"
+    backend: {type: "gemini", model: "gemini-2.5-flash", temperature: 0.7}
+  - id: "agent_2"
+    backend: {type: "gemini", model: "gemini-2.5-flash", temperature: 0.8}
+  - id: "agent_3"
+    backend: {type: "gemini", model: "gemini-2.5-flash", temperature: 0.9}
+  - id: "agent_4"
+    backend: {type: "gemini", model: "gemini-2.5-flash", temperature: 0.6}
+  - id: "agent_5"
+    backend: {type: "gemini", model: "gemini-2.5-flash", temperature: 0.5}
+  - id: "agent_6"
+    backend: {type: "gemini", model: "gemini-2.5-pro", temperature: 0.7}
+  - id: "agent_7"
+    backend: {type: "gemini", model: "gemini-2.5-pro", temperature: 0.8}
+
+orchestrator:
+  max_duration: 600
+  consensus_threshold: 0.6
+  max_debate_rounds: 2
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

@@ -167,6 +167,14 @@ class Orchestrator(ChatAgent):
         # Coordination state tracking for cleanup
         self._active_streams: Dict = {}
         self._active_tasks: Dict = {}
+        
+        # Agent startup rate limiting (per model)
+        self._agent_startup_times: Dict[str, List[float]] = {}  # model -> [timestamps]
+        self._rate_limits: Dict[str, Dict[str, int]] = {  # model -> {max_starts, time_window}
+            "gemini-2.5-flash": {"max_starts": 9, "time_window": 60},  # 9/min for Flash (conservative)
+            "gemini-2.5-pro": {"max_starts": 2, "time_window": 60},    # 2/min for Pro (very limited!)
+            "gemini": {"max_starts": 7, "time_window": 60},            # Default for other Gemini models
+        }
 
         # Context sharing for agents with filesystem support
         self._snapshot_storage: Optional[str] = snapshot_storage
@@ -506,6 +514,9 @@ class Orchestrator(ChatAgent):
             current_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
             for agent_id in self.agents.keys():
                 if agent_id not in active_streams and not self.agent_states[agent_id].has_voted and not self.agent_states[agent_id].is_killed:
+                    # Apply rate limiting before starting agent
+                    await self._apply_agent_startup_rate_limit(agent_id)
+                    
                     active_streams[agent_id] = self._stream_agent_execution(
                         agent_id,
                         self.current_task,
@@ -1256,6 +1267,100 @@ class Orchestrator(ChatAgent):
             enforcement_msgs.append(neutral_msg)
 
         return enforcement_msgs
+
+    async def _apply_agent_startup_rate_limit(self, agent_id: str) -> None:
+        """
+        Apply rate limiting for agent startup based on model.
+        
+        Ensures that agents using rate-limited models (like Gemini Flash/Pro)
+        don't exceed the allowed startup rate.
+        
+        Args:
+            agent_id: ID of the agent to start
+        """
+        agent = self.agents.get(agent_id)
+        if not agent or not hasattr(agent, "backend"):
+            return
+        
+        # Get model name from backend config
+        model_key = None
+        if hasattr(agent.backend, "config") and isinstance(agent.backend.config, dict):
+            model_name = agent.backend.config.get("model", "")
+            # Check for specific models first
+            if "gemini-2.5-flash" in model_name.lower():
+                model_key = "gemini-2.5-flash"
+            elif "gemini-2.5-pro" in model_name.lower():
+                model_key = "gemini-2.5-pro"
+            elif "gemini" in model_name.lower():
+                model_key = "gemini"
+        
+        # Fallback: try backend type
+        if not model_key:
+            if hasattr(agent.backend, "get_provider_name"):
+                backend_type = agent.backend.get_provider_name()
+                if backend_type in self._rate_limits:
+                    model_key = backend_type
+        
+        # Check if this model has rate limits
+        if not model_key or model_key not in self._rate_limits:
+            return
+        
+        rate_limit = self._rate_limits[model_key]
+        max_starts = rate_limit["max_starts"]
+        time_window = rate_limit["time_window"]
+        
+        # Initialize tracking for this model if needed
+        if model_key not in self._agent_startup_times:
+            self._agent_startup_times[model_key] = []
+        
+        current_time = time.time()
+        startup_times = self._agent_startup_times[model_key]
+        
+        # Remove timestamps outside the current window
+        startup_times[:] = [t for t in startup_times if t > current_time - time_window]
+        
+        # If we've hit the limit, wait until the oldest startup falls outside the window
+        if len(startup_times) >= max_starts:
+            oldest_time = startup_times[0]
+            wait_time = (oldest_time + time_window) - current_time
+            
+            if wait_time > 0:
+                log_orchestrator_activity(
+                    self.orchestrator_id,
+                    f"Rate limit reached for {model_key}",
+                    {
+                        "agent_id": agent_id,
+                        "model": model_key,
+                        "current_starts": len(startup_times),
+                        "max_starts": max_starts,
+                        "time_window": time_window,
+                        "wait_time": round(wait_time, 2),
+                    },
+                )
+                logger.info(
+                    f"[Orchestrator] Rate limit: {len(startup_times)}/{max_starts} {model_key} agents "
+                    f"started in {time_window}s window. Waiting {wait_time:.2f}s before starting {agent_id}..."
+                )
+                
+                await asyncio.sleep(wait_time)
+                
+                # After waiting, clean up old timestamps again
+                current_time = time.time()
+                startup_times[:] = [t for t in startup_times if t > current_time - time_window]
+        
+        # Record this startup
+        startup_times.append(time.time())
+        
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            f"Agent startup allowed",
+            {
+                "agent_id": agent_id,
+                "model": model_key,
+                "current_starts": len(startup_times),
+                "max_starts": max_starts,
+            },
+        )
 
     async def _stream_agent_execution(
         self,

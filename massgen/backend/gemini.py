@@ -33,6 +33,7 @@ from ..logger_config import (
     log_tool_call,
     logger,
 )
+from ..rate_limiter import GlobalRateLimiter
 from .base import FilesystemSupport, StreamChunk
 from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend
 from .gemini_mcp_manager import GeminiMCPManager
@@ -136,6 +137,33 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
         # Initialize Gemini MCP manager after all attributes are ready
         self.mcp_manager = GeminiMCPManager(self)
+        
+        # Initialize global rate limiter for Gemini API (per-model limits)
+        # Flash: 10 RPM, Pro: 2 RPM (from Google AI Studio)
+        # This is shared across ALL instances of the SAME MODEL
+        model_name = kwargs.get('model', '')
+        if 'gemini-2.5-flash' in model_name.lower():
+            self.rate_limiter = GlobalRateLimiter.get_limiter_sync(
+                provider='gemini-2.5-flash',
+                max_requests=9,  # Conservative: 9 instead of 10
+                time_window=60
+            )
+            logger.info(f"[Gemini] API rate limiter enabled for Flash: 9 requests per minute")
+        elif 'gemini-2.5-pro' in model_name.lower():
+            self.rate_limiter = GlobalRateLimiter.get_limiter_sync(
+                provider='gemini-2.5-pro',
+                max_requests=2,  # Very limited!
+                time_window=60
+            )
+            logger.info(f"[Gemini] API rate limiter enabled for Pro: 2 requests per minute")
+        else:
+            # Default for other Gemini models
+            self.rate_limiter = GlobalRateLimiter.get_limiter_sync(
+                provider='gemini-other',
+                max_requests=7,
+                time_window=60
+            )
+            logger.info(f"[Gemini] API rate limiter enabled: 7 requests per minute")
 
     def _setup_permission_hooks(self):
         """Override base class - Gemini uses session-based permissions, not function hooks."""
@@ -482,12 +510,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                     # ====================================================================
                     # Streaming phase
                     # ====================================================================
-                    # Use async streaming call with sessions/tools
-                    stream = await client.aio.models.generate_content_stream(
-                        model=model_name,
-                        contents=full_content,
-                        config=session_config,
-                    )
+                    # Use async streaming call with sessions/tools (with rate limiting)
+                    async with self.rate_limiter:
+                        stream = await client.aio.models.generate_content_stream(
+                            model=model_name,
+                            contents=full_content,
+                            config=session_config,
+                        )
 
                     # Initialize trackers for both MCP and custom tools
                     mcp_tracker = MCPCallTracker()
@@ -1057,12 +1086,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     source="custom_tools",
                                 )
 
-                                # Use same session_config as before
-                                continuation_stream = await client.aio.models.generate_content_stream(
-                                    model=model_name,
-                                    contents=conversation_history,
-                                    config=session_config,
-                                )
+                                # Use same session_config as before (with rate limiting)
+                                async with self.rate_limiter:
+                                    continuation_stream = await client.aio.models.generate_content_stream(
+                                        model=model_name,
+                                        contents=conversation_history,
+                                        config=session_config,
+                                    )
 
                                 # Process continuation stream (same processing as main stream)
                                 async for chunk in continuation_stream:
@@ -1505,12 +1535,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                             manual_config["tools"] = all_tools
                         logger.info("[Gemini] Fallback: using builtin tools only (all advanced tools failed)")
 
-                    # Create new stream for fallback
-                    stream = await client.aio.models.generate_content_stream(
-                        model=model_name,
-                        contents=full_content,
-                        config=manual_config,
-                    )
+                    # Create new stream for fallback (with rate limiting)
+                    async with self.rate_limiter:
+                        stream = await client.aio.models.generate_content_stream(
+                            model=model_name,
+                            contents=full_content,
+                            config=manual_config,
+                        )
 
                     async for chunk in stream:
                         # Process text content
@@ -1530,12 +1561,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
             else:
                 # Non-MCP streaming path: execute when MCP is disabled
                 try:
-                    # Use the standard config (with builtin tools if configured)
-                    stream = await client.aio.models.generate_content_stream(
-                        model=model_name,
-                        contents=full_content,
-                        config=config,
-                    )
+                    # Use the standard config (with builtin tools if configured, with rate limiting)
+                    async with self.rate_limiter:
+                        stream = await client.aio.models.generate_content_stream(
+                            model=model_name,
+                            contents=full_content,
+                            config=config,
+                        )
 
                     # Process streaming chunks
                     async for chunk in stream:
