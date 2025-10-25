@@ -47,17 +47,57 @@ def sync_readme_pypi(readme_path: Path, readme_pypi_path: Path, dry_run: bool = 
     for old_path, new_path in replacements:
         pypi_content = pypi_content.replace(old_path, new_path)
 
+    # Remove PyPI badge from the first row (redundant on PyPI)
+    # Replace the entire first badge row to exclude PyPI badge
+    old_badge_row = """<p align="center">
+  <a href="https://pypi.org/project/massgen/">
+    <img src="https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9" alt="PyPI">
+  </a>
+  <a href="https://docs.massgen.ai">
+    <img src="https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation">
+  </a>
+  <a href="https://github.com/Leezekun/MassGen">
+    <img src="https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white" alt="GitHub Stars">
+  </a>
+  <a href="https://www.python.org/downloads/">
+    <img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="License">
+  </a>
+</p>"""
+
+    new_badge_row = """<p align="center">
+  <a href="https://docs.massgen.ai">
+    <img src="https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation">
+  </a>
+  <a href="https://github.com/Leezekun/MassGen">
+    <img src="https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white" alt="GitHub Stars">
+  </a>
+  <a href="https://www.python.org/downloads/">
+    <img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="License">
+  </a>
+</p>"""
+
+    pypi_content = pypi_content.replace(old_badge_row, new_badge_row)
+
     # Show diff summary
     print("=" * 80)
     print("README_PYPI.md Sync Summary")
     print("=" * 80)
     print(f"\n📄 Copying README.md ({len(readme_content.split(chr(10)))} lines)")
-    print("\n🔄 Replacements:")
+    print("\n🔄 Asset Path Replacements:")
     for old_path, new_path in replacements:
         count = readme_content.count(old_path)
         print(f"   • {old_path}")
         print(f"     → {new_path}")
         print(f"     ({count} occurrence{'s' if count != 1 else ''})")
+    print("\n🏷️  Badge Transformations:")
+    print("   • Removed PyPI badge (redundant on PyPI)")
+    print("   • Kept: Docs | GitHub Stars | Python | License")
 
     if dry_run:
         print("\n🔍 DRY RUN - No files were modified")

@@ -28,3 +28,17 @@ html[data-theme="dark"] .theme-image-light {
     height: auto;
     background: transparent !important;
 }
+
+/* Remove underlines from badge links */
+a img[src*="shields.io"],
+a img[src*="img.shields.io"],
+a img[alt*="badge"],
+a img[alt*="Badge"] {
+    border: none !important;
+}
+
+a:has(img[src*="shields.io"]),
+a:has(img[src*="img.shields.io"]) {
+    text-decoration: none !important;
+    border-bottom: none !important;
+}

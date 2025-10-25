@@ -6,26 +6,29 @@
   <a href="https://pypi.org/project/massgen/">
     <img src="https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9" alt="PyPI">
   </a>
+  <a href="https://docs.massgen.ai">
+    <img src="https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation">
+  </a>
+  <a href="https://github.com/Leezekun/MassGen">
+    <img src="https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white" alt="GitHub Stars">
+  </a>
   <a href="https://www.python.org/downloads/">
     <img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="License">
   </a>
-  <a href="https://docs.massgen.ai">
-    <img src="https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation">
-  </a>
 </p>
 
 <p align="center">
-  <a href="https://discord.massgen.ai">
-    <img src="https://img.shields.io/discord/1153072414184452236?style=flat-square&logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord">
-  </a>
   <a href="https://x.massgen.ai">
-    <img src="https://img.shields.io/badge/Follow-@MassGen-000000?style=flat-square&logo=x&logoColor=white" alt="X (Twitter)">
+    <img src="https://img.shields.io/badge/FOLLOW%20ON%20X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X">
   </a>
   <a href="https://www.linkedin.com/company/massgen-ai">
-    <img src="https://img.shields.io/badge/LinkedIn-MassGen-0A66C2?style=flat-square&logo=linkedin&logoColor=white" alt="LinkedIn">
+    <img src="https://img.shields.io/badge/FOLLOW%20ON%20LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Follow on LinkedIn">
+  </a>
+  <a href="https://discord.massgen.ai">
+    <img src="https://img.shields.io/badge/JOIN%20OUR%20DISCORD-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord">
   </a>
 </p>
 
