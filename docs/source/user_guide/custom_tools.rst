@@ -606,17 +606,27 @@ Each basic example demonstrates the same ``two_num_tool`` adapted for different 
 Backend Support
 ---------------
 
-Custom tools work across all MassGen backends:
+Custom tools work with **most** MassGen backends:
 
-* ✅ Claude API
-* ✅ Claude Code
-* ✅ Gemini
-* ✅ OpenAI (Chat Completions)
-* ✅ Grok
-* ✅ Response API
-* ✅ AG2 Framework
-* ✅ Azure OpenAI
-* ✅ Local models (LM Studio, vLLM, SGLang)
+**✅ Supported Backends:**
+
+* **OpenAI** (``openai``) - OpenAI's GPT models
+* **Claude** (``claude``) - Anthropic's Claude API
+* **Claude Code** (``claude_code``) - Claude with native file/code tools
+* **Gemini** (``gemini``) - Google's Gemini models
+* **Grok** (``grok``) - xAI's Grok models
+* **Chat Completions** (``chatcompletion``) - Generic OpenAI-compatible APIs
+* **LM Studio** (``lmstudio``) - Local model hosting
+* **Inference** (``inference``) - vLLM, SGLang, custom inference servers
+
+**❌ Not Supported:**
+
+* **Azure OpenAI** (``azure_openai``) - Does not implement custom tools interface
+* **AG2 Framework** (``ag2``) - Does not implement custom tools interface
+
+**Why Some Backends Don't Support Custom Tools:**
+
+Azure OpenAI and AG2 inherit from the base ``LLMBackend`` class directly without the custom tools layer. These backends focus on their native capabilities rather than custom tool integration.
 
 Troubleshooting
 ---------------

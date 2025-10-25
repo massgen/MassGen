@@ -229,9 +229,6 @@ File Understanding
 
 File understanding capabilities enable agents to analyze documents and perform Q&A using the ``understand_file`` custom tool.
 
-Basic Configuration
-~~~~~~~~~~~~~~~~~~~
-
 Configure agents to analyze files:
 
 .. code-block:: yaml
@@ -272,72 +269,21 @@ Configure agents to analyze files:
      --config @examples/basic/single/single_gpt5nano_file_search.yaml \
      "What are the main conclusions from the research paper?"
 
-Supported Backends
-------------------
+Backend Compatibility
+---------------------
 
-Multimodal capabilities vary by backend. This table shows which backends support which multimodal features:
+Multimodal understanding tools work with backends that support custom tools:
 
-.. list-table:: Backend Multimodal Capabilities
-   :header-rows: 1
-   :widths: 15 12 12 12 12 12
+* **Supported Backends**: OpenAI, Claude, Claude Code, Gemini, Grok, Chat Completions (generic API), LM Studio, Inference (vLLM/SGLang)
+* **Not Supported**: Azure OpenAI, AG2 (these backends don't support custom tools)
+* **How It Works**: The custom tools (``understand_image``, ``understand_video``, ``understand_audio``, ``understand_file``) use OpenAI's API for processing
+* **Requirements**:
 
-   * - Backend
-     - Image
-     - Audio
-     - Video
-     - File
-     - Notes
-   * - ``openai``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Vision models
-   * - ``claude``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Vision models
-   * - ``claude_code``
-     - ✅
-     - ✅
-     - ✅
-     - ⭐
-     - Native file tools
-   * - ``gemini``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Multimodal Pro/Flash
-   * - ``grok``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Multimodal support
-   * - ``azure_openai``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Vision models
-   * - ``chatcompletion``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Provider-dependent
+  * Your agent backend must support custom tools
+  * ``OPENAI_API_KEY`` must be set in your ``.env`` file for the understanding tools to function
+  * The agent's backend type can be anything supported - only the custom tools need OpenAI API access
 
-**Legend:**
-
-* ✅ - Feature supported via custom tools
-* ⭐ - Native backend support
-* ❌ - Not available
-
-
-See :doc:`backends` for complete backend capabilities including web search, code execution, and MCP support.
+See :doc:`custom_tools` for complete details on custom tool support by backend, and :doc:`backends` for all backend capabilities including web search, code execution, and MCP support.
 
 Configuration Examples
 ----------------------

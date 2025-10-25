@@ -127,6 +127,12 @@ BACKEND_CAPABILITIES = {
 ### 3.2 Sphinx Documentation (User-Facing)
 **Location:** `docs/source/`
 
+- [ ] **Documentation Homepage** (`docs/source/index.rst`)
+  - [ ] Update "Recent Releases" section with latest version
+  - [ ] Copy release entry from CHANGELOG.md
+  - [ ] Keep only the 3 most recent releases (remove oldest)
+  - [ ] Format: `**v0.1.X (Month DD, YYYY)** - Title`
+
 - [ ] **User Guides** (`docs/source/user_guide/`)
   - [ ] Add/update guides for new features
   - [ ] Include code examples
@@ -454,28 +460,29 @@ uv publish
 
 **Must Update:**
 1. ✅ `CHANGELOG.md`
-2. ✅ `docs/source/user_guide/` (if user-facing feature)
-3. ✅ `README.md` (Recent Achievements)
-4. ✅ `massgen/configs/` (example configs)
-5. ✅ `massgen/configs/README.md`
-6. ✅ Case study in `docs/source/examples/case_studies/`
+2. ✅ `docs/source/index.rst` (Recent Releases section)
+3. ✅ `docs/source/user_guide/` (if user-facing feature)
+4. ✅ `README.md` (Recent Achievements)
+5. ✅ `massgen/configs/` (example configs)
+6. ✅ `massgen/configs/README.md`
+7. ✅ Case study in `docs/source/examples/case_studies/`
 
 **Should Update (if applicable):**
-7. ⚠️ `massgen/config_builder.py` (if config params added)
-8. ⚠️ `massgen/backend/capabilities.py` (if backend changes)
-9. ✅ `README_PYPI.md` (auto-synced via pre-commit hook when README.md changes)
-10. ⚠️ `ROADMAP.md` (mark completed items)
-11. ⚠️ `ROADMAP_v0.1.X+1.md` (plan next release)
-12. ⚠️ `CONTRIBUTING.md` (if process changed)
+8. ⚠️ `massgen/config_builder.py` (if config params added)
+9. ⚠️ `massgen/backend/capabilities.py` (if backend changes)
+10. ✅ `README_PYPI.md` (auto-synced via pre-commit hook when README.md changes)
+11. ⚠️ `ROADMAP.md` (mark completed items)
+12. ⚠️ `ROADMAP_v0.1.X+1.md` (plan next release)
+13. ⚠️ `CONTRIBUTING.md` (if process changed)
 
 **Auto-Updated (DO NOT EDIT):**
 - ❌ `docs/source/development/roadmap.rst` (pulls from `ROADMAP.md`)
 - ❌ `docs/source/development/contributing.rst` (pulls from `CONTRIBUTING.md`)
 
 **Build & Verify:**
-13. 🔨 `cd docs && make html && make linkcheck`
-14. 🔨 Test new config files
-15. 🔨 Verify all links work
+14. 🔨 `cd docs && make html && make linkcheck`
+15. 🔨 Test new config files
+16. 🔨 Verify all links work
 
 ---
 
