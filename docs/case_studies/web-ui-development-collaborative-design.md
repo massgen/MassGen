@@ -144,8 +144,6 @@ The web UI collaborative design case study was successfully executed with three 
 
 **Winner: Gemini Solution C** 🏆
 
-<img width="856" height="322" alt="Screenshot 2025-10-25 at 3 35 14 PM" src="https://github.com/user-attachments/assets/6080b7c9-9d6a-4d99-b582-130b8c9e9969" />
-
 After collaborative review and consensus voting, Gemini's solution was selected as the best implementation. The winning dashboard features:
 - Complete HTML/CSS/JavaScript implementation (97 KB total)
 - All 8 requirements fully implemented
@@ -153,6 +151,7 @@ After collaborative review and consensus voting, Gemini's solution was selected 
 - Superior visual polish and animation quality
 - Comprehensive accessibility features
 - Fully responsive across all device sizes
+<img width="856" height="322" alt="Screenshot 2025-10-25 at 3 35 14 PM" src="https://github.com/user-attachments/assets/6080b7c9-9d6a-4d99-b582-130b8c9e9969" />
 
 **Live Demo Available:**
 ```bash
