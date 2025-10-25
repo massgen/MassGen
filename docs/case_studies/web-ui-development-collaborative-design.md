@@ -22,16 +22,13 @@ To guide future versions of MassGen, we encourage **anyone** to submit an issue 
     - [New Features](#new-features)
     - [New Config](#new-config)
     - [Command](#command)
-  - [🤖 Agents](#agents)
   - [🎥 Demo](#demo)
 - [📊 EVALUATION & ANALYSIS](#evaluation-analysis-1)
   - [Results](#results)
     - [The Collaborative Process](#the-collaborative-process)
     - [The Voting Pattern](#the-voting-pattern)
     - [The Final Answer](#the-final-answer)
-    - [Anything Else](#anything-else)
   - [🎯 Conclusion](#conclusion)
-- [📌 Status Tracker](#status-tracker)
 
 ---
 
@@ -347,13 +344,6 @@ massgen/configs/resources/dashboard_demo/
 - Mobile menu slide-in transitions
 - Loading state animations
 - Vote button hover effects with gradient shifts
-
-**Mock Data Included:**
-- 7 diverse AI agents with roles (Data Analyst, Code Generator, QA, ML Model Trainer, Deployment Handler, System Monitor, Task Router)
-- 6 timeline events spanning 60-second coordination process
-- 3 comparison outputs with vote counts
-- Real-time status updates every 4 seconds
-- Dynamic timeline event generation
 
 <h2 id="conclusion">🎯 Conclusion</h2>
 
