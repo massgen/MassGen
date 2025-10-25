@@ -8,10 +8,17 @@ MassGen supports comprehensive multimodal AI workflows, enabling agents to work 
 
    MassGen now provides custom tools for understanding multimodal content:
 
-   * ✅ **understand_audio**: Transcribe audio files to text
+   * ✅ **understand_audio**: Transcribe audio files to text (uses OpenAI's ``gpt-4o-transcribe`` by default)
    * ✅ **understand_file**: Analyze documents (PDF, DOCX, XLSX, PPTX) and text files
-   * ✅ **understand_image**: Describe and analyze images
-   * ✅ **understand_video**: Extract and analyze key frames from videos
+   * ✅ **understand_image**: Describe and analyze images (uses OpenAI's ``gpt-4.1`` by default)
+   * ✅ **understand_video**: Extract and analyze key frames from videos (uses OpenAI's ``gpt-4.1`` by default)
+
+   **Backend Requirements:**
+
+   * The understanding tools use OpenAI's API backend for processing multimodal content
+   * Requires ``OPENAI_API_KEY`` environment variable set in ``.env`` file
+   * These tools work with any agent backend type (openai, claude, gemini, etc.)
+   * The agent backend only needs to support custom tools; the actual understanding is done via OpenAI
 
    **File Access:**
 
@@ -45,6 +52,9 @@ Image Understanding
 -------------------
 
 Image understanding enables agents to analyze visual content, extract information, and answer questions about images using the ``understand_image`` custom tool.
+
+.. note::
+   The ``understand_image`` tool uses OpenAI's API backend with the ``gpt-4.1`` model by default for processing images. This requires an OpenAI API key regardless of which backend your agent uses.
 
 Basic Configuration
 ~~~~~~~~~~~~~~~~~~~
@@ -135,7 +145,10 @@ Multiple agents can provide diverse perspectives on image content:
 Audio Understanding
 -------------------
 
-Transcribe and analyze audio files using the ``understand_audio`` custom tool:
+Transcribe and analyze audio files using the ``understand_audio`` custom tool.
+
+.. note::
+   The ``understand_audio`` tool uses OpenAI's Transcription API with the ``gpt-4o-transcribe`` model by default. This requires an OpenAI API key regardless of which backend your agent uses.
 
 .. code-block:: yaml
 
@@ -171,7 +184,10 @@ Transcribe and analyze audio files using the ``understand_audio`` custom tool:
 Video Understanding
 -------------------
 
-Analyze and extract information from video files using the ``understand_video`` custom tool:
+Analyze and extract information from video files using the ``understand_video`` custom tool.
+
+.. note::
+   The ``understand_video`` tool uses OpenAI's API backend with the ``gpt-4.1`` model by default for analyzing video frames. This requires an OpenAI API key regardless of which backend your agent uses.
 
 .. code-block:: yaml
 
@@ -357,34 +373,42 @@ Browse all examples in the `Configuration README <https://github.com/Leezekun/Ma
 Best Practices
 --------------
 
-1. **File Access and Configuration**
+1. **API Keys and Backend Configuration**
+
+   * **IMPORTANT**: All multimodal understanding tools (``understand_image``, ``understand_video``, ``understand_audio``) require an OpenAI API key
+   * Set ``OPENAI_API_KEY`` in your ``.env`` file even if using other backends (Claude, Gemini, etc.)
+   * The tools use OpenAI's backend (gpt-4.1 for images/videos, gpt-4o-transcribe for audio) regardless of your agent's configured backend
+   * Your agent backend only needs to support custom tools; the actual multimodal processing happens via OpenAI
+
+2. **File Access and Configuration**
 
    * Use ``context_paths`` to provide secure file access to agents
    * Ensure files are accessible before running - use absolute paths or paths relative to execution directory
    * Install required dependencies before use (already included in MassGen environment):
 
-     * Audio: No additional dependencies (uses OpenAI API)
+     * Audio: No additional dependencies (uses OpenAI Transcription API)
      * Video: ``pip install opencv-python``
      * Files (PDF): ``pip install PyPDF2``
      * Files (Word): ``pip install python-docx``
      * Files (Excel): ``pip install openpyxl``
      * Files (PowerPoint): ``pip install python-pptx``
 
-2. **Performance and Cost Optimization**
+3. **Performance and Cost Optimization**
 
    * Set appropriate ``max_chars`` limits for large documents to control API costs
    * Adjust ``num_frames`` for videos (default: 8) based on content length and detail needed
-   * Monitor OpenAI API usage when processing large files or many files
+   * **Monitor OpenAI API usage** - all understanding tools use OpenAI's API and incur costs
    * Use specific prompts to get targeted insights from multimodal content
+   * Consider costs when processing multiple files or extracting many video frames
 
-3. **Quality and Accuracy**
+4. **Quality and Accuracy**
 
    * Use high-quality source files (clear images, high-quality audio, well-lit videos)
    * Ask specific, detailed questions to get better responses
    * Use multi-agent collaboration for diverse perspectives on complex content
    * Combine with web search tools for contextual information
 
-4. **Workspace Management**
+5. **Workspace Management**
 
    * Configure ``cwd`` for organized file storage
    * Use ``snapshot_storage`` for agent collaboration

@@ -1,8 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.2
+**Current Version:** v0.1.3
+
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
-**Last Updated:** October 23, 2025
+
+**Last Updated:** October 24, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 

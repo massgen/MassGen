@@ -603,7 +603,7 @@ Every feature needs documentation! Here's how to decide where and what to write.
 - Feature is significant enough to showcase
 - Following case-driven development methodology
 
-**Location:** `docs/case_studies/feature_name.md`
+**Location:** `docs/source/examples/case_studies/feature_name.md`
 
 **Examples:**
 - `claude-code-workspace-management.md`
@@ -645,7 +645,7 @@ Every feature needs documentation! Here's how to decide where and what to write.
                 ┌──────────────┐
                 │ Write Case   │
                 │ Study        │
-                │ (case_studies/)│
+                │ (source/examples/case_studies/)│
                 └──────────────┘
 ```
 
@@ -659,7 +659,7 @@ Every feature needs documentation! Here's how to decide where and what to write.
 | **CHANGELOG** | Every PR | `CHANGELOG.md` | ✅ Yes |
 | **Examples** | **Every feature** | `docs/source/examples/` | ✅ **ALWAYS** |
 | **Design Doc** | Complex implementation | `docs/dev_notes/` | ⚠️ Optional |
-| **Case Study** | Demonstrate real-world usage | `docs/case_studies/` | ⚠️ Optional but expected |
+| **Case Study** | Demonstrate real-world usage | `docs/source/examples/case_studies/` | ⚠️ Optional but expected |
 
 #### 6. Documentation Quality Standards
 

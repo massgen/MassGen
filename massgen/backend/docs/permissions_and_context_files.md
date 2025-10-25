@@ -1067,8 +1067,8 @@ Files delivered:
 - **Multi-Turn Design**: `docs/dev_notes/multi_turn_filesystem_design.md` - Detailed architecture for session persistence and turn-based workflows
 - **MCP Integration**: `docs/dev_notes/gemini_filesystem_mcp_design.md` - How filesystem access works through Model Context Protocol
 - **Context Sharing**: `docs/dev_notes/v0.0.14-context.md` - Original context sharing design
-- **User Context Paths**: `docs/case_studies/user-context-path-support-with-copy-mcp.md` - Case study on adding user-specified paths
-- **Claude Code Workspace**: `docs/case_studies/claude-code-workspace-management.md` - Native filesystem integration patterns
+- **User Context Paths**: `docs/source/examples/case_studies/user-context-path-support-with-copy-mcp.md` - Case study on adding user-specified paths
+- **Claude Code Workspace**: `docs/source/examples/case_studies/claude-code-workspace-management.md` - Native filesystem integration patterns
 
 ## Conclusion
 

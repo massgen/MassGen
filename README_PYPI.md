@@ -3,17 +3,29 @@
 </p>
 
 <p align="center">
+  <a href="https://pypi.org/project/massgen/">
+    <img src="https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9" alt="PyPI">
+  </a>
   <a href="https://www.python.org/downloads/">
-    <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+" style="margin-right: 5px;">
+    <img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
+    <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="License">
   </a>
   <a href="https://docs.massgen.ai">
-    <img src="https://img.shields.io/badge/docs-massgen.ai-blue.svg" alt="Documentation" style="margin-right: 5px;">
+    <img src="https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation">
   </a>
+</p>
+
+<p align="center">
   <a href="https://discord.massgen.ai">
-    <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Join our Discord">
+    <img src="https://img.shields.io/discord/1153072414184452236?style=flat-square&logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord">
+  </a>
+  <a href="https://x.massgen.ai">
+    <img src="https://img.shields.io/badge/Follow-@MassGen-000000?style=flat-square&logo=x&logoColor=white" alt="X (Twitter)">
+  </a>
+  <a href="https://www.linkedin.com/company/massgen-ai">
+    <img src="https://img.shields.io/badge/LinkedIn-MassGen-0A66C2?style=flat-square&logo=linkedin&logoColor=white" alt="LinkedIn">
   </a>
 </p>
 
@@ -54,7 +66,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.2 Features](#-latest-features-v012)
+- [v0.1.3 Features](#-latest-features-v013)
 </details>
 
 <details open>
@@ -99,15 +111,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.2](#recent-achievements-v012)
-  - [v0.0.3 - v0.1.1](#previous-achievements-v003---v011)
+  - [v0.1.3](#recent-achievements-v013)
+  - [v0.0.3 - v0.1.2](#previous-achievements-v003---v012)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.3 Roadmap](#v013-roadmap)
+- [v0.1.4 Roadmap](#v014-roadmap)
 </details>
 
 <details open>
@@ -132,36 +144,43 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.2)
+## 🆕 Latest Features (v0.1.3)
 
-**🎉 Released: October 22, 2025**
+**🎉 Released: October 24, 2025**
 
-**What's New in v0.1.2:**
-- **🧠 Intelligent Planning Mode** - Automatic question analysis for safe MCP tool blocking
-- **🎭 Claude 4.5 Haiku Support** - Access to latest Claude Haiku model
-- **🔍 Grok Web Search Fix** - Improved web search functionality in Grok backend
+**What's New in v0.1.3:**
+- **🔄 Post-Evaluation Workflow** - Winning agents can evaluate and restart orchestration
+- **🎨 Multimodal Understanding Tools** - Analyze images, audio, video, and documents in workspaces
+- **🐳 Docker Sudo Mode** - Execute privileged commands in containerized environments
 
 **Key Improvements:**
-- Automatically determines if questions require irreversible operations
-- Read-only MCP operations allowed during coordination for better decisions
-- Write operations automatically blocked for safety
-- Zero configuration required - works transparently
-- Enhanced model support with latest Claude 4.5 Haiku
+- Submit tool for confirming final answers or restart with feedback
+- Analyze workspace files with GPT-4.1: images (PNG/JPEG), audio (WAV/MP3), video (MP4), documents (PDF/DOCX)
+- Enhanced Docker execution with elevated privileges for system commands
+- Works with any backend - multimodal analysis via OpenAI API
+- Interactive config builder improvements with better provider handling
 
-**Get Started with v0.1.2:**
+**Watch the Demo:**
+
+[![MassGen v0.1.3 Demo](https://img.youtube.com/vi/nRP34Bqz-D4/0.jpg)](https://youtu.be/nRP34Bqz-D4)
+
+**Get Started with v0.1.3:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Try intelligent planning mode with MCP tools
-# (Please read the YAML file for required API keys: DISCORD_TOKEN, OPENAI_API_KEY, etc.)
-massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
-  "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
+# Try multimodal image understanding
+# (Requires OPENAI_API_KEY in .env)
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_image \
+  "Please summarize the content in this image."
 
-# Use latest Claude 4.5 Haiku model
-# (Requires ANTHROPIC_API_KEY in .env)
-massgen --model claude-haiku-4-5-20251001 \
-  "Summarize the latest AI developments"
+# Try multimodal audio understanding
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_audio \
+  "Please summarize the content in this audio."
+
+# Try multimodal video understanding
+massgen --config @examples/tools/custom_tools/multimodal_tools/understand_video \
+  "What's happening in this video?"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -865,7 +884,7 @@ massgen --config @examples/tools/code-execution/multi_agent_playwright_automatio
   "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
 ```
 
-→ [**See detailed case studies**](docs/case_studies/README.md) with real session logs and outcomes
+→ [**See detailed case studies**](docs/source/examples/case_studies/README.md) with real session logs and outcomes
 
 #### Interactive Mode & Advanced Usage
 
@@ -986,7 +1005,7 @@ All sessions are automatically logged with detailed information for debugging an
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
-- [**MassGen Case Studies**](docs/case_studies/README.md)
+- [**MassGen Case Studies**](docs/source/examples/case_studies/README.md)
 - [**Case Studies Documentation**](https://docs.massgen.ai/en/latest/examples/case_studies.html) - Browse case studies online
 
 ---
@@ -994,33 +1013,50 @@ To see how MassGen works in practice, check out these detailed case studies base
 
 ## 🗺️ Roadmap
 
-MassGen is currently in its foundational stage, with a focus on parallel, asynchronous multi-agent collaboration and orchestration. Our roadmap is centered on transforming this foundation into a highly robust, intelligent, and user-friendly system, while enabling frontier research and exploration. An earlier version of MassGen can be found [here](./massgen/v1).
+MassGen is currently in its foundational stage, with a focus on parallel, asynchronous multi-agent collaboration and orchestration. Our roadmap is centered on transforming this foundation into a highly robust, intelligent, and user-friendly system, while enabling frontier research and exploration.
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.2)
+### Recent Achievements (v0.1.3)
 
-**🎉 Released: October 22, 2025**
+**🎉 Released: October 24, 2025**
 
-#### Intelligent Planning Mode
-- **Automatic Question Analysis**: New `_analyze_question_irreversibility()` method in orchestrator determines if MCP operations are reversible
-- **Selective Tool Blocking**: Granular control with `set_planning_mode_blocked_tools()`, `get_planning_mode_blocked_tools()`, and `is_mcp_tool_blocked()` methods
-- **Dynamic Behavior**: Read-only MCP operations allowed during coordination, write operations blocked for safety
-- **Zero Configuration**: Works transparently without setup
-- **Multi-Workspace Support**: Planning mode works across different workspaces without conflicts
-- **Test Coverage**: Comprehensive tests in `massgen/tests/test_intelligent_planning_mode.py`
-- **Documentation**: Complete guide in `docs/case_studies/INTELLIGENT_PLANNING_MODE.md`
+#### Post-Evaluation Workflow Tools
+- **Submit/Restart Capabilities**: New `PostEvaluationToolkit` class in `massgen/tool/workflow_toolkits/post_evaluation.py`
+- **Submit Tool**: Winning agents can confirm final answers with confidence assessments
+- **Restart Tool**: Request orchestration restart with improvements and specific feedback
+- **Post-Evaluation Phase**: Winning agent evaluates its own answer before final submission
+- **Universal Backend Support**: Works with Claude, Response API, and Chat Completions formats
+- **Opt-In Configuration**: `enable_post_evaluation_tools` parameter for feature control
 
-#### Model Support & Improvements
-- **Claude 4.5 Haiku**: Added latest Claude Haiku model `claude-haiku-4-5-20251001`
-- **Model Priority Updates**: Reorganized Claude model list with updated defaults (`claude-sonnet-4-5-20250929`)
-- **Grok Web Search Fix**: Resolved `extra_body` parameter handling for Grok's Live Search API with new `_add_grok_search_params()` method
+#### Custom Multimodal Understanding Tools
+- **Image Analysis**: `understand_image` tool for PNG/JPEG/JPG with metadata extraction
+- **Audio Processing**: `understand_audio` tool for WAV/MP3/FLAC/OGG transcription
+- **Video Understanding**: `understand_video` tool for MP4/AVI/MOV/WEBM frame extraction
+- **Document Processing**: `understand_file` tool for PDF/DOCX/XLSX/PPTX text extraction
+- **Cross-Backend**: Works with any backend using OpenAI's GPT-4.1 for analysis
+- **Structured Output**: Returns comprehensive JSON with metadata
+- **Documentation**: Complete 779-line guide in `massgen/tool/docs/multimodal_tools.md`
 
-#### Configuration Updates
-- **Planning Mode Configs**: Updated 5 configurations in `massgen/configs/tools/planning/` with selective blocking examples
-- **Default Configuration**: Updated `three_agents_default.yaml` with Grok-4-fast model
+#### Docker Sudo Mode
+- **Privileged Commands**: New `use_sudo` parameter for Docker execution
+- **Elevated Privileges**: Execute system-level commands in containers
+- **Security Instructions**: Enhanced documentation and guidelines
+- **Test Coverage**: Comprehensive tests in `test_code_execution.py`
 
-### Previous Achievements (v0.0.3 - v0.1.1)
+#### Configuration & Enhancements
+- **Interactive Config Builder**: Improved flow with auto-detection of environment variables
+- **System Message Fix**: Resolved deprecated configuration warning in `agent_config.py`
+- **Example Configurations**: 4 new YAML files in `configs/tools/custom_tools/multimodal_tools/`
+- **Example Resources**: Test files in `configs/resources/v0.1.3-example/` (image, audio, video, PDF)
+- **Documentation Updates**: Enhanced `docs/source/user_guide/multimodal.rst` and `code_execution.rst`
+- **Case Study**: New `docs/source/examples/case_studies/multimodal-case-study-video-analysis.md` demonstrating multimodal video understanding
+
+### Previous Achievements (v0.0.3 - v0.1.2)
+
+✅ **Intelligent Planning Mode (v0.1.2)**: Automatic question analysis determining operation irreversibility via `_analyze_question_irreversibility()` in orchestrator, selective tool blocking with `set_planning_mode_blocked_tools()` and `is_mcp_tool_blocked()` methods, read-only MCP operations during coordination with write operations blocked, zero-configuration transparent operation, multi-workspace support, comprehensive tests in `test_intelligent_planning_mode.py`, complete guide in `docs/dev_notes/intelligent_planning_mode.md`
+
+✅ **Model Updates (v0.1.2)**: Claude 4.5 Haiku model `claude-haiku-4-5-20251001`, reorganized Claude model priorities with `claude-sonnet-4-5-20250929` default, Grok web search fix with `_add_grok_search_params()` method for proper `extra_body` parameter handling, 5 updated planning mode configurations in `configs/tools/planning/`, updated `three_agents_default.yaml` with Grok-4-fast
 
 ✅ **Custom Tools System (v0.1.1)**: User-defined Python function registration using `ToolManager` class in `massgen/tool/_manager.py`, cross-backend support alongside MCP servers, builtin/MCP/custom tool categories with automatic discovery, 40+ examples in `massgen/configs/tools/custom_tools/`, voting sensitivity controls with three-tier quality system (lenient/balanced/strict), answer novelty detection preventing duplicates
 
@@ -1124,19 +1160,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.3 Roadmap
+### v0.1.4 Roadmap
 
-Version 0.1.3 focuses on general interoperability and enterprise collaboration:
+Version 0.1.4 focuses on Docker integration and media tool system refactoring:
 
 #### Required Features
-- **General Interoperability**: Enable MassGen to orchestrate agents from multiple external frameworks with unified interface
-- **Final Agent Submit/Restart Tools**: Enable final agent to decide whether to submit or restart orchestration
+- **Running MCP Tools in Docker**: Containerized execution environment for MCP tools with enhanced security and isolation
+- **Move Image/Audio/Video Generation Tools to Customized Tool System**: Refactor media generation capabilities into unified custom tool system
 
 Key technical approach:
-- **Framework Integration**: Multi-agent coordination supporting external agent frameworks with specialized agent roles (researcher, analyst, critic, synthesizer)
-- **Submit/Restart**: Multi-step task verification with access to previous agents' responses and workspaces
+- **Docker Integration**: Secure execution of third-party tools in isolated Docker containers with resource limits and network isolation
+- **Media Tools Migration**: Integrate image, audio, and video generation tools with custom tool system for better maintainability and extensibility
 
-For detailed milestones and technical specifications, see the [full v0.1.3 roadmap](ROADMAP.md).
+**Target Release**: October 27, 2025 (Monday @ 9am PT)
+
+For detailed milestones and technical specifications, see the [full v0.1.4 roadmap](ROADMAP_v0.1.4.md).
 
 ---
 

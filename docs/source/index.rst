@@ -12,14 +12,29 @@ MassGen: Multi-Agent Scaling System for GenAI
 .. raw:: html
 
    <p align="center">
+     <a href="https://pypi.org/project/massgen/">
+       <img src="https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9" alt="PyPI">
+     </a>
      <a href="https://www.python.org/downloads/">
-       <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+">
+       <img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
      </a>
      <a href="https://github.com/Leezekun/MassGen/blob/main/LICENSE">
-       <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
+       <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="License">
      </a>
+     <a href="https://github.com/Leezekun/MassGen">
+       <img src="https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white" alt="GitHub Stars">
+     </a>
+   </p>
+
+   <p align="center">
      <a href="https://discord.massgen.ai">
-       <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Discord">
+       <img src="https://img.shields.io/discord/1153072414184452236?style=flat-square&logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord">
+     </a>
+     <a href="https://x.massgen.ai">
+       <img src="https://img.shields.io/badge/Follow-@MassGen-000000?style=flat-square&logo=x&logoColor=white" alt="X (Twitter)">
+     </a>
+     <a href="https://www.linkedin.com/company/massgen-ai">
+       <img src="https://img.shields.io/badge/LinkedIn-MassGen-0A66C2?style=flat-square&logo=linkedin&logoColor=white" alt="LinkedIn">
      </a>
    </p>
 

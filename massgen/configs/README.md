@@ -243,7 +243,7 @@ Most configurations use environment variables for API keys:so
 - `massgen/docker/README.md` - Updated Docker documentation with sudo mode instructions
 
 **Case Study:**
-- [Multimodal Video Understanding](../../docs/case_studies/multimodal-case-study-video-analysis.md)
+- [Multimodal Video Understanding](../../docs/source/examples/case_studies/multimodal-case-study-video-analysis.md)
 
 **Example Resources:**
 - `configs/resources/v0.1.3-example/multimodality.jpg` - Image example
@@ -284,7 +284,7 @@ massgen --config @examples/tools/custom_tools/multimodal_tools/understand_video 
 - `configs/basic/multi/three_agents_default.yaml` - Updated with Grok-4-fast model
 
 **Documentation:**
-- `docs/case_studies/INTELLIGENT_PLANNING_MODE.md` - Complete intelligent planning mode guide
+- `docs/dev_notes/intelligent_planning_mode.md` - Complete intelligent planning mode guide
 
 **Key Features:**
 - **Intelligent Planning Mode**: Automatic analysis of question irreversibility for dynamic MCP tool blocking
@@ -392,7 +392,7 @@ massgen --config @examples/tools/code-execution/docker_with_resource_limits \
 - `massgen/configs/basic/single/single_gpt4o_video_generation.yaml` - Video generation with OpenAI Sora-2
 
 **Case Study:**
-- [Universal Code Execution via MCP](../../docs/case_studies/universal-code-execution-mcp.md)
+- [Universal Code Execution via MCP](../../docs/source/examples/case_studies/universal-code-execution-mcp.md)
 
 **Key Features:**
 - Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
@@ -465,7 +465,7 @@ massgen --config @examples/tools/filesystem/cc_gpt5_gemini_filesystem \
 - New `FileOperationTracker` class for read-before-delete enforcement
 - Enhanced PathPermissionManager with operation tracking methods
 
-**Case Study:** [MCP Planning Mode](../../docs/case_studies/mcp-planning-mode.md)
+**Case Study:** [MCP Planning Mode](../../docs/source/examples/case_studies/mcp-planning-mode.md)
 
 **Try it:**
 ```bash
@@ -492,7 +492,7 @@ massgen --config @examples/tools/planning/five_agents_twitter_mcp_planning_mode 
 - New `ExternalAgentBackend` class bridging MassGen with external frameworks
 - Multiple code executor types: LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
 
-**Case Study:** [AG2 Framework Integration](../../docs/case_studies/ag2-framework-integration.md)
+**Case Study:** [AG2 Framework Integration](../../docs/source/examples/case_studies/ag2-framework-integration.md)
 
 **Try it:**
 ```bash
@@ -561,7 +561,7 @@ massgen --config @examples/tools/filesystem/gemini_gpt5nano_file_context_path \
 - Automatic `.massgen` directory management for persistent conversation context
 - Enhanced path permissions with `will_be_writable` flag and smart exclusion patterns
 
-**Case Study:** [Multi-Turn Filesystem Support](../../docs/case_studies/multi-turn-filesystem-support.md)
+**Case Study:** [Multi-Turn Filesystem Support](../../docs/source/examples/case_studies/multi-turn-filesystem-support.md)
 ```bash
 # Turn 1 - Initial creation
 Turn 1: Make a website about Bob Dylan
@@ -599,7 +599,7 @@ massgen --config @examples/basic/multi/two_qwen_vllm \
 - All configs now organized by provider & use case (basic/, providers/, tools/, teams/)
 - Use same configs as v0.0.21 for compatibility, but now with improved performance
 
-**Case Study:** [Advanced Filesystem with User Context Path Support](../../docs/case_studies/v0.0.21-v0.0.22-filesystem-permissions.md)
+**Case Study:** [Advanced Filesystem with User Context Path Support](../../docs/source/examples/case_studies/v0.0.21-v0.0.22-filesystem-permissions.md)
 ```bash
 # Multi-agent collaboration with granular filesystem permissions
 massgen --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
@@ -645,7 +645,7 @@ massgen --config @examples/tools/mcp/gpt5_nano_mcp_example \
 
 ### v0.0.16
 **New Features:** Unified Filesystem Support with MCP Integration
-**Case Study:** [Cross-Backend Collaboration with Gemini MCP Filesystem](../../docs/case_studies/unified-filesystem-mcp-integration.md)
+**Case Study:** [Cross-Backend Collaboration with Gemini MCP Filesystem](../../docs/source/examples/case_studies/unified-filesystem-mcp-integration.md)
 ```bash
 # Gemini and Claude Code agents with unified filesystem via MCP
 massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
@@ -658,7 +658,7 @@ massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code
 
 ### v0.0.12 - v0.0.14
 **New Features:** Enhanced Logging and Workspace Management
-**Case Study:** [Claude Code Workspace Management with Comprehensive Logging](../../docs/case_studies/claude-code-workspace-management.md)
+**Case Study:** [Claude Code Workspace Management with Comprehensive Logging](../../docs/source/examples/case_studies/claude-code-workspace-management.md)
 ```bash
 # Multi-agent Claude Code collaboration with enhanced workspace isolation
 massgen --config @examples/tools/filesystem/claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
