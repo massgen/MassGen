@@ -30,10 +30,14 @@ def sync_readme_pypi(readme_path: Path, readme_pypi_path: Path, dry_run: bool = 
 
     # Replace relative asset paths with full GitHub URLs
     replacements = [
-        # Logo image
+        # Logo images (light and dark)
         (
             "assets/logo.png",
             "https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/logo.png",
+        ),
+        (
+            "assets/logo-dark.png",
+            "https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/logo-dark.png",
         ),
         # Demo GIF → Thumbnail for PyPI
         (
@@ -50,36 +54,22 @@ def sync_readme_pypi(readme_path: Path, readme_pypi_path: Path, dry_run: bool = 
     # Remove PyPI badge from the first row (redundant on PyPI)
     # Replace the entire first badge row to exclude PyPI badge
     old_badge_row = """<p align="center">
-  <a href="https://pypi.org/project/massgen/">
-    <img src="https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9" alt="PyPI">
-  </a>
-  <a href="https://docs.massgen.ai">
-    <img src="https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation">
-  </a>
-  <a href="https://github.com/Leezekun/MassGen">
-    <img src="https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white" alt="GitHub Stars">
-  </a>
-  <a href="https://www.python.org/downloads/">
-    <img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="License">
-  </a>
+
+[![PyPI](https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9)](https://pypi.org/project/massgen/)
+[![Docs](https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.massgen.ai)
+[![GitHub Stars](https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white)](https://github.com/Leezekun/MassGen)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square)](LICENSE)
+
 </p>"""
 
     new_badge_row = """<p align="center">
-  <a href="https://docs.massgen.ai">
-    <img src="https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation">
-  </a>
-  <a href="https://github.com/Leezekun/MassGen">
-    <img src="https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white" alt="GitHub Stars">
-  </a>
-  <a href="https://www.python.org/downloads/">
-    <img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="License">
-  </a>
+
+[![Docs](https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.massgen.ai)
+[![GitHub Stars](https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white)](https://github.com/Leezekun/MassGen)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square)](LICENSE)
+
 </p>"""
 
     pypi_content = pypi_content.replace(old_badge_row, new_badge_row)
