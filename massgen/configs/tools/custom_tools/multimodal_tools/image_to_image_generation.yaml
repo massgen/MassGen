@@ -1,0 +1,35 @@
+# MassGen Configuration: Image to Image Generation Tool
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/image_to_image_generation.yaml "Please create a variation combining these images."
+agents:
+  - id: "image_to_image_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+      custom_tools:
+        - name: ["image_to_image_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/image_to_image_generation.py"
+          function: ["image_to_image_generation"]
+    system_message: |
+      You are an AI assistant with access to image-to-image generation capabilities.
+
+      The image_to_image_generation tool is available to create variations based on multiple input images
+      using OpenAI's gpt-4.1 API. The tool can combine, transform, or create variations of input images.
+
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about creating variations, combining images, or generating new images based on
+      existing ones, use the image_to_image_generation tool to process the input images.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "massgen/configs/resources/"
+      permission: "read"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

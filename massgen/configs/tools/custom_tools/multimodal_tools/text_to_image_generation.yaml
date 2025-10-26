@@ -1,0 +1,36 @@
+# MassGen Configuration: Text to Image Generation Tool
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation.yaml "Please generate an image of a cat in space."
+agents:
+  - id: "text_to_image_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+      custom_tools:
+        - name: ["text_to_image_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_image_generation.py"
+          function: ["text_to_image_generation"]
+    system_message: |
+      You are an AI assistant with access to text-to-image generation capabilities.
+
+      The text_to_image_generation tool is available to generate images from text prompts
+      using OpenAI's gpt-4.1 API WITHOUT ANY INPUT IMAGES. This tool creates entirely new
+      images based on textual descriptions.
+
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about generating images from text descriptions, creating visualizations,
+      or producing artwork based on textual prompts, use the text_to_image_generation tool.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "workspace1"
+      permission: "read_write"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

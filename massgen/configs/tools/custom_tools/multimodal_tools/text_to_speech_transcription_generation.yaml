@@ -1,0 +1,37 @@
+# MassGen Configuration: Text to Speech Transcription Generation Tool
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_transcription_generation.yaml "Please convert this transcription to speech with a cheerful tone."
+agents:
+  - id: "text_to_speech_transcription_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+      custom_tools:
+        - name: ["text_to_speech_transcription_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_speech_transcription_generation.py"
+          function: ["text_to_speech_transcription_generation"]
+    system_message: |
+      You are an AI assistant with access to text-to-speech capabilities.
+
+      The text_to_speech_transcription_generation tool is available to convert text (such as
+      transcriptions) directly to speech using OpenAI's TTS API with streaming response.
+      The tool supports various voices and speaking styles with optional instructions.
+
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about converting transcriptions or text to speech, generating spoken audio
+      from text, or creating voice recordings with specific tones, use the
+      text_to_speech_transcription_generation tool.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "workspace1"
+      permission: "read_write"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

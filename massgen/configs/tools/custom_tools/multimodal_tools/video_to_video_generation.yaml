@@ -1,0 +1,37 @@
+# MassGen Configuration: Video to Video Generation Tool
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/video_to_video_generation.yaml "Please combine these videos into a cohesive story."
+agents:
+  - id: "video_to_video_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+      custom_tools:
+        - name: ["video_to_video_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/video_to_video_generation.py"
+          function: ["video_to_video_generation"]
+    system_message: |
+      You are an AI assistant with access to video-to-video generation capabilities.
+
+      The video_to_video_generation tool is available to:
+      1. Understand each input video by extracting key frames and analyzing them with gpt-4.1
+      2. Synthesize the video descriptions into a coherent text prompt using a language model
+      3. Generate a new video from the synthesized prompt using OpenAI's Sora-2 API
+
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about combining videos, creating video mashups, or generating new videos
+      based on existing ones, use the video_to_video_generation tool to process the input videos.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "massgen/configs/resources/"
+      permission: "read"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
