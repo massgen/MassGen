@@ -284,38 +284,41 @@ class CustomToolAndMCPBackend(LLMBackend):
 
                     # Register each function with its corresponding values
                     for i, func in enumerate(functions):
-                        # Load the function first if custom name is needed
+                        # Load function to check signature for workspace_path injection
+                        if path:
+                            loaded_func = self.custom_tool_manager._load_function_from_path(path, func)
+                        else:
+                            loaded_func = self.custom_tool_manager._load_builtin_function(func)
+
+                        if loaded_func is None:
+                            logger.error(f"Could not load function '{func}' from path: {path}")
+                            continue
+
+                        # Check if function accepts workspace_path parameter
+                        import inspect
+
+                        sig = inspect.signature(loaded_func)
+                        accepts_workspace_path = "workspace_path" in sig.parameters
+
+                        # Inject workspace_path if function accepts it and filesystem manager exists
+                        current_preset_args = preset_args_list[i] or {}
+                        if accepts_workspace_path and self.filesystem_manager:
+                            workspace_path_value = str(Path(str(self.filesystem_manager.get_current_workspace())).resolve())
+                            current_preset_args = {**current_preset_args, "workspace_path": workspace_path_value}
+                            logger.debug(f"Auto-injected workspace_path for {func}: {workspace_path_value}")
+
+                        # Apply custom name if needed
                         if names[i] and names[i] != func:
-                            # Need to load function and apply custom name
-                            if path:
-                                loaded_func = self.custom_tool_manager._load_function_from_path(path, func)
-                            else:
-                                loaded_func = self.custom_tool_manager._load_builtin_function(func)
-
-                            if loaded_func is None:
-                                logger.error(f"Could not load function '{func}' from path: {path}")
-                                continue
-
-                            # Apply custom name by modifying __name__ attribute
                             loaded_func.__name__ = names[i]
 
-                            # Register with loaded function (no path needed)
-                            self.custom_tool_manager.add_tool_function(
-                                path=None,
-                                func=loaded_func,
-                                category=category,
-                                preset_args=preset_args_list[i],
-                                description=descriptions[i],
-                            )
-                        else:
-                            # No custom name or same as function name, use normal registration
-                            self.custom_tool_manager.add_tool_function(
-                                path=path,
-                                func=func,
-                                category=category,
-                                preset_args=preset_args_list[i],
-                                description=descriptions[i],
-                            )
+                        # Register with loaded function (always use loaded function now)
+                        self.custom_tool_manager.add_tool_function(
+                            path=None,
+                            func=loaded_func,
+                            category=category,
+                            preset_args=current_preset_args,
+                            description=descriptions[i],
+                        )
 
                         # Use custom name for logging and tracking if provided
                         registered_name = names[i] if names[i] else func

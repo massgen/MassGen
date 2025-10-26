@@ -12,6 +12,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from massgen.logger_config import logger
 from massgen.tool._result import ExecutionResult, TextContent
 
 
@@ -140,11 +141,112 @@ async def understand_image(
                 output_blocks=[TextContent(data=json.dumps(result, indent=2))],
             )
 
-        # Read and encode image to base64
+        # Read image and check size and dimensions
         try:
-            with open(img_path, "rb") as image_file:
-                image_data = image_file.read()
-            base64_image = base64.b64encode(image_data).decode("utf-8")
+            # OpenAI Vision API limits:
+            # - Up to 20MB per image
+            # - High-resolution: 768px (short side) x 2000px (long side)
+            file_size = img_path.stat().st_size
+            max_size = 18 * 1024 * 1024  # 18MB (conservative buffer under OpenAI's 20MB limit)
+            max_short_side = 768  # Maximum pixels for short side
+            max_long_side = 2000  # Maximum pixels for long side
+
+            # Try to import PIL for dimension/size checking
+            try:
+                import io
+
+                from PIL import Image
+            except ImportError:
+                # PIL not available - fall back to simple file reading
+                # This will work for small images but may fail for large ones
+                if file_size > max_size:
+                    result = {
+                        "success": False,
+                        "operation": "understand_image",
+                        "error": f"Image too large ({file_size/1024/1024:.1f}MB > {max_size/1024/1024:.0f}MB) and PIL not available for resizing. Install with: pip install pillow",
+                    }
+                    return ExecutionResult(
+                        output_blocks=[TextContent(data=json.dumps(result, indent=2))],
+                    )
+                # Read without resizing
+                with open(img_path, "rb") as image_file:
+                    image_data = image_file.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                mime_type = "image/jpeg" if img_path.suffix.lower() in [".jpg", ".jpeg"] else "image/png"
+                logger.info(f"Read image without dimension check (PIL not available): {img_path.name} ({file_size/1024/1024:.1f}MB)")
+
+            else:
+                # PIL available - check both file size and dimensions
+                img = Image.open(img_path)
+                img.size
+                original_width, original_height = img.size
+
+                # Determine short and long sides
+                short_side = min(original_width, original_height)
+                long_side = max(original_width, original_height)
+
+                # Check if we need to resize
+                needs_resize = False
+                resize_reason = []
+
+                if file_size > max_size:
+                    needs_resize = True
+                    resize_reason.append(f"file size {file_size/1024/1024:.1f}MB > {max_size/1024/1024:.0f}MB")
+
+                if short_side > max_short_side or long_side > max_long_side:
+                    needs_resize = True
+                    resize_reason.append(f"dimensions {original_width}x{original_height} exceed {max_short_side}x{max_long_side}")
+
+                if needs_resize:
+                    # Calculate scale factor based on both size and dimensions
+                    scale_factors = []
+
+                    # Scale for file size (if needed)
+                    if file_size > max_size:
+                        # Estimate: reduce dimensions by sqrt of size ratio
+                        size_scale = (max_size / file_size) ** 0.5 * 0.8  # 0.8 for safety margin
+                        scale_factors.append(size_scale)
+
+                    # Scale for dimensions (if needed)
+                    if short_side > max_short_side or long_side > max_long_side:
+                        # Calculate scale needed to fit within dimension constraints
+                        short_scale = max_short_side / short_side if short_side > max_short_side else 1.0
+                        long_scale = max_long_side / long_side if long_side > max_long_side else 1.0
+                        dimension_scale = min(short_scale, long_scale) * 0.95  # 0.95 for safety margin
+                        scale_factors.append(dimension_scale)
+
+                    # Use the most restrictive scale factor
+                    scale_factor = min(scale_factors)
+                    new_width = int(original_width * scale_factor)
+                    new_height = int(original_height * scale_factor)
+
+                    # Resize image
+                    img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+                    # Convert to bytes
+                    img_byte_arr = io.BytesIO()
+                    # Save as JPEG for better compression
+                    img_resized.convert("RGB").save(img_byte_arr, format="JPEG", quality=85, optimize=True)
+                    image_data = img_byte_arr.getvalue()
+
+                    base64_image = base64.b64encode(image_data).decode("utf-8")
+                    mime_type = "image/jpeg"
+
+                    logger.info(
+                        f"Resized image ({', '.join(resize_reason)}): "
+                        f"{original_width}x{original_height} ({file_size/1024/1024:.1f}MB) -> "
+                        f"{new_width}x{new_height} ({len(image_data)/1024/1024:.1f}MB)",
+                    )
+
+                else:
+                    # No resize needed - read normally
+                    with open(img_path, "rb") as image_file:
+                        image_data = image_file.read()
+                    base64_image = base64.b64encode(image_data).decode("utf-8")
+                    # Determine MIME type
+                    mime_type = "image/jpeg" if img_path.suffix.lower() in [".jpg", ".jpeg"] else "image/png"
+                    logger.info(f"Image within limits: {original_width}x{original_height} ({file_size/1024/1024:.1f}MB)")
+
         except Exception as read_error:
             result = {
                 "success": False,
@@ -154,9 +256,6 @@ async def understand_image(
             return ExecutionResult(
                 output_blocks=[TextContent(data=json.dumps(result, indent=2))],
             )
-
-        # Determine MIME type
-        mime_type = "image/jpeg" if img_path.suffix.lower() in [".jpg", ".jpeg"] else "image/png"
 
         try:
             # Call OpenAI API for image understanding
