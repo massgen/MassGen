@@ -33,6 +33,7 @@ from ..logger_config import (
     log_tool_call,
     logger,
 )
+from ..configs.rate_limits import get_rate_limit_config
 from ..rate_limiter import GlobalRateLimiter
 from .base import FilesystemSupport, StreamChunk
 from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend
@@ -138,32 +139,44 @@ class GeminiBackend(CustomToolAndMCPBackend):
         # Initialize Gemini MCP manager after all attributes are ready
         self.mcp_manager = GeminiMCPManager(self)
         
-        # Initialize global rate limiter for Gemini API (per-model limits)
-        # Flash: 10 RPM, Pro: 2 RPM (from Google AI Studio)
+        # Initialize multi-dimensional rate limiter for Gemini API
+        # Supports RPM (Requests Per Minute), TPM (Tokens Per Minute), RPD (Requests Per Day)
+        # Configuration loaded from massgen/config/rate_limits.yaml
         # This is shared across ALL instances of the SAME MODEL
         model_name = kwargs.get('model', '')
-        if 'gemini-2.5-flash' in model_name.lower():
-            self.rate_limiter = GlobalRateLimiter.get_limiter_sync(
-                provider='gemini-2.5-flash',
-                max_requests=9,  # Conservative: 9 instead of 10
-                time_window=60
+        
+        # Load rate limits from configuration
+        rate_config = get_rate_limit_config()
+        limits = rate_config.get_limits('gemini', model_name)
+        
+        # Create a unique provider key for the rate limiter
+        # Use the full model name to distinguish between different models
+        provider_key = f"gemini-{model_name}" if model_name else "gemini-default"
+        
+        # Initialize multi-dimensional rate limiter
+        self.rate_limiter = GlobalRateLimiter.get_multi_limiter_sync(
+            provider=provider_key,
+            rpm=limits.get('rpm'),
+            tpm=limits.get('tpm'),
+            rpd=limits.get('rpd')
+        )
+        
+        # Log the active rate limits
+        active_limits = []
+        if limits.get('rpm'):
+            active_limits.append(f"RPM: {limits['rpm']}")
+        if limits.get('tpm'):
+            active_limits.append(f"TPM: {limits['tpm']:,}")
+        if limits.get('rpd'):
+            active_limits.append(f"RPD: {limits['rpd']}")
+        
+        if active_limits:
+            logger.info(
+                f"[Gemini] Multi-dimensional rate limiter enabled for '{model_name}': "
+                f"{', '.join(active_limits)}"
             )
-            logger.info(f"[Gemini] API rate limiter enabled for Flash: 9 requests per minute")
-        elif 'gemini-2.5-pro' in model_name.lower():
-            self.rate_limiter = GlobalRateLimiter.get_limiter_sync(
-                provider='gemini-2.5-pro',
-                max_requests=2,  # Very limited!
-                time_window=60
-            )
-            logger.info(f"[Gemini] API rate limiter enabled for Pro: 2 requests per minute")
         else:
-            # Default for other Gemini models
-            self.rate_limiter = GlobalRateLimiter.get_limiter_sync(
-                provider='gemini-other',
-                max_requests=7,
-                time_window=60
-            )
-            logger.info(f"[Gemini] API rate limiter enabled: 7 requests per minute")
+            logger.info(f"[Gemini] No rate limits configured for '{model_name}'")
 
     def _setup_permission_hooks(self):
         """Override base class - Gemini uses session-based permissions, not function hooks."""
@@ -1813,6 +1826,26 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 agent_id,
             )
             yield StreamChunk(type="complete_message", complete_message=complete_message)
+            
+            # Record token usage for TPM tracking (if available)
+            try:
+                if final_response and hasattr(final_response, 'usage_metadata'):
+                    usage = final_response.usage_metadata
+                    total_tokens = 0
+                    
+                    # Extract total tokens from usage metadata
+                    if hasattr(usage, 'total_token_count'):
+                        total_tokens = usage.total_token_count
+                    elif hasattr(usage, 'candidates_token_count') and hasattr(usage, 'prompt_token_count'):
+                        total_tokens = usage.candidates_token_count + usage.prompt_token_count
+                    
+                    if total_tokens > 0:
+                        await self.rate_limiter.record_tokens(total_tokens)
+                        logger.debug(f"[Gemini] Recorded {total_tokens} tokens for TPM tracking")
+            except Exception as token_error:
+                # Token tracking should not break the flow
+                logger.debug(f"[Gemini] Could not record tokens for TPM tracking: {token_error}")
+            
             log_stream_chunk("backend.gemini", "done", None, agent_id)
             yield StreamChunk(type="done")
 
