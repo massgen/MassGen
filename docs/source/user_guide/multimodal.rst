@@ -710,6 +710,7 @@ Generate formatted documents from text using AI. The ``text_to_file_generation``
 * **TXT** - Plain text files
 * **MD** - Markdown formatted documents
 * **PDF** - Professional PDF documents with formatting
+* **PPTX** - PowerPoint presentations with slide structure
 
 Multi-Agent Document Workflow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -770,6 +771,7 @@ Combine generation with review and refinement:
 **Requirements:**
 
 * PDF generation requires ``reportlab`` (``pip install reportlab``)
+* PPTX generation requires ``python-pptx`` (``pip install python-pptx``)
 
 Supported Backends
 ------------------
@@ -896,6 +898,7 @@ Best Practices
      * File Understanding (Excel): ``pip install openpyxl``
      * File Understanding (PowerPoint): ``pip install python-pptx``
      * File Generation (PDF): ``pip install reportlab``
+     * File Generation (PPTX): ``pip install python-pptx``
 
 2. **Generation Tool Configuration**
 
@@ -1003,7 +1006,7 @@ Troubleshooting
 
   .. code-block:: bash
 
-     pip install PyPDF2 python-docx openpyxl python-pptx opencv-python
+     pip install PyPDF2 python-docx openpyxl python-pptx opencv-python reportlab
 
 **API and Dependency Issues:**
 
