@@ -75,6 +75,61 @@ async def _check_url_accessible(url: str) -> tuple[bool, str, int]:
         return False, f"Error checking URL: {str(e)}", 0
 
 
+async def _check_docker_running() -> tuple[bool, str]:
+    """Check if the crawl4ai Docker container is running and accessible.
+
+    Returns:
+        Tuple of (is_running, error_message)
+    """
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{CRAWL4AI_BASE_URL}/health")
+            if response.status_code == 200:
+                return True, ""
+            return False, f"crawl4ai container health check failed with status {response.status_code}"
+    except httpx.ConnectError:
+        return False, (
+            "crawl4ai Docker container is not running or not accessible at http://localhost:11235\n\n"
+            "To start the container, run:\n"
+            "  docker pull unclecode/crawl4ai:latest\n"
+            "  docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest\n\n"
+            "To verify it's running:\n"
+            "  docker ps | grep crawl4ai"
+        )
+    except httpx.TimeoutException:
+        return False, "crawl4ai container is not responding (timeout). Check if the container is healthy."
+    except Exception as e:
+        return False, f"Error checking crawl4ai container: {str(e)}"
+
+
+def require_docker(func):
+    """Decorator that checks if Docker container is running before executing the function."""
+    from functools import wraps
+
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        is_docker_running, docker_error = await _check_docker_running()
+        if not is_docker_running:
+            return ExecutionResult(
+                output_blocks=[
+                    TextContent(
+                        data=json.dumps(
+                            {
+                                "success": False,
+                                "error": "Docker container not running",
+                                "details": docker_error,
+                            },
+                            indent=2,
+                        ),
+                    ),
+                ],
+            )
+        return await func(*args, **kwargs)
+
+    return wrapper
+
+
+@require_docker
 async def crawl4ai_md(
     url: str,
     filter_type: str = "fit",
@@ -214,6 +269,7 @@ async def crawl4ai_md(
         )
 
 
+@require_docker
 async def crawl4ai_html(url: str) -> ExecutionResult:
     """Extract preprocessed HTML from a webpage.
 
@@ -262,6 +318,7 @@ async def crawl4ai_html(url: str) -> ExecutionResult:
         )
 
 
+@require_docker
 async def crawl4ai_screenshot(
     url: str,
     wait_seconds: float = 2.0,
@@ -365,6 +422,7 @@ async def crawl4ai_screenshot(
         )
 
 
+@require_docker
 async def crawl4ai_pdf(
     url: str,
     output_filename: Optional[str] = None,
@@ -459,6 +517,7 @@ async def crawl4ai_pdf(
         )
 
 
+@require_docker
 async def crawl4ai_execute_js(
     url: str,
     scripts: List[str],
@@ -527,6 +586,7 @@ async def crawl4ai_execute_js(
         )
 
 
+@require_docker
 async def crawl4ai_crawl(
     urls: List[str],
     max_urls: int = 100,
