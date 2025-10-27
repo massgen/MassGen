@@ -582,7 +582,7 @@ See :doc:`multimodal` for complete multimodal capabilities documentation.
 Example 5: Crawl4AI Web Scraping Tools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**New in v0.1.3-p3**: Docker-based web scraping with multiple output formats via crawl4ai custom tools.
+**New in v0.1.4**: Docker-based web scraping with multiple output formats via crawl4ai custom tools.
 
 .. code-block:: bash
 

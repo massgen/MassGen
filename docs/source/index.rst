@@ -111,6 +111,10 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.4 (October 27, 2025)** - Multimodal Generation Tools & Binary File Protection
+
+Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
+
 **v0.1.3 (October 24, 2025)** - Post-Evaluation Tools & Multimodal Understanding
 
 Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
@@ -118,10 +122,6 @@ Post-evaluation workflow with submit/restart capabilities, custom multimodal und
 **v0.1.2 (October 22, 2025)** - Intelligent Planning Mode & Model Updates
 
 Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
-
-**v0.1.1 (October 20, 2025)** - Custom Tools, Voting Controls & Documentation
-
-Custom Python function tools, voting sensitivity controls, interactive config builder, and comprehensive Sphinx documentation.
 
 Quick Start
 -----------

@@ -7,16 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
+Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
+
 **v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
 Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
 
 **v0.1.2 (October 2025)** - Intelligent Planning Mode & Model Updates
 Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
 
-**v0.1.1 (October 2025)** - Custom Tools, Voting Controls & Documentation
-Custom Python function tools, voting sensitivity controls, interactive config builder, and comprehensive Sphinx documentation.
-
 ---
+
+## [0.1.4] - 2025-10-27
+
+### Added
+- **Multimodal Generation Tools**: Comprehensive generation capabilities via OpenAI APIs
+  - New `text_to_image_generation` tool for generating images from text prompts using DALL-E models
+  - New `text_to_video_generation` tool for generating videos from text prompts
+  - New `text_to_speech_continue_generation` tool for text-to-speech with continuation support
+  - New `text_to_speech_transcription_generation` tool for audio transcription and generation
+  - New `text_to_file_generation` tool for generating documents (PDF, DOCX, XLSX, PPTX)
+  - New `image_to_image_generation` tool for image-to-image transformations
+  - Implemented in `massgen/tool/_multimodal_tools/` with 6 new modules
+
+- **Binary File Protection System**: Enhanced security for file operations
+  - New binary file blocking in `PathPermissionManager` preventing text tools from reading binary files
+  - Added `BINARY_FILE_EXTENSIONS` set covering images, videos, audio, archives, executables, and Office documents
+  - New `_validate_binary_file_access()` method with intelligent tool suggestions
+  - Prevents context pollution by blocking Read, read_text_file, and read_file tools from binary files
+  - Comprehensive test suite in `test_binary_file_blocking.py`
+
+- **Crawl4AI Web Scraping Integration**: Advanced web content extraction tool
+  - New `crawl4ai_tool` for intelligent web scraping with LLM-powered extraction
+  - Implemented in `massgen/tool/_web_tools/crawl4ai_tool.py`
+
+### Changed
+- **Multimodal File Size Limits**: Enhanced validation and automatic handling
+  - Automatic image resizing for files exceeding size limits
+  - Comprehensive size limit test suite in `test_multimodal_size_limits.py`
+  - Enhanced validation in understand_audio and understand_video tools
+
+### Documentations, Configurations and Resources
+
+- **PyPI Package Documentation**: Standalone README for PyPI distribution
+  - New `README_PYPI.md` with comprehensive package documentation
+  - Improved package metadata and installation instructions
+
+- **Release Management Documentation**: Comprehensive release workflow guide
+  - New `docs/dev_notes/release_checklist.md` with step-by-step release procedures
+  - Detailed checklist for testing, documentation, and deployment
+
+- **Binary File Protection Documentation**: Enhanced protected paths user guide
+  - Updated `docs/source/user_guide/protected_paths.rst` with binary file protection section
+  - Documents 40+ protected binary file types and specialized tool suggestions
+
+- **Enhanced Pre-commit Hooks**: Improved code quality automation
+  - Updated `.pre-commit-config.yaml` with additional checks
+  - Better README synchronization and validation
+
+- **Documentation Automation**: CI/CD for documentation deployment
+  - New `.github/workflows/docs-automation.yml` for automated doc builds
+  - Removed legacy docs.yml workflow
+
+- **Configuration Examples**: 9 new YAML configuration files
+  - **Generation Tools**: 8 multimodal generation configurations
+    - `text_to_image_generation_single.yaml` and `text_to_image_generation_multi.yaml`
+    - `text_to_video_generation_single.yaml` and `text_to_video_generation_multi.yaml`
+    - `text_to_speech_generation_single.yaml` and `text_to_speech_generation_multi.yaml`
+    - `text_to_file_generation_single.yaml` and `text_to_file_generation_multi.yaml`
+  - **Web Scraping**: `crawl4ai_example.yaml` for Crawl4AI integration
+
+### Technical Details
+- **Major Focus**: Multimodal generation tools, binary file protection system, web scraping integration
+- **Contributors**: @qidanrui @ncrispino @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.3] - 2025-10-24
 

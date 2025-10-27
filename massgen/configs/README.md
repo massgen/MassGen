@@ -227,53 +227,62 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.3 - Latest
-**New Features:** Post-Evaluation Workflow, Custom Multimodal Understanding Tools, Docker Sudo Mode
+### v0.1.4 - Latest
+**New Features:** Multimodal Generation Tools, Binary File Protection, Crawl4AI Integration
 
 **Configuration Files:**
-- `configs/tools/custom_tools/multimodal_tools/understand_image.yaml` - Image analysis configuration
-- `configs/tools/custom_tools/multimodal_tools/understand_audio.yaml` - Audio transcription configuration
-- `configs/tools/custom_tools/multimodal_tools/understand_video.yaml` - Video analysis configuration
-- `configs/tools/custom_tools/multimodal_tools/understand_file.yaml` - Document processing configuration
+- `text_to_image_generation_single.yaml` / `text_to_image_generation_multi.yaml` - Image generation
+- `text_to_video_generation_single.yaml` / `text_to_video_generation_multi.yaml` - Video generation
+- `text_to_speech_generation_single.yaml` / `text_to_speech_generation_multi.yaml` - Audio generation
+- `text_to_file_generation_single.yaml` / `text_to_file_generation_multi.yaml` - Document generation
+- `crawl4ai_example.yaml` - Web scraping configuration
 
 **Documentation:**
-- `massgen/tool/docs/multimodal_tools.md` - Complete 779-line multimodal tools guide
-- `docs/source/user_guide/multimodal.rst` - Updated multimodal documentation with custom tools
-- `docs/source/user_guide/code_execution.rst` - Enhanced with 98 lines documenting sudo mode
-- `massgen/docker/README.md` - Updated Docker documentation with sudo mode instructions
-
-**Case Study:**
-- [Multimodal Video Understanding](../../docs/source/examples/case_studies/multimodal-case-study-video-analysis.md)
-
-**Example Resources:**
-- `configs/resources/v0.1.3-example/multimodality.jpg` - Image example
-- `configs/resources/v0.1.3-example/Sherlock_Holmes.mp3` - Audio example
-- `configs/resources/v0.1.3-example/oppenheimer_trailer_1920.mp4` - Video example
-- `configs/resources/v0.1.3-example/TUMIX.pdf` - PDF document example
+- `README_PYPI.md` - Standalone PyPI package documentation
+- `docs/dev_notes/release_checklist.md` - Release workflow guide
+- `docs/source/user_guide/protected_paths.rst` - Binary file protection documentation
+- `.github/workflows/docs-automation.yml` - Documentation CI/CD automation
 
 **Key Features:**
-- **Post-Evaluation Tools**: Submit and restart capabilities for winning agents with confidence assessments
-- **Multimodal Understanding**: Analyze images, audio, video, and documents using GPT-4.1
-- **Docker Sudo Mode**: Execute privileged commands in containerized environments
-- **Config Builder**: Improved workflow with auto-detection and better provider handling
+- **Generation Tools**: Create images, videos, audio, and documents using OpenAI APIs
+- **Binary File Protection**: Automatic blocking prevents text tools from reading 40+ binary file types
+- **Web Scraping**: Crawl4AI integration for intelligent content extraction
+- **Enhanced Security**: Smart tool suggestions guide users to appropriate specialized tools
 
 **Try it:**
 ```bash
 # Install or upgrade
 pip install --upgrade massgen
 
+# Generate an image from text
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_image_generation_single \
+  "Please generate an image of a cat in space."
+
+# Generate a video from text
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_video_generation_single \
+  "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
+
+# Generate documents (PDF, DOCX, etc.)
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_file_generation_single \
+  "Please generate a comprehensive technical report about the latest developments in Large Language Models (LLMs)."
+```
+
+### v0.1.3
+**New Features:** Post-Evaluation Workflow, Custom Multimodal Understanding Tools, Docker Sudo Mode
+
+**Configuration Files:**
+- `understand_image.yaml`, `understand_audio.yaml`, `understand_video.yaml`, `understand_file.yaml`
+
+**Key Features:**
+- **Post-Evaluation Tools**: Submit and restart capabilities for winning agents
+- **Multimodal Understanding**: Analyze images, audio, video, and documents
+- **Docker Sudo Mode**: Execute privileged commands in containers
+
+**Try it:**
+```bash
 # Try multimodal image understanding
-# (Requires OPENAI_API_KEY in .env)
 massgen --config @examples/tools/custom_tools/multimodal_tools/understand_image \
   "Please summarize the content in this image."
-
-# Try multimodal audio understanding
-massgen --config @examples/tools/custom_tools/multimodal_tools/understand_audio \
-  "Please summarize the content in this audio."
-
-# Try multimodal video understanding
-massgen --config @examples/tools/custom_tools/multimodal_tools/understand_video \
-  "What's happening in this video?"
 ```
 
 ### v0.1.2
