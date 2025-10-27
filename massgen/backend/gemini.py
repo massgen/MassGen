@@ -178,6 +178,18 @@ class GeminiBackend(CustomToolAndMCPBackend):
         """
         return False
 
+    def _create_client(self, **kwargs):
+        pass
+
+    async def _stream_with_custom_and_mcp_tools(
+        self,
+        current_messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        yield StreamChunk(type="error", error="Not implemented")
+
     async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using Gemini API with structured output for coordination and MCP tool support."""
         # Use instance agent_id (from __init__) or get from kwargs if not set
@@ -943,14 +955,27 @@ class GeminiBackend(CustomToolAndMCPBackend):
                             tool_args = tool_call["arguments"]
 
                             try:
-                                # Execute the custom tool
-                                result_str = await self._execute_custom_tool(
+                                # Execute the custom tool with streaming
+                                accumulated_result = ""
+                                async for chunk in self.stream_custom_tool_execution(
                                     {
                                         "name": tool_name,
                                         "arguments": json.dumps(tool_args) if isinstance(tool_args, dict) else tool_args,
                                     },
-                                )
+                                ):
+                                    if not chunk.completed:
+                                        # Stream partial results to user
+                                        yield StreamChunk(
+                                            type="custom_tool_status",
+                                            status="custom_tool_output",
+                                            content=chunk.data,
+                                            source="custom_tools",
+                                        )
+                                    else:
+                                        # Get final accumulated result
+                                        accumulated_result = chunk.accumulated_result
 
+                                result_str = accumulated_result
                                 # Format result as JSON if possible
                                 formatted_result = format_tool_response_as_json(result_str)
 

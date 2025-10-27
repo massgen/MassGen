@@ -786,8 +786,17 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                 )
 
                 try:
-                    # Execute custom function
-                    result_str = await self._execute_custom_tool(
+                    # Yield custom tool arguments
+                    yield StreamChunk(
+                        type="custom_tool_status",
+                        status="function_call",
+                        content=f"Arguments for Calling {function_name}: {json.dumps(tool_call['function'].get('arguments', {}))}",
+                        source=f"custom_{function_name}",
+                    )
+
+                    # Execute custom function with streaming
+                    accumulated_result = ""
+                    async for chunk in self.stream_custom_tool_execution(
                         {
                             "name": function_name,
                             "arguments": json.dumps(tool_call["function"]["arguments"])
@@ -795,7 +804,20 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                             else tool_call["function"].get("arguments", "{}"),
                             "call_id": tool_call["id"],
                         },
-                    )
+                    ):
+                        if not chunk.completed:
+                            # Stream partial results to user
+                            yield StreamChunk(
+                                type="custom_tool_status",
+                                status="function_call_output",
+                                content=chunk.data,
+                                source=f"custom_{function_name}",
+                            )
+                        else:
+                            # Get final accumulated result
+                            accumulated_result = chunk.accumulated_result
+
+                    result_str = accumulated_result
                     if not result_str or result_str.startswith("Error:"):
                         logger.warning(f"Custom function {function_name} failed: {result_str or 'unknown error'}")
                         result_str = result_str or "Tool execution failed"
@@ -817,13 +839,6 @@ class ClaudeBackend(CustomToolAndMCPBackend):
 
                 # Append to updated_messages
                 updated_messages.append(tool_result_msg)
-
-                yield StreamChunk(
-                    type="custom_tool_status",
-                    status="function_call",
-                    content=f"Arguments for Calling {function_name}: {json.dumps(tool_call['function'].get('arguments', {}))}",
-                    source=f"custom_{function_name}",
-                )
 
                 yield StreamChunk(
                     type="custom_tool_status",

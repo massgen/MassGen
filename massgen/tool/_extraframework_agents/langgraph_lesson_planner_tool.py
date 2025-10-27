@@ -12,6 +12,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 
+from massgen.tool import context_params
 from massgen.tool._result import ExecutionResult, TextContent
 
 
@@ -27,6 +28,7 @@ class LessonPlannerState(TypedDict):
     final_plan: str
 
 
+@context_params("system_message", "user_message")
 async def langgraph_lesson_planner(
     user_prompt: str,
     context: Optional[str] = None,

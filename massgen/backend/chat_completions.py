@@ -293,22 +293,34 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         source=f"custom_{call['name']}",
                     )
 
-                    # Execute custom tool
-                    result = await self._execute_custom_tool(call)
+                    # Execute custom tool with streaming
+                    accumulated_result = ""
+                    async for chunk in self.stream_custom_tool_execution(call):
+                        if not chunk.completed:
+                            # Stream partial results to user
+                            yield StreamChunk(
+                                type="custom_tool_status",
+                                status="function_call_output",
+                                content=chunk.data,
+                                source=f"custom_{call['name']}",
+                            )
+                        else:
+                            # Get final accumulated result
+                            accumulated_result = chunk.accumulated_result
 
                     # Add function result to messages
                     function_output_msg = {
                         "role": "tool",
                         "tool_call_id": call["call_id"],
-                        "content": str(result),
+                        "content": accumulated_result,
                     }
                     updated_messages.append(function_output_msg)
 
-                    # Yield custom tool results
+                    # Yield custom tool results summary
                     yield StreamChunk(
                         type="custom_tool_status",
                         status="function_call_output",
-                        content=f"Results for Calling {call['name']}: {str(result)}",
+                        content=f"Results for Calling {call['name']}: {accumulated_result}",
                         source=f"custom_{call['name']}",
                     )
 

@@ -5,17 +5,18 @@ This tool demonstrates interoperability by wrapping AutoGen's nested chat functi
 """
 
 import os
-from typing import Any, Dict, List
+from typing import Any, AsyncGenerator, Dict, List
 
 from autogen import ConversableAgent, GroupChat, GroupChatManager
 
+from massgen.tool import context_params
 from massgen.tool._result import ExecutionResult, TextContent
 
 
 def run_ag2_lesson_planner_agent(
     messages: List[Dict[str, Any]],
     api_key: str,
-) -> str:
+):
     """
     Core AG2 lesson planner agent - pure AutoGen implementation.
 
@@ -23,7 +24,7 @@ def run_ag2_lesson_planner_agent(
     using nested chats and multiple specialized agents.
 
     Args:
-        messages: Complete message history from orchestrator
+        messages: messages for the agent to execute
         api_key: OpenAI API key for the agents
 
     Returns:
@@ -106,7 +107,7 @@ def run_ag2_lesson_planner_agent(
     planning_chat = GroupChat(
         agents=[curriculum_agent, lesson_planner_agent, lesson_reviewer_agent],
         messages=[],
-        max_round=4,
+        max_round=2,
         send_introductions=True,
     )
 
@@ -171,21 +172,21 @@ def run_ag2_lesson_planner_agent(
     )
 
     # Initiate the chat and get the result
-    result = assistant_agent.initiate_chat(
+    response = assistant_agent.run(
         recipient=lead_teacher_agent,
         message=str(messages),
         max_turns=1,
     )
 
     # Extract the lesson plan from the result
-    lesson_plan = result.summary if hasattr(result, "summary") else str(result)
 
-    return lesson_plan
+    return response
 
 
+@context_params("prompt")
 async def ag2_lesson_planner(
-    messages: List[Dict[str, Any]],
-) -> ExecutionResult:
+    prompt: List[Dict[str, Any]],
+) -> AsyncGenerator[ExecutionResult]:
     """
     MassGen custom tool wrapper for AG2 lesson planner.
 
@@ -193,7 +194,7 @@ async def ag2_lesson_planner(
     error handling, and wraps the core agent logic in ExecutionResult.
 
     Args:
-        messages: Complete message list from orchestrator (auto-injected via execution_context)
+        prompt: processed message list from orchestrator (auto-injected via execution_context)
 
     Returns:
         ExecutionResult containing the formatted lesson plan or error message
@@ -202,27 +203,48 @@ async def ag2_lesson_planner(
     api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
-        return ExecutionResult(
+        yield ExecutionResult(
             output_blocks=[
                 TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable."),
             ],
         )
 
     try:
-        # Call the core agent function with complete messages
-        lesson_plan = run_ag2_lesson_planner_agent(
-            messages=messages,
+        # Call the core agent function with processed messages
+        response = run_ag2_lesson_planner_agent(
+            messages=prompt,
             api_key=api_key,
         )
 
-        return ExecutionResult(
-            output_blocks=[
-                TextContent(data=f"AG2 Lesson Planner Result:\n\n{lesson_plan}"),
-            ],
-        )
+        last_nested_chat_event_msgs = []
+
+        def process_and_log_event(*args, **kwargs) -> None:
+            """Process and log AG2 event, returning string representation."""
+            line = " ".join(str(arg) for arg in args)
+            last_nested_chat_event_msgs.append(line)
+
+        for event in response.events:
+            last_nested_chat_event_msgs.clear()
+            event.print(f=process_and_log_event)
+            formatted_message = "\n".join(last_nested_chat_event_msgs)
+
+            if event.type == "run_completion":
+                # Final output
+                yield ExecutionResult(
+                    output_blocks=[
+                        TextContent(data=event.content.summary),
+                    ],
+                )
+            else:
+                yield ExecutionResult(
+                    output_blocks=[
+                        TextContent(data=formatted_message),
+                    ],
+                    is_log=True,
+                )
 
     except Exception as e:
-        return ExecutionResult(
+        yield ExecutionResult(
             output_blocks=[
                 TextContent(data=f"Error creating lesson plan: {str(e)}"),
             ],

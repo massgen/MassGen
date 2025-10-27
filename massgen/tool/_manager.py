@@ -220,17 +220,11 @@ class ToolManager:
         if description:
             tool_schema["function"]["description"] = description
 
-        # Remove preset args from schema
-        for arg in preset_args or {}:
-            if arg in tool_schema["function"]["parameters"]["properties"]:
-                tool_schema["function"]["parameters"]["properties"].pop(arg)
+        # Extract context param names from decorator
+        context_param_names = getattr(base_func, "__context_params__", set())
 
-            if "required" in tool_schema["function"]["parameters"]:
-                if arg in tool_schema["function"]["parameters"]["required"]:
-                    tool_schema["function"]["parameters"]["required"].remove(arg)
-
-                if not tool_schema["function"]["parameters"]["required"]:
-                    tool_schema["function"]["parameters"].pop("required", None)
+        # Remove preset args and context params from schema
+        self._remove_params_from_schema(tool_schema, set(preset_args or {}) | context_param_names)
 
         tool_entry = RegisteredToolEntry(
             tool_name=tool_name,
@@ -239,6 +233,7 @@ class ToolManager:
             base_function=base_func,
             schema_def=tool_schema,
             preset_params=preset_args or {},
+            context_param_names=context_param_names,
             extension_model=None,
             post_processor=post_processor,
         )
@@ -315,32 +310,29 @@ class ToolManager:
 
         tool_entry = self.registered_tools[tool_name]
 
-        # Merge all available parameters: preset_params + tool input + execution context
-        all_available_params = {
+        # Extract context values for marked params only
+        context_values = {}
+        if execution_context and tool_entry.context_param_names:
+            context_values = {k: v for k, v in execution_context.items() if k in tool_entry.context_param_names}
+
+        # Validate all parameters match function signature
+        self._validate_params_match_signature(
+            tool_entry.base_function,
+            tool_entry.preset_params,
+            tool_entry.context_param_names,
+            tool_request,
+            tool_name,
+        )
+
+        # Merge all parameters (validation ensures all are valid):
+        # 1. Static preset params (from registration)
+        # 2. Dynamic context values (from execution_context, marked by decorator)
+        # 3. LLM input (from tool request)
+        exec_kwargs = {
             **tool_entry.preset_params,
+            **context_values,
             **(tool_request.get("input", {}) or {}),
-            **(execution_context or {}),
         }
-
-        # 🔑 Automatic parameter filtering based on function signature
-        # Only pass parameters that the function actually accepts
-        sig = inspect.signature(tool_entry.base_function)
-        exec_kwargs = {}
-
-        for param_name, param in sig.parameters.items():
-            # Skip self and cls
-            if param_name in ["self", "cls"]:
-                continue
-
-            # If parameter exists in available params, include it
-            if param_name in all_available_params:
-                exec_kwargs[param_name] = all_available_params[param_name]
-            # If parameter has VAR_KEYWORD kind (**kwargs), pass all remaining params
-            elif param.kind == inspect.Parameter.VAR_KEYWORD:
-                # Pass all params that weren't already included
-                for key, value in all_available_params.items():
-                    if key not in exec_kwargs:
-                        exec_kwargs[key] = value
 
         # Prepare post-processor if exists
         if tool_entry.post_processor:
@@ -391,6 +383,73 @@ class ToolManager:
             raise TypeError(
                 f"Tool must return ExecutionResult or Generator, got {type(result)}",
             )
+
+    @staticmethod
+    def _validate_params_match_signature(
+        func: Callable,
+        preset_params: dict,
+        context_param_names: set,
+        tool_request: dict,
+        tool_name: str,
+    ) -> None:
+        """Validate that all provided parameters match function signature.
+
+        Args:
+            func: The function to validate against
+            preset_params: Static preset parameters
+            context_param_names: Context parameter names from decorator
+            tool_request: Tool request with LLM input
+            tool_name: Tool name for error messages
+
+        Raises:
+            ValueError: If any provided parameter doesn't match function signature
+        """
+        sig = inspect.signature(func)
+        valid_params = set(sig.parameters.keys())
+
+        # Check preset args
+        invalid_preset = set(preset_params.keys()) - valid_params
+        if invalid_preset:
+            raise ValueError(
+                f"Tool '{tool_name}': preset_args contains invalid parameters: {invalid_preset}. " f"Valid parameters: {valid_params}",
+            )
+
+        # Check context params
+        invalid_context = context_param_names - valid_params
+        if invalid_context:
+            raise ValueError(
+                f"Tool '{tool_name}': @context_params decorator specifies invalid parameters: {invalid_context}. " f"Valid parameters: {valid_params}",
+            )
+
+        # Check LLM input
+        llm_input = tool_request.get("input", {}) or {}
+        invalid_llm = set(llm_input.keys()) - valid_params
+        if invalid_llm:
+            raise ValueError(
+                f"Tool '{tool_name}': LLM provided invalid parameters: {invalid_llm}. " f"Valid parameters: {valid_params}",
+            )
+
+    @staticmethod
+    def _remove_params_from_schema(tool_schema: dict, param_names: set) -> None:
+        """Remove parameters from tool schema (for preset args and context params).
+
+        Args:
+            tool_schema: The tool schema to modify
+            param_names: Set of parameter names to remove
+        """
+        for arg in param_names:
+            # Remove from properties
+            if arg in tool_schema["function"]["parameters"]["properties"]:
+                tool_schema["function"]["parameters"]["properties"].pop(arg)
+
+            # Remove from required list
+            if "required" in tool_schema["function"]["parameters"]:
+                if arg in tool_schema["function"]["parameters"]["required"]:
+                    tool_schema["function"]["parameters"]["required"].remove(arg)
+
+                # Clean up empty required list
+                if not tool_schema["function"]["parameters"]["required"]:
+                    tool_schema["function"]["parameters"].pop("required", None)
 
     def fetch_category_hints(self) -> str:
         """Get usage hints from active categories.
@@ -590,10 +649,17 @@ class ToolManager:
 
         func_desc = "\n\n".join(desc_parts)
 
+        # Get context param names to exclude from schema
+        context_param_names = getattr(func, "__context_params__", set())
+
         # Build parameter fields
         param_fields = {}
         for param_name, param_info in inspect.signature(func).parameters.items():
             if param_name in ["self", "cls"]:
+                continue
+
+            # Skip context params (they'll be injected at runtime)
+            if param_name in context_param_names:
                 continue
 
             if param_info.kind == inspect.Parameter.VAR_KEYWORD:

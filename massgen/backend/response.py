@@ -265,8 +265,20 @@ class ResponseBackend(CustomToolAndMCPBackend):
                         source=f"custom_{call['name']}",
                     )
 
-                    # Execute custom tool
-                    result = await self._execute_custom_tool(call)
+                    # Execute custom tool with streaming
+                    accumulated_result = ""
+                    async for chunk in self.stream_custom_tool_execution(call):
+                        if not chunk.completed:
+                            # Stream partial results to user
+                            yield TextStreamChunk(
+                                type=ChunkType.CUSTOM_TOOL_STATUS,
+                                status="function_call_output",
+                                content=chunk.data,
+                                source=f"custom_{call['name']}",
+                            )
+                        else:
+                            # Get final accumulated result
+                            accumulated_result = chunk.accumulated_result
 
                     # Add function call and result to messages
                     function_call_msg = {
@@ -280,15 +292,15 @@ class ResponseBackend(CustomToolAndMCPBackend):
                     function_output_msg = {
                         "type": "function_call_output",
                         "call_id": call["call_id"],
-                        "output": str(result),
+                        "output": accumulated_result,
                     }
                     updated_messages.append(function_output_msg)
 
-                    # Yield custom tool results (like MCP tools)
+                    # Yield custom tool results summary (like MCP tools)
                     yield TextStreamChunk(
                         type=ChunkType.CUSTOM_TOOL_STATUS,
                         status="function_call_output",
-                        content=f"Results for Calling {call['name']}: {str(result)}",
+                        content=f"Results for Calling {call['name']}: {accumulated_result}",
                         source=f"custom_{call['name']}",
                     )
 
