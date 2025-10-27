@@ -1,18 +1,18 @@
-# MassGen v0.1.4 Roadmap
+# MassGen v0.1.5 Roadmap
 
 ## Overview
 
-Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Key priorities include:
+Version 0.1.5 focuses on Docker integration for MCP tools and backend code refactoring. Key priorities include:
 
 - **Running MCP Tools in Docker** (Required): 🐳 Containerized execution environment for MCP tools with enhanced security and isolation
-- **Enhanced File Operations** (Required): 📁 Advanced workspace management for coding agents
+- **Backend Code Refactoring** (Required): 🔧 Major code refactoring for improved maintainability and developer experience
 
 ## Key Technical Priorities
 
 1. **Running MCP Tools in Docker**: Containerized execution environment for MCP tools, enhanced security and isolation
    **Use Case**: Secure execution of third-party tools in isolated environments
-2. **Enhanced File Operations**: Advanced file handling and workspace management for coding agents
-   **Use Case**: Complex coding tasks requiring sophisticated file manipulation
+2. **Backend Code Refactoring**: Major backend code improvements for better architecture and maintainability
+   **Use Case**: Improved developer experience and easier future enhancements
 
 ## Key Milestones
 
@@ -49,43 +49,37 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 
 ---
 
-### 🎯 Milestone 2: Move Image/Audio/Video Generation Tools to Customized Tool System (REQUIRED)
+### 🎯 Milestone 2: Backend Code Refactoring (REQUIRED)
 
-**Goal**: Refactor existing media generation capabilities to integrate with customized tool system
+**Goal**: Major backend code refactoring for improved maintainability and architecture
 
-**Owner**: @qidanrui (danrui2020)
+**Owner**: @ncrispino (nickcrispino)
 
-**Issue**: [#357](https://github.com/Leezekun/MassGen/issues/357)
+**PR**: [#362](https://github.com/Leezekun/MassGen/pull/362)
 
-#### 2.1 Tool System Refactoring
-- [ ] Extract image generation tools to custom tool system
-- [ ] Extract audio generation tools to custom tool system
-- [ ] Extract video generation tools to custom tool system
-- [ ] Standardize tool interface across media types
+#### 2.1 Code Architecture Improvements
+- [ ] Refactor backend code for better organization
+- [ ] Improve code modularity and separation of concerns
+- [ ] Enhance code readability and maintainability
+- [ ] Standardize coding patterns across modules
 
-#### 2.2 Integration and Compatibility
-- [ ] Ensure backward compatibility with existing implementations
-- [ ] Update backend configurations to use new tool system
-- [ ] Maintain feature parity with current generation tools
-- [ ] Add tool discovery and registration mechanisms
+#### 2.2 Developer Experience
+- [ ] Simplify backend extension points
+- [ ] Improve API clarity and consistency
+- [ ] Better error handling and debugging support
+- [ ] Enhanced code documentation
 
-#### 2.3 Documentation and Examples
-- [ ] Document new tool system architecture
-- [ ] Provide migration guide for existing users
-- [ ] Create example configurations using new tools
-- [ ] Update API documentation
-
-#### 2.4 Testing and Validation
-- [ ] Comprehensive tests for media generation tools
-- [ ] Validate output quality matches previous implementation
-- [ ] Performance benchmarking
-- [ ] Cross-backend compatibility testing
+#### 2.3 Testing and Validation
+- [ ] Ensure no functionality regressions
+- [ ] Validate all existing tests pass
+- [ ] Add tests for refactored components
+- [ ] Performance validation
 
 **Success Criteria**:
-- ✅ All media generation tools successfully migrated to custom tool system
-- ✅ No regression in functionality or quality
-- ✅ Improved maintainability and extensibility
-- ✅ Complete documentation and examples
+- ✅ Backend code successfully refactored
+- ✅ No functionality regressions
+- ✅ Improved code maintainability
+- ✅ Better developer experience
 
 ---
 
@@ -100,23 +94,23 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 - [ ] Resource limits and network isolation working
 - [ ] Documentation and examples complete
 
-**Media Generation Tools Migration:**
-- [ ] Image generation tools migrated to custom tool system
-- [ ] Audio generation tools migrated to custom tool system
-- [ ] Video generation tools migrated to custom tool system
-- [ ] Backward compatibility maintained
-- [ ] Comprehensive testing and documentation
+**Backend Code Refactoring:**
+- [ ] Backend code successfully refactored
+- [ ] Code organization and modularity improved
+- [ ] No functionality regressions
+- [ ] All tests passing
+- [ ] Enhanced developer experience
 
 ### Performance Requirements
 - [ ] Docker container startup overhead minimal
-- [ ] File operations perform efficiently
-- [ ] Memory usage optimized for large workspaces
+- [ ] Refactored code maintains or improves performance
+- [ ] Memory usage optimized
 - [ ] Overall system remains responsive
 
 ### Quality Requirements
 - [ ] Test coverage for all new features
 - [ ] Integration tests for Docker MCP execution
-- [ ] End-to-end tests for media generation tools
+- [ ] All existing tests pass after refactoring
 - [ ] Security testing for containerized execution
 - [ ] Comprehensive documentation for all features
 
@@ -126,26 +120,25 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 
 ### Dependencies
 - **Docker**: Container runtime for MCP tool execution
-- **Existing Infrastructure**: MCP integration, tool system, orchestrator
-- **Custom Tool System**: Framework for tool registration and management
+- **Existing Infrastructure**: MCP integration, tool system, orchestrator, backend architecture
 
 ### Risks & Mitigations
 1. **Docker Configuration Complexity**: *Mitigation*: Provide pre-configured templates, comprehensive documentation, automated setup scripts
 2. **Container Security**: *Mitigation*: Follow Docker security best practices, implement resource limits, regular security audits
-3. **Tool Migration Compatibility**: *Mitigation*: Comprehensive backward compatibility testing, gradual migration path, fallback mechanisms
-4. **API Breaking Changes**: *Mitigation*: Version management, deprecation notices, migration guides for users
+3. **Refactoring Regressions**: *Mitigation*: Comprehensive test suite, incremental changes, thorough code review process
+4. **API Breaking Changes**: *Mitigation*: Maintain backward compatibility, version management, clear documentation
 
 ---
 
-## Future Enhancements (Post-v0.1.4)
+## Future Enhancements (Post-v0.1.5)
 
-### v0.1.5 Plans
+### v0.1.6 Plans
 - **General Interoperability**: Framework integration for external agent systems
 - **Memory Module - Phase 1**: Long-term memory for reasoning tasks and document understanding
 
-### v0.1.6 Plans
+### v0.1.7 Plans
 - **DSPy Integration**: Automated prompt optimization for domain-specific tasks
-- **Advanced Voting Mechanism**: Sophisticated voting strategies for multi-agent decision-making
+- **Computer Use Agent**: Automated UI testing and browser automation
 
 ### Long-term Vision
 - **Visual Workflow Designer**: No-code multi-agent workflow creation
@@ -160,9 +153,9 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
 | Phase 1 | Docker Integration | Containerized MCP tool execution, security and isolation | @ncrispino | **REQUIRED** |
-| Phase 2 | Media Tools Migration | Image/audio/video generation tools to custom tool system | @qidanrui | **REQUIRED** |
+| Phase 2 | Backend Refactoring | Code organization, maintainability, developer experience | @ncrispino | **REQUIRED** |
 
-**Target Release**: October 27, 2025 (Monday @ 9am PT)
+**Target Release**: October 30, 2025 (Wednesday @ 9am PT)
 
 ---
 
@@ -173,16 +166,16 @@ Version 0.1.4 focuses on Docker integration and enhanced coding capabilities. Ke
 **Required Work:**
 1. Implement Docker integration for MCP tool execution
 2. Create security and isolation layers for containerized execution
-3. Migrate media generation tools to custom tool system
+3. Complete backend code refactoring (PR #362)
 4. Add comprehensive tests for all features
 5. Create documentation and examples
 
 ### For Users
 
-- v0.1.4 enables secure execution of MCP tools in Docker containers
+- v0.1.5 enables secure execution of MCP tools in Docker containers
 - Enhanced security and isolation for third-party tools
-- Streamlined media generation through unified custom tool system
-- Better maintainability and extensibility for generation capabilities
+- Improved backend code architecture and maintainability
+- Better developer experience for future enhancements
 - Docker setup guides and security best practices included
 
 ---
@@ -197,11 +190,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 **Contact Track Owners:**
 - Docker Integration: @ncrispino on Discord (nickcrispino)
-- Media Tools Migration: @qidanrui on Discord (danrui2020)
+- Backend Refactoring: @ncrispino on Discord (nickcrispino)
 
 ---
 
-*This roadmap reflects v0.1.4 priorities focusing on Docker integration and enhanced coding capabilities. All features are required for this release.*
+*This roadmap reflects v0.1.5 priorities focusing on Docker integration for MCP tools and backend code refactoring. All features are required for this release.*
 
-**Last Updated:** October 24, 2025
+**Last Updated:** October 27, 2025
 **Maintained By:** MassGen Team

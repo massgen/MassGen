@@ -61,7 +61,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.3 Features](#-latest-features-v013)
+- [v0.1.4 Features](#-latest-features-v014)
 </details>
 
 <details open>
@@ -106,6 +106,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
+  - [v0.1.4](#recent-achievements-v014)
   - [v0.1.3](#recent-achievements-v013)
   - [v0.0.3 - v0.1.2](#previous-achievements-v003---v012)
 - [Key Future Enhancements](#key-future-enhancements)
@@ -114,7 +115,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.4 Roadmap](#v014-roadmap)
+- [v0.1.5 Roadmap](#v015-roadmap)
 </details>
 
 <details open>
@@ -139,43 +140,37 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.3)
+## 🆕 Latest Features (v0.1.4)
 
-**🎉 Released: October 24, 2025**
+**🎉 Released: October 27, 2025**
 
-**What's New in v0.1.3:**
-- **🔄 Post-Evaluation Workflow** - Winning agents can evaluate and restart orchestration
-- **🎨 Multimodal Understanding Tools** - Analyze images, audio, video, and documents in workspaces
-- **🐳 Docker Sudo Mode** - Execute privileged commands in containerized environments
+**What's New in v0.1.4:**
+- **🎨 Multimodal Generation Tools** - Create images, videos, audio, and documents with AI
+- **🔒 Binary File Protection** - Automatic security preventing accidental binary file reads
+- **🕷️ Crawl4AI Integration** - Intelligent web scraping with LLM-powered extraction
 
 **Key Improvements:**
-- Submit tool for confirming final answers or restart with feedback
-- Analyze workspace files with GPT-4.1: images (PNG/JPEG), audio (WAV/MP3), video (MP4), documents (PDF/DOCX)
-- Enhanced Docker execution with elevated privileges for system commands
-- Works with any backend - multimodal analysis via OpenAI API
-- Interactive config builder improvements with better provider handling
+- 6 new generation tools: text-to-image, text-to-video, text-to-speech, text-to-file, image-to-image
+- Binary file protection for 40+ file types with smart tool suggestions
+- Web crawling with customizable extraction patterns
+- Enhanced documentation and automation infrastructure
 
-**Watch the Demo:**
-
-[![MassGen v0.1.3 Demo](https://img.youtube.com/vi/nRP34Bqz-D4/0.jpg)](https://youtu.be/nRP34Bqz-D4)
-
-**Get Started with v0.1.3:**
+**Get Started with v0.1.4:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Try multimodal image understanding
-# (Requires OPENAI_API_KEY in .env)
-massgen --config @examples/tools/custom_tools/multimodal_tools/understand_image \
-  "Please summarize the content in this image."
+# Generate an image from text
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_image_generation_single \
+  "Please generate an image of a cat in space."
 
-# Try multimodal audio understanding
-massgen --config @examples/tools/custom_tools/multimodal_tools/understand_audio \
-  "Please summarize the content in this audio."
+# Generate a video from text
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_video_generation_single \
+  "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
 
-# Try multimodal video understanding
-massgen --config @examples/tools/custom_tools/multimodal_tools/understand_video \
-  "What's happening in this video?"
+# Generate documents (PDF, DOCX, etc.)
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_file_generation_single \
+  "Please generate a comprehensive technical report about the latest developments in Large Language Models (LLMs)."
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1012,42 +1007,41 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.3)
+### Recent Achievements (v0.1.4)
 
-**🎉 Released: October 24, 2025**
+**🎉 Released: October 27, 2025**
 
-#### Post-Evaluation Workflow Tools
-- **Submit/Restart Capabilities**: New `PostEvaluationToolkit` class in `massgen/tool/workflow_toolkits/post_evaluation.py`
-- **Submit Tool**: Winning agents can confirm final answers with confidence assessments
-- **Restart Tool**: Request orchestration restart with improvements and specific feedback
-- **Post-Evaluation Phase**: Winning agent evaluates its own answer before final submission
-- **Universal Backend Support**: Works with Claude, Response API, and Chat Completions formats
-- **Opt-In Configuration**: `enable_post_evaluation_tools` parameter for feature control
+#### Multimodal Generation Tools
+- **Text-to-Image**: `text_to_image_generation` tool creates images from text prompts via DALL-E API
+- **Text-to-Video**: `text_to_video_generation` tool generates videos from text descriptions
+- **Text-to-Speech**: `text_to_speech_continue_generation` and `text_to_speech_transcription_generation` tools for audio generation and transcription
+- **Text-to-File**: `text_to_file_generation` tool creates documents in PDF, DOCX, XLSX, and PPTX formats
+- **Image-to-Image**: `image_to_image_generation` tool transforms existing images
 
-#### Custom Multimodal Understanding Tools
-- **Image Analysis**: `understand_image` tool for PNG/JPEG/JPG with metadata extraction
-- **Audio Processing**: `understand_audio` tool for WAV/MP3/FLAC/OGG transcription
-- **Video Understanding**: `understand_video` tool for MP4/AVI/MOV/WEBM frame extraction
-- **Document Processing**: `understand_file` tool for PDF/DOCX/XLSX/PPTX text extraction
-- **Cross-Backend**: Works with any backend using OpenAI's GPT-4.1 for analysis
-- **Structured Output**: Returns comprehensive JSON with metadata
-- **Documentation**: Complete 779-line guide in `massgen/tool/docs/multimodal_tools.md`
+#### Binary File Protection
+- **Automatic Blocking**: `PathPermissionManager` now prevents text-based read tools from accessing binary files
+- **Protected File Types**: 40+ extensions including images (.jpg, .png), videos (.mp4, .avi), audio (.mp3, .wav), archives (.zip, .tar), executables (.exe, .dll), and Office documents (.pdf, .docx, .xlsx, .pptx)
+- **Intelligent Guidance**: Error messages automatically suggest appropriate specialized tools (e.g., "use understand_image tool" for .jpg files)
+- **Test Coverage**: `test_binary_file_blocking.py`
 
-#### Docker Sudo Mode
-- **Privileged Commands**: New `use_sudo` parameter for Docker execution
-- **Elevated Privileges**: Execute system-level commands in containers
-- **Security Instructions**: Enhanced documentation and guidelines
-- **Test Coverage**: Comprehensive tests in `test_code_execution.py`
+#### Web Scraping Capabilities
+- **Crawl4AI Tool**: `crawl4ai_tool` enables intelligent web scraping with LLM-powered content extraction and customizable patterns
 
-#### Configuration & Enhancements
-- **Interactive Config Builder**: Improved flow with auto-detection of environment variables
-- **System Message Fix**: Resolved deprecated configuration warning in `agent_config.py`
-- **Example Configurations**: 4 new YAML files in `configs/tools/custom_tools/multimodal_tools/`
-- **Example Resources**: Test files in `configs/resources/v0.1.3-example/` (image, audio, video, PDF)
-- **Documentation Updates**: Enhanced `docs/source/user_guide/multimodal.rst` and `code_execution.rst`
-- **Case Study**: New `docs/source/examples/case_studies/multimodal-case-study-video-analysis.md` demonstrating multimodal video understanding
+#### Documentation & Infrastructure
+  - **Generation Tools**: 8 multimodal generation configurations
+    - `text_to_image_generation_single.yaml` and `text_to_image_generation_multi.yaml`
+    - `text_to_video_generation_single.yaml` and `text_to_video_generation_multi.yaml`
+    - `text_to_speech_generation_single.yaml` and `text_to_speech_generation_multi.yaml`
+    - `text_to_file_generation_single.yaml` and `text_to_file_generation_multi.yaml`
+  - **Web Scraping**: `crawl4ai_example.yaml` for Crawl4AI integration
 
-### Previous Achievements (v0.0.3 - v0.1.2)
+### Previous Achievements (v0.0.3 - v0.1.3)
+
+✅ **Post-Evaluation Workflow (v0.1.3)**: `PostEvaluationToolkit` class with submit tool for confirming final answers and restart tool for orchestration restart with feedback, winning agent evaluates answer before submission, universal backend support (Claude, Response API, Chat Completions), opt-in via `enable_post_evaluation_tools` parameter
+
+✅ **Multimodal Understanding Tools (v0.1.3)**: `understand_image` for PNG/JPEG analysis, `understand_audio` for WAV/MP3 transcription, `understand_video` for MP4/AVI frame extraction, `understand_file` for PDF/DOCX processing, cross-backend support via OpenAI GPT-4.1, structured JSON output, configurations: `understand_image.yaml`, `understand_audio.yaml`, `understand_video.yaml`, `understand_file.yaml`
+
+✅ **Docker Sudo Mode (v0.1.3)**: `use_sudo` parameter for privileged Docker execution, system-level command support in containers, enhanced security documentation, test coverage in `test_code_execution.py`
 
 ✅ **Intelligent Planning Mode (v0.1.2)**: Automatic question analysis determining operation irreversibility via `_analyze_question_irreversibility()` in orchestrator, selective tool blocking with `set_planning_mode_blocked_tools()` and `is_mcp_tool_blocked()` methods, read-only MCP operations during coordination with write operations blocked, zero-configuration transparent operation, multi-workspace support, comprehensive tests in `test_intelligent_planning_mode.py`, complete guide in `docs/dev_notes/intelligent_planning_mode.md`
 
@@ -1155,21 +1149,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.4 Roadmap
+### v0.1.5 Roadmap
 
-Version 0.1.4 focuses on Docker integration and media tool system refactoring:
+Version 0.1.5 focuses on Docker integration for MCP tools and backend code refactoring:
 
 #### Required Features
 - **Running MCP Tools in Docker**: Containerized execution environment for MCP tools with enhanced security and isolation
-- **Move Image/Audio/Video Generation Tools to Customized Tool System**: Refactor media generation capabilities into unified custom tool system
+- **Backend Code Refactoring**: Major code refactoring for improved maintainability and developer experience
 
 Key technical approach:
-- **Docker Integration**: Secure execution of third-party tools in isolated Docker containers with resource limits and network isolation
-- **Media Tools Migration**: Integrate image, audio, and video generation tools with custom tool system for better maintainability and extensibility
+- **Docker Integration**: Secure execution of third-party MCP tools in isolated Docker containers with resource limits and network isolation
+- **Backend Improvements**: Enhanced code organization, modularity, and architectural improvements for better maintainability
 
-**Target Release**: October 27, 2025 (Monday @ 9am PT)
+**Target Release**: October 30, 2025 (Wednesday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.4 roadmap](ROADMAP_v0.1.4.md).
+For detailed milestones and technical specifications, see the [full v0.1.5 roadmap](ROADMAP_v0.1.5.md).
 
 ---
 

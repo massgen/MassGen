@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.3
+**Current Version:** v0.1.4
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** October 24, 2025
+**Last Updated:** October 27, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -34,18 +34,18 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.4** | 10/27/25 | Running MCP Tools in Docker | @ncrispino | Enhanced security and isolation for MCP tool execution |
-| | | Move Image/Audio/Video Generation Tools to Customized Tool System | @qidanrui | Streamlined media generation tool management |
-| **v0.1.5** | 10/29/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
+| **v0.1.5** | 10/30/25 | Running MCP Tools in Docker | @ncrispino | Enhanced security and isolation for MCP tool execution |
+| | | Backend Code Refactoring | @ncrispino | Improved code organization and maintainability |
+| **v0.1.6** | 11/01/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
 | | | Memory Module (Phase 1) | @qidanrui @ncrispino | Long-term memory for reasoning tasks and document understanding |
-| **v0.1.6** | 10/31/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
+| **v0.1.7** | 11/04/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
 | | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.4 - Docker Integration & Enhanced Coding
+## 📋 v0.1.5 - Docker Integration & Backend Refactoring
 
 ### Features
 
@@ -55,19 +55,19 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Enhanced security and isolation for tool operations
 - **Use Case**: Secure execution of third-party tools in isolated environments
 
-**2. Move Image/Audio/Video Generation Tools to Customized Tool System** (@qidanrui)
-- Issue: [#357](https://github.com/Leezekun/MassGen/issues/357)
-- Refactor existing image, audio, and video generation capabilities
-- Integrate generation tools with customized tool system
-- **Use Case**: Streamlined tool management and better integration of media generation capabilities
+**2. Backend Code Refactoring** (@ncrispino)
+- PR: [#362](https://github.com/Leezekun/MassGen/pull/362)
+- Major backend code refactoring for improved maintainability
+- Enhanced code organization and architectural improvements
+- **Use Case**: Improved developer experience and easier future enhancements
 
 ### Success Criteria
 - ✅ MCP tools run securely in Docker containers
-- ✅ Media generation tools successfully integrated into custom tool system
+- ✅ Backend refactoring merged with improved code structure
 
 ---
 
-## 📋 v0.1.5 - Interoperability & Memory
+## 📋 v0.1.6 - Interoperability & Memory
 
 ### Features
 
@@ -88,7 +88,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.6 - Intelligent Optimization & Advanced Voting
+## 📋 v0.1.7 - Intelligent Optimization & Advanced Voting
 
 ### Features
 
@@ -214,5 +214,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 24, 2025
+**Last Updated:** October 27, 2025
 **Maintained By:** MassGen Team
