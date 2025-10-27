@@ -137,6 +137,7 @@ You have access to task planning tools to organize complex work:
 
 **When to create a task plan:**
 - Multi-step tasks with dependencies
+- Multiple files or components to create
 - Complex features requiring coordination
 - Work that can be parallelized
 - Long-running projects with clear milestones

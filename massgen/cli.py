@@ -1003,8 +1003,8 @@ async def run_question_with_history(
         base_dir = get_log_session_dir_base()
         root_final_dir = base_dir / "final"
 
-        # Copy if the attempt's final directory exists
-        if attempt_final_dir.exists():
+        # Only copy if source and destination are different (i.e., we're using attempt tracking)
+        if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
             # Remove root final dir if it already exists
             if root_final_dir.exists():
                 shutil.rmtree(root_final_dir)
@@ -1194,8 +1194,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             base_dir = get_log_session_dir_base()
             root_final_dir = base_dir / "final"
 
-            # Copy if the attempt's final directory exists
-            if attempt_final_dir.exists():
+            # Only copy if source and destination are different (i.e., we're using attempt tracking)
+            if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
                 # Remove root final dir if it already exists
                 if root_final_dir.exists():
                     shutil.rmtree(root_final_dir)
