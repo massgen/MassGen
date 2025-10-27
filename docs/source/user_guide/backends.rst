@@ -66,7 +66,7 @@ Different backends support different built-in tools:
 
 .. list-table:: Backend Tool Support
    :header-rows: 1
-   :widths: 15 10 10 10 10 12 12 12 10
+   :widths: 15 10 10 10 10 12 12 12 10 10
 
    * - Backend
      - Web Search
@@ -77,85 +77,95 @@ Different backends support different built-in tools:
      - Video
      - MCP Support
      - Filesystem
+     - Custom Tools
    * - ``openai``
      - ⭐
      - ⭐
      - ✅
-     - ✅ Both
-     - ✅ Both
-     - ✅ Generation
+     - ⭐ Both
+     - ⭐ Both
+     - ⭐ Generation
+     - ✅
      - ✅
      - ✅
    * - ``claude``
      - ⭐
      - ⭐
      - ✅
-     - ❌
-     - ✅ Understanding
-     - ✅ Understanding
+     - 🔧
+     - 🔧
+     - 🔧
+     - ✅
      - ✅
      - ✅
    * - ``claude_code``
      - ⭐
      - ❌
      - ⭐
-     - ✅ Understanding
-     - ❌
-     - ❌
+     - 🔧
+     - 🔧
+     - 🔧
      - ✅
      - ⭐
+     - ✅
    * - ``gemini``
      - ⭐
      - ⭐
      - ✅
-     - ✅ Understanding
-     - ❌
-     - ❌
+     - 🔧
+     - 🔧
+     - 🔧
+     - ✅
      - ✅
      - ✅
    * - ``grok``
      - ⭐
      - ❌
      - ✅
-     - ❌
-     - ❌
-     - ❌
+     - 🔧
+     - 🔧
+     - 🔧
+     - ✅
      - ✅
      - ✅
    * - ``azure_openai``
      - ⭐
      - ⭐
      - ✅
-     - ✅ Both
+     - ⭐ Both
      - ❌
      - ❌
      - ✅
      - ✅
+     - ❌
    * - ``chatcompletion``
      - ❌
      - ❌
      - ✅
-     - ❌
-     - ✅ Understanding
-     - ✅ Understanding
+     - 🔧
+     - 🔧
+     - 🔧
+     - ✅
      - ✅
      - ✅
    * - ``lmstudio``
      - ❌
      - ❌
      - ✅
-     - ❌
-     - ❌
-     - ❌
+     - 🔧
+     - 🔧
+     - 🔧
+     - ✅
      - ✅
      - ✅
    * - ``inference``
      - ❌
      - ❌
      - ✅
-     - ❌
-     - ❌
-     - ❌
+     - 🔧
+     - 🔧
+     - 🔧
+     - ✅
      - ✅
      - ✅
    * - ``ag2``
@@ -167,14 +177,24 @@ Different backends support different built-in tools:
      - ❌
      - ❌
      - ❌
+     - ❌
 
 **Notes:**
 
 * **Symbol Legend:**
 
-  * ⭐ **Built-in** - Native backend feature (e.g., Anthropic's web search, OpenAI code interpreter, Claude Code's Bash tool)
+  * ⭐ **Built-in** - Native backend feature (e.g., Anthropic's web search, OpenAI's native image API, Claude Code's Bash tool)
+  * 🔧 **Via Custom Tools** - Available through custom tools (requires ``OPENAI_API_KEY`` for multimodal understanding)
   * ✅ **MCP-based or Available** - Feature available via MCP integration or standard capability
   * ❌ **Not available** - Feature not supported
+
+* **Custom Tools:**
+
+  * Custom tools allow you to give agents access to your own Python functions
+  * Most backends support custom tools (OpenAI, Claude, Claude Code, Gemini, Grok, Chat Completions, LM Studio, Inference)
+  * **Azure OpenAI** and **AG2** do not support custom tools as they inherit from the base backend class without the custom tools layer
+  * Custom tools are essential for multimodal understanding features (``understand_image``, ``understand_video``, ``understand_audio``, ``understand_file``)
+  * See :doc:`custom_tools` for complete documentation on creating and using custom tools
 
 * **Code Execution vs Bash/Shell:**
 
@@ -202,20 +222,24 @@ Different backends support different built-in tools:
 
 * **Multimodal Capabilities:**
 
-  * **Both**: The backend supports BOTH understanding (analyze existing content) AND generation (create new content)
+  * **⭐ Native Multimodal Support**: The backend/model API directly handles multimodal content
 
-    * **Image Both** (e.g., ``openai``, ``azure_openai``): Can analyze images you provide AND create new images from text prompts
-    * **Audio Both** (e.g., ``openai``): Can transcribe/analyze audio files AND generate speech from text (text-to-speech)
+    * **⭐ Both** (e.g., ``openai``, ``azure_openai``): Native API supports BOTH understanding (analyze) AND generation (create)
+    * **⭐ Generation** (e.g., ``openai`` video): Can create videos via Sora-2 API but not analyze them
 
-  * **Understanding Only**: Can only analyze or process existing content, not create new content
+  * **🔧 Via Custom Tools**: Multimodal understanding through custom tools (``understand_image``, ``understand_video``, ``understand_audio``)
 
-    * **Image Understanding** (e.g., ``claude``, ``gemini``, ``claude_code``): Can analyze images but cannot create new ones
-    * **Audio Understanding** (e.g., ``claude``, ``chatcompletion``): Can process audio files but cannot generate speech
-    * **Video Understanding** (e.g., ``claude``, ``chatcompletion``): Can analyze video files but cannot create new videos
+    * Works with any backend that supports custom tools
+    * Requires ``OPENAI_API_KEY`` in ``.env`` file (tools use OpenAI's API for processing)
+    * Examples: ``claude``, ``claude_code``, ``gemini``, ``grok``, ``chatcompletion``, ``lmstudio``, ``inference``
+    * Does NOT work with ``azure_openai`` or ``ag2`` (these backends don't support custom tools)
+    * See :doc:`multimodal` for complete setup instructions
 
-  * **Generation Only**: Can only create new content, not analyze existing content
+  * **Understanding vs Generation**:
 
-    * **Video Generation** (e.g., ``openai`` with Sora-2 API, v0.1.0): Can create videos from text prompts but cannot analyze existing videos
+    * **Understanding**: Analyze existing content (images, audio, video)
+    * **Generation**: Create new content from text prompts
+    * **Both**: Supports both understanding AND generation
 
 See :doc:`../reference/supported_models` for the complete backend capabilities reference.
 
@@ -300,7 +324,7 @@ Claude Backend
              command: "npx"
              args: ["-y", "@modelcontextprotocol/server-weather"]
 
-**Supported Models:** claude-sonnet-4, claude-opus-4, claude-3-5-sonnet-latest, claude-3-5-haiku-latest
+**Supported Models:** claude-haiku-4-5-20251001, claude-sonnet-4-5-20250929, claude-opus-4-1-20250805, claude-sonnet-4-20250514, claude-3-5-sonnet-latest, claude-3-5-haiku-latest
 
 Claude Code Backend
 ~~~~~~~~~~~~~~~~~~~
@@ -371,7 +395,7 @@ Grok Backend
          model: "grok-3-mini"
          enable_web_search: true
 
-**Supported Models:** grok-4, grok-3, grok-3-mini, grok-beta
+**Supported Models:** grok-4, grok-4-fast, grok-3, grok-3-mini
 
 Azure OpenAI Backend
 ~~~~~~~~~~~~~~~~~~~~

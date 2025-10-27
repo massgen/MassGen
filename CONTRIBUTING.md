@@ -267,7 +267,7 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 
 ## 🔧 Development Workflow
 
-> **Important**: Our next version is v0.1.2. If you want to contribute, please contribute to the `dev/v0.1.2` branch.
+> **Important**: Our next version is v0.1.5. If you want to contribute, please contribute to the `dev/v0.1.5` branch.
 
 ### 1. Create Feature Branch
 
@@ -275,8 +275,8 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 # Fetch latest changes from upstream
 git fetch upstream
 
-# Create feature branch from dev/v0.1.2
-git checkout -b feature/your-feature-name upstream/dev/v0.1.2
+# Create feature branch from dev/v0.1.5
+git checkout -b feature/your-feature-name upstream/dev/v0.1.5
 ```
 
 ### 2. Make Your Changes
@@ -373,7 +373,7 @@ git push origin feature/your-feature-name
 ```
 
 Then create a pull request on GitHub:
-- Base branch: `dev/v0.1.2`
+- Base branch: `dev/v0.1.5`
 - Compare branch: `feature/your-feature-name`
 - Add clear description of changes
 - Link any related issues
@@ -479,7 +479,7 @@ Have a significant feature idea not covered by existing tracks?
 - [ ] Tests pass locally
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow convention
-- [ ] PR targets `dev/v0.1.2` branch
+- [ ] PR targets `dev/v0.1.5` branch
 
 ### PR Description Should Include
 
@@ -603,7 +603,7 @@ Every feature needs documentation! Here's how to decide where and what to write.
 - Feature is significant enough to showcase
 - Following case-driven development methodology
 
-**Location:** `docs/case_studies/feature_name.md`
+**Location:** `docs/source/examples/case_studies/feature_name.md`
 
 **Examples:**
 - `claude-code-workspace-management.md`
@@ -645,7 +645,7 @@ Every feature needs documentation! Here's how to decide where and what to write.
                 ┌──────────────┐
                 │ Write Case   │
                 │ Study        │
-                │ (case_studies/)│
+                │ (source/examples/case_studies/)│
                 └──────────────┘
 ```
 
@@ -659,7 +659,7 @@ Every feature needs documentation! Here's how to decide where and what to write.
 | **CHANGELOG** | Every PR | `CHANGELOG.md` | ✅ Yes |
 | **Examples** | **Every feature** | `docs/source/examples/` | ✅ **ALWAYS** |
 | **Design Doc** | Complex implementation | `docs/dev_notes/` | ⚠️ Optional |
-| **Case Study** | Demonstrate real-world usage | `docs/case_studies/` | ⚠️ Optional but expected |
+| **Case Study** | Demonstrate real-world usage | `docs/source/examples/case_studies/` | ⚠️ Optional but expected |
 
 #### 6. Documentation Quality Standards
 

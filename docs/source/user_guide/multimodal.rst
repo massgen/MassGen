@@ -1,39 +1,41 @@
 Multimodal Capabilities
 =======================
 
-MassGen supports comprehensive multimodal AI workflows, enabling agents to work with images, audio, and video content. This includes generation (creating new content), understanding (analyzing existing content), and file-based interactions.
+MassGen supports comprehensive multimodal AI workflows, enabling agents to both understand and generate images, audio, video, and file content. This includes analyzing existing content and creating new multimodal outputs.
 
 .. note::
+   **Multimodal Tools (v0.1.3+):**
 
-   **Multimodal Timeline:**
+   MassGen provides custom tools for both understanding and generating multimodal content:
 
-   * **v0.0.27**: Image generation and understanding
-   * **v0.0.30**: Audio and video understanding
-   * **v0.0.31**: Audio generation (text-to-speech, transcription) and video generation (Sora-2)
+   **Understanding Tools:**
 
-.. warning::
-   **Current Multimodal Limitations:**
+   * ✅ **understand_audio**: Transcribe audio files to text (uses OpenAI's ``gpt-4o-transcribe`` by default)
+   * ✅ **understand_file**: Analyze documents (PDF, DOCX, XLSX, PPTX) and text files
+   * ✅ **understand_image**: Describe and analyze images (uses OpenAI's ``gpt-4.1`` by default)
+   * ✅ **understand_video**: Extract and analyze key frames from videos (uses OpenAI's ``gpt-4.1`` by default)
 
-   Agents **cannot directly analyze** multimodal content (images, audio, video) they generate in their workspace. Generated files are saved but not directly accessible for analysis.
+   **Backend Requirements:**
 
-   **What works:**
+   * The understanding tools use OpenAI's API backend for processing multimodal content
+   * Requires ``OPENAI_API_KEY`` environment variable set in ``.env`` file
+   * These tools work with any agent backend type (openai, claude, gemini, etc.)
+   * The agent backend only needs to support custom tools; the actual understanding is done via OpenAI
 
-   * ✅ Generate images/audio/video from text prompts
-   * ✅ Upload and analyze pre-existing multimodal files via ``upload_files`` configuration
-   * ✅ Process multimodal content **when used as input** to generation tools:
+   **Generation Tools:**
 
-      - Call ``generate_and_store_image_with_input_images`` with a generated image → Agent can "see" it during generation
-      - Call ``generate_text_with_input_audio`` with generated audio → Agent can read/transcribe it
+   * ✅ **text_to_image_generation**: Generate images from text prompts (GPT-4.1)
+   * ✅ **image_to_image_generation**: Create image variations from existing images
+   * ✅ **text_to_video_generation**: Generate videos from text descriptions (Sora-2)
+   * ✅ **text_to_speech_continue_generation**: Generate expressive speech with emotional tone
+   * ✅ **text_to_speech_transcription_generation**: Convert text to speech (TTS)
+   * ✅ **text_to_file_generation**: Generate formatted documents (TXT, MD, PDF)
 
-   **What doesn't work:**
+   **File Access:**
 
-   * ❌ Agent generates an image → Agent cannot directly analyze that image
-   * ❌ Agent generates audio → Agent cannot directly transcribe/analyze it (unless using it as input to another tool)
-   * ❌ Multi-agent workflows where Agent A generates content and Agent B analyzes it
-
-   **Workaround:** To analyze generated multimodal content, you must use it as **input** to another generation/processing tool (e.g., generate image variation with input image, transcribe audio). The content is only "readable" during API processing, not through direct workspace file access.
-
-   **Note:** Direct workspace multimodal file reading (``read_multimodal_files``) is planned for future releases.
+   * Files must be accessible via ``context_paths`` configuration or created within agent workspaces
+   * Supports both pre-existing files and agent-generated content
+   * Provides secure, sandboxed file access to agents
 
 Overview
 --------
@@ -42,110 +44,37 @@ Multimodal capabilities extend MassGen's multi-agent collaboration across differ
 
 **Image Capabilities:**
 
-* **Generation**: Create images from text descriptions (DALL-E, Imagen)
 * **Understanding**: Analyze and describe image content (Vision models)
+* **Generation**: Create images from text prompts, generate variations from existing images
 
 **Audio Capabilities:**
 
-* **Generation**: Text-to-speech, audio synthesis
 * **Understanding**: Transcription, audio analysis
+* **Generation**: Text-to-speech with emotional expression, direct TTS conversion
 
 **Video Capabilities:**
 
-* **Generation**: Create videos from text prompts (Sora-2)
-* **Understanding**: Analyze video content
+* **Understanding**: Analyze video content through key frame extraction
+* **Generation**: Create videos from text descriptions
 
 **File Operations:**
 
-* **Upload and Search**: Work with documents and files (RAG)
-* **MCP Tools**: Read multimodal files with base64 encoding
-
-Image Generation
-----------------
-
-Image generation allows agents to create visual content from textual descriptions. Multiple agents can collaborate to refine image generation prompts and produce high-quality results.
-
-Basic Configuration
-~~~~~~~~~~~~~~~~~~~
-
-Enable image generation in your agent configuration:
-
-.. code-block:: yaml
-
-   agents:
-     - id: "image_creator"
-       backend:
-         type: "openai"
-         model: "gpt-4o"
-         cwd: "workspace"
-         enable_image_generation: true  # Enable image generation
-
-   orchestrator:
-     snapshot_storage: "snapshots"
-     agent_temporary_workspace: "temp_workspaces"
-
-**Example Command:**
-
-.. code-block:: bash
-
-   massgen \
-     --config @examples/basic/single/single_gpt4o_image_generation.yaml \
-     "Generate an image of gray tabby cat hugging an otter with an orange scarf."
-
-Multi-Agent Image Generation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Leverage multiple agents to refine and improve image generation prompts:
-
-.. code-block:: yaml
-
-   agents:
-     - id: "gpt4o_1"
-       backend:
-         type: "openai"
-         model: "gpt-4o"
-         text:
-           verbosity: "medium"
-         cwd: "workspace1"
-         enable_image_generation: true
-
-     - id: "gpt4o_2"
-       backend:
-         type: "openai"
-         model: "gpt-4o"
-         text:
-           verbosity: "medium"
-         cwd: "workspace2"
-         enable_image_generation: true
-
-   orchestrator:
-     snapshot_storage: "snapshots"
-     agent_temporary_workspace: "temp_workspaces"
-
-**Example Command:**
-
-.. code-block:: bash
-
-   massgen \
-     --config @examples/basic/multi/gpt4o_image_generation.yaml \
-     "Create a professional logo for a tech startup focused on AI"
-
-**How It Works:**
-
-1. Both agents analyze the image generation request
-2. Agents collaborate to refine the prompt and approach
-3. The winning agent executes the image generation
-4. Generated images are saved to the agent's workspace
+* **Understanding**: Analyze documents and files (PDF, DOCX, XLSX, PPTX, text files)
+* **Generation**: Generate formatted documents from text prompts
+* **Custom Tools**: Comprehensive multimodal file handling
 
 Image Understanding
 -------------------
 
-Image understanding enables agents to analyze visual content, extract information, and answer questions about images.
+Image understanding enables agents to analyze visual content, extract information, and answer questions about images using the ``understand_image`` custom tool.
+
+.. note::
+   The ``understand_image`` tool uses OpenAI's API backend with the ``gpt-4.1`` model by default for processing images. This requires an OpenAI API key regardless of which backend your agent uses.
 
 Basic Configuration
 ~~~~~~~~~~~~~~~~~~~
 
-Upload images for agents to analyze:
+Configure agents with the ``understand_image`` tool:
 
 .. code-block:: yaml
 
@@ -154,9 +83,18 @@ Upload images for agents to analyze:
        backend:
          type: "openai"
          model: "gpt-5-nano"
-         upload_files:
-           - image_path: "@examples/resources/v0.0.27-example/multimodality.jpg"
+         cwd: "workspace1"
+         custom_tools:
+           - name: ["understand_image"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_image.py"
+             function: ["understand_image"]
        system_message: "You are a helpful assistant"
+
+   orchestrator:
+     context_paths:
+       - path: "@examples/resources/v0.0.27-example/multimodality.jpg"
+         permission: "read"
 
 **Example Command:**
 
@@ -178,17 +116,30 @@ Multiple agents can provide diverse perspectives on image content:
        backend:
          type: "openai"
          model: "gpt-5-nano"
-         upload_files:
-           - image_path: "@examples/resources/v0.0.27-example/multimodality.jpg"
+         cwd: "workspace1"
+         custom_tools:
+           - name: ["understand_image"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_image.py"
+             function: ["understand_image"]
        system_message: "You are a helpful assistant"
 
      - id: "response_agent2"
        backend:
          type: "openai"
          model: "gpt-5-nano"
-         upload_files:
-           - image_path: "@examples/resources/v0.0.27-example/multimodality.jpg"
+         cwd: "workspace2"
+         custom_tools:
+           - name: ["understand_image"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_image.py"
+             function: ["understand_image"]
        system_message: "You are a helpful assistant"
+
+   orchestrator:
+     context_paths:
+       - path: "@examples/resources/v0.0.27-example/multimodality.jpg"
+         permission: "read"
 
 **Example Command:**
 
@@ -206,65 +157,149 @@ Multiple agents can provide diverse perspectives on image content:
 * Design feedback and critique
 * Scene understanding for robotics
 
-Audio Capabilities
-------------------
+Image Generation
+----------------
 
-MassGen supports both audio generation (creating speech from text) and audio understanding (transcribing and analyzing audio files).
+Generate images from text descriptions using AI models. MassGen provides two generation approaches:
 
-Audio Generation (Text-to-Speech)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Text-to-Image Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Convert text to natural-sounding speech using OpenAI's text-to-speech models:
+Create new images from text prompts using GPT-4.1:
 
 .. code-block:: yaml
 
    agents:
-     - id: "audio_creator"
+     - id: "image_generator"
        backend:
          type: "openai"
-         model: "gpt-4o-audio-preview"
-         cwd: "workspace"
-         enable_audio_generation: true
-
-**Available Voices:**
-
-* **alloy**: Neutral, balanced voice
-* **echo**: Warm, engaging voice
-* **fable**: Expressive, storytelling voice
-* **onyx**: Deep, authoritative voice
-* **nova**: Friendly, energetic voice
-* **shimmer**: Soft, gentle voice
-* **coral**: Warm, conversational voice
-* **sage**: Calm, wise voice
-
-**Supported Formats:**
-
-* WAV, MP3, Opus, AAC, FLAC
+         model: "gpt-4o"
+         cwd: "workspace1"
+         enable_image_generation: true
+         custom_tools:
+           - name: ["text_to_image_generation"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/text_to_image_generation.py"
+             function: ["text_to_image_generation"]
+       system_message: "You are an AI assistant with access to text-to-image generation capabilities."
 
 **Example Command:**
 
 .. code-block:: bash
 
    massgen \
-     --config @examples/basic/single/single_gpt4o_audio_generation.yaml \
-     "Generate a podcast introduction with a professional tone"
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_single.yaml \
+     "Please generate an image of a cat in space."
 
-**Configuration Options:**
+**Key Features:**
+
+* Powered by OpenAI's GPT-4.1 model
+* Generates high-quality images from text descriptions
+* Automatically saves images to agent workspace
+
+Image-to-Image Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create variations or modifications of existing images:
 
 .. code-block:: yaml
 
-   backend:
-     type: "openai"
-     model: "gpt-4o-audio-preview"
-     enable_audio_generation: true
-     audio_voice: "alloy"              # Choose voice
-     audio_format: "mp3"               # Output format
-     speaking_instructions: "Speak in a professional, clear tone"
+   agents:
+     - id: "image_editor"
+       backend:
+         type: "openai"
+         model: "gpt-4o"
+         cwd: "workspace1"
+         enable_image_generation: true
+         custom_tools:
+           - name: ["image_to_image_generation"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/image_to_image_generation.py"
+             function: ["image_to_image_generation"]
+           - name: ["understand_image"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_image.py"
+             function: ["understand_image"]
 
-Audio Understanding (Transcription)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   orchestrator:
+     context_paths:
+       - path: "path/to/source_image.jpg"
+         permission: "read"
 
-Transcribe and analyze audio files:
+**Use Cases:**
+
+* Create artistic variations of existing images
+* Style transfer and image transformation
+* Generate similar images with different characteristics
+* Image editing and enhancement workflows
+
+Multi-Agent Image Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Combine understanding and generation capabilities with multiple agents:
+
+.. code-block:: yaml
+
+  agents:
+    - id: "text_to_image_generation_tool1"
+      backend:
+        type: "openai"
+        model: "gpt-4o"
+        cwd: "workspace1"
+        enable_image_generation: true
+        custom_tools:
+          - name: ["text_to_image_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_image_generation.py"
+            function: ["text_to_image_generation"]
+          - name: ["understand_image"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/understand_image.py"
+            function: ["understand_image"]
+          - name: ["image_to_image_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/image_to_image_generation.py"
+            function: ["image_to_image_generation"]
+      system_message: |
+        You are an AI assistant with access to text-to-image generation capabilities.
+
+    - id: "text_to_image_generation_tool2"
+      backend:
+        type: "openai"
+        model: "gpt-4o"
+        cwd: "workspace2"
+        enable_image_generation: true
+        custom_tools:
+          - name: ["text_to_image_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_image_generation.py"
+            function: ["text_to_image_generation"]
+          - name: ["understand_image"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/understand_image.py"
+            function: ["understand_image"]
+      system_message: |
+        You are an AI assistant with access to text-to-image generation capabilities.
+
+    orchestrator:
+      snapshot_storage: "snapshots"
+      agent_temporary_workspace: "temp_workspaces"
+
+**Example Command:**
+
+.. code-block:: bash
+
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_multi.yaml \
+     "Please generate an image of a cat in space."
+
+Audio Understanding
+-------------------
+
+Transcribe and analyze audio files using the ``understand_audio`` custom tool.
+
+.. note::
+   The ``understand_audio`` tool uses OpenAI's Transcription API with the ``gpt-4o-transcribe`` model by default. This requires an OpenAI API key regardless of which backend your agent uses.
 
 .. code-block:: yaml
 
@@ -272,13 +307,22 @@ Transcribe and analyze audio files:
      - id: "transcriber"
        backend:
          type: "openai"
-         model: "gpt-4o"
-         upload_files:
-           - audio_path: "path/to/audio.mp3"
+         model: "gpt-5-nano"
+         cwd: "workspace1"
+         custom_tools:
+           - name: ["understand_audio"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_audio.py"
+             function: ["understand_audio"]
+
+   orchestrator:
+     context_paths:
+       - path: "path/to/audio.mp3"
+         permission: "read"
 
 **Supported Formats:**
 
-* MP3, MP4, M4A, WAV, WEBM
+* WAV, MP3, M4A, MP4, OGG, FLAC, AAC, WMA, OPUS
 
 **Example Use Cases:**
 
@@ -288,75 +332,188 @@ Transcribe and analyze audio files:
 * Interview transcription
 * Audio content summarization
 
-Video Capabilities
-------------------
+Audio/Speech Generation
+-----------------------
 
-MassGen supports video generation (creating videos from text) and video understanding (analyzing video content).
+Generate speech and audio content from text using OpenAI's audio generation capabilities. MassGen provides two text-to-speech approaches:
 
-Video Generation
-~~~~~~~~~~~~~~~~
+Expressive Speech Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create videos from text descriptions using OpenAI's Sora-2 API:
+Generate natural-sounding speech with emotional expression using GPT-4o Audio:
 
 .. code-block:: yaml
 
    agents:
-     - id: "video_creator"
+     - id: "speech_generator"
        backend:
          type: "openai"
-         model: "sora-2"
-         cwd: "workspace"
-         enable_video_generation: true
+         model: "gpt-4o"
+         cwd: "workspace1"
+         enable_audio_generation: true
+         custom_tools:
+           - name: ["text_to_speech_continue_generation"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/text_to_speech_continue_generation.py"
+             function: ["text_to_speech_continue_generation"]
+       system_message: "You are an AI assistant with access to text-to-speech generation capabilities."
 
 **Example Command:**
 
 .. code-block:: bash
 
    massgen \
-     --config @examples/basic/single/single_gpt4o_video_generation.yaml \
-     "Create a 10-second video of ocean waves at sunset"
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_generation_single.yaml \
+     "I want you to tell me a very short introduction about Sherlock Holmes in one sentence, and I want you to use emotion voice to read it out loud."
 
-**Features:**
+**Key Features:**
 
-* Asynchronous video generation with progress monitoring
-* Automatic MP4 format output
-* Configurable video duration
-* Workspace storage and organization
+* Powered by GPT-4o Audio Preview model
+* Supports emotional and expressive speech
+* Multiple voice options (alloy, echo, fable, onyx, nova, shimmer)
+* Output formats: WAV, MP3
+* Natural conversation flow with context awareness
 
-**Configuration:**
+Direct Text-to-Speech (TTS)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Convert text directly to speech using OpenAI's TTS API:
 
 .. code-block:: yaml
 
-   backend:
-     type: "openai"
-     model: "sora-2"
-     enable_video_generation: true
-     video_duration: 10  # Duration in seconds
+   agents:
+     - id: "tts_agent"
+       backend:
+         type: "openai"
+         model: "gpt-4o"
+         cwd: "workspace1"
+         enable_audio_generation: true
+         custom_tools:
+           - name: ["text_to_speech_transcription_generation"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/text_to_speech_transcription_generation.py"
+             function: ["text_to_speech_transcription_generation"]
+
+**Key Features:**
+
+* Uses GPT-4o-mini-TTS for fast, cost-effective generation
+* Direct text-to-speech conversion
+* Supports multiple voices and output formats
+* Optional instructions for voice style customization
+* Streaming response for efficient processing
+
+**Supported Voices:**
+
+* ``alloy`` - Neutral, balanced voice
+* ``echo`` - Clear, professional voice
+* ``fable`` - Warm, storytelling voice
+* ``onyx`` - Deep, authoritative voice
+* ``nova`` - Energetic, friendly voice
+* ``shimmer`` - Soft, gentle voice
+
+**Supported Formats:**
+
+* MP3 (default)
+* WAV
+* OPUS
+* AAC
+* FLAC
+
+Multi-Agent Audio/Speech Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Combine understanding and generation capabilities with multiple agents:
+
+.. code-block:: yaml
+
+  agents:
+    - id: "text_to_speech_continue_generation_tool1"
+      backend:
+        type: "openai"
+        model: "gpt-4o"
+        cwd: "workspace1"
+        enable_audio_generation: true
+        custom_tools:
+          - name: ["text_to_speech_transcription_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_speech_transcription_generation.py"
+            function: ["text_to_speech_transcription_generation"]
+          - name: ["understand_audio"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/understand_audio.py"
+            function: ["understand_audio"]
+          - name: ["text_to_speech_continue_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_speech_continue_generation.py"
+            function: ["text_to_speech_continue_generation"]
+      system_message: |
+        You are an AI assistant with access to text-to-speech generation capabilities.
+
+    - id: "text_to_speech_continue_generation_tool2"
+      backend:
+        type: "openai"
+        model: "gpt-4o"
+        cwd: "workspace2"
+        enable_audio_generation: true
+        custom_tools:
+          - name: ["text_to_speech_transcription_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_speech_transcription_generation.py"
+            function: ["text_to_speech_transcription_generation"]
+          - name: ["understand_audio"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/understand_audio.py"
+            function: ["understand_audio"]
+          - name: ["text_to_speech_continue_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_speech_continue_generation.py"
+            function: ["text_to_speech_continue_generation"]
+      system_message: |
+        You are an AI assistant with access to text-to-speech generation capabilities.
+
+  orchestrator:
+    snapshot_storage: "snapshots"
+    agent_temporary_workspace: "temp_workspaces"
+
+
+**Example Command:**
+
+.. code-block:: bash
+
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_generation_multi.yaml \
+     "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
 
 Video Understanding
-~~~~~~~~~~~~~~~~~~~
+-------------------
 
-Analyze and extract information from video files:
+Analyze and extract information from video files using the ``understand_video`` custom tool.
+
+.. note::
+   The ``understand_video`` tool uses OpenAI's API backend with the ``gpt-4.1`` model by default for analyzing video frames. This requires an OpenAI API key regardless of which backend your agent uses.
 
 .. code-block:: yaml
 
    agents:
      - id: "video_analyzer"
        backend:
-         type: "claude"  # or chatcompletion, qwen
-         model: "claude-sonnet-4"
-         upload_files:
-           - video_path: "path/to/video.mp4"
+         type: "openai"
+         model: "gpt-5-nano"
+         cwd: "workspace1"
+         custom_tools:
+           - name: ["understand_video"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_video.py"
+             function: ["understand_video"]
 
-**Supported Backends:**
-
-* Claude (Anthropic): Video understanding
-* ChatCompletion providers: Varies by provider
-* Qwen API: Video understanding support
+   orchestrator:
+     context_paths:
+       - path: "path/to/video.mp4"
+         permission: "read"
 
 **Supported Formats:**
 
-* MP4, AVI, MOV, WEBM
+* MP4, AVI, MOV, MKV, FLV, WMV, WEBM, M4V, MPG, MPEG
 
 **Example Use Cases:**
 
@@ -366,29 +523,133 @@ Analyze and extract information from video files:
 * Video summarization
 * Quality assessment
 
-**Example Configuration:**
+**Requirements:**
+
+* Requires opencv-python (``pip install opencv-python``)
+
+Video Generation
+----------------
+
+Generate videos from text descriptions using OpenAI's Sora-2 API:
 
 .. code-block:: yaml
 
    agents:
-     - id: "qwen_video"
+     - id: "video_generator"
        backend:
-         type: "chatcompletion"
-         model: "qwen-vl-max"
-         base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-         api_key: "${QWEN_API_KEY}"
-         upload_files:
-           - video_path: "@examples/resources/demo_video.mp4"
+         type: "openai"
+         model: "gpt-4o"
+         cwd: "workspace1"
+         enable_video_generation: true
+         custom_tools:
+           - name: ["text_to_video_generation"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/text_to_video_generation.py"
+             function: ["text_to_video_generation"]
+       system_message: "You are an AI assistant with access to text-to-video generation capabilities."
 
-File Upload and Search
-----------------------
+**Example Command:**
 
-File upload and search capabilities enable agents to work with documents and perform retrieval-augmented generation (RAG).
+.. code-block:: bash
 
-File Upload Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_video_generation_single.yaml \
+     "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
 
-Upload files for agent access:
+**Key Features:**
+
+* Powered by OpenAI's Sora-2 model
+* Generate high-quality videos from text descriptions
+* Customizable video duration (4-20 seconds)
+* Automatic video download and storage
+* Supports detailed scene descriptions and camera movements
+
+**Use Cases:**
+
+* Marketing and advertising content creation
+* Concept visualization and storyboarding
+* Educational and training videos
+* Social media content generation
+* Creative storytelling and animation
+* Product demonstration videos
+
+**Best Practices for Video Generation:**
+
+* Provide detailed scene descriptions including:
+
+  * Setting and environment
+  * Lighting conditions
+  * Camera movements (push-in, pull-out, pan, etc.)
+  * Atmosphere and mood
+  * Objects and characters
+
+* Use cinematic terminology for better results
+* Specify duration based on content complexity
+* Combine with ``understand_video`` tool for quality verification
+
+Multi-Agent Video Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Combine video generation with analysis for iterative improvement:
+
+.. code-block:: yaml
+
+  agents:
+    - id: "text_to_video_generation_tool1"
+      backend:
+        type: "openai"
+        model: "gpt-4o"
+        cwd: "workspace1"
+        enable_video_generation: true
+        custom_tools:
+          - name: ["understand_video"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/understand_video.py"
+            function: ["understand_video"]
+          - name: ["text_to_video_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_video_generation.py"
+            function: ["text_to_video_generation"]
+      system_message: |
+        You are an AI assistant with access to text-to-video generation capabilities.
+
+    - id: "text_to_video_generation_tool2"
+      backend:
+        type: "openai"
+        model: "gpt-4o"
+        cwd: "workspace2"
+        enable_video_generation: true
+        custom_tools:
+          - name: ["understand_video"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/understand_video.py"
+            function: ["understand_video"]
+          - name: ["text_to_video_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_video_generation.py"
+            function: ["text_to_video_generation"]
+      system_message: |
+        You are an AI assistant with access to text-to-video generation capabilities.
+
+  orchestrator:
+    snapshot_storage: "snapshots"
+    agent_temporary_workspace: "temp_workspaces"
+
+
+**Example Command:**
+
+.. code-block:: bash
+
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_video_generation_multi.yaml \
+     "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
+
+File Understanding
+------------------
+
+File understanding capabilities enable agents to analyze documents and perform Q&A using the ``understand_file`` custom tool.
+
+Configure agents to analyze files:
 
 .. code-block:: yaml
 
@@ -397,229 +658,182 @@ Upload files for agent access:
        backend:
          type: "openai"
          model: "gpt-5-nano"
-         upload_files:
-           - image_path: "path/to/document.pdf"
-           - image_path: "path/to/image.jpg"
+         cwd: "workspace1"
+         custom_tools:
+           - name: ["understand_file"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_file.py"
+             function: ["understand_file"]
+
+   orchestrator:
+     context_paths:
+       - path: "path/to/document.pdf"
+         permission: "read"
+       - path: "path/to/report.docx"
+         permission: "read"
 
 **Supported File Types:**
 
-* Images: JPG, PNG, GIF, WebP
-* Documents: PDF (with text extraction)
-* Future support planned for audio, video, and other formats
-
-Vector Store Management
-~~~~~~~~~~~~~~~~~~~~~~~
-
-The OpenAI backend automatically manages vector stores for file search:
-
-.. code-block:: yaml
-
-   agents:
-     - id: "search_agent"
-       backend:
-         type: "openai"
-         model: "gpt-5-nano"
-         upload_files:
-           - image_path: "documents/report.pdf"
-         enable_file_search: true  # Enable vector store search
-
-**Features:**
-
-* Automatic vector store creation
-* Efficient similarity search
-* Context retrieval for Q&A
-* Cleanup utilities for uploaded files
+* **Text Files**: .py, .js, .java, .md, .txt, .log, .csv, .json, .yaml, etc.
+* **PDF**: Requires PyPDF2 (``pip install PyPDF2``)
+* **Word**: .docx - Requires python-docx (``pip install python-docx``)
+* **Excel**: .xlsx - Requires openpyxl (``pip install openpyxl``)
+* **PowerPoint**: .pptx - Requires python-pptx (``pip install python-pptx``)
 
 **Example Use Case:**
 
 .. code-block:: bash
 
-   # Document Q&A with file search
+   # Document Q&A
    massgen \
      --config @examples/basic/single/single_gpt5nano_file_search.yaml \
-     "What are the main conclusions from the uploaded research paper?"
+     "What are the main conclusions from the research paper?"
 
-Multimodal MCP Tools
---------------------
+File Generation
+---------------
 
-MassGen provides MCP-based tools for working with multimodal content in agent workspaces.
-
-read_multimodal_files Tool
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``read_multimodal_files`` tool reads images and encodes them as base64 data with MIME type detection:
+Generate formatted documents from text using AI. The ``text_to_file_generation`` tool can create professional documents in various formats:
 
 .. code-block:: yaml
 
    agents:
-     - id: "mcp_agent"
+     - id: "document_generator"
        backend:
          type: "openai"
-         model: "gpt-5-nano"
-         mcp_servers:
-           - name: "workspace"
-             type: "stdio"
-             command: "python"
-             args: ["-m", "massgen.mcp_tools.workspace_tools_server"]
+         model: "gpt-4o"
+         cwd: "workspace1"
+         enable_file_generation: true
+         custom_tools:
+           - name: ["text_to_file_generation"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/text_to_file_generation.py"
+             function: ["text_to_file_generation"]
+       system_message: "You are an AI assistant with access to text-to-file generation capabilities."
 
-**How It Works:**
+**Example Command:**
 
-1. Agent requests to read an image file from workspace
-2. Tool detects MIME type (image/jpeg, image/png, etc.)
-3. Image is encoded as base64 data
-4. Agent receives structured multimodal content
+.. code-block:: bash
 
-**Benefits:**
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_file_generation_single.yaml \
+     "Please generate a comprehensive technical report about the latest developments in Large Language Models (LLMs) and Generative AI. The report should include: 1) Executive Summary, 2) Introduction to LLMs, 3) Recent breakthroughs, 4) Applications in industry, 5) Ethical considerations, 6) Future directions. Save it as a PDF file."
 
-* Seamless integration with MCP workflow
-* Automatic format detection
-* Base64 encoding for API compatibility
-* Support for various image formats
+**Supported Output Formats:**
 
-StreamChunk Architecture
-~~~~~~~~~~~~~~~~~~~~~~~~
+* **TXT** - Plain text files
+* **MD** - Markdown formatted documents
+* **PDF** - Professional PDF documents with formatting
+* **PPTX** - PowerPoint presentations with slide structure
 
-Multimodal content is handled through the ``StreamChunk`` architecture:
+Multi-Agent Document Workflow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Text Content:**
+Combine generation with review and refinement:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen.stream_chunk import TextChunk
+  agents:
+    - id: "text_to_file_generation_tool1"
+      backend:
+        type: "openai"
+        model: "gpt-4o"
+        cwd: "workspace1"
+        enable_file_generation: true
+        custom_tools:
+          - name: ["text_to_file_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_file_generation.py"
+            function: ["text_to_file_generation"]
+          - name: ["understand_file"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/understand_file.py"
+            function: ["understand_file"]
+      system_message: |
+        You are an AI assistant with access to text-to-file generation capabilities.
 
-   chunk = TextChunk(content="This is a response")
+    - id: "text_to_file_generation_tool2"
+      backend:
+        type: "openai"
+        model: "gpt-4o"
+        cwd: "workspace2"
+        enable_file_generation: true
+        custom_tools:
+          - name: ["text_to_file_generation"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/text_to_file_generation.py"
+            function: ["text_to_file_generation"]
+          - name: ["understand_file"]
+            category: "multimodal"
+            path: "massgen/tool/_multimodal_tools/understand_file.py"
+            function: ["understand_file"]
+      system_message: |
+        You are an AI assistant with access to text-to-file generation capabilities.
 
-**Multimodal Content:**
+  orchestrator:
+    snapshot_storage: "snapshots"
+    agent_temporary_workspace: "temp_workspaces"
 
-.. code-block:: python
+**Example Command:**
 
-   from massgen.stream_chunk import MultimodalChunk
+.. code-block:: bash
 
-   chunk = MultimodalChunk(
-       content_type="image",
-       data="base64_encoded_image_data",
-       mime_type="image/jpeg"
-   )
+   massgen \
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_file_generation_multi.yaml \
+     "Please generate a comprehensive technical report about the latest developments in Large Language Models (LLMs) and Generative AI. The report should include: 1) Executive Summary, 2) Introduction to LLMs, 3) Recent breakthroughs, 4) Applications in industry, 5) Ethical considerations, 6) Future directions. Save it as a PDF file."
 
-**Architecture Benefits:**
+**Requirements:**
 
-* Unified message handling for text and multimodal content
-* Streaming support for real-time processing
-* Extensible for future content types (audio, video, documents)
+* PDF generation requires ``reportlab`` (``pip install reportlab``)
+* PPTX generation requires ``python-pptx`` (``pip install python-pptx``)
 
 Supported Backends
 ------------------
 
-Multimodal capabilities vary by backend. This table shows which backends support which multimodal features:
+* **Supported Backends**: OpenAI, Claude, Claude Code, Gemini, Grok, Chat Completions (generic API), LM Studio, Inference (vLLM/SGLang)
+* **Not Supported**: Azure OpenAI, AG2 (these backends don't support custom tools)
+* **How It Works**: The custom tools (``understand_image``, ``understand_video``, ``understand_audio``, ``understand_file``) use OpenAI's API for processing
+* **Requirements**:
 
-.. list-table:: Backend Multimodal Capabilities
-   :header-rows: 1
-   :widths: 15 12 12 12 12 12 12
+  * Your agent backend must support custom tools
+  * ``OPENAI_API_KEY`` must be set in your ``.env`` file for the understanding tools to function
+  * The agent's backend type can be anything supported - only the custom tools need OpenAI API access
 
-   * - Backend
-     - Image
-     - Audio
-     - Video
-     - File Upload
-     - File Search
-     - Notes
-   * - ``openai``
-     - ⭐ Both
-     - ⭐ Both
-     - ⭐ Generation
-     - ✅
-     - ✅
-     - DALL-E, TTS, Sora-2
-   * - ``claude``
-     - ✅ Understanding
-     - ✅ Understanding
-     - ✅ Understanding
-     - ✅
-     - ❌
-     - Vision models
-   * - ``claude_code``
-     - ✅ Understanding
-     - ❌
-     - ❌
-     - ⭐ Native
-     - ❌
-     - Native file tools
-   * - ``gemini``
-     - ✅ Understanding
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-     - Multimodal Pro/Flash
-   * - ``grok``
-     - ❌
-     - ❌
-     - ❌
-     - ❌
-     - ❌
-     - Limited multimodal
-   * - ``azure_openai``
-     - ⭐ Both
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-     - DALL-E support
-   * - ``chatcompletion``
-     - ❌
-     - ✅ Understanding
-     - ✅ Understanding
-     - ✅
-     - ❌
-     - Provider-dependent
-
-**Legend:**
-
-* ⭐ **Both** - Supports BOTH understanding (analyze existing) AND generation (create new)
-* ✅ **Understanding** - Can analyze/process existing content only
-* ✅ **Generation** - Can create new content only
-* ✅ **Available** - Feature supported
-* ❌ **Not available** - Feature not supported
-
-**Capability Details:**
-
-* **Image Both**: Can analyze images you provide AND generate new images (e.g., ``openai``, ``azure_openai``)
-* **Audio Both**: Can transcribe/analyze audio AND generate speech (e.g., ``openai`` with TTS)
-* **Video Generation**: Can create videos from text (e.g., ``openai`` with Sora-2)
-* **Understanding Only**: Can only analyze existing content, not create new (e.g., ``claude``, ``gemini``)
-* **Native**: Built into the backend (e.g., ``claude_code`` filesystem tools)
-
-**Provider-Specific Notes:**
-
-* **OpenAI**: Most comprehensive multimodal support (DALL-E, TTS, Sora-2)
-* **Claude**: Strong vision capabilities, audio/video understanding
-* **Gemini**: Multimodal understanding with Flash/Pro models
-* **Azure OpenAI**: Image generation/understanding via DALL-E
-* **ChatCompletion**: Varies by provider (Qwen, etc.)
-
-See :doc:`backends` for complete backend capabilities including web search, code execution, and MCP support.
+See :doc:`custom_tools` for complete details on custom tool support by backend, and :doc:`backends` for all backend capabilities including web search, code execution, and MCP support.
 
 Configuration Examples
 ----------------------
 
 Complete configuration files are available in the MassGen repository:
 
-**Image:**
+**Custom Multimodal Understanding Tools (v0.1.3+):**
 
-* ``@examples/basic/single/single_gpt4o_image_generation.yaml`` - Single agent image generation
-* ``@examples/basic/multi/gpt4o_image_generation.yaml`` - Multi-agent image generation
+* ``massgen/configs/tools/custom_tools/multimodal_tools/understand_audio.yaml`` - Audio transcription tool
+* ``massgen/configs/tools/custom_tools/multimodal_tools/understand_file.yaml`` - File understanding tool (PDF, DOCX, etc.)
+* ``massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml`` - Image understanding tool
+* ``massgen/configs/tools/custom_tools/multimodal_tools/understand_video.yaml`` - Video understanding tool
+
+**Custom Multimodal Generation Tools (Latest):**
+
+* ``massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_single.yaml`` - Single-agent image generation
+* ``massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_multi.yaml`` - Multi-agent image generation
+* ``massgen/configs/tools/custom_tools/multimodal_tools/text_to_video_generation_single.yaml`` - Single-agent video generation
+* ``massgen/configs/tools/custom_tools/multimodal_tools/text_to_video_generation_multi.yaml`` - Multi-agent video generation
+* ``massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_generation_single.yaml`` - Single-agent speech generation
+* ``massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_generation_multi.yaml`` - Multi-agent speech generation
+* ``massgen/configs/tools/custom_tools/multimodal_tools/text_to_file_generation_single.yaml`` - Single-agent document generation
+* ``massgen/configs/tools/custom_tools/multimodal_tools/text_to_file_generation_multi.yaml`` - Multi-agent document generation
+
+**Image Understanding:**
+
 * ``@examples/basic/single/single_gpt5nano_image_understanding.yaml`` - Image understanding
 * ``@examples/basic/multi/gpt5nano_image_understanding.yaml`` - Multi-agent image analysis
 
-**Audio:**
+**Audio Understanding:**
 
-* ``@examples/basic/single/single_gpt4o_audio_generation.yaml`` - Text-to-speech generation
-* ``@examples/basic/multi/gpt4o_audio_generation.yaml`` - Multi-agent audio generation
 * ``@examples/basic/single/single_openrouter_audio_understanding.yaml`` - Audio transcription
 
-**Video:**
+**Video Understanding:**
 
-* ``@examples/basic/single/single_gpt4o_video_generation.yaml`` - Video generation with Sora-2
 * ``@examples/basic/single/single_qwen_video_understanding.yaml`` - Video analysis with Qwen
 
 **File Operations:**
@@ -628,199 +842,257 @@ Complete configuration files are available in the MassGen repository:
 
 Browse all examples in the `Configuration README <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md>`_.
 
+File Size Limits and Optimization
+----------------------------------
+
+MassGen automatically handles file size limits to prevent memory issues and API errors.
+
+Default Size Limits
+~~~~~~~~~~~~~~~~~~~
+
+Each multimodal tool has configurable size limits:
+
+* **Images**: 10MB (automatically resized if exceeded)
+* **Videos**: 50MB
+* **Audio**: 25MB
+
+Automatic Image Resizing
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When an image exceeds the size limit, MassGen automatically:
+
+1. Detects the oversized file
+2. Compresses and resizes the image
+3. Saves the optimized version to a temporary location
+4. Processes the optimized image
+
+**Supported formats for auto-resizing**: PNG, JPEG, JPG, WebP
+
+**Example log output**:
+
+.. code-block:: text
+
+   Image size (12.5 MB) exceeds limit (10 MB). Attempting to resize...
+   Successfully resized image from 12.5 MB to 8.3 MB
+
+Customizing Size Limits
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can override size limits per tool call using the ``MAX_FILE_SIZE_MB`` parameter:
+
+.. code-block:: yaml
+
+   custom_tools:
+     - name: ["understand_image"]
+       category: "multimodal"
+       path: "massgen/tool/_multimodal_tools/understand_image.py"
+       function: ["understand_image"]
+       preset_args:
+         MAX_FILE_SIZE_MB: 15  # Increase limit to 15MB
+
+**Note**: Increasing limits may cause:
+
+* Higher memory usage
+* API errors for very large files
+* Increased processing time
+
 Best Practices
 --------------
 
-1. **Image Generation**
+1. **API Keys and Backend Configuration**
 
-   * Use descriptive, detailed prompts with style and mood
-   * Leverage multiple agents for prompt refinement
-   * Specify composition, lighting, and artistic style clearly
-   * Review generated images in agent workspaces
-   * Iterate on prompts based on results
+   * **IMPORTANT**: All multimodal understanding tools (``understand_image``, ``understand_video``, ``understand_audio``) require an OpenAI API key
+   * Set ``OPENAI_API_KEY`` in your ``.env`` file even if using other backends (Claude, Gemini, etc.)
+   * The tools use OpenAI's backend (gpt-4.1 for images/videos, gpt-4o-transcribe for audio) regardless of your agent's configured backend
+   * Your agent backend only needs to support custom tools; the actual multimodal processing happens via OpenAI
 
-2. **Image Understanding**
+2. **File Access and Configuration**
 
-   * Upload high-quality images for better analysis
-   * Ask specific questions about image content
-   * Use multi-agent collaboration for diverse perspectives
-   * Combine with web search for contextual information
-   * Specify aspect ratio and resolution when needed
+   * Use ``context_paths`` to provide secure file access to agents for understanding tasks
+   * Ensure files are accessible before running - use absolute paths or paths relative to execution directory
+   * Install required dependencies before use:
 
-3. **Audio Generation**
+     * Audio Understanding: No additional dependencies (uses OpenAI API)
+     * Video Understanding: ``pip install opencv-python``
+     * File Understanding (PDF): ``pip install PyPDF2``
+     * File Understanding (Word): ``pip install python-docx``
+     * File Understanding (Excel): ``pip install openpyxl``
+     * File Understanding (PowerPoint): ``pip install python-pptx``
+     * File Generation (PDF): ``pip install reportlab``
+     * File Generation (PPTX): ``pip install python-pptx``
 
-   * Choose appropriate voice for your use case (professional, friendly, etc.)
-   * Use ``speaking_instructions`` to control tone and style
-   * Select optimal audio format (MP3 for general use, WAV for high quality)
-   * Test different voices to find the best match
-   * Review generated audio in workspaces
+2. **Generation Tool Configuration**
 
-4. **Audio Understanding**
+   * Enable generation capabilities with backend flags:
 
-   * Use clear, high-quality audio recordings
-   * Supported formats: MP3, WAV, M4A, WEBM
-   * Combine transcription with analysis tasks
-   * Ask specific questions about audio content
-   * Monitor file size limits (default 64MB)
+     * ``enable_image_generation: true`` for image generation
+     * ``enable_video_generation: true`` for video generation
+     * ``enable_audio_generation: true`` for speech generation
+     * ``enable_file_generation: true`` for document generation
 
-5. **Video Generation**
+   * Set appropriate ``cwd`` for organized output storage
+   * Use ``storage_path`` parameter to customize output locations
+   * Verify generated content with corresponding understanding tools
 
-   * Write detailed scene descriptions with action and movement
-   * Specify duration (typically 5-10 seconds for Sora-2)
-   * Be patient - video generation is asynchronous
-   * Review generated videos in MP4 format
-   * Iterate on prompts for better results
+3. **Performance and Cost Optimization**
 
-6. **Video Understanding**
+   * **Understanding Tools:**
 
-   * Upload clear, well-lit videos
-   * Supported formats: MP4, AVI, MOV, WEBM
-   * Ask about specific scenes, actions, or content
-   * Use appropriate backends (Claude, Qwen for video)
-   * Monitor file size limits
+     * Set appropriate ``max_chars`` limits for large documents to control API costs
+     * Adjust ``num_frames`` for videos (default: 8) based on content length and detail needed
+     * Monitor OpenAI API usage when processing large files or many files
 
-7. **File Upload and Search**
+   * **Generation Tools:**
 
-   * Organize files logically before upload
-   * Use vector store search for large document collections
-   * Clean up uploaded files after processing
-   * Monitor API costs for file storage and search
-   * Test file paths before deployment
+     * Image generation (GPT-4.1) is more expensive than standard API calls
+     * Video generation (Sora-2) can be costly - use appropriate duration (4-20 seconds)
+     * Speech generation costs vary by model (gpt-4o-audio-preview vs gpt-4o-mini-tts)
+     * Use multi-agent to refine prompts before generation
 
-8. **Workspace Management**
+4. **Quality and Accuracy**
 
-   * Configure ``cwd`` for organized file storage
-   * Use ``snapshot_storage`` for agent collaboration
-   * Review generated/analyzed content in workspaces
+   * **Understanding:**
+
+     * Use high-quality source files (clear images, high-quality audio, well-lit videos)
+     * Ask specific, detailed questions to get better responses
+     * Use multi-agent collaboration for diverse perspectives on complex content
+
+   * **Generation:**
+
+     * Provide detailed, specific prompts for better generation results
+     * For images: Include style, composition, lighting, and mood details
+     * For videos: Specify scene, camera movements, duration, and atmosphere
+     * For speech: Choose appropriate voice and specify emotional tone
+     * For documents: Outline structure, sections, and formatting requirements
+     * Combine understanding and generation agents for iterative refinement
+
+5. **Workspace Management**
+
+   * Configure ``cwd`` for organized file storage (both input and output)
+   * Use ``snapshot_storage`` for agent collaboration and sharing generated content
+   * Review generated content in agent workspaces before distribution
    * Include ``.massgen/`` in ``.gitignore``
-   * Clean up old workspaces periodically
+   * Clean up old workspaces periodically to manage storage
+   * Use descriptive filenames for generated content (automatic timestamp-based naming available)
 
 Troubleshooting
 ---------------
 
 **Image Issues:**
 
-* **Image generation not working:** Ensure ``enable_image_generation: true`` in backend configuration
+* **Image file not found:** Ensure image path is added to ``context_paths`` and the file exists
 
   .. code-block:: yaml
 
-     backend:
-       type: "openai"
-       model: "gpt-4o"
-       enable_image_generation: true  # Required for DALL-E
-
-* **Image upload fails:** Verify image path is correct and accessible. Use absolute paths or paths relative to execution directory.
+     orchestrator:
+       context_paths:
+         - path: "path/to/image.jpg"
+           permission: "read"
 
 **Audio Issues:**
 
-* **Audio generation fails:** Ensure you're using a supported model (``gpt-4o-audio-preview``) with ``enable_audio_generation: true``
-
-  .. code-block:: yaml
-
-     backend:
-       type: "openai"
-       model: "gpt-4o-audio-preview"
-       enable_audio_generation: true
-       audio_voice: "alloy"  # Choose from available voices
-
-* **Audio file too large:** Check file size limits (default 64MB). Configure with ``media_max_file_size_mb``
-
-  .. code-block:: yaml
-
-     backend:
-       type: "openai"
-       media_max_file_size_mb: 100  # Increase limit if needed
-
-* **Unsupported audio format:** Use MP3, WAV, M4A, or WEBM formats
+* **Audio file not found:** Ensure audio path is in ``context_paths`` and file exists
+* **Unsupported audio format:** Use supported formats: WAV, MP3, M4A, MP4, OGG, FLAC, AAC, WMA, OPUS
+* **API transcription error:** Verify OpenAI API key is set in ``.env`` file
 
 **Video Issues:**
 
-* **Video generation slow:** Video generation is asynchronous and can take several minutes. Monitor progress in logs.
-
-* **Video understanding not working:** Ensure you're using a supported backend (Claude, Qwen) with video capabilities
+* **opencv-python not installed:** Install with ``pip install opencv-python``
+* **Video file not found:** Ensure video path is in ``context_paths`` and file exists
 
   .. code-block:: yaml
 
-     backend:
-       type: "claude"
-       model: "claude-sonnet-4"
-       upload_files:
-         - video_path: "path/to/video.mp4"
+     orchestrator:
+       context_paths:
+         - path: "path/to/video.mp4"
+           permission: "read"
 
-* **Video file too large:** Check file size limits. Videos should typically be under 64MB.
+* **Unsupported video format:** Use supported formats: MP4, AVI, MOV, MKV, FLV, WMV, WEBM, M4V, MPG, MPEG
+* **High API costs:** Reduce ``num_frames`` parameter (default: 8) to extract fewer frames
 
 **General File Issues:**
 
-* **File not found in workspace:** Check agent's ``cwd`` configuration
+* **File not found:** Ensure the file path is added to ``context_paths`` in the orchestrator configuration
 
   .. code-block:: yaml
 
-     backend:
-       cwd: "workspace1"  # Files stored in .massgen/workspaces/workspace1/
+     orchestrator:
+       context_paths:
+         - path: "path/to/your/file"
+           permission: "read"
 
-* **Vector store errors:** Enable file search explicitly
+* **Permission errors:** Verify that files are readable and paths are accessible
 
-  .. code-block:: yaml
+* **Missing dependencies:** Install required Python packages for specific file types
 
-     backend:
-       type: "openai"
-       model: "gpt-5-nano"
-       enable_file_search: true
+  .. code-block:: bash
 
-* **Permission errors:** Ensure files are readable and paths are accessible
+     pip install PyPDF2 python-docx openpyxl python-pptx opencv-python reportlab
 
-**API Cost Issues:**
+**API and Dependency Issues:**
 
-* Monitor multimodal API usage carefully - image/audio/video generation can be expensive
-* Clean up uploaded files and vector stores after use
-* Use appropriate file sizes and durations to control costs
+* **Missing OpenAI API key:** Set ``OPENAI_API_KEY`` in ``.env`` file or environment variable
+* **Import errors:** Install required dependencies for your file types (see Best Practices section)
+* **API costs:** Monitor usage carefully - multimodal understanding can be expensive with large files or many frames
 
 Use Cases
 ---------
 
-**Image Use Cases:**
+**Content Understanding:**
 
-* **Creative Design**: Logo generation, marketing assets, visual concept exploration
-* **Document Analysis**: PDF Q&A, scanned form understanding, chart analysis
-* **Content Creation**: Image descriptions for accessibility, social media content
-* **Research**: Scientific image analysis, medical imaging, visual data extraction
+* **Document Processing:**
 
-**Audio Use Cases:**
+  * Analyze PDFs, Word docs, Excel sheets, PowerPoint presentations
+  * Extract data from forms, tables, and structured documents
+  * Summarize research papers, technical documentation, and reports
 
-* **Content Creation**: Podcast generation, audiobook narration, voiceover production
-* **Transcription**: Meeting notes, interview transcription, voice memo processing
-* **Accessibility**: Text-to-speech for visually impaired, audio descriptions
-* **Language Learning**: Pronunciation practice, language tutorials, conversation practice
-* **Customer Service**: IVR systems, automated responses, customer support audio
+* **Media Analysis:**
 
-**Video Use Cases:**
+  * Transcribe meeting recordings, interviews, and podcasts
+  * Analyze video content through key frame extraction
+  * Extract information from screenshots, charts, and diagrams
 
-* **Marketing**: Product demonstrations, explainer videos, social media content
-* **Education**: Tutorial videos, educational content, training materials
-* **Entertainment**: Short-form content creation, video concepts, storyboarding
-* **Analysis**: Video content summarization, scene detection, quality assessment
-* **Security**: Surveillance analysis, incident review, activity recognition
+* **Code and Visual Analysis:**
 
-**Multi-Modal Workflows:**
+  * Code analysis with AI-powered explanations
+  * Visual content description for accessibility
+  * Scene detection and description in videos
 
-* **Podcast Production**: Generate script → Text-to-speech → Audio editing workflow
-* **Video Marketing**: Generate storyboard image → Create video → Add voiceover
-* **Document Processing**: Scan document → OCR with vision → Generate audio summary
-* **Educational Content**: Create visual aids → Generate explanation videos → Add narration
-* **Accessibility**: Take image → Generate description → Convert to speech
+**Content Generation:**
 
-**Enterprise Applications:**
+* **Creative Content Creation:**
 
-* **Documentation**: Convert technical docs to multimedia formats
-* **Training**: Create multi-modal training materials automatically
-* **Marketing**: Generate coordinated image, audio, and video campaigns
-* **Customer Support**: Multi-modal knowledge base with images, videos, and audio guides
+  * Generate marketing visuals and product images from descriptions
+  * Create social media content (images, videos, audio)
+  * Produce concept art and design mockups
+  * Generate voice-overs and narration for videos
+
+* **Document and Report Generation:**
+
+  * Automatically generate technical reports and white papers
+  * Create formatted business documentation (PDF, MD, TXT)
+  * Produce meeting summaries and documentation
+  * Generate educational materials and training guides
+
+* **Video Production:**
+
+  * Create promotional and marketing videos from text descriptions
+  * Generate concept visualization and storyboards
+  * Produce educational content and tutorials
+  * Create social media video content
+
+* **Audio Content:**
+
+  * Generate audiobooks and narrated content
+  * Create podcast intros and outros
+  * Produce accessibility audio for visually impaired users
+  * Generate multilingual voice content
 
 Next Steps
 ----------
 
 * :doc:`backends` - Backend-specific multimodal capabilities
 * :doc:`file_operations` - Workspace and file management
-* :doc:`mcp_integration` - MCP tools for multimodal workflows
+* :doc:`tools` - Custom tools configuration and usage
 * :doc:`../examples/advanced_patterns` - Advanced multimodal patterns
 * :doc:`../reference/yaml_schema` - Complete configuration reference

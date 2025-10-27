@@ -90,6 +90,68 @@ class PathPermissionManager:
         "massgen_logs",
     ]
 
+    # Binary file extensions that should not be read by text-based tools
+    # These files should be handled by specialized tools (understand_image, understand_video, etc.)
+    BINARY_FILE_EXTENSIONS = {
+        # Images
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".ico",
+        ".svg",
+        ".webp",
+        ".tiff",
+        ".tif",
+        # Videos
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".mkv",
+        ".flv",
+        ".wmv",
+        ".webm",
+        ".m4v",
+        ".mpg",
+        ".mpeg",
+        # Audio
+        ".mp3",
+        ".wav",
+        ".ogg",
+        ".flac",
+        ".aac",
+        ".m4a",
+        ".wma",
+        # Archives
+        ".zip",
+        ".tar",
+        ".gz",
+        ".bz2",
+        ".7z",
+        ".rar",
+        ".xz",
+        # Executables and binaries
+        ".exe",
+        ".bin",
+        ".dll",
+        ".so",
+        ".dylib",
+        ".o",
+        ".a",
+        ".pyc",
+        ".class",
+        ".jar",
+        # Office documents (binary formats - use understand_file tool)
+        ".doc",  # Old Word (not supported by understand_file)
+        ".xls",  # Old Excel (not supported by understand_file)
+        ".ppt",  # Old PowerPoint (not supported by understand_file)
+        ".pdf",  # PDF (supported by understand_file with PyPDF2)
+        ".docx",  # Word (supported by understand_file with python-docx)
+        ".xlsx",  # Excel (supported by understand_file with openpyxl)
+        ".pptx",  # PowerPoint (supported by understand_file with python-pptx)
+    }
+
     def __init__(
         self,
         context_write_access_enabled: bool = False,
@@ -440,6 +502,12 @@ class PathPermissionManager:
             - allowed: Whether the tool call should proceed
             - reason: Explanation if blocked (None if allowed)
         """
+        # Check if read tool is trying to read binary files (images, videos, etc.)
+        if self._is_text_read_tool(tool_name):
+            binary_check_result = self._validate_binary_file_access(tool_name, tool_args)
+            if not binary_check_result[0]:
+                return binary_check_result
+
         # Track read operations for read-before-delete enforcement
         if self._is_read_tool(tool_name):
             self._track_read_operation(tool_name, tool_args)
@@ -495,6 +563,33 @@ class PathPermissionManager:
 
         return False
 
+    def _is_text_read_tool(self, tool_name: str) -> bool:
+        """
+        Check if a tool is a text-based read operation that should not access binary files.
+
+        These tools are designed for reading text files and should be blocked from
+        reading binary files (images, videos, audio, etc.) to prevent context pollution.
+
+        Tools that read text file contents:
+        - Read: Claude Code read tool
+        - read_text_file: MCP filesystem read tool
+        - read_file: Generic read operations
+        """
+        # Use lowercase for case-insensitive matching
+        tool_lower = tool_name.lower()
+
+        # Check if tool name contains any text read operation keywords
+        text_read_keywords = [
+            "read_text_file",  # MCP filesystem: read_text_file
+            "read_file",  # Generic read operations
+        ]
+
+        # Also check for exact "Read" match (Claude Code tool)
+        if tool_name == "Read":
+            return True
+
+        return any(keyword in tool_lower for keyword in text_read_keywords)
+
     def _is_read_tool(self, tool_name: str) -> bool:
         """
         Check if a tool is a read operation that should be tracked.
@@ -517,6 +612,59 @@ class PathPermissionManager:
         ]
 
         return any(keyword in tool_lower for keyword in read_keywords)
+
+    def _validate_binary_file_access(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """
+        Validate that text-based read tools are not trying to read binary files.
+
+        Binary files (images, videos, audio, etc.) should be handled by specialized tools
+        to prevent context pollution with binary data.
+
+        Args:
+            tool_name: Name of the tool being called
+            tool_args: Arguments passed to the tool
+
+        Returns:
+            Tuple of (allowed: bool, reason: Optional[str])
+            - allowed: False if trying to read binary file, True otherwise
+            - reason: Explanation if blocked (None if allowed)
+        """
+        # Extract file path from arguments
+        file_path = self._extract_file_path(tool_args)
+        if not file_path:
+            # Can't determine path - allow (tool may not access files)
+            return (True, None)
+
+        # Resolve path
+        try:
+            file_path_str = self._resolve_path_against_workspace(file_path)
+            path = Path(file_path_str)
+        except Exception:
+            # If path resolution fails, allow (will fail elsewhere if invalid)
+            return (True, None)
+
+        # Check file extension
+        file_extension = path.suffix.lower()
+        if file_extension in self.BINARY_FILE_EXTENSIONS:
+            # Determine appropriate tool suggestion based on file type
+            if file_extension in {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico", ".svg", ".webp", ".tiff", ".tif"}:
+                suggestion = "For images, use understand_image tool"
+            elif file_extension in {".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv", ".webm", ".m4v", ".mpg", ".mpeg"}:
+                suggestion = "For videos, use understand_video tool"
+            elif file_extension in {".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a", ".wma"}:
+                suggestion = "For audio files, use generate_text_with_input_audio tool"
+            elif file_extension in {".pdf"}:
+                suggestion = "For PDF files, use understand_file tool"
+            elif file_extension in {".docx", ".xlsx", ".pptx"}:
+                suggestion = "For Office documents, use understand_file tool"
+            else:
+                suggestion = "Use appropriate specialized tool for this file type"
+
+            reason = f"Cannot read binary file '{path.name}' with {tool_name}. {suggestion}."
+            logger.warning(f"[PathPermissionManager] Blocked {tool_name} from reading binary file: {path}")
+            return (False, reason)
+
+        return (True, None)
 
     def _is_delete_tool(self, tool_name: str) -> bool:
         """

@@ -90,6 +90,27 @@ class SimpleDisplay(BaseDisplay):
             print(f"🗳️ Vote results: {vote_summary}")
         print("=" * 50)
 
+    def show_post_evaluation_content(self, content: str, agent_id: str):
+        """Display post-evaluation streaming content."""
+        print(f"🔍 [{agent_id}] {content}", end="", flush=True)
+
+    def show_restart_banner(self, reason: str, instructions: str, attempt: int, max_attempts: int):
+        """Display restart decision banner."""
+        print("\n" + "🔄" * 40)
+        print(f"ORCHESTRATION RESTART - Attempt {attempt}/{max_attempts}")
+        print("🔄" * 40)
+        print(f"\n{reason}\n")
+        print(f"Instructions: {instructions}\n")
+        print("🔄" * 40 + "\n")
+
+    def show_restart_context_panel(self, reason: str, instructions: str):
+        """Display restart context panel at top of UI (for attempt 2+)."""
+        print("\n" + "⚠️ " * 30)
+        print("PREVIOUS ATTEMPT FEEDBACK")
+        print(f"Reason: {reason}")
+        print(f"Instructions: {instructions}")
+        print("⚠️ " * 30 + "\n")
+
     def cleanup(self):
         """Clean up resources."""
         print(f"\n✅ Coordination completed with {len(self.agent_ids)} agents")

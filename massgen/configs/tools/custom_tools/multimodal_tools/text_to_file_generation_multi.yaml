@@ -1,0 +1,61 @@
+# MassGen Configuration: Text to File Generation Tool
+# Usage:
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_file_generation_multi.yaml "Please generate a comprehensive business presentation about Artificial Intelligence in Healthcare for our upcoming board meeting. The presentation should include the following slides: 1) Title slide with presentation title and date, 2) Executive Summary highlighting key findings, 3) Market Overview showing the current AI healthcare market size and growth trends, 4) Technology Applications including AI in diagnostics, drug discovery, and patient care, 5) Case Studies showcasing 3-4 successful implementations with metrics, 6) Competitive Landscape analyzing major players and their solutions, 7) Implementation Roadmap with timeline and milestones, 8) ROI Analysis with projected costs and benefits, 9) Risk Assessment and mitigation strategies, 10) Recommendations and next steps. Please make it professional with approximately 15-20 slides, use clear bullet points, include suggested visual elements for each slide, and save it as a PPTX file with a modern business layout."
+agents:
+  - id: "text_to_file_generation_tool1"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace1"
+      enable_file_generation: true
+      custom_tools:
+        - name: ["text_to_file_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_file_generation.py"
+          function: ["text_to_file_generation"]
+        - name: ["understand_file"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_file.py"
+          function: ["understand_file"]
+    system_message: |
+      You are an AI assistant with access to text-to-file generation capabilities.
+
+      When generating PPTX presentations, format your content with:
+      - Use "# Title" or "## Title" for slide titles
+      - Use "---" to separate slides
+      - Use "- Item" for bullet points
+      - Use "  - Subitem" for sub-bullets (two spaces indent)
+      - Structure content in a slide-friendly format with clear, concise points
+
+  - id: "text_to_file_generation_tool2"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace2"
+      enable_file_generation: true
+      custom_tools:
+        - name: ["text_to_file_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_file_generation.py"
+          function: ["text_to_file_generation"]
+        - name: ["understand_file"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_file.py"
+          function: ["understand_file"]
+    system_message: |
+      You are an AI assistant with access to text-to-file generation capabilities.
+
+      When generating PPTX presentations, format your content with:
+      - Use "# Title" or "## Title" for slide titles
+      - Use "---" to separate slides
+      - Use "- Item" for bullet points
+      - Use "  - Subitem" for sub-bullets (two spaces indent)
+      - Structure content in a slide-friendly format with clear, concise points
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

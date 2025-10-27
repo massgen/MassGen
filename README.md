@@ -1,21 +1,28 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/logo.png" alt="MassGen Logo" width="360" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo.png">
+    <img src="assets/logo.png" alt="MassGen Logo" width="360" />
+  </picture>
 </p>
 
-<p align="center">
-  <a href="https://www.python.org/downloads/">
-    <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+" style="margin-right: 5px;">
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
-  </a>
-  <a href="https://docs.massgen.ai">
-    <img src="https://img.shields.io/badge/docs-massgen.ai-blue.svg" alt="Documentation" style="margin-right: 5px;">
-  </a>
-  <a href="https://discord.massgen.ai">
-    <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Join our Discord">
-  </a>
-</p>
+<div align="center">
+
+[![PyPI](https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9)](https://pypi.org/project/massgen/)
+[![Docs](https://img.shields.io/badge/docs-massgen.ai-blue?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.massgen.ai)
+[![GitHub Stars](https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white)](https://github.com/Leezekun/MassGen)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square)](LICENSE)
+
+</div>
+
+<div align="center">
+
+[![Follow on X](https://img.shields.io/badge/FOLLOW%20ON%20X-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.massgen.ai)
+[![Follow on LinkedIn](https://img.shields.io/badge/FOLLOW%20ON%20LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/company/massgen-ai)
+[![Join our Discord](https://img.shields.io/badge/JOIN%20OUR%20DISCORD-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.massgen.ai)
+
+</div>
 
 <h1 align="center">🚀 MassGen: Multi-Agent Scaling System for GenAI</h1>
 
@@ -25,7 +32,7 @@
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
-    <img src="https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/massgen-demo.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
+    <img src="docs/source/_static/images/readme.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
 </p>
 
@@ -54,7 +61,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.1 Features](#-latest-features-v011)
+- [v0.1.4 Features](#-latest-features-v014)
 </details>
 
 <details open>
@@ -99,15 +106,16 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.1](#recent-achievements-v011)
-  - [v0.0.3 - v0.1.0](#previous-achievements-v003---v010)
+  - [v0.1.4](#recent-achievements-v014)
+  - [v0.1.3](#recent-achievements-v013)
+  - [v0.0.3 - v0.1.2](#previous-achievements-v003---v012)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.2 Roadmap](#v012-roadmap)
+- [v0.1.5 Roadmap](#v015-roadmap)
 </details>
 
 <details open>
@@ -132,36 +140,37 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.1)
+## 🆕 Latest Features (v0.1.4)
 
-**🎉 Released: October 20, 2025**
+**🎉 Released: October 27, 2025**
 
-**What's New in v0.1.1:**
-- **🔧 Custom Tools System** - Register your own Python functions as tools
-- **⚖️ Voting Sensitivity Controls** - Three-tier quality control for multi-agent consensus
-- **🎯 Configuration Builder** - Interactive wizard to create custom configs
-- **📊 Backend Capabilities Registry** - Centralized feature support tracking
-- **🔬 Self-Evolution Capability** - Agents autonomously analyze GitHub issues and market trends for feature prioritization
+**What's New in v0.1.4:**
+- **🎨 Multimodal Generation Tools** - Create images, videos, audio, and documents with AI
+- **🔒 Binary File Protection** - Automatic security preventing accidental binary file reads
+- **🕷️ Crawl4AI Integration** - Intelligent web scraping with LLM-powered extraction
 
-[![MassGen v0.1.1 Custom Tools & Voting Demo](https://img.youtube.com/vi/eXK_oF177zY/0.jpg)](https://youtu.be/eXK_oF177zY)
+**Key Improvements:**
+- 6 new generation tools: text-to-image, text-to-video, text-to-speech, text-to-file, image-to-image
+- Binary file protection for 40+ file types with smart tool suggestions
+- Web crawling with customizable extraction patterns
+- Enhanced documentation and automation infrastructure
 
-*Watch the v0.1.1 demo showcasing custom Python tool registration and three-tier voting sensitivity controls for multi-agent quality assurance*
-
-**Get Started with v0.1.1:**
+**Get Started with v0.1.4:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Create a configuration with the interactive builder
-massgen --setup
+# Generate an image from text
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_image_generation_single \
+  "Please generate an image of a cat in space."
 
-# Try custom tools with agents
-massgen --config @examples/tools/custom_tools/claude_custom_tool_example \
-  "What's the sum of 123 and 456?"
+# Generate a video from text
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_video_generation_single \
+  "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
 
-# Use voting sensitivity controls for quality assurance
-massgen --config @examples/voting/gemini_gpt_voting_sensitivity \
-  "What are the pros and cons of renewable energy?"
+# Generate documents (PDF, DOCX, etc.)
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_file_generation_single \
+  "Please generate a comprehensive technical report about the latest developments in Large Language Models (LLMs)."
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -383,17 +392,20 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal (Image/Audio/Video) | Advanced Features |
-|---------|:-----------:|:--------------:|:---------------:|:-----------:|:----------:|:-----------------|
-| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
-| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code execution, **MCP integration**|
-| **Grok API** | ✅ | ❌ | ✅ | ✅ | ❌ | Web search, **MCP integration** |
-| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ❌ | **MCP integration** |
+| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal Understanding | Multimodal Generation | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------:|:------------------------:|:---------------------:|:-----------------|
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | Web search, code interpreter, **MCP integration** |
+| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
+| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | Web search, code execution, **MCP integration**|
+| **Grok API** | ✅ | ❌ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | Web search, **MCP integration** |
+| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | Web search, code interpreter, **MCP integration** |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | **MCP integration** |
 
-**Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
+**Notes:**
+- **Multimodal Understanding** (NEW in v0.1.3): Analyze images, audio, video, and documents via custom tools using OpenAI GPT-4.1 - works with any backend
+- **Multimodal Generation** (NEW in v0.1.4): Generate images, videos, audio, and documents via custom tools using OpenAI APIs - works with any backend
+- See custom tool configurations: [`understand_image.yaml`](massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml), [`text_to_image_generation_single.yaml`](massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_single.yaml)
 
 → For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://docs.massgen.ai/en/latest/user_guide/backends.html)
 
@@ -865,7 +877,7 @@ massgen --config @examples/tools/code-execution/multi_agent_playwright_automatio
   "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
 ```
 
-→ [**See detailed case studies**](docs/case_studies/README.md) with real session logs and outcomes
+→ [**See detailed case studies**](docs/source/examples/case_studies/README.md) with real session logs and outcomes
 
 #### Interactive Mode & Advanced Usage
 
@@ -986,7 +998,7 @@ All sessions are automatically logged with detailed information for debugging an
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
-- [**MassGen Case Studies**](docs/case_studies/README.md)
+- [**MassGen Case Studies**](docs/source/examples/case_studies/README.md)
 - [**Case Studies Documentation**](https://docs.massgen.ai/en/latest/examples/case_studies.html) - Browse case studies online
 
 ---
@@ -994,35 +1006,53 @@ To see how MassGen works in practice, check out these detailed case studies base
 
 ## 🗺️ Roadmap
 
-MassGen is currently in its foundational stage, with a focus on parallel, asynchronous multi-agent collaboration and orchestration. Our roadmap is centered on transforming this foundation into a highly robust, intelligent, and user-friendly system, while enabling frontier research and exploration. An earlier version of MassGen can be found [here](./massgen/v1).
+MassGen is currently in its foundational stage, with a focus on parallel, asynchronous multi-agent collaboration and orchestration. Our roadmap is centered on transforming this foundation into a highly robust, intelligent, and user-friendly system, while enabling frontier research and exploration.
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.1)
+### Recent Achievements (v0.1.4)
 
-**🎉 Released: October 20, 2025**
+**🎉 Released: October 27, 2025**
 
-#### Custom Tools System
-- **User-Defined Functions**: Register Python functions as tools using `ToolManager` class in `massgen/tool/_manager.py`
-- **Cross-Backend Support**: Works alongside MCP servers across all backends (Claude, Gemini, OpenAI, Chat Completions, Claude Code)
-- **Tool Categories**: Builtin, MCP, and custom tools with automatic discovery and conflict resolution
-- **40+ Examples**: Ready-to-use configurations in `massgen/configs/tools/custom_tools/`
+#### Multimodal Generation Tools
+- **Text-to-Image**: `text_to_image_generation` tool creates images from text prompts via DALL-E API
+- **Text-to-Video**: `text_to_video_generation` tool generates videos from text descriptions
+- **Text-to-Speech**: `text_to_speech_continue_generation` and `text_to_speech_transcription_generation` tools for audio generation and transcription
+- **Text-to-File**: `text_to_file_generation` tool creates documents in PDF, DOCX, XLSX, and PPTX formats
+- **Image-to-Image**: `image_to_image_generation` tool transforms existing images
 
-#### Voting Sensitivity & Answer Quality Controls
-- **Three-Tier System**: "lenient", "balanced", "strict" voting modes
-- **Answer Novelty Detection**: Prevents duplicate submissions with configurable similarity thresholds
-- **Quality Assurance**: Configurable `max_new_answers_per_agent` and token-based overlap detection
-- **Configuration**: `massgen/configs/voting/gemini_gpt_voting_sensitivity.yaml`
+#### Binary File Protection
+- **Automatic Blocking**: `PathPermissionManager` now prevents text-based read tools from accessing binary files
+- **Protected File Types**: 40+ extensions including images (.jpg, .png), videos (.mp4, .avi), audio (.mp3, .wav), archives (.zip, .tar), executables (.exe, .dll), and Office documents (.pdf, .docx, .xlsx, .pptx)
+- **Intelligent Guidance**: Error messages automatically suggest appropriate specialized tools (e.g., "use understand_image tool" for .jpg files)
+- **Test Coverage**: `test_binary_file_blocking.py`
 
-#### Backend & Documentation Enhancements
-- **Gemini Refactoring**: Extracted MCP management (`gemini_mcp_manager.py`), tracking (`gemini_trackers.py`), and utilities
-- **Capabilities Registry**: New `massgen/backend/capabilities.py` documenting feature support across backends
-- **Documentation Updates**: Enhanced custom tools guide, reorganized case studies, updated configuration schema
-- **Case Studies**:
-  - `docs/case_studies/github-issue-market-analysis.md` - Custom tools with GitHub issue market analysis (v0.1.1)
-  - `docs/case_studies/universal-code-execution-mcp.md` - MCP code execution across backends (v0.0.31)
+#### Web Scraping Capabilities
+- **Crawl4AI Tool**: `crawl4ai_tool` enables intelligent web scraping with LLM-powered content extraction and customizable patterns
 
-### Previous Achievements (v0.0.3 - v0.1.0)
+#### Documentation & Infrastructure
+  - **Generation Tools**: 8 multimodal generation configurations
+    - `text_to_image_generation_single.yaml` and `text_to_image_generation_multi.yaml`
+    - `text_to_video_generation_single.yaml` and `text_to_video_generation_multi.yaml`
+    - `text_to_speech_generation_single.yaml` and `text_to_speech_generation_multi.yaml`
+    - `text_to_file_generation_single.yaml` and `text_to_file_generation_multi.yaml`
+  - **Web Scraping**: `crawl4ai_example.yaml` for Crawl4AI integration
+
+### Previous Achievements (v0.0.3 - v0.1.3)
+
+✅ **Post-Evaluation Workflow (v0.1.3)**: `PostEvaluationToolkit` class with submit tool for confirming final answers and restart tool for orchestration restart with feedback, winning agent evaluates answer before submission, universal backend support (Claude, Response API, Chat Completions), opt-in via `enable_post_evaluation_tools` parameter
+
+✅ **Multimodal Understanding Tools (v0.1.3)**: `understand_image` for PNG/JPEG analysis, `understand_audio` for WAV/MP3 transcription, `understand_video` for MP4/AVI frame extraction, `understand_file` for PDF/DOCX processing, cross-backend support via OpenAI GPT-4.1, structured JSON output, configurations: `understand_image.yaml`, `understand_audio.yaml`, `understand_video.yaml`, `understand_file.yaml`
+
+✅ **Docker Sudo Mode (v0.1.3)**: `use_sudo` parameter for privileged Docker execution, system-level command support in containers, enhanced security documentation, test coverage in `test_code_execution.py`
+
+✅ **Intelligent Planning Mode (v0.1.2)**: Automatic question analysis determining operation irreversibility via `_analyze_question_irreversibility()` in orchestrator, selective tool blocking with `set_planning_mode_blocked_tools()` and `is_mcp_tool_blocked()` methods, read-only MCP operations during coordination with write operations blocked, zero-configuration transparent operation, multi-workspace support, comprehensive tests in `test_intelligent_planning_mode.py`, complete guide in `docs/dev_notes/intelligent_planning_mode.md`
+
+✅ **Model Updates (v0.1.2)**: Claude 4.5 Haiku model `claude-haiku-4-5-20251001`, reorganized Claude model priorities with `claude-sonnet-4-5-20250929` default, Grok web search fix with `_add_grok_search_params()` method for proper `extra_body` parameter handling, 5 updated planning mode configurations in `configs/tools/planning/`, updated `three_agents_default.yaml` with Grok-4-fast
+
+✅ **Custom Tools System (v0.1.1)**: User-defined Python function registration using `ToolManager` class in `massgen/tool/_manager.py`, cross-backend support alongside MCP servers, builtin/MCP/custom tool categories with automatic discovery, 40+ examples in `massgen/configs/tools/custom_tools/`, voting sensitivity controls with three-tier quality system (lenient/balanced/strict), answer novelty detection preventing duplicates
+
+✅ **Backend Enhancements (v0.1.1)**: Gemini architecture refactoring with extracted MCP management (`gemini_mcp_manager.py`), tracking (`gemini_trackers.py`), and utilities, new capabilities registry in `massgen/backend/capabilities.py` documenting feature support across backends
 
 ✅ **PyPI Package Release (v0.1.0)**: Official distribution via `pip install massgen` with simplified installation, global `massgen` command accessible from any directory, comprehensive Sphinx documentation at [docs.massgen.ai](https://docs.massgen.ai/), interactive setup wizard with use case presets and API key management, enhanced CLI with `@examples/` prefix for built-in configurations
 
@@ -1122,21 +1152,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.2 Roadmap
+### v0.1.5 Roadmap
 
-Version 0.1.2 focuses on enterprise collaboration and intelligent agent workflows:
+Version 0.1.5 focuses on Docker integration for MCP tools and backend code refactoring:
 
 #### Required Features
-- **General Interoperability**: Enable MassGen to orchestrate agents from multiple external frameworks with unified interface
-- **Final Agent Submit/Restart Tools**: Enable final agent to decide whether to submit or restart orchestration
-- **Memory Module - Phase 1**: Long-term memory implementation using mem0 for reasoning and document understanding
+- **Running MCP Tools in Docker**: Containerized execution environment for MCP tools with enhanced security and isolation
+- **Backend Code Refactoring**: Major code refactoring for improved maintainability and developer experience
 
 Key technical approach:
-- **Framework Integration**: Multi-agent coordination supporting external agent frameworks with specialized agent roles (researcher, analyst, critic, synthesizer)
-- **Submit/Restart**: Multi-step task verification with access to previous agents' responses and workspaces
-- **Memory Module**: Session-based memory management with persistent context across conversations
+- **Docker Integration**: Secure execution of third-party MCP tools in isolated Docker containers with resource limits and network isolation
+- **Backend Improvements**: Enhanced code organization, modularity, and architectural improvements for better maintainability
 
-For detailed milestones and technical specifications, see the [full v0.1.2 roadmap](ROADMAP.md).
+**Target Release**: October 30, 2025 (Wednesday @ 9am PT)
+
+For detailed milestones and technical specifications, see the [full v0.1.5 roadmap](ROADMAP_v0.1.5.md).
 
 ---
 

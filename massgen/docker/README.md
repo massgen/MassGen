@@ -115,6 +115,7 @@ agents:
 | `command_line_docker_memory_limit` | None | Memory limit (e.g., `"2g"`, `"512m"`) |
 | `command_line_docker_cpu_limit` | None | CPU cores limit (e.g., `2.0`) |
 | `command_line_docker_network_mode` | `"none"` | `"none"`, `"bridge"`, or `"host"` |
+| `command_line_docker_enable_sudo` | `false` | Enable sudo in containers (isolated from host) |
 
 ## How It Works
 
@@ -203,6 +204,88 @@ docker build -t my-custom-runtime:latest -f Dockerfile.custom .
 ```yaml
 command_line_docker_image: "my-custom-runtime:latest"
 ```
+
+### Sudo Variant (Runtime Package Installation)
+
+The sudo variant allows agents to install system packages at runtime inside their Docker container.
+
+**IMPORTANT: Build the image before first use:**
+```bash
+bash massgen/docker/build.sh --sudo
+```
+
+This builds `massgen/mcp-runtime-sudo:latest` with sudo access locally. (This image is not available on Docker Hub - you must build it yourself.)
+
+**Enable in config:**
+```yaml
+agent:
+  backend:
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    command_line_execution_mode: "docker"
+    command_line_docker_enable_sudo: true  # Automatically uses sudo image
+```
+
+**What agents can do with sudo:**
+```bash
+# Install system packages at runtime
+sudo apt-get update && sudo apt-get install -y ffmpeg
+
+# Install additional Python packages
+sudo pip install tensorflow
+
+# Modify system configuration inside the container
+sudo apt-get install -y postgresql-client
+```
+
+**Security model - Is this safe?**
+
+**YES, it's still safe** because Docker container isolation is the primary security boundary:
+
+✅ **Container is fully isolated from your host:**
+- Sudo inside container ≠ sudo on your computer
+- Agent can only access mounted volumes (workspace, context paths)
+- Cannot access your host filesystem outside mounts
+- Cannot affect host processes or system configuration
+- Docker namespaces/cgroups provide strong isolation
+
+✅ **What sudo can and cannot do:**
+- ✅ Can: Install packages inside the container (apt, pip, npm)
+- ✅ Can: Modify container system configuration
+- ✅ Can: Read/write mounted workspace (same as without sudo)
+- ❌ Cannot: Access your host filesystem outside mounts
+- ❌ Cannot: Affect your host system
+- ❌ Cannot: Break out of the container (unless Docker vulnerability exists)
+
+ℹ️ **Note:**
+- Container escape vulnerabilities (CVEs in Docker/kernel) are extremely rare and quickly patched
+- Standard Docker security practices apply
+
+❌ **Don't do this (makes it unsafe):**
+- Enabling privileged mode (not exposed in MassGen, would need code changes)
+- Mounting sensitive host paths like `/`, `/etc`, `/usr`
+- Disabling security features like AppArmor/SELinux
+
+**When to use sudo variant vs custom images:**
+
+| Approach | Use When | Performance | Security |
+|----------|----------|-------------|----------|
+| **Sudo variant** | Need flexibility, unknown packages upfront, prototyping | Slower (runtime install) | Good (container isolated) |
+| **Custom image** | Know packages needed, production use, performance matters | Fast (pre-installed) | Best (minimal attack surface) |
+
+**Custom image example (recommended for production):**
+```dockerfile
+FROM massgen/mcp-runtime:latest
+USER root
+RUN apt-get update && apt-get install -y ffmpeg postgresql-client
+USER massgen
+```
+
+Build: `docker build -t my-runtime:latest .`
+
+Use: `command_line_docker_image: "my-runtime:latest"`
+
+**Bottom line:** The sudo variant is safe for most use cases because Docker container isolation is strong. Custom images are preferred for production because they're faster and have a smaller attack surface, but sudo is fine for development and prototyping.
 
 ## Security Features
 

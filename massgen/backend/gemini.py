@@ -23,6 +23,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 import re
 import time
 from io import BytesIO
@@ -45,6 +46,19 @@ from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend
 from .gemini_mcp_manager import GeminiMCPManager
 from .gemini_trackers import MCPCallTracker, MCPResponseExtractor, MCPResponseTracker
 from .gemini_utils import CoordinationResponse
+
+
+# Suppress Gemini SDK logger warning about non-text parts in response
+# Using custom filter per https://github.com/googleapis/python-genai/issues/850
+class NoFunctionCallWarning(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "there are non-text parts in the response:" in message:
+            return False
+        return True
+
+
+logging.getLogger("google_genai.types").addFilter(NoFunctionCallWarning())
 
 try:
     from pydantic import BaseModel, Field
@@ -286,6 +300,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
             # Analyze tool types
             is_coordination = self.formatter.has_coordination_tools(tools)
+            is_post_evaluation = self.formatter.has_post_evaluation_tools(tools)
 
             valid_agent_ids = None
 
@@ -305,6 +320,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
             # For coordination requests, modify the prompt to use structured output
             if is_coordination:
                 full_content = self.formatter.build_structured_output_prompt(full_content, valid_agent_ids)
+            elif is_post_evaluation:
+                # For post-evaluation, modify prompt to use structured output
+                full_content = self.formatter.build_post_evaluation_prompt(full_content)
 
             # Use google-genai package
             client = genai.Client(api_key=self.api_key)
@@ -340,6 +358,16 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 if (not using_sdk_mcp) and (not using_custom_tools) and (not all_tools):
                     config["response_mime_type"] = "application/json"
                     config["response_schema"] = CoordinationResponse.model_json_schema()
+                else:
+                    # Tools or sessions are present; fallback to text parsing
+                    pass
+            elif is_post_evaluation:
+                # For post-evaluation, use JSON response format for structured decisions
+                from .gemini_utils import PostEvaluationResponse
+
+                if (not using_sdk_mcp) and (not using_custom_tools) and (not all_tools):
+                    config["response_mime_type"] = "application/json"
+                    config["response_schema"] = PostEvaluationResponse.model_json_schema()
                 else:
                     # Tools or sessions are present; fallback to text parsing
                     pass
@@ -452,6 +480,42 @@ class GeminiBackend(CustomToolAndMCPBackend):
                             )
                             tools_to_apply.extend(mcp_sessions)
                             sessions_applied = True
+
+                        if self.is_planning_mode_enabled():
+                            blocked_tools = self.get_planning_mode_blocked_tools()
+
+                            if not blocked_tools:
+                                # Empty set means block ALL MCP tools (backward compatible)
+                                logger.info("[Gemini] Planning mode enabled - blocking ALL MCP tools during coordination")
+                                # Don't set tools at all - this prevents any MCP tool execution
+                                log_backend_activity(
+                                    "gemini",
+                                    "All MCP tools blocked in planning mode",
+                                    {
+                                        "blocked_tools": len(available_mcp_tools),
+                                        "session_count": len(mcp_sessions),
+                                    },
+                                    agent_id=agent_id,
+                                )
+                            else:
+                                # Selective blocking - allow non-blocked tools to be called
+                                # The execution layer (_execute_mcp_function_with_retry) will enforce blocking
+                                # but we still register all tools so non-blocked ones can be used
+                                logger.info(f"[Gemini] Planning mode enabled - allowing non-blocked MCP tools, blocking {len(blocked_tools)} specific tools")
+
+                                # Pass all sessions - the backend's is_mcp_tool_blocked() will handle selective blocking
+                                session_config["tools"] = mcp_sessions
+
+                                log_backend_activity(
+                                    "gemini",
+                                    "Selective MCP tools blocked in planning mode",
+                                    {
+                                        "total_tools": len(available_mcp_tools),
+                                        "blocked_tools": len(blocked_tools),
+                                        "allowed_tools": len(available_mcp_tools) - len(blocked_tools),
+                                    },
+                                    agent_id=agent_id,
+                                )
 
                     # Add custom tools (if available)
                     if has_custom_tools:
@@ -1637,11 +1701,11 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
             content = full_content_text
 
-            # Process tool calls - only coordination tool calls (MCP manual mode removed)
+            # Process tool calls - coordination and post-evaluation tool calls (MCP manual mode removed)
             tool_calls_detected: List[Dict[str, Any]] = []
 
-            # Then, process coordination tools if present
-            if is_coordination and content.strip() and not tool_calls_detected:
+            # Process coordination tools OR post-evaluation tools if present
+            if (is_coordination or is_post_evaluation) and content.strip() and not tool_calls_detected:
                 # For structured output mode, the entire content is JSON
                 structured_response = None
                 # Try multiple parsing strategies
@@ -1660,14 +1724,15 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         # Log conversion to tool calls (summary)
                         log_stream_chunk("backend.gemini", "tool_calls", tool_calls, agent_id)
 
-                        # Log each coordination tool call for analytics/debugging
+                        # Log each tool call for analytics/debugging
+                        tool_type = "post_evaluation" if is_post_evaluation else "coordination"
                         try:
                             for tool_call in tool_calls:
                                 log_tool_call(
                                     agent_id,
-                                    tool_call.get("function", {}).get("name", "unknown_coordination_tool"),
+                                    tool_call.get("function", {}).get("name", f"unknown_{tool_type}_tool"),
                                     tool_call.get("function", {}).get("arguments", {}),
-                                    result="coordination_tool_called",
+                                    result=f"{tool_type}_tool_called",
                                     backend_name="gemini",
                                 )
                         except Exception:

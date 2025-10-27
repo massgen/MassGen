@@ -166,3 +166,25 @@ jobs:
             cat docs/_build/warnings.txt
           fi
         continue-on-error: true
+
+  # deploy-readthedocs:
+  #   name: Deploy to ReadTheDocs
+  #   runs-on: ubuntu-latest
+  #   needs: [validate-documentation, documentation-build]
+  #   if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/doc_web')
+
+  #   steps:
+  #     - name: Trigger ReadTheDocs build
+  #       run: |
+  #         echo "Triggering ReadTheDocs build for branch: ${{ github.ref_name }}"
+  #         curl -X POST \
+  #           -H "Authorization: Token ${{ secrets.READTHEDOCS_TOKEN }}" \
+  #           https://readthedocs.org/api/v3/projects/massgendoc/versions/latest/builds/
+  #       continue-on-error: true
+
+  #     - name: Check deployment status
+  #       if: success()
+  #       run: |
+  #         echo "✓ ReadTheDocs build triggered successfully"
+  #         echo "Visit https://massgendoc.readthedocs.io to view the documentation"
+

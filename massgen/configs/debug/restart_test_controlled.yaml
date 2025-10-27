@@ -1,0 +1,60 @@
+# Two Agent Orchestration Restart Test Configuration (No Filesystem)
+# This configuration demonstrates the orchestration restart feature for self-correcting coordination
+# Uses debug_final_answer to force restart on first attempt for testing
+#
+# Setup Requirements:
+# 1. Set environment variable in .env file:
+#    OPENAI_API_KEY="your_openai_key"
+#
+# Example usage:
+# massgen --config @examples/configs/debug/restart_test_controlled.yaml "Describe two famous Beatles members: John Lennon and Paul McCartney. Include their birth year, role in the band, and notable contributions."
+#
+# Expected behavior:
+# - Attempt 1: Agents coordinate, final presentation shows debug override (incomplete answer)
+# - Post-evaluation detects incomplete answer and calls restart_orchestration()
+# - Restart banner displays with reason and instructions
+# - Attempt 2: Agents see restart context and produce complete answer
+# - Post-evaluation approves and calls submit()
+# - Inspection menu appears
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      # type: "gemini"
+      # model: "gemini-2.5-flash"
+      # type: "grok"
+      # model: "grok-4-fast"
+      # type: "claude"
+      # model: "claude-sonnet-4-5-20250929"
+      # type: "claude_code"
+      # model: "claude-sonnet-4-5-20250929"
+      # cwd: "workspace1"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  # Restart configuration
+  coordination:
+    max_orchestration_restarts: 2  # Allow up to 2 restarts (3 total attempts)
+
+  # DEBUG MODE: Override final answer on attempt 1 to simulate incomplete response
+  debug_final_answer: |
+    John Lennon was born in 1940 in Liverpool, England. He was a founding member
+    of The Beatles and served as rhythm guitarist and vocalist. He co-wrote many
+    of the band's greatest hits with Paul McCartney. After the Beatles disbanded,
+    he pursued a successful solo career and became known for his peace activism.
+
+  # Use lenient voting for faster coordination in debug mode
+  voting_sensitivity: "lenient"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

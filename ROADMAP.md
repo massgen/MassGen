@@ -1,8 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.1
+**Current Version:** v0.1.4
+
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
-**Last Updated:** October 20, 2025
+
+**Last Updated:** October 27, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -19,7 +21,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | General Interoperability | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
-| Memory Module | [@kitrakrev](https://github.com/kitrakrev) | kitrak_23536 |
+| Memory Module | [@qidanrui](https://github.com/qidanrui) [@ncrispino](https://github.com/ncrispino) | danrui2020, nickcrispino |
 | Final Agent Submit/Restart | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Coding Agent Enhancements | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | DSPy Integration | [@praneeth999](https://github.com/praneeth999) | ram2561 |
@@ -29,78 +31,67 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 🚀 Upcoming Releases
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.1** | ✅ 10/20/25 | Custom Tools System | @qidanrui | User-defined Python functions as tools alongside MCP servers |
-| | | Voting Sensitivity Controls | @qidanrui | Three-tier voting system for multi-agent quality control |
-| | | Interactive Config Builder | @ncrispino | Wizard for creating YAML configurations |
-| **v0.1.2** | 10/22/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
-| | | Final Agent Submit/Restart Tools | @ncrispino | Multi-step task verification and intelligent restart decisions |
-| | | Memory Module (Phase 1) | @kitrakrev | Long-term memory for reasoning tasks and document understanding |
-| **v0.1.3** | 10/24/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Irreversible Actions Safety | @franklinnwren | Safety controls for production deployments with dangerous operations |
+| **v0.1.5** | 10/30/25 | Memory implementation | @ncrispino @qidanrui | Short and long-term memory implementation for agents |
+| | | Backend Code Refactoring | @praneeth999 | Improved code organization and maintainability |
+| **v0.1.6** | 11/01/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
+| **v0.1.7** | 11/04/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
+| | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.1 - Custom Tools & Quality Controls ✅ COMPLETED
-
-**Released:** October 20, 2025
-
-### Features Delivered
-
-**1. Custom Tools System** (@qidanrui) ✅
-- Complete framework for registering user-defined Python functions as tools
-- New `ToolManager` class for centralized tool registration and lifecycle management
-- Support for custom tools alongside MCP servers across all backends
-- 40+ example configurations demonstrating custom tool usage
-- **Use Case**: Domain-specific workflows with custom Python functions (data processing, API integration, specialized computations)
-
-**2. Voting Sensitivity & Answer Novelty Controls** (@qidanrui) ✅
-- Three-tier voting system: "lenient", "balanced", "strict"
-- Answer novelty detection preventing duplicate submissions
-- Configurable quality thresholds for multi-agent coordination
-- **Use Case**: Quality control for multi-agent systems requiring high-quality consensus
-
-**3. Interactive Configuration Builder** (@ncrispino) ✅
-- Wizard for creating YAML configurations with step-by-step prompts
-- Backend selection, model configuration, and API key setup
-- Integration via `massgen --config-builder` command
-- **Use Case**: Simplified onboarding for new users and rapid prototyping
-
-### Success Criteria
-- ✅ Custom tools system fully functional across all backends
-- ✅ Voting sensitivity controls improving answer quality
-- ✅ Configuration builder simplifying setup process
-
----
-
-## 📋 v0.1.2 - General Interoperability & Enterprise Collaboration
+## 📋 v0.1.5 - Memory Implementation & Backend Refactoring
 
 ### Features
 
-**1. General Interoperability** (@qidanrui)
-- Issue: [#341](https://github.com/Leezekun/MassGen/issues/341)
-- Framework integration for external agent systems
-- Unified agent interface for seamless integration
-- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source
+**1. Handle Context Limit Overflow** (@ncrispino, @qidanrui)
+- Issue: [#347](https://github.com/Leezekun/MassGen/issues/347)
+- Implement strategies to handle when context passes context limit
+- Automatic context management and truncation
+- **Use Case**: Enable agents to work on long-running tasks without hitting context limits
 
-**2. Final Agent Submit/Restart Tools** (@ncrispino)
-- Issue: [#325](https://github.com/Leezekun/MassGen/issues/325)
-- Enable final agent to decide whether to submit answer or restart orchestration
-- Agent can access previous agents' responses and workspaces when restarting
-- **Use Case**: Multi-step tasks where completion requires verification (repository cloning + issue resolution, planning-mode scenarios)
+**2. Persistent Memory Across Restarts** (@ncrispino, @qidanrui)
+- Issue: [#348](https://github.com/Leezekun/MassGen/issues/348)
+- Ensure memory persists across system restarts
+- Short and long-term memory implementation for agents
+- **Use Case**: Maintain continuity in agent reasoning and learning across sessions
+
+**3. Backend Code Refactoring** (@praneeth999)
+- PR: [#362](https://github.com/Leezekun/MassGen/pull/362)
+- Major backend code refactoring for improved maintainability
+- Enhanced code organization and architectural improvements
+- **Use Case**: Improved developer experience and easier future enhancements
 
 ### Success Criteria
-- ✅ Final agent can intelligently decide to restart when task is incomplete
-- ✅ Documentation with use case examples
+- ✅ Agents handle context limit overflow gracefully
+- ✅ Memory persists reliably across restarts
+- ✅ Backend refactoring merged with improved code structure
 
 ---
 
-## 📋 v0.1.3 - Intelligent Optimization & Safety
+## 📋 v0.1.6 - Interoperability & Memory
+
+### Features
+
+**1. Agent Framework Interoperability** (@qidanrui)
+- Issue: [#374](https://github.com/Leezekun/MassGen/issues/374)
+- PR: [#341](https://github.com/Leezekun/MassGen/pull/341) (Draft)
+- Agent-as-tool wrapper system for cross-framework collaboration
+- Enable agents from AG2, LangGraph, and other frameworks to work together
+- Unified interface for framework-agnostic collaboration
+- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source without rewriting them
+
+### Success Criteria
+- ✅ Agents from different frameworks (AG2, LangGraph) can be wrapped as tools
+- ✅ Cross-framework agent collaboration works seamlessly
+
+---
+
+## 📋 v0.1.7 - Intelligent Optimization & Advanced Voting
 
 ### Features
 
@@ -110,15 +101,15 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Issue: [#316](https://github.com/Leezekun/MassGen/issues/316)
 - **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
 
-**2. Irreversible Actions Safety** (@franklinnwren)
-- LLM-generated detection of irreversible MCP tools
-- Optional human-in-the-loop approval
-- Per-user customizable tool lists
-- **Use Case**: Writing to real-world documents, database operations, production deployments where safety is critical
+**2. Add Computer Use Agent to Custom Tools** (@qidanrui)
+- Issue: [#358](https://github.com/Leezekun/MassGen/issues/358)
+- Computer use agent integration with custom tools system
+- Enable agents to interact with computer interfaces
+- **Use Case**: Automated UI testing, browser automation, and desktop application interaction
 
 ### Success Criteria
 - ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
-- ✅ Safety controls prevent accidental irreversible operations
+- ✅ Computer use agent successfully integrated with custom tools
 
 ---
 
@@ -141,10 +132,10 @@ These features are being actively developed on **separate parallel tracks** and 
 - Image, audio, video processing across backends
 - **Shipping:** Incremental improvements each release
 
-### Track: Memory Module (@kitrakrev, kitrak_23536)
-- PR: TODO
-- Long-term memory implementation using mem0
-- **Target:** v0.1.1 (Phase 1), v0.1.2 (Phase 2)
+### Track: Memory Module (@qidanrui, @ncrispino, danrui2020, nickcrispino)
+- Issues: [#347](https://github.com/Leezekun/MassGen/issues/347), [#348](https://github.com/Leezekun/MassGen/issues/348)
+- Short and long-term memory implementation with persistence
+- **Target:** v0.1.5 (Context management & persistence)
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
@@ -226,5 +217,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 20, 2025
+**Last Updated:** October 27, 2025
 **Maintained By:** MassGen Team

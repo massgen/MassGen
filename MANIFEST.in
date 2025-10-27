@@ -1,10 +1,12 @@
 include README.md
+include README_PYPI.md
 include LICENSE
 include CONTRIBUTING.md
 include CHANGELOG.md
 include requirements.txt
 recursive-include massgen/configs *.yaml *.yml
 include .env.example
+recursive-include assets *.png *.gif *.jpg *.jpeg *.ico
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 exclude .gitignore
