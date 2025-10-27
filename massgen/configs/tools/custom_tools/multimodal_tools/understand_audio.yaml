@@ -1,6 +1,6 @@
 # MassGen Configuration: Understand Audio Tool
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/understand_audio.yaml "Please summarize the content in this audio."
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/understand_audio.yaml "Please summarize the content in this audio."
 agents:
   - id: "understand_audio_tool"
     backend:

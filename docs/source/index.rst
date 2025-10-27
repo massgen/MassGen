@@ -7,19 +7,32 @@ MassGen: Multi-Agent Scaling System for GenAI
    <img src="_static/images/logo.png" width="360" alt="MassGen Logo" class="theme-image-light">
    <img src="_static/images/logo-dark.png" width="360" alt="MassGen Logo" class="theme-image-dark">
 
-|
-
 .. raw:: html
 
    <p align="center">
+     <a href="https://pypi.org/project/massgen/">
+       <img src="https://img.shields.io/pypi/v/massgen?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=3775A9" alt="PyPI">
+     </a>
+     <a href="https://github.com/Leezekun/MassGen">
+       <img src="https://img.shields.io/github/stars/Leezekun/MassGen?style=flat-square&logo=github&color=181717&logoColor=white" alt="GitHub Stars">
+     </a>
      <a href="https://www.python.org/downloads/">
-       <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+">
+       <img src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
      </a>
      <a href="https://github.com/Leezekun/MassGen/blob/main/LICENSE">
-       <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
+       <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="License">
+     </a>
+   </p>
+
+   <p align="center">
+     <a href="https://x.massgen.ai">
+       <img src="https://img.shields.io/badge/FOLLOW%20ON%20X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X">
+     </a>
+     <a href="https://www.linkedin.com/company/massgen-ai">
+       <img src="https://img.shields.io/badge/FOLLOW%20ON%20LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Follow on LinkedIn">
      </a>
      <a href="https://discord.massgen.ai">
-       <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Discord">
+       <img src="https://img.shields.io/badge/JOIN%20OUR%20DISCORD-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord">
      </a>
    </p>
 
@@ -34,11 +47,9 @@ MassGen: Multi-Agent Scaling System for GenAI
 .. raw:: html
 
    <a href="https://www.youtube.com/watch?v=Dp2oldJJImw" style="display: block; text-align: center;">
-     <img src="_static/images/massgen-demo-light.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-light">
-     <img src="_static/images/massgen-demo.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-dark">
+     <img src="_static/images/readme.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-light">
+     <img src="_static/images/readme.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-dark">
    </a>
-
-|
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
 
@@ -100,17 +111,17 @@ Key Features
 Recent Releases
 ---------------
 
-**v0.1.0 (October 17, 2025)** - PyPI Package Release
+**v0.1.4 (October 27, 2025)** - Multimodal Generation Tools & Binary File Protection
 
-Official PyPI package available for installation via ``pip install massgen`` with comprehensive Sphinx documentation.
+Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
 
-**v0.0.32 (October 15, 2025)** - Docker Execution & MCP Refactoring
+**v0.1.3 (October 24, 2025)** - Post-Evaluation Tools & Multimodal Understanding
 
-Docker-based isolated command execution with resource limits. Major MCP architecture simplification for better maintainability.
+Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
 
-**v0.0.31 (October 13, 2025)** - Code Execution & Framework Integration
+**v0.1.2 (October 22, 2025)** - Intelligent Planning Mode & Model Updates
 
-Universal MCP-based command execution across all backends. AG2 framework integration with group chat support. Limited audio/video generation capabilities.
+Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
 
 Quick Start
 -----------

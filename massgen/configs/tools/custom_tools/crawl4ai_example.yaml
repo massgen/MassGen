@@ -1,0 +1,55 @@
+# MassGen Configuration: Crawl4AI Web Scraping via Custom Tools
+#
+# Prerequisites:
+#   1. Start crawl4ai Docker container (one-time setup):
+#      docker pull unclecode/crawl4ai:latest
+#      docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+#
+#   2. Verify container is running:
+#      docker ps | grep crawl4ai
+#
+#   3. Test REST API endpoint (optional):
+#      curl -X POST http://localhost:11235/md -H "Content-Type: application/json" -d '{"url": "https://example.com", "f": "fit"}'
+#
+# Usage:
+#   massgen --config @examples/configs/tools/custom_tools/crawl4ai_example.yaml "Please search for the MassGen docs, take a screenshot of the website, and explain that screenshot"
+#
+# Available Tools (via Custom Tools):
+#   - crawl4ai_md: Generate markdown from web content
+#   - crawl4ai_html: Extract preprocessed HTML
+#   - crawl4ai_screenshot: Capture webpage screenshots
+#   - crawl4ai_pdf: Generate PDF documents
+#   - crawl4ai_execute_js: Run JavaScript on web pages
+#   - crawl4ai_crawl: Perform multi-URL crawling
+#   - crawl4ai_ask: Query the Crawl4AI library context
+#
+# Note: Multiple agents can use these tools concurrently.
+#       The server handles up to 5 concurrent crawls by default.
+
+agents:
+  - id: "web_scraper_agent"
+    backend:
+      type: "openai"  # Works with any backend: openai, gemini, claude_code, etc.
+      model: "gpt-5-mini"
+      cwd: "workspace1"
+
+      # Register crawl4ai custom tools
+      custom_tools:
+        - name: ["crawl4ai_md", "crawl4ai_html", "crawl4ai_screenshot", "crawl4ai_pdf", "crawl4ai_execute_js", "crawl4ai_crawl"]
+          category: "web_scraping"
+          path: "massgen/tool/_web_tools/crawl4ai_tool.py"
+          function: ["crawl4ai_md", "crawl4ai_html", "crawl4ai_screenshot", "crawl4ai_pdf", "crawl4ai_execute_js", "crawl4ai_crawl"]
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  coordination:
+    max_orchestration_restarts: 2  # Default: 0 (allows 3 total attempts: initial + 2 restarts)
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

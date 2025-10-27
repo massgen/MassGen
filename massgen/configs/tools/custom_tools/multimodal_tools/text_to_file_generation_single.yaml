@@ -1,0 +1,29 @@
+# MassGen Configuration: Text to File Generation Tool
+# Usage:
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_file_generation_single.yaml "Please generate a comprehensive technical report about the latest developments in Large Language Models (LLMs) and Generative AI. The report should include the following sections: 1) Executive Summary, 2) Introduction to LLMs and their architecture, 3) Recent breakthroughs in 2024-2025, 4) Applications in industry including healthcare, finance, and education, 5) Ethical considerations and limitations, 6) Future directions and research opportunities. Please make the report approximately 10-15 pages long with proper citations and references, and save it as a PDF file with a professional layout."
+agents:
+  - id: "text_to_file_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace1"
+      enable_file_generation: true
+      custom_tools:
+        - name: ["text_to_file_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_file_generation.py"
+          function: ["text_to_file_generation"]
+        - name: ["understand_file"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_file.py"
+          function: ["understand_file"]
+    system_message: |
+      You are an AI assistant with access to text-to-file generation capabilities.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "simple"
+  logging_enabled: true

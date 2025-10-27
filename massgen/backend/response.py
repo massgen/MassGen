@@ -57,6 +57,7 @@ class ResponseBackend(CustomToolAndMCPBackend):
 
         Wraps parent implementation to ensure File Search cleanup happens after streaming completes.
         """
+
         try:
             async for chunk in super().stream_with_tools(messages, tools, **kwargs):
                 yield chunk
@@ -145,6 +146,7 @@ class ResponseBackend(CustomToolAndMCPBackend):
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Recursively stream MCP responses, executing function calls as needed."""
+
         agent_id = kwargs.get("agent_id")
 
         # Build API params for this iteration

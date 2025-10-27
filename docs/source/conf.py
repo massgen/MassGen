@@ -132,6 +132,33 @@ html_theme_options = {
     "navigation_depth": 4,
     "includehidden": True,
     "titles_only": False,
+    # Social and community links
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/Leezekun/MassGen",
+            "icon": "fa-brands fa-github",
+            "type": "fontawesome",
+        },
+        {
+            "name": "Discord",
+            "url": "https://discord.massgen.ai",
+            "icon": "fa-brands fa-discord",
+            "type": "fontawesome",
+        },
+        {
+            "name": "X (Twitter)",
+            "url": "https://x.massgen.ai",
+            "icon": "fa-brands fa-x-twitter",
+            "type": "fontawesome",
+        },
+        {
+            "name": "LinkedIn",
+            "url": "https://www.linkedin.com/company/massgen-ai",
+            "icon": "fa-brands fa-linkedin",
+            "type": "fontawesome",
+        },
+    ],
 }
 
 # Logo and favicon (fallback if theme doesn't support logo dict)

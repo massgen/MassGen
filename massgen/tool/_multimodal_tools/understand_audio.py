@@ -42,6 +42,7 @@ async def understand_audio(
     audio_paths: List[str],
     model: str = "gpt-4o-transcribe",
     allowed_paths: Optional[List[str]] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """
     Transcribe audio file(s) to text using OpenAI's Transcription API.
@@ -55,6 +56,7 @@ async def understand_audio(
                     - Absolute path: Must be within allowed directories
         model: Model to use (default: "gpt-4o-transcribe")
         allowed_paths: List of allowed base paths for validation (optional)
+        agent_cwd: Current working directory of the agent (optional)
 
     Returns:
         ExecutionResult containing:
@@ -108,10 +110,13 @@ async def understand_audio(
 
         for audio_path_str in audio_paths:
             # Resolve audio path
+            # Use agent_cwd if available, otherwise fall back to Path.cwd()
+            base_dir = Path(agent_cwd) if agent_cwd else Path.cwd()
+
             if Path(audio_path_str).is_absolute():
                 audio_path = Path(audio_path_str).resolve()
             else:
-                audio_path = (Path.cwd() / audio_path_str).resolve()
+                audio_path = (base_dir / audio_path_str).resolve()
 
             # Validate audio path
             _validate_path_access(audio_path, allowed_paths_list)
@@ -132,6 +137,19 @@ async def understand_audio(
                     "success": False,
                     "operation": "generate_text_with_input_audio",
                     "error": f"File does not appear to be an audio file: {audio_path}",
+                }
+                return ExecutionResult(
+                    output_blocks=[TextContent(data=json.dumps(result, indent=2))],
+                )
+
+            # Check file size (OpenAI Whisper API has 25MB limit)
+            file_size = audio_path.stat().st_size
+            max_size = 25 * 1024 * 1024  # 25MB
+            if file_size > max_size:
+                result = {
+                    "success": False,
+                    "operation": "generate_text_with_input_audio",
+                    "error": f"Audio file too large: {audio_path} ({file_size/1024/1024:.1f}MB > 25MB). " "Please use a smaller file or compress the audio.",
                 }
                 return ExecutionResult(
                     output_blocks=[TextContent(data=json.dumps(result, indent=2))],
