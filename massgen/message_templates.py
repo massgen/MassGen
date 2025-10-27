@@ -370,7 +370,8 @@ Present the best possible coordinated answer by combining the strengths from all
         #             presentation_instructions += """For image generation tasks:
         # - Extract image paths from the existing answer and resolve them in the shared reference.
         # - Gather all agent-produced images (ignore non-existent files).
-        # - IMPORTANT: If you find ANY existing images (from yourself or other agents), you MUST call the understand_image tool to analyze EACH image and extract their key visual elements, composition, style, and quality.
+        # - IMPORTANT: If you find ANY existing images (from yourself or other agents), you MUST call the understand_image tool
+        #   to analyze EACH image and extract their key visual elements, composition, style, and quality.
         # - IMPORTANT: Synthesize insights from all analyzed images into a detailed, combined prompt that captures the best elements.
         # - IMPORTANT: Call text_to_image_generation with this synthesized prompt to generate the final image.
         # - IMPORTANT: Save the final output in your workspace and output the saved path.

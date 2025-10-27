@@ -168,7 +168,7 @@ def _generate_pptx(content: str, file_path: Path) -> None:
                 {
                     "title": "Generated Content",
                     "content": [line.strip() for line in content.split("\n") if line.strip()],
-                }
+                },
             ]
 
         # Create slides
