@@ -392,17 +392,20 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal (Image/Audio/Video) | Advanced Features |
-|---------|:-----------:|:--------------:|:---------------:|:-----------:|:----------:|:-----------------|
-| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
-| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code execution, **MCP integration**|
-| **Grok API** | ✅ | ❌ | ✅ | ✅ | ❌ | Web search, **MCP integration** |
-| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ❌ | **MCP integration** |
+| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal Understanding | Multimodal Generation | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------:|:------------------------:|:---------------------:|:-----------------|
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | Web search, code interpreter, **MCP integration** |
+| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
+| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | Web search, code execution, **MCP integration**|
+| **Grok API** | ✅ | ❌ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | Web search, **MCP integration** |
+| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | Web search, code interpreter, **MCP integration** |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | **MCP integration** |
 
-**Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
+**Notes:**
+- **Multimodal Understanding** (NEW in v0.1.3): Analyze images, audio, video, and documents via custom tools using OpenAI GPT-4.1 - works with any backend
+- **Multimodal Generation** (NEW in v0.1.4): Generate images, videos, audio, and documents via custom tools using OpenAI APIs - works with any backend
+- See custom tool configurations: [`understand_image.yaml`](massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml), [`text_to_image_generation_single.yaml`](massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_single.yaml)
 
 → For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://docs.massgen.ai/en/latest/user_guide/backends.html)
 
