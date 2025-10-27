@@ -1,7 +1,7 @@
 # Memory Feature Testing Summary
 
-**Date:** October 27, 2025  
-**Branch:** memory  
+**Date:** October 27, 2025
+**Branch:** memory
 **Tester:** GitHub Copilot
 
 ## Executive Summary
@@ -14,7 +14,7 @@ The MassGen memory system has been designed and partially implemented, with the 
 
 1. **ConversationMemory (Short-term Memory)**
    - ✓ Message storage and retrieval
-   - ✓ Role-based filtering  
+   - ✓ Role-based filtering
    - ✓ Message truncation
    - ✓ State save/restore
    - ✓ Last message retrieval
@@ -71,8 +71,8 @@ uv run python -m massgen.cli \
   "My name is Alice. Please remember this."
 ```
 
-**Expected:** Agent stores "Alice" to persistent memory  
-**Actual:** Agent responds but doesn't use persistent memory  
+**Expected:** Agent stores "Alice" to persistent memory
+**Actual:** Agent responds but doesn't use persistent memory
 **Cause:** Config parsing doesn't read `persistent_memory` section
 
 ### Test 2: Memory Recall
@@ -82,8 +82,8 @@ uv run python -m massgen.cli \
   "What is my name?"
 ```
 
-**Expected:** Agent recalls "Alice" from previous session  
-**Actual:** Agent says it doesn't know the name  
+**Expected:** Agent recalls "Alice" from previous session
+**Actual:** Agent says it doesn't know the name
 **Cause:** No persistent memory attached to agent
 
 ### Test 3: Programmatic Demo
@@ -114,21 +114,21 @@ File: `massgen/cli.py`, function: `create_agents_from_config()`
 memory_config = agent_data.get("persistent_memory", {})
 if memory_config.get("enabled", False):
     from massgen.memory import PersistentMemory
-    
+
     # Create LLM backend for memory operations
     llm_config = memory_config.get("llm", {})
     llm_backend = create_backend(
         llm_config["backend_type"],
         model=llm_config["model"]
     )
-    
+
     # Create embedding backend
     embedding_config = memory_config.get("embedding", {})
     embedding_backend = create_backend(
         embedding_config["backend_type"],
         model=embedding_config["model"]
     )
-    
+
     # Create persistent memory instance
     persistent_memory = PersistentMemory(
         agent_name=memory_config["agent_name"],
@@ -138,7 +138,7 @@ if memory_config.get("enabled", False):
         embedding_backend=embedding_backend,
         on_disk=memory_config.get("on_disk", False)
     )
-    
+
     # TODO: Pass to agent constructor when it supports the parameter
     # agent.persistent_memory = persistent_memory
 ```
@@ -155,7 +155,7 @@ File: `massgen/memory/_persistent.py`, method: `record()`
 
 File: `massgen/chat_agent.py`, class: `ConfigurableAgent.__init__()`
 
-**Current:** Accepts `persistent_memory` parameter but doesn't use it from config  
+**Current:** Accepts `persistent_memory` parameter but doesn't use it from config
 **Required:** Ensure parameter is properly accepted and stored
 
 ### Priority 4: CLI Memory Management

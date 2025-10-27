@@ -10,19 +10,19 @@ agents:
     backend:
       type: "openai"
       model: "gpt-5-mini"
-    
+
     persistent_memory:
       enabled: true
       agent_name: "my_agent_name"
       user_name: "user_identifier"  # optional
       session_name: "session_id"    # optional
       on_disk: true
-      
+
       # LLM for memory operations (summarization, extraction)
       llm:
         backend_type: "openai"
         model: "gpt-5-mini"
-      
+
       # Embeddings for semantic search
       embedding:
         backend_type: "openai"
@@ -183,7 +183,7 @@ persistent_memory:
   enabled: true
   agent_name: "my_agent"
   on_disk: true
-  
+
   # Custom vector store configuration
   vector_store:
     provider: "qdrant"  # or "chroma", "pinecone"
@@ -191,11 +191,11 @@ persistent_memory:
       path: "./custom_memory_path"
       collection_name: "my_memories"
       # Provider-specific options...
-  
+
   llm:
     backend_type: "openai"
     model: "gpt-5-mini"
-  
+
   embedding:
     backend_type: "openai"
     model: "text-embedding-3-small"

@@ -16,12 +16,12 @@ uv run python -m massgen.cli \
 
 **Prompt:**
 ```
-Clone the FastAPI repository (https://github.com/tiangolo/fastapi.git) and analyze 
-the codebase comprehensively. Create an architecture document that explains: 
-(1) Core components and their responsibilities, 
-(2) How different modules interact, 
-(3) Key design patterns used, 
-(4) Main entry points and request flows. 
+Clone the FastAPI repository (https://github.com/tiangolo/fastapi.git) and analyze
+the codebase comprehensively. Create an architecture document that explains:
+(1) Core components and their responsibilities,
+(2) How different modules interact,
+(3) Key design patterns used,
+(4) Main entry points and request flows.
 Read at least 30 files to build a complete understanding of the architecture.
 ```
 
@@ -89,8 +89,8 @@ Each agent independently:
 
 **Memory in Action:**
 ```
-Agent 1 saves: "FastAPI repository contains core logic in fastapi/ directory, 
-extensive tests in tests/, and documentation in docs/. Main entry point 
+Agent 1 saves: "FastAPI repository contains core logic in fastapi/ directory,
+extensive tests in tests/, and documentation in docs/. Main entry point
 likely in fastapi/__init__.py or fastapi/main.py"
 ```
 
@@ -521,24 +521,24 @@ The memory feature is **not yet integrated with the configuration system**. Spec
 3. **Required Implementation:**
    ```python
    # In massgen/cli.py, create_agents_from_config() function needs:
-   
+
    # Parse memory config
    memory_config = agent_data.get("persistent_memory", {})
    if memory_config.get("enabled", False):
        # Create LLM backend for memory operations
        llm_config = memory_config.get("llm", {})
        llm_backend = create_backend(
-           llm_config["backend_type"], 
+           llm_config["backend_type"],
            model=llm_config["model"]
        )
-       
+
        # Create embedding backend
        embedding_config = memory_config.get("embedding", {})
        embedding_backend = create_backend(
            embedding_config["backend_type"],
            model=embedding_config["model"]
        )
-       
+
        # Instantiate PersistentMemory
        from massgen.memory import PersistentMemory
        persistent_memory = PersistentMemory(
@@ -549,10 +549,10 @@ The memory feature is **not yet integrated with the configuration system**. Spec
            embedding_backend=embedding_backend,
            on_disk=memory_config.get("on_disk", False)
        )
-       
+
        # Pass to agent constructor
        agent = ConfigurableAgent(
-           config=agent_config, 
+           config=agent_config,
            backend=backend,
            persistent_memory=persistent_memory  # <-- Add this parameter
        )

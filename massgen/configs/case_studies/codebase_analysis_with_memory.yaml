@@ -12,19 +12,19 @@ agents:
       reasoning:
         effort: "medium"
         summary: "auto"
-    
+
     # Enable persistent memory for long-term knowledge retention
     persistent_memory:
       enabled: true
       agent_name: "codebase_analyzer_gpt5"
       user_name: "developer"
       on_disk: true
-      
+
       # LLM config for memory operations (summarization, extraction)
       llm:
         backend_type: "openai"
         model: "gpt-5-mini"
-      
+
       # Embedding config for semantic search
       embedding:
         backend_type: "openai"
@@ -34,18 +34,18 @@ agents:
     backend:
       type: "gemini"
       model: "gemini-2.5-flash"
-    
+
     # Enable persistent memory
     persistent_memory:
       enabled: true
       agent_name: "codebase_analyzer_gemini"
       user_name: "developer"
       on_disk: true
-      
+
       llm:
         backend_type: "gemini"
         model: "gemini-2.5-flash"
-      
+
       embedding:
         backend_type: "openai"
         model: "text-embedding-3-small"
@@ -60,12 +60,12 @@ tools:
       - "list_directory"
       - "search_files"
       - "create_directory"
-    
+
     # Allow access to temporary workspace
     allowed_paths:
       - "./workspace"
       - "/tmp/massgen_workspace"
-    
+
     # Prevent access to sensitive areas
     protected_paths:
       - "~/.ssh"
@@ -81,7 +81,7 @@ tools:
       - "grep"
       - "find"
       - "tree"
-    
+
     # Prevent destructive operations
     blocked_commands:
       - "rm -rf"
