@@ -24,6 +24,10 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
                 "exclude_tools",
                 "custom_tools",  # Custom tools configuration (processed separately)
                 "_has_file_search_files",  # Internal flag for file search tracking
+                "enable_file_generation",  # Internal flag for file generation (used in system messages only)
+                "enable_image_generation",  # Internal flag for image generation (used in system messages only)
+                "enable_audio_generation",  # Internal flag for audio generation (used in system messages only)
+                "enable_video_generation",  # Internal flag for video generation (used in system messages only)
             },
         )
 

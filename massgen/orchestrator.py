@@ -2513,6 +2513,20 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_audio_generation = agent.backend.backend_params.get("enable_audio_generation", False)
 
+        # Check if file generation is enabled for this agent
+        enable_file_generation = False
+        if hasattr(agent, "config") and agent.config:
+            enable_file_generation = agent.config.backend_params.get("enable_file_generation", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_file_generation = agent.backend.backend_params.get("enable_file_generation", False)
+
+        # Check if video generation is enabled for this agent
+        enable_video_generation = False
+        if hasattr(agent, "config") and agent.config:
+            enable_video_generation = agent.config.backend_params.get("enable_video_generation", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_video_generation = agent.backend.backend_params.get("enable_video_generation", False)
+
         # Check if agent has write access to context paths (requires file delivery)
         has_irreversible_actions = False
         if agent.backend.filesystem_manager:
@@ -2525,6 +2539,8 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
             agent_system_message,
             enable_image_generation,
             enable_audio_generation,
+            enable_file_generation,
+            enable_video_generation,
             has_irreversible_actions,
             enable_command_execution,
         )

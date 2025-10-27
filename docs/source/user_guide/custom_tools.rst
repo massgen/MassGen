@@ -579,6 +579,73 @@ Example 4: Multimodal Understanding Tools
 
 See :doc:`multimodal` for complete multimodal capabilities documentation.
 
+Example 5: Crawl4AI Web Scraping Tools
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**New in v0.1.3-p3**: Docker-based web scraping with multiple output formats via crawl4ai custom tools.
+
+.. code-block:: bash
+
+   # Start crawl4ai Docker container (one-time setup)
+   docker pull unclecode/crawl4ai:latest
+   docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+
+   # Use crawl4ai tools
+   massgen \
+     --config massgen/configs/tools/custom_tools/crawl4ai_example.yaml \
+     "Please scrape the MassGen docs, take a screenshot, and explain that screenshot"
+
+**Config Example:** ``crawl4ai_example.yaml``
+
+.. code-block:: yaml
+
+   agents:
+     - id: "web_scraper_agent"
+       backend:
+         type: "openai"
+         model: "gpt-5-mini"
+         cwd: "workspace1"
+
+         # Register crawl4ai custom tools
+         custom_tools:
+           - name: ["crawl4ai_md", "crawl4ai_html", "crawl4ai_screenshot", "crawl4ai_pdf", "crawl4ai_execute_js", "crawl4ai_crawl"]
+             category: "web_scraping"
+             path: "massgen/tool/_web_tools/crawl4ai_tool.py"
+             function: ["crawl4ai_md", "crawl4ai_html", "crawl4ai_screenshot", "crawl4ai_pdf", "crawl4ai_execute_js", "crawl4ai_crawl"]
+
+           - name: ["understand_image"]
+             category: "multimodal"
+             path: "massgen/tool/_multimodal_tools/understand_image.py"
+             function: ["understand_image"]
+
+   ui:
+     display_type: "rich_terminal"
+     logging_enabled: true
+
+**Available Crawl4AI Tools:**
+
+* ``crawl4ai_md`` - Extract clean markdown from web content
+* ``crawl4ai_html`` - Get preprocessed HTML
+* ``crawl4ai_screenshot`` - Capture webpage screenshots
+* ``crawl4ai_pdf`` - Generate PDF documents
+* ``crawl4ai_execute_js`` - Run JavaScript on web pages
+* ``crawl4ai_crawl`` - Perform multi-URL crawling
+
+**Key Features:**
+
+* Docker-based isolation (no Python dependencies needed)
+* Multiple output formats (markdown, HTML, screenshots, PDFs)
+* JavaScript execution for dynamic content
+* Concurrent crawling (up to 5 simultaneous crawls)
+* Automatic Docker health checks with clear error messages
+
+**Requirements:**
+
+* Docker installed and running
+* crawl4ai container accessible at ``http://localhost:11235``
+
+If the Docker container isn't running, agents receive a helpful error message with setup instructions.
+
 Available Example Configs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -600,6 +667,10 @@ The ``massgen/configs/tools/custom_tools/`` directory contains examples for all 
 * ``multimodal_tools/understand_audio.yaml`` - Audio transcription
 * ``multimodal_tools/understand_video.yaml`` - Video analysis
 * ``multimodal_tools/understand_file.yaml`` - Document processing
+
+**Web Scraping Tools:**
+
+* ``crawl4ai_example.yaml`` - Docker-based web scraping with multiple output formats
 
 Each basic example demonstrates the same ``two_num_tool`` adapted for different backends.
 
