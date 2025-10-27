@@ -468,7 +468,7 @@ Combine understanding and generation capabilities with multiple agents:
 .. code-block:: bash
 
    massgen \
-     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_generation_multi.yaml 
+     --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_generation_multi.yaml \
      "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
 
 Video Understanding
