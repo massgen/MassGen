@@ -10,10 +10,17 @@ MassGen supports comprehensive multimodal AI workflows, enabling agents to both 
 
    **Understanding Tools:**
 
-   * ✅ **understand_audio**: Transcribe audio files to text
+   * ✅ **understand_audio**: Transcribe audio files to text (uses OpenAI's ``gpt-4o-transcribe`` by default)
    * ✅ **understand_file**: Analyze documents (PDF, DOCX, XLSX, PPTX) and text files
-   * ✅ **understand_image**: Describe and analyze images
-   * ✅ **understand_video**: Extract and analyze key frames from videos
+   * ✅ **understand_image**: Describe and analyze images (uses OpenAI's ``gpt-4.1`` by default)
+   * ✅ **understand_video**: Extract and analyze key frames from videos (uses OpenAI's ``gpt-4.1`` by default)
+
+   **Backend Requirements:**
+
+   * The understanding tools use OpenAI's API backend for processing multimodal content
+   * Requires ``OPENAI_API_KEY`` environment variable set in ``.env`` file
+   * These tools work with any agent backend type (openai, claude, gemini, etc.)
+   * The agent backend only needs to support custom tools; the actual understanding is done via OpenAI
 
    **Generation Tools:**
 
@@ -60,6 +67,9 @@ Image Understanding
 -------------------
 
 Image understanding enables agents to analyze visual content, extract information, and answer questions about images using the ``understand_image`` custom tool.
+
+.. note::
+   The ``understand_image`` tool uses OpenAI's API backend with the ``gpt-4.1`` model by default for processing images. This requires an OpenAI API key regardless of which backend your agent uses.
 
 Basic Configuration
 ~~~~~~~~~~~~~~~~~~~
@@ -286,7 +296,10 @@ Combine understanding and generation capabilities with multiple agents:
 Audio Understanding
 -------------------
 
-Transcribe and analyze audio files using the ``understand_audio`` custom tool:
+Transcribe and analyze audio files using the ``understand_audio`` custom tool.
+
+.. note::
+   The ``understand_audio`` tool uses OpenAI's Transcription API with the ``gpt-4o-transcribe`` model by default. This requires an OpenAI API key regardless of which backend your agent uses.
 
 .. code-block:: yaml
 
@@ -474,7 +487,10 @@ Combine understanding and generation capabilities with multiple agents:
 Video Understanding
 -------------------
 
-Analyze and extract information from video files using the ``understand_video`` custom tool:
+Analyze and extract information from video files using the ``understand_video`` custom tool.
+
+.. note::
+   The ``understand_video`` tool uses OpenAI's API backend with the ``gpt-4.1`` model by default for analyzing video frames. This requires an OpenAI API key regardless of which backend your agent uses.
 
 .. code-block:: yaml
 
@@ -633,9 +649,6 @@ File Understanding
 
 File understanding capabilities enable agents to analyze documents and perform Q&A using the ``understand_file`` custom tool.
 
-Basic Configuration
-~~~~~~~~~~~~~~~~~~~
-
 Configure agents to analyze files:
 
 .. code-block:: yaml
@@ -776,69 +789,16 @@ Combine generation with review and refinement:
 Supported Backends
 ------------------
 
-Multimodal capabilities vary by backend. This table shows which backends support which multimodal features:
+* **Supported Backends**: OpenAI, Claude, Claude Code, Gemini, Grok, Chat Completions (generic API), LM Studio, Inference (vLLM/SGLang)
+* **Not Supported**: Azure OpenAI, AG2 (these backends don't support custom tools)
+* **How It Works**: The custom tools (``understand_image``, ``understand_video``, ``understand_audio``, ``understand_file``) use OpenAI's API for processing
+* **Requirements**:
 
-.. list-table:: Backend Multimodal Capabilities
-   :header-rows: 1
-   :widths: 15 12 12 12 12 12
+  * Your agent backend must support custom tools
+  * ``OPENAI_API_KEY`` must be set in your ``.env`` file for the understanding tools to function
+  * The agent's backend type can be anything supported - only the custom tools need OpenAI API access
 
-   * - Backend
-     - Image
-     - Audio
-     - Video
-     - File
-     - Notes
-   * - ``openai``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Vision models
-   * - ``claude``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Vision models
-   * - ``claude_code``
-     - ✅
-     - ✅
-     - ✅
-     - ⭐
-     - Native file tools
-   * - ``gemini``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Multimodal Pro/Flash
-   * - ``grok``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Multimodal support
-   * - ``azure_openai``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Vision models
-   * - ``chatcompletion``
-     - ✅
-     - ✅
-     - ✅
-     - ✅
-     - Provider-dependent
-
-**Legend:**
-
-* ✅ - Feature supported via custom tools
-* ⭐ - Native backend support
-* ❌ - Not available
-
-
-See :doc:`backends` for complete backend capabilities including web search, code execution, and MCP support.
+See :doc:`custom_tools` for complete details on custom tool support by backend, and :doc:`backends` for all backend capabilities including web search, code execution, and MCP support.
 
 Configuration Examples
 ----------------------
@@ -939,7 +899,14 @@ You can override size limits per tool call using the ``MAX_FILE_SIZE_MB`` parame
 Best Practices
 --------------
 
-1. **File Access and Configuration**
+1. **API Keys and Backend Configuration**
+
+   * **IMPORTANT**: All multimodal understanding tools (``understand_image``, ``understand_video``, ``understand_audio``) require an OpenAI API key
+   * Set ``OPENAI_API_KEY`` in your ``.env`` file even if using other backends (Claude, Gemini, etc.)
+   * The tools use OpenAI's backend (gpt-4.1 for images/videos, gpt-4o-transcribe for audio) regardless of your agent's configured backend
+   * Your agent backend only needs to support custom tools; the actual multimodal processing happens via OpenAI
+
+2. **File Access and Configuration**
 
    * Use ``context_paths`` to provide secure file access to agents for understanding tasks
    * Ensure files are accessible before running - use absolute paths or paths relative to execution directory

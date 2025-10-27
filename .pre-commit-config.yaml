@@ -114,6 +114,14 @@ repos:
     hooks:
       - id: pyroma
         args: [.]
+  - repo: local
+    hooks:
+      - id: sync-readme-pypi
+        name: Auto-sync README_PYPI.md when README.md changes
+        entry: bash -c 'python3 scripts/sync_readme_pypi.py && git add README_PYPI.md'
+        language: system
+        files: ^README\.md$
+        pass_filenames: false
   # - repo: local
   #   hooks:
   #     - id: check-massgen-python-file-length

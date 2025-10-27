@@ -84,7 +84,7 @@ Custom Python function tools, voting sensitivity controls, interactive config bu
   - `massgen/configs/resources/v0.1.3-example/TUMIX.pdf`: PDF document example
 
 - **Case Studies**: New case study demonstrating v0.1.3 features
-  - `docs/case_studies/multimodal-case-study-video-analysis.md`: Meta-level demonstration of multimodal video understanding with agents analyzing their own case study videos
+  - `docs/source/examples/case_studies/multimodal-case-study-video-analysis.md`: Meta-level demonstration of multimodal video understanding with agents analyzing their own case study videos
 
 ### Technical Details
 - **Major Focus**: Post-evaluation workflow tools, custom multimodal understanding tools, Docker sudo mode
@@ -122,7 +122,7 @@ Custom Python function tools, voting sensitivity controls, interactive config bu
 ### Documentations, Configurations and Resources
 
 - **Intelligent Planning Mode Case Study**: Complete feature documentation
-  - `docs/case_studies/INTELLIGENT_PLANNING_MODE.md`: Comprehensive guide for automatic planning mode
+  - `docs/source/examples/case_studies/INTELLIGENT_PLANNING_MODE.md`: Comprehensive guide for automatic planning mode
   - Demonstrates automatic irreversibility detection
   - Shows read/write operation classification
   - Includes examples for Discord, filesystem, and Twitter operations
@@ -202,7 +202,7 @@ Custom Python function tools, voting sensitivity controls, interactive config bu
 ### Documentations, Configurations and Resources
 
 - **Case Study: Universal Code Execution via MCP**: Comprehensive v0.0.31 feature documentation
-  - `docs/case_studies/universal-code-execution-mcp.md`
+  - `docs/source/examples/case_studies/universal-code-execution-mcp.md`
   - Demonstrates pytest test creation and execution across backends
   - Shows command validation, security layers, and result interpretation
 
