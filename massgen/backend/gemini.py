@@ -120,6 +120,11 @@ class GeminiBackend(CustomToolAndMCPBackend):
         # Store Gemini-specific API key before calling parent init
         gemini_api_key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
+        # Extract and remove enable_rate_limit BEFORE calling parent init
+        # This prevents it from being stored in self.config and passed to Gemini SDK
+        enable_rate_limit = kwargs.pop('enable_rate_limit', False)
+        model_name = kwargs.get('model', '')
+
         # Call parent class __init__ - this initializes custom_tool_manager and MCP-related attributes
         super().__init__(gemini_api_key, **kwargs)
 
@@ -148,10 +153,6 @@ class GeminiBackend(CustomToolAndMCPBackend):
         # Supports RPM (Requests Per Minute), TPM (Tokens Per Minute), RPD (Requests Per Day)
         # Configuration loaded from massgen/config/rate_limits.yaml
         # This is shared across ALL instances of the SAME MODEL
-        model_name = kwargs.get('model', '')
-        
-        # Check if rate limiting is enabled via CLI flag
-        enable_rate_limit = kwargs.get('enable_rate_limit', False)
         
         if enable_rate_limit:
             # Load rate limits from configuration
@@ -265,6 +266,10 @@ class GeminiBackend(CustomToolAndMCPBackend):
             elif not self._mcp_initialized:
                 # Setup MCP without streaming for backward compatibility
                 await self.mcp_manager.setup_mcp_tools(agent_id)
+
+            # Remove enable_rate_limit from kwargs if present (it's already been consumed in __init__)
+            # This prevents it from being passed to Gemini SDK API calls
+            kwargs.pop('enable_rate_limit', None)
 
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
