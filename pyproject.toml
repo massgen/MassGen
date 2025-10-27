@@ -57,6 +57,7 @@ dependencies = [
     "python-pptx>=1.0.2",
     "opencv-python>=4.12.0.88",
     "pypdf2>=3.0.1",
+    "mem0ai>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -265,5 +266,6 @@ dev = [
     "sphinx-design>=0.6.1",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx-book-theme>=1.1.4",
+    "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
 ]
