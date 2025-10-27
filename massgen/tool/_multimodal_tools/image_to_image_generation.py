@@ -13,7 +13,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from .._result import ExecutionResult, TextContent
+from massgen.tool._result import ExecutionResult, TextContent
 
 
 def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None) -> None:
@@ -23,6 +23,7 @@ def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None
     Args:
         path: Path to validate
         allowed_paths: List of allowed base paths (optional)
+        agent_cwd: Agent\'s current working directory (automatically injected)
 
     Raises:
         ValueError: If path is not within allowed directories
@@ -46,6 +47,7 @@ async def image_to_image_generation(
     model: str = "gpt-4.1",
     storage_path: Optional[str] = None,
     allowed_paths: Optional[List[str]] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """
     Create variations based on multiple input images using OpenAI's gpt-4.1 API.
@@ -55,15 +57,16 @@ async def image_to_image_generation(
 
     Args:
         base_image_paths: List of paths to base images (PNG/JPEG files, less than 4MB)
-                    - Relative path: Resolved relative to workspace
+                    - Relative path: Resolved relative to agent's workspace
                     - Absolute path: Must be within allowed directories
         prompt: Text description for the variation (default: "Create a variation of the provided images")
         model: Model to use (default: "gpt-4.1")
         storage_path: Directory path where to save variations (optional)
-                     - Relative path: Resolved relative to workspace
+                     - Relative path: Resolved relative to agent's workspace
                      - Absolute path: Must be within allowed directories
-                     - None/empty: Saves to workspace root
+                     - None/empty: Saves to agent's workspace root
         allowed_paths: List of allowed base paths for validation (optional)
+        agent_cwd: Agent\'s current working directory (automatically injected)
 
     Returns:
         ExecutionResult containing:
@@ -90,6 +93,9 @@ async def image_to_image_generation(
     try:
         # Convert allowed_paths from strings to Path objects
         allowed_paths_list = [Path(p) for p in allowed_paths] if allowed_paths else None
+
+        # Use agent_cwd if available, otherwise fall back to Path.cwd()
+        base_dir = Path(agent_cwd) if agent_cwd else Path.cwd()
 
         # Load environment variables
         script_dir = Path(__file__).parent.parent.parent.parent
@@ -124,7 +130,7 @@ async def image_to_image_generation(
             if Path(image_path_str).is_absolute():
                 image_path = Path(image_path_str).resolve()
             else:
-                image_path = (Path.cwd() / image_path_str).resolve()
+                image_path = (base_dir / image_path_str).resolve()
 
             # Validate image path
             _validate_path_access(image_path, allowed_paths_list)
@@ -185,9 +191,9 @@ async def image_to_image_generation(
             if Path(storage_path).is_absolute():
                 storage_dir = Path(storage_path).resolve()
             else:
-                storage_dir = (Path.cwd() / storage_path).resolve()
+                storage_dir = (base_dir / storage_path).resolve()
         else:
-            storage_dir = Path.cwd()
+            storage_dir = base_dir
 
         # Validate storage directory
         _validate_path_access(storage_dir, allowed_paths_list)

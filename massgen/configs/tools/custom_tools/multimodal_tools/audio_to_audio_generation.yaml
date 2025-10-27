@@ -31,6 +31,8 @@ orchestrator:
   context_paths:
     - path: "massgen/configs/resources/v0.1.3-example/Sherlock_Holmes.mp3"
       permission: "read"
+    - path: "massgen/configs/resources/v0.1.3-example/Sherlock_Holmes2.mp3"
+      permission: "read"
 
 ui:
   display_type: "rich_terminal"

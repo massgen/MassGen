@@ -34,6 +34,9 @@ class ResponseBackend(CustomToolAndMCPBackend):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.formatter = ResponseFormatter()
 
+        import pdb
+        pdb.set_trace()
+
         # Initialize API params handler after custom_tool_manager
         self.api_params_handler = ResponseAPIParamsHandler(self)
 
@@ -57,6 +60,7 @@ class ResponseBackend(CustomToolAndMCPBackend):
 
         Wraps parent implementation to ensure File Search cleanup happens after streaming completes.
         """
+
         try:
             async for chunk in super().stream_with_tools(messages, tools, **kwargs):
                 yield chunk
@@ -145,6 +149,9 @@ class ResponseBackend(CustomToolAndMCPBackend):
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Recursively stream MCP responses, executing function calls as needed."""
+
+        import pdb
+        pdb.set_trace()
         agent_id = kwargs.get("agent_id")
 
         # Build API params for this iteration

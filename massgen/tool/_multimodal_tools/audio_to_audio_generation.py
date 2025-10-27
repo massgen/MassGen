@@ -12,7 +12,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from .._result import ExecutionResult, TextContent
+from massgen.tool._result import ExecutionResult, TextContent
 
 
 def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None) -> None:
@@ -50,6 +50,7 @@ async def audio_to_audio_generation(
     storage_path: Optional[str] = None,
     audio_format: str = "mp3",
     allowed_paths: Optional[List[str]] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """
     Generate audio from multiple input audio files through transcription, synthesis, and TTS.
@@ -74,12 +75,13 @@ async def audio_to_audio_generation(
               Options: "alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "sage"
         speech_instructions: Optional speaking instructions for tone and style
         storage_path: Directory path where to save the output audio (optional)
-                     - Relative path: Resolved relative to workspace
+                     - Relative path: Resolved relative to agent's workspace
                      - Absolute path: Must be within allowed directories
-                     - None/empty: Saves to workspace root
+                     - None/empty: Saves to agent's workspace root
         audio_format: Output audio format (default: "mp3")
                      Options: "mp3", "opus", "aac", "flac", "wav", "pcm"
         allowed_paths: List of allowed base paths for validation (optional)
+        agent_cwd: Agent's current working directory (automatically injected)
 
     Returns:
         ExecutionResult containing:
@@ -122,6 +124,9 @@ async def audio_to_audio_generation(
         # Convert allowed_paths from strings to Path objects
         allowed_paths_list = [Path(p) for p in allowed_paths] if allowed_paths else None
 
+        # Use agent_cwd if available, otherwise fall back to Path.cwd()
+        base_dir = Path(agent_cwd) if agent_cwd else Path.cwd()
+
         # Load environment variables
         script_dir = Path(__file__).parent.parent.parent.parent
         env_path = script_dir / ".env"
@@ -155,7 +160,7 @@ async def audio_to_audio_generation(
             if Path(audio_path_str).is_absolute():
                 audio_path = Path(audio_path_str).resolve()
             else:
-                audio_path = (Path.cwd() / audio_path_str).resolve()
+                audio_path = (base_dir / audio_path_str).resolve()
 
             # Validate audio path
             _validate_path_access(audio_path, allowed_paths_list)
@@ -253,9 +258,9 @@ async def audio_to_audio_generation(
                 if Path(storage_path).is_absolute():
                     storage_dir = Path(storage_path).resolve()
                 else:
-                    storage_dir = (Path.cwd() / storage_path).resolve()
+                    storage_dir = (base_dir / storage_path).resolve()
             else:
-                storage_dir = Path.cwd()
+                storage_dir = base_dir
 
             # Validate storage directory
             _validate_path_access(storage_dir, allowed_paths_list)

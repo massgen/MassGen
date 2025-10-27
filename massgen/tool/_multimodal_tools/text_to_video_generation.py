@@ -13,7 +13,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from .._result import ExecutionResult, TextContent
+from massgen.tool._result import ExecutionResult, TextContent
 
 
 def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None) -> None:
@@ -23,6 +23,7 @@ def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None
     Args:
         path: Path to validate
         allowed_paths: List of allowed base paths (optional)
+        agent_cwd: Agent\'s current working directory (automatically injected)
 
     Raises:
         ValueError: If path is not within allowed directories
@@ -46,6 +47,7 @@ async def text_to_video_generation(
     seconds: int = 4,
     storage_path: Optional[str] = None,
     allowed_paths: Optional[List[str]] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """
     Generate a video from a text prompt using OpenAI's Sora-2 API.
@@ -58,10 +60,11 @@ async def text_to_video_generation(
         model: Model to use (default: "sora-2")
         seconds: Video duration in seconds (default: 4)
         storage_path: Directory path where to save the video (optional)
-                     - Relative path: Resolved relative to workspace
+                     - Relative path: Resolved relative to agent's workspace
                      - Absolute path: Must be within allowed directories
-                     - None/empty: Saves to workspace root
+                     - None/empty: Saves to agent's workspace root
         allowed_paths: List of allowed base paths for validation (optional)
+        agent_cwd: Agent\'s current working directory (automatically injected)
 
     Returns:
         ExecutionResult containing:
@@ -86,6 +89,9 @@ async def text_to_video_generation(
     try:
         # Convert allowed_paths from strings to Path objects
         allowed_paths_list = [Path(p) for p in allowed_paths] if allowed_paths else None
+
+        # Use agent_cwd if available, otherwise fall back to base_dir
+        base_dir = Path(agent_cwd) if agent_cwd else Path.cwd()
 
         # Load environment variables
         script_dir = Path(__file__).parent.parent.parent.parent
@@ -115,9 +121,9 @@ async def text_to_video_generation(
             if Path(storage_path).is_absolute():
                 storage_dir = Path(storage_path).resolve()
             else:
-                storage_dir = (Path.cwd() / storage_path).resolve()
+                storage_dir = (base_dir / storage_path).resolve()
         else:
-            storage_dir = Path.cwd()
+            storage_dir = base_dir
 
         # Validate storage directory is within allowed paths
         _validate_path_access(storage_dir, allowed_paths_list)

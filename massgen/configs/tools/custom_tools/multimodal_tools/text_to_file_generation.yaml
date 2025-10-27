@@ -1,6 +1,6 @@
 # MassGen Configuration: Text to File Generation Tool
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_file_generation.yaml "Please generate a technical report about AI and save it as PDF."
+#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_file_generation.yaml "Please generate a technical report about AI and save it as PDF in your workspace."
 agents:
   - id: "text_to_file_generation_tool"
     backend:
@@ -27,10 +27,7 @@ agents:
 orchestrator:
   snapshot_storage: "snapshots"
   agent_temporary_workspace: "temp_workspaces"
-  context_paths:
-    - path: "workspace1"
-      permission: "read_write"
 
 ui:
-  display_type: "rich_terminal"
+  display_type: "simple"
   logging_enabled: true

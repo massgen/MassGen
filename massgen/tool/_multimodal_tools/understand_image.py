@@ -44,6 +44,7 @@ async def understand_image(
     prompt: str = "What's in this image? Please describe it in detail.",
     model: str = "gpt-4.1",
     allowed_paths: Optional[List[str]] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """
     Understand and analyze an image using OpenAI's gpt-4.1 API.
@@ -58,6 +59,7 @@ async def understand_image(
         prompt: Question or instruction about the image (default: "What's in this image? Please describe it in detail.")
         model: Model to use (default: "gpt-4.1")
         allowed_paths: List of allowed base paths for validation (optional)
+        agent_cwd: Agent's current working directory (automatically injected)
 
     Returns:
         ExecutionResult containing:
@@ -111,10 +113,13 @@ async def understand_image(
         client = OpenAI(api_key=openai_api_key)
 
         # Resolve image path
+        # Use agent_cwd if available, otherwise fall back to Path.cwd()
+        base_dir = Path(agent_cwd) if agent_cwd else Path.cwd()
+
         if Path(image_path).is_absolute():
             img_path = Path(image_path).resolve()
         else:
-            img_path = (Path.cwd() / image_path).resolve()
+            img_path = (base_dir / image_path).resolve()
 
         # Validate image path
         _validate_path_access(img_path, allowed_paths_list)
