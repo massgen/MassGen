@@ -323,7 +323,7 @@ async def crawl4ai_screenshot(
     url: str,
     wait_seconds: float = 2.0,
     output_filename: Optional[str] = None,
-    workspace_path: Optional[str] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """Capture a screenshot of a webpage.
 
@@ -335,7 +335,7 @@ async def crawl4ai_screenshot(
         url: The webpage URL to screenshot
         wait_seconds: Seconds to wait before capturing (default: 2.0)
         output_filename: Optional filename to save in workspace (e.g., "screenshot.png")
-        workspace_path: Agent's workspace directory (auto-injected)
+        agent_cwd: Agent's workspace directory (auto-injected)
 
     Returns:
         ExecutionResult with base64 screenshot or saved file path
@@ -381,11 +381,11 @@ async def crawl4ai_screenshot(
         if output_filename:
             screenshot_data = base64.b64decode(screenshot_b64)
 
-            # Use workspace_path if provided (auto-injected by MassGen)
-            if workspace_path:
-                workspace_dir = Path(workspace_path)
+            # Use agent_cwd if provided (auto-injected by MassGen)
+            if agent_cwd:
+                workspace_dir = Path(agent_cwd)
             else:
-                # Fallback: use current directory if workspace_path not provided
+                # Fallback: use current directory if agent_cwd not provided
                 workspace_dir = Path.cwd()
 
             output_path = workspace_dir / output_filename
@@ -426,7 +426,7 @@ async def crawl4ai_screenshot(
 async def crawl4ai_pdf(
     url: str,
     output_filename: Optional[str] = None,
-    workspace_path: Optional[str] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """Generate a PDF from a webpage.
 
@@ -436,7 +436,7 @@ async def crawl4ai_pdf(
     Args:
         url: The webpage URL to convert to PDF
         output_filename: Optional filename to save in workspace (e.g., "page.pdf")
-        workspace_path: Agent's workspace directory (auto-injected by MassGen)
+        agent_cwd: Agent's workspace directory (auto-injected by MassGen)
 
     Returns:
         ExecutionResult with saved file path
@@ -476,11 +476,11 @@ async def crawl4ai_pdf(
         if output_filename:
             pdf_data = base64.b64decode(pdf_b64)
 
-            # Use workspace_path if provided (auto-injected by MassGen)
-            if workspace_path:
-                workspace_dir = Path(workspace_path)
+            # Use agent_cwd if provided (auto-injected by MassGen)
+            if agent_cwd:
+                workspace_dir = Path(agent_cwd)
             else:
-                # Fallback: use current directory if workspace_path not provided
+                # Fallback: use current directory if agent_cwd not provided
                 workspace_dir = Path.cwd()
 
             output_path = workspace_dir / output_filename

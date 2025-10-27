@@ -312,9 +312,14 @@ class ToolManager:
             return
 
         tool_entry = self.registered_tools[tool_name]
+
+        # Merge parameters: model input first, then preset params override
+        # This ensures preset_params (like agent_cwd) always take precedence
+        # and won't be overridden by null values from model
+        model_input = tool_request.get("input", {}) or {}
         exec_kwargs = {
-            **tool_entry.preset_params,
-            **(tool_request.get("input", {}) or {}),
+            **model_input,
+            **tool_entry.preset_params,  # preset_params override model input
         }
 
         # Prepare post-processor if exists

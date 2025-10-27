@@ -144,6 +144,7 @@ async def understand_video(
     num_frames: int = 8,
     model: str = "gpt-4.1",
     allowed_paths: Optional[List[str]] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """
     Understand and analyze a video by extracting key frames and using OpenAI's gpt-4.1 API.
@@ -161,6 +162,7 @@ async def understand_video(
                    - Recommended range: 4-16 frames
         model: Model to use (default: "gpt-4.1")
         allowed_paths: List of allowed base paths for validation (optional)
+        agent_cwd: Agent's current working directory (automatically injected, optional)
 
     Returns:
         ExecutionResult containing:
@@ -223,10 +225,13 @@ async def understand_video(
         client = OpenAI(api_key=openai_api_key)
 
         # Resolve video path
+        # Use agent_cwd if available, otherwise fall back to Path.cwd()
+        base_dir = Path(agent_cwd) if agent_cwd else Path.cwd()
+
         if Path(video_path).is_absolute():
             vid_path = Path(video_path).resolve()
         else:
-            vid_path = (Path.cwd() / video_path).resolve()
+            vid_path = (base_dir / video_path).resolve()
 
         # Validate video path
         _validate_path_access(vid_path, allowed_paths_list)

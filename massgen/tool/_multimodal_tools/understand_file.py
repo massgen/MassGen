@@ -199,6 +199,7 @@ async def understand_file(
     model: str = "gpt-4.1",
     max_chars: int = 50000,
     allowed_paths: Optional[List[str]] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """
     Understand and analyze file contents using OpenAI's gpt-4.1 API.
@@ -216,6 +217,7 @@ async def understand_file(
                   - Prevents processing extremely large files
                   - Applies to both text files and extracted content from documents
         allowed_paths: List of allowed base paths for validation (optional)
+        agent_cwd: Agent's current working directory (automatically injected, optional)
 
     Returns:
         ExecutionResult containing:
@@ -306,10 +308,13 @@ async def understand_file(
         client = OpenAI(api_key=openai_api_key)
 
         # Resolve file path
+        # Use agent_cwd if available, otherwise fall back to Path.cwd()
+        base_dir = Path(agent_cwd) if agent_cwd else Path.cwd()
+
         if Path(file_path).is_absolute():
             f_path = Path(file_path).resolve()
         else:
-            f_path = (Path.cwd() / file_path).resolve()
+            f_path = (base_dir / file_path).resolve()
 
         # Validate file path
         _validate_path_access(f_path, allowed_paths_list)

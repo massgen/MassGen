@@ -1,6 +1,6 @@
 # MassGen Configuration: Understand File Tool
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/understand_file.yaml "Please summarize the content in this file."
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/understand_file.yaml "Please summarize the content in this file."
 agents:
   - id: "understand_file_tool"
     backend:

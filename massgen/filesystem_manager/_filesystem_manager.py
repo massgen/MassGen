@@ -57,6 +57,7 @@ class FilesystemManager:
         command_line_docker_network_mode: str = "none",
         command_line_docker_enable_sudo: bool = False,
         enable_audio_generation: bool = False,
+        enable_file_generation: bool = False,
     ):
         """
         Initialize FilesystemManager.

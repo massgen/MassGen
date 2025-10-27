@@ -24,6 +24,10 @@ class ChatCompletionsAPIParamsHandler(APIParamsHandlerBase):
                 "allowed_tools",
                 "exclude_tools",
                 "custom_tools",  # Custom tools configuration (processed separately)
+                "enable_file_generation",  # Internal flag for file generation (used in system messages only)
+                "enable_image_generation",  # Internal flag for image generation (used in system messages only)
+                "enable_audio_generation",  # Internal flag for audio generation (used in system messages only)
+                "enable_video_generation",  # Internal flag for video generation (used in system messages only)
             },
         )
 

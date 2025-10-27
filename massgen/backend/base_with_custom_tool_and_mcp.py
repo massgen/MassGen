@@ -284,41 +284,47 @@ class CustomToolAndMCPBackend(LLMBackend):
 
                     # Register each function with its corresponding values
                     for i, func in enumerate(functions):
-                        # Load function to check signature for workspace_path injection
-                        if path:
-                            loaded_func = self.custom_tool_manager._load_function_from_path(path, func)
+                        # Inject agent_cwd into preset_args if filesystem_manager is available
+                        final_preset_args = preset_args_list[i].copy() if preset_args_list[i] else {}
+                        if self.filesystem_manager and self.filesystem_manager.cwd:
+                            final_preset_args["agent_cwd"] = self.filesystem_manager.cwd
+                            logger.info(f"Injecting agent_cwd for {func}: {self.filesystem_manager.cwd}")
+                        elif self.filesystem_manager:
+                            logger.warning(f"filesystem_manager exists but cwd is None for {func}")
                         else:
-                            loaded_func = self.custom_tool_manager._load_builtin_function(func)
+                            logger.warning(f"No filesystem_manager available for {func}")
 
-                        if loaded_func is None:
-                            logger.error(f"Could not load function '{func}' from path: {path}")
-                            continue
-
-                        # Check if function accepts workspace_path parameter
-                        import inspect
-
-                        sig = inspect.signature(loaded_func)
-                        accepts_workspace_path = "workspace_path" in sig.parameters
-
-                        # Inject workspace_path if function accepts it and filesystem manager exists
-                        current_preset_args = preset_args_list[i] or {}
-                        if accepts_workspace_path and self.filesystem_manager:
-                            workspace_path_value = str(Path(str(self.filesystem_manager.get_current_workspace())).resolve())
-                            current_preset_args = {**current_preset_args, "workspace_path": workspace_path_value}
-                            logger.debug(f"Auto-injected workspace_path for {func}: {workspace_path_value}")
-
-                        # Apply custom name if needed
+                        # Load the function first if custom name is needed
                         if names[i] and names[i] != func:
+                            # Load function to apply custom name
+                            if path:
+                                loaded_func = self.custom_tool_manager._load_function_from_path(path, func)
+                            else:
+                                loaded_func = self.custom_tool_manager._load_builtin_function(func)
+
+                            if loaded_func is None:
+                                logger.error(f"Could not load function '{func}' from path: {path}")
+                                continue
+
                             loaded_func.__name__ = names[i]
 
-                        # Register with loaded function (always use loaded function now)
-                        self.custom_tool_manager.add_tool_function(
-                            path=None,
-                            func=loaded_func,
-                            category=category,
-                            preset_args=current_preset_args,
-                            description=descriptions[i],
-                        )
+                            # Register with loaded function (no path needed)
+                            self.custom_tool_manager.add_tool_function(
+                                path=None,
+                                func=loaded_func,
+                                category=category,
+                                preset_args=final_preset_args,
+                                description=descriptions[i],
+                            )
+                        else:
+                            # No custom name or same as function name, use normal registration
+                            self.custom_tool_manager.add_tool_function(
+                                path=path,
+                                func=func,
+                                category=category,
+                                preset_args=final_preset_args,
+                                description=descriptions[i],
+                            )
 
                         # Use custom name for logging and tracking if provided
                         registered_name = names[i] if names[i] else func
@@ -407,9 +413,19 @@ class CustomToolAndMCPBackend(LLMBackend):
         """
         import json
 
+        # Parse arguments
+        arguments = json.loads(call["arguments"]) if isinstance(call["arguments"], str) else call["arguments"]
+
+        # Ensure agent_cwd is always injected if filesystem_manager is available
+        # This provides a fallback in case preset_args didn't work during registration
+        if self.filesystem_manager and self.filesystem_manager.cwd:
+            if "agent_cwd" not in arguments or arguments.get("agent_cwd") is None:
+                arguments["agent_cwd"] = self.filesystem_manager.cwd
+                logger.info(f"Dynamically injected agent_cwd at execution time: {self.filesystem_manager.cwd}")
+
         tool_request = {
             "name": call["name"],
-            "input": json.loads(call["arguments"]) if isinstance(call["arguments"], str) else call["arguments"],
+            "input": arguments,
         }
 
         result_text = ""
@@ -1123,6 +1139,7 @@ class CustomToolAndMCPBackend(LLMBackend):
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Simple passthrough streaming without MCP processing."""
+
         agent_id = kwargs.get("agent_id", None)
         all_params = {**self.config, **kwargs}
         processed_messages = await self._process_upload_files(messages, all_params)
