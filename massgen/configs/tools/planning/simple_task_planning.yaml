@@ -1,0 +1,27 @@
+# Simple Configuration: Agent Task Planning (Single Agent)
+#
+# Minimal config to test task planning with just one agent
+#
+# Run with:
+#   massgen --config @examples/configs/tools/planning/simple_task_planning.yaml "Create a REST API with authentication, database, and tests"
+
+agents:
+  - id: "agent_a"
+    backend:
+      # type: "openai"
+      # model: "gpt-5-nano"
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace1"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  # Enable agent task planning
+  coordination:
+    enable_agent_task_planning: true
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

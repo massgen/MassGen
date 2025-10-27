@@ -173,12 +173,9 @@ class FilesystemManager:
         if agent_temporary_workspace and self.agent_id:
             self.agent_temporary_workspace = self._setup_workspace(self.agent_temporary_workspace_parent / self.agent_id)
 
-        # Also setup log directories if we have an agent_id
-        if self.agent_id:
-            log_session_dir = get_log_session_dir()
-            if log_session_dir:
-                agent_log_dir = log_session_dir / self.agent_id
-                agent_log_dir.mkdir(parents=True, exist_ok=True)
+        # Note: Agent log directories are created on-demand when save_snapshot() is called,
+        # not preemptively here. This avoids creating empty directories for agents that
+        # don't produce any workspace content.
 
         # Create Docker container if Docker mode enabled
         if self.docker_manager and self.agent_id:
