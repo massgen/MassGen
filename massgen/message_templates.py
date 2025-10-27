@@ -302,6 +302,8 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         original_system_message: Optional[str] = None,
         enable_image_generation: bool = False,
         enable_audio_generation: bool = False,
+        enable_file_generation: bool = False,
+        enable_video_generation: bool = False,
         has_irreversible_actions: bool = False,
         enable_command_execution: bool = False,
     ) -> str:
@@ -311,6 +313,8 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
             original_system_message: The agent's original system message to preserve
             enable_image_generation: Whether image generation is enabled
             enable_audio_generation: Whether audio generation is enabled
+            enable_file_generation: Whether file generation is enabled
+            enable_video_generation: Whether video generation is enabled
             has_irreversible_actions: Whether agent has write access to context paths (requires actual file delivery)
             enable_command_execution: Whether command execution is enabled for this agent
         """
@@ -353,6 +357,28 @@ Present the best possible coordinated answer by combining the strengths from all
 - IMPORTANT: You MUST call the **text_to_speech_transcription_generation** tool with this synthesized transcription to generate the final audio.
 - IMPORTANT: Save the final output in your workspace and output the saved path.
 - If no existing audios are found, generate based on the original task requirements.
+"""
+        # Add file generation instructions only if enabled
+        if enable_file_generation:
+            presentation_instructions += """For file generation tasks:
+- Extract file paths from the existing answer and resolve them in the shared reference.
+- Gather ALL files produced by EVERY agent (ignore non-existent files).
+- IMPORTANT: If you find ANY existing files (from yourself or other agents), you MUST call the **understand_file** tool to extract each file's content.
+- IMPORTANT: Synthesize contents from all files into a detailed, combined content.
+- IMPORTANT: You MUST call the **text_to_file_generation** tool with this synthesized content to generate the final file.
+- IMPORTANT: Save the final output in your workspace and output the saved path.
+- If no existing files are found, generate based on the original task requirements.
+"""
+        # Add video generation instructions only if enabled
+        if enable_video_generation:
+            presentation_instructions += """For video generation tasks:
+- Extract video paths from the existing answer and resolve them in the shared reference.
+- Gather ALL videos produced by EVERY agent (ignore non-existent files).
+- IMPORTANT: If you find ANY existing videos (from yourself or other agents), you MUST call the **understand_video** tool to extract each video's description and key features.
+- IMPORTANT: Synthesize descriptions from all videos into a detailed, combined prompt capturing the best elements.
+- IMPORTANT: You MUST call the **text_to_video_generation** tool with this synthesized prompt to generate the final video.
+- IMPORTANT: Save the final output in your workspace and output the saved path.
+- If no existing videos are found, generate based on the original task requirements.
 """
 
         # Add irreversible actions reminder if needed

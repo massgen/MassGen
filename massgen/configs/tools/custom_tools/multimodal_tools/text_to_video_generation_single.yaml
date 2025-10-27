@@ -1,0 +1,29 @@
+# MassGen Configuration: Text to Video Generation Tool
+# Usage:
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_video_generation_single.yaml "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
+agents:
+  - id: "text_to_video_generation_tool"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace1"
+      enable_video_generation: true
+      custom_tools:
+        - name: ["understand_video"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_video.py"
+          function: ["understand_video"]
+        - name: ["text_to_video_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_video_generation.py"
+          function: ["text_to_video_generation"]
+    system_message: |
+      You are an AI assistant with access to text-to-video generation capabilities.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "simple"
+  logging_enabled: true
