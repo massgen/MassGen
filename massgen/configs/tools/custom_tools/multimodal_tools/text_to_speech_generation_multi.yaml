@@ -1,0 +1,55 @@
+# MassGen Configuration: Text to Speech Continue Generation Tool
+# Usage:
+#    uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_generation_multi.yaml "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
+agents:
+  - id: "text_to_speech_continue_generation_tool1"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace1"
+      enable_audio_generation: true
+      custom_tools:
+        - name: ["text_to_speech_transcription_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_speech_transcription_generation.py"
+          function: ["text_to_speech_transcription_generation"]
+        - name: ["understand_audio"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_audio.py"
+          function: ["understand_audio"]
+        - name: ["text_to_speech_continue_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_speech_continue_generation.py"
+          function: ["text_to_speech_continue_generation"]
+    system_message: |
+      You are an AI assistant with access to text-to-speech generation capabilities.
+
+  - id: "text_to_speech_continue_generation_tool2"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace2"
+      enable_audio_generation: true
+      custom_tools:
+        - name: ["text_to_speech_transcription_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_speech_transcription_generation.py"
+          function: ["text_to_speech_transcription_generation"]
+        - name: ["understand_audio"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_audio.py"
+          function: ["understand_audio"]
+        - name: ["text_to_speech_continue_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_speech_continue_generation.py"
+          function: ["text_to_speech_continue_generation"]
+    system_message: |
+      You are an AI assistant with access to text-to-speech generation capabilities.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
