@@ -47,8 +47,8 @@ MassGen: Multi-Agent Scaling System for GenAI
 .. raw:: html
 
    <a href="https://www.youtube.com/watch?v=Dp2oldJJImw" style="display: block; text-align: center;">
-     <img src="_static/images/massgen-demo-light.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-light">
-     <img src="_static/images/massgen-demo.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-dark">
+     <img src="_static/images/readme.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-light">
+     <img src="_static/images/readme.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-dark">
    </a>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
