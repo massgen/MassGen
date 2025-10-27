@@ -348,10 +348,11 @@ Present the best possible coordinated answer by combining the strengths from all
             presentation_instructions += """For audio generation tasks:
 - Extract audio paths from the existing answer and resolve them in the shared reference.
 - Gather ALL audio files produced by EVERY agent (ignore non-existent files).
-  IMPORTANT: You MUST call the generate_text_with_input_audio tool to obtain transcriptions
-  for EACH AND EVERY audio file from ALL agents - no audio should be skipped or overlooked.
-- MUST combine the strengths of all transcriptions into one final detailed transcription that captures the best elements from each.
-- MUST use the convert_text_to_audio tool to convert this final transcription to a new audio file and save it, then output the saved path.
+- IMPORTANT: If you find ANY existing audios (from yourself or other agents), you MUST call the **understand_audio** tool to extract each audio's transcription.
+- IMPORTANT: Synthesize transcriptions from all audios into a detailed, combined transcription.
+- IMPORTANT: You MUST call the **text_to_speech_transcription_generation** tool with this synthesized transcription to generate the final audio.
+- IMPORTANT: Save the final output in your workspace and output the saved path.
+- If no existing audios are found, generate based on the original task requirements.
 """
 
         # Add irreversible actions reminder if needed

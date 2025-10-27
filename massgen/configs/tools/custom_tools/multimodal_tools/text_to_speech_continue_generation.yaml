@@ -1,13 +1,22 @@
 # MassGen Configuration: Text to Speech Continue Generation Tool
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_continue_generation.yaml "Please convert this text to speech: Is a golden retriever a good family dog?"
+#    uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_speech_continue_generation.yaml "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
 agents:
   - id: "text_to_speech_continue_generation_tool"
     backend:
       type: "openai"
-      model: "gpt-5-nano"
+      model: "gpt-4o"
       cwd: "workspace1"
+      enable_audio_generation: true
       custom_tools:
+        - name: ["text_to_speech_transcription_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_speech_transcription_generation.py"
+          function: ["text_to_speech_transcription_generation"]
+        - name: ["understand_audio"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_audio.py"
+          function: ["understand_audio"]
         - name: ["text_to_speech_continue_generation"]
           category: "multimodal"
           path: "massgen/tool/_multimodal_tools/text_to_speech_continue_generation.py"
@@ -15,22 +24,10 @@ agents:
     system_message: |
       You are an AI assistant with access to text-to-speech generation capabilities.
 
-      The text_to_speech_continue_generation tool is available to generate audio speech from text
-      prompts using OpenAI's gpt-4o-audio-preview model. The tool can create natural-sounding
-      speech audio with various voice options.
-
-      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
-
-      When users ask about converting text to speech, generating audio from text, or creating
-      voice recordings, use the text_to_speech_continue_generation tool to process the text.
-
 orchestrator:
   snapshot_storage: "snapshots"
   agent_temporary_workspace: "temp_workspaces"
-  context_paths:
-    - path: "workspace1"
-      permission: "read_write"
 
 ui:
-  display_type: "rich_terminal"
+  display_type: "simple"
   logging_enabled: true

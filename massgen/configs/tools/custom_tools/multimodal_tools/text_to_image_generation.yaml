@@ -1,6 +1,6 @@
 # MassGen Configuration: Text to Image Generation Tool
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation.yaml "Please generate an image of a cat in space."
+#    uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation.yaml "Please generate an image of a cat in space."
 agents:
   - id: "text_to_image_generation_tool"
     backend:
