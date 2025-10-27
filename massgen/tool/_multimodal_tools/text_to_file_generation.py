@@ -50,10 +50,9 @@ def _generate_pdf(content: str, file_path: Path) -> None:
     """
     try:
         from reportlab.lib.pagesizes import letter
-        from reportlab.pdfgen import canvas
         from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
         from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
         # Create PDF
         doc = SimpleDocTemplate(str(file_path), pagesize=letter)
@@ -61,16 +60,16 @@ def _generate_pdf(content: str, file_path: Path) -> None:
         styles = getSampleStyleSheet()
 
         # Split content into paragraphs
-        paragraphs = content.split('\n\n')
+        paragraphs = content.split("\n\n")
 
         for para in paragraphs:
             if para.strip():
                 # Handle special markdown-like formatting
-                if para.startswith('#'):
+                if para.startswith("#"):
                     # Use heading style
-                    p = Paragraph(para.replace('#', '').strip(), styles['Heading1'])
+                    p = Paragraph(para.replace("#", "").strip(), styles["Heading1"])
                 else:
-                    p = Paragraph(para.replace('\n', '<br/>'), styles['BodyText'])
+                    p = Paragraph(para.replace("\n", "<br/>"), styles["BodyText"])
                 story.append(p)
                 story.append(Spacer(1, 0.2 * inch))
 
@@ -86,15 +85,14 @@ def _generate_pdf(content: str, file_path: Path) -> None:
             pdf.set_font("Arial", size=12)
 
             # Split content into lines and add to PDF
-            for line in content.split('\n'):
+            for line in content.split("\n"):
                 pdf.multi_cell(0, 10, txt=line)
 
             pdf.output(str(file_path))
 
         except ImportError:
             raise ImportError(
-                "PDF generation requires either 'reportlab' or 'fpdf2' library. "
-                "Install with: pip install reportlab  OR  pip install fpdf2"
+                "PDF generation requires either 'reportlab' or 'fpdf2' library. " "Install with: pip install reportlab  OR  pip install fpdf2",
             )
 
 
@@ -108,7 +106,7 @@ def _generate_pptx(content: str, file_path: Path) -> None:
     """
     try:
         from pptx import Presentation
-        from pptx.util import Inches, Pt
+        from pptx.util import Inches
 
         # Create presentation
         prs = Presentation()
@@ -122,14 +120,14 @@ def _generate_pptx(content: str, file_path: Path) -> None:
         slides_content = []
         current_slide = {"title": "", "content": []}
 
-        lines = content.split('\n')
+        lines = content.split("\n")
         i = 0
 
         while i < len(lines):
             line = lines[i].strip()
 
             # Check for slide delimiter
-            if line.startswith('---') or line.startswith('==='):
+            if line.startswith("---") or line.startswith("==="):
                 if current_slide["title"] or current_slide["content"]:
                     slides_content.append(current_slide)
                     current_slide = {"title": "", "content": []}
@@ -137,20 +135,20 @@ def _generate_pptx(content: str, file_path: Path) -> None:
                 continue
 
             # Check for title (marked with # or ##)
-            if line.startswith('# '):
+            if line.startswith("# "):
                 if current_slide["title"] or current_slide["content"]:
                     slides_content.append(current_slide)
                     current_slide = {"title": "", "content": []}
-                current_slide["title"] = line.lstrip('#').strip()
+                current_slide["title"] = line.lstrip("#").strip()
                 i += 1
                 continue
 
             # Check for subtitle/section (## or "Slide X:")
-            if line.startswith('## ') or line.lower().startswith('slide '):
+            if line.startswith("## ") or line.lower().startswith("slide "):
                 if current_slide["title"] or current_slide["content"]:
                     slides_content.append(current_slide)
                     current_slide = {"title": "", "content": []}
-                current_slide["title"] = line.lstrip('#').strip()
+                current_slide["title"] = line.lstrip("#").strip()
                 i += 1
                 continue
 
@@ -166,10 +164,12 @@ def _generate_pptx(content: str, file_path: Path) -> None:
 
         # If no slides were parsed, create a single slide with all content
         if not slides_content:
-            slides_content = [{
-                "title": "Generated Content",
-                "content": [line.strip() for line in content.split('\n') if line.strip()]
-            }]
+            slides_content = [
+                {
+                    "title": "Generated Content",
+                    "content": [line.strip() for line in content.split("\n") if line.strip()],
+                }
+            ]
 
         # Create slides
         for slide_data in slides_content:
@@ -201,10 +201,10 @@ def _generate_pptx(content: str, file_path: Path) -> None:
                             p = text_frame.add_paragraph()
 
                         # Handle bullet points
-                        if content_line.startswith('- ') or content_line.startswith('* '):
+                        if content_line.startswith("- ") or content_line.startswith("* "):
                             p.text = content_line[2:].strip()
                             p.level = 0
-                        elif content_line.startswith('  - ') or content_line.startswith('  * '):
+                        elif content_line.startswith("  - ") or content_line.startswith("  * "):
                             p.text = content_line[4:].strip()
                             p.level = 1
                         else:
@@ -216,8 +216,7 @@ def _generate_pptx(content: str, file_path: Path) -> None:
 
     except ImportError:
         raise ImportError(
-            "PPTX generation requires 'python-pptx' library. "
-            "Install with: pip install python-pptx"
+            "PPTX generation requires 'python-pptx' library. " "Install with: pip install python-pptx",
         )
 
 
@@ -395,7 +394,7 @@ async def text_to_file_generation(
 
         if filename:
             # Use custom filename (remove extension if provided)
-            clean_filename = filename.rsplit('.', 1)[0]
+            clean_filename = filename.rsplit(".", 1)[0]
             file_name = f"{clean_filename}.{file_format}"
         else:
             # Generate filename from prompt
@@ -414,7 +413,7 @@ async def text_to_file_generation(
                 _generate_pptx(generated_content, file_path)
             else:
                 # For txt and md, save as plain text
-                file_path.write_text(generated_content, encoding='utf-8')
+                file_path.write_text(generated_content, encoding="utf-8")
 
             file_size = file_path.stat().st_size
 

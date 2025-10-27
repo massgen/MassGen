@@ -367,15 +367,15 @@ Present the best possible coordinated answer by combining the strengths from all
   **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing images. Do not skip calling
   understand_image on found images. This is a mandatory synthesis workflow.
   """
-#             presentation_instructions += """For image generation tasks:
-# - Extract image paths from the existing answer and resolve them in the shared reference.
-# - Gather all agent-produced images (ignore non-existent files).
-# - IMPORTANT: If you find ANY existing images (from yourself or other agents), you MUST call the understand_image tool to analyze EACH image and extract their key visual elements, composition, style, and quality.
-# - IMPORTANT: Synthesize insights from all analyzed images into a detailed, combined prompt that captures the best elements.
-# - IMPORTANT: Call text_to_image_generation with this synthesized prompt to generate the final image.
-# - IMPORTANT: Save the final output in your workspace and output the saved path.
-# - If no existing images are found, generate based on the original task requirements.
-# """
+        #             presentation_instructions += """For image generation tasks:
+        # - Extract image paths from the existing answer and resolve them in the shared reference.
+        # - Gather all agent-produced images (ignore non-existent files).
+        # - IMPORTANT: If you find ANY existing images (from yourself or other agents), you MUST call the understand_image tool to analyze EACH image and extract their key visual elements, composition, style, and quality.
+        # - IMPORTANT: Synthesize insights from all analyzed images into a detailed, combined prompt that captures the best elements.
+        # - IMPORTANT: Call text_to_image_generation with this synthesized prompt to generate the final image.
+        # - IMPORTANT: Save the final output in your workspace and output the saved path.
+        # - If no existing images are found, generate based on the original task requirements.
+        # """
         # Add audio generation instructions only if enabled
         if enable_audio_generation:
             presentation_instructions += """For audio generation tasks:
@@ -407,15 +407,15 @@ Present the best possible coordinated answer by combining the strengths from all
   **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing audios. Do not skip calling
   understand_audio on found audios. This is a mandatory synthesis workflow.
   """
-#                         presentation_instructions += """For audio generation tasks:
-# - Extract audio paths from the existing answer and resolve them in the shared reference.
-# - Gather ALL audio files produced by EVERY agent (ignore non-existent files).
-# - IMPORTANT: If you find ANY existing audios (from yourself or other agents), you MUST call the **understand_audio** tool to extract each audio's transcription.
-# - IMPORTANT: Synthesize transcriptions from all audios into a detailed, combined transcription.
-# - IMPORTANT: You MUST call the **text_to_speech_transcription_generation** tool with this synthesized transcription to generate the final audio.
-# - IMPORTANT: Save the final output in your workspace and output the saved path.
-# - If no existing audios are found, generate based on the original task requirements.
-# """
+        #                         presentation_instructions += """For audio generation tasks:
+        # - Extract audio paths from the existing answer and resolve them in the shared reference.
+        # - Gather ALL audio files produced by EVERY agent (ignore non-existent files).
+        # - IMPORTANT: If you find ANY existing audios (from yourself or other agents), you MUST call the **understand_audio** tool to extract each audio's transcription.
+        # - IMPORTANT: Synthesize transcriptions from all audios into a detailed, combined transcription.
+        # - IMPORTANT: You MUST call the **text_to_speech_transcription_generation** tool with this synthesized transcription to generate the final audio.
+        # - IMPORTANT: Save the final output in your workspace and output the saved path.
+        # - If no existing audios are found, generate based on the original task requirements.
+        # """
         # Add file generation instructions only if enabled
         if enable_file_generation:
             presentation_instructions += """For file generation tasks:
@@ -447,15 +447,15 @@ Present the best possible coordinated answer by combining the strengths from all
   **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing files. Do not skip calling
   understand_file on found files. This is a mandatory synthesis workflow.
   """
-#             presentation_instructions += """For file generation tasks:
-# - Extract file paths from the existing answer and resolve them in the shared reference.
-# - Gather ALL files produced by EVERY agent (ignore non-existent files).
-# - IMPORTANT: If you find ANY existing files (from yourself or other agents), you MUST call the **understand_file** tool to extract each file's content.
-# - IMPORTANT: Synthesize contents from all files into a detailed, combined content.
-# - IMPORTANT: You MUST call the **text_to_file_generation** tool with this synthesized content to generate the final file.
-# - IMPORTANT: Save the final output in your workspace and output the saved path.
-# - If no existing files are found, generate based on the original task requirements.
-# """
+        #             presentation_instructions += """For file generation tasks:
+        # - Extract file paths from the existing answer and resolve them in the shared reference.
+        # - Gather ALL files produced by EVERY agent (ignore non-existent files).
+        # - IMPORTANT: If you find ANY existing files (from yourself or other agents), you MUST call the **understand_file** tool to extract each file's content.
+        # - IMPORTANT: Synthesize contents from all files into a detailed, combined content.
+        # - IMPORTANT: You MUST call the **text_to_file_generation** tool with this synthesized content to generate the final file.
+        # - IMPORTANT: Save the final output in your workspace and output the saved path.
+        # - If no existing files are found, generate based on the original task requirements.
+        # """
         # Add video generation instructions only if enabled
         if enable_video_generation:
             presentation_instructions += """For video generation tasks:
@@ -467,7 +467,7 @@ Present the best possible coordinated answer by combining the strengths from all
   - Look for video files (.mp4, .avi, .mov, etc.) in each agent's workspace subdirectory
 
   Step 2: **Understand ALL existing videos (REQUIRED if videos exist)**
-  - For EACH video file you found, you MUST call the **understand_video** tool to extract its description, visual features, and 
+  - For EACH video file you found, you MUST call the **understand_video** tool to extract its description, visual features, and
   key elements
   - Do this for videos from yourself AND from other agents - analyze ALL videos found
   - DO NOT skip this step even if you think you know the content
@@ -485,18 +485,18 @@ Present the best possible coordinated answer by combining the strengths from all
   - Save the final generated video in your workspace
   - Report the saved path in your final answer
 
-  **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing videos. Do not skip calling 
+  **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing videos. Do not skip calling
   understand_video on found videos. This is a mandatory synthesis workflow.
   """
-#             presentation_instructions += """For video generation tasks:
-# - Extract video paths from the existing answer and resolve them in the shared reference.
-# - Gather ALL videos produced by EVERY agent (ignore non-existent files).
-# - IMPORTANT: If you find ANY existing videos (from yourself or other agents), you MUST call the **understand_video** tool to extract each video's description and key features.
-# - IMPORTANT: Synthesize descriptions from all videos into a detailed, combined prompt capturing the best elements.
-# - IMPORTANT: You MUST call the **text_to_video_generation** tool with this synthesized prompt to generate the final video.
-# - IMPORTANT: Save the final output in your workspace and output the saved path.
-# - If no existing videos are found, generate based on the original task requirements.
-# """
+        #             presentation_instructions += """For video generation tasks:
+        # - Extract video paths from the existing answer and resolve them in the shared reference.
+        # - Gather ALL videos produced by EVERY agent (ignore non-existent files).
+        # - IMPORTANT: If you find ANY existing videos (from yourself or other agents), you MUST call the **understand_video** tool to extract each video's description and key features.
+        # - IMPORTANT: Synthesize descriptions from all videos into a detailed, combined prompt capturing the best elements.
+        # - IMPORTANT: You MUST call the **text_to_video_generation** tool with this synthesized prompt to generate the final video.
+        # - IMPORTANT: Save the final output in your workspace and output the saved path.
+        # - If no existing videos are found, generate based on the original task requirements.
+        # """
 
         # Add irreversible actions reminder if needed
         # TODO: Integrate more general irreversible actions handling in future (i.e., not just for context file delivery)
