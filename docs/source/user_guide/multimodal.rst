@@ -882,6 +882,60 @@ Complete configuration files are available in the MassGen repository:
 
 Browse all examples in the `Configuration README <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md>`_.
 
+File Size Limits and Optimization
+----------------------------------
+
+MassGen automatically handles file size limits to prevent memory issues and API errors.
+
+Default Size Limits
+~~~~~~~~~~~~~~~~~~~
+
+Each multimodal tool has configurable size limits:
+
+* **Images**: 10MB (automatically resized if exceeded)
+* **Videos**: 50MB
+* **Audio**: 25MB
+
+Automatic Image Resizing
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When an image exceeds the size limit, MassGen automatically:
+
+1. Detects the oversized file
+2. Compresses and resizes the image
+3. Saves the optimized version to a temporary location
+4. Processes the optimized image
+
+**Supported formats for auto-resizing**: PNG, JPEG, JPG, WebP
+
+**Example log output**:
+
+.. code-block:: text
+
+   Image size (12.5 MB) exceeds limit (10 MB). Attempting to resize...
+   Successfully resized image from 12.5 MB to 8.3 MB
+
+Customizing Size Limits
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can override size limits per tool call using the ``MAX_FILE_SIZE_MB`` parameter:
+
+.. code-block:: yaml
+
+   custom_tools:
+     - name: ["understand_image"]
+       category: "multimodal"
+       path: "massgen/tool/_multimodal_tools/understand_image.py"
+       function: ["understand_image"]
+       preset_args:
+         MAX_FILE_SIZE_MB: 15  # Increase limit to 15MB
+
+**Note**: Increasing limits may cause:
+
+* Higher memory usage
+* API errors for very large files
+* Increased processing time
+
 Best Practices
 --------------
 

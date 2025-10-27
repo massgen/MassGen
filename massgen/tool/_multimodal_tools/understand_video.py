@@ -41,14 +41,14 @@ def _validate_path_access(path: Path, allowed_paths: Optional[List[Path]] = None
 
 def _extract_key_frames(video_path: Path, num_frames: int = 8) -> List[str]:
     """
-    Extract key frames from a video file.
+    Extract key frames from a video file and resize them to fit OpenAI Vision API limits.
 
     Args:
         video_path: Path to the video file
         num_frames: Number of key frames to extract
 
     Returns:
-        List of base64-encoded frame images
+        List of base64-encoded frame images (resized to fit 768px x 2000px limits)
 
     Raises:
         ImportError: If opencv-python is not installed
@@ -60,6 +60,10 @@ def _extract_key_frames(video_path: Path, num_frames: int = 8) -> List[str]:
         raise ImportError(
             "opencv-python is required for video frame extraction. " "Please install it with: pip install opencv-python",
         )
+
+    # OpenAI Vision API limits for images (same as understand_image)
+    max_short_side = 768  # Maximum pixels for short side
+    max_long_side = 2000  # Maximum pixels for long side
 
     # Open the video file
     video = cv2.VideoCapture(str(video_path))
@@ -96,8 +100,26 @@ def _extract_key_frames(video_path: Path, num_frames: int = 8) -> List[str]:
             if not ret:
                 continue
 
-            # Encode frame to JPEG
-            ret, buffer = cv2.imencode(".jpg", frame)
+            # Check and resize frame if needed to fit OpenAI Vision API limits
+            height, width = frame.shape[:2]
+            short_side = min(width, height)
+            long_side = max(width, height)
+
+            if short_side > max_short_side or long_side > max_long_side:
+                # Calculate scale factor to fit within dimension constraints
+                short_scale = max_short_side / short_side if short_side > max_short_side else 1.0
+                long_scale = max_long_side / long_side if long_side > max_long_side else 1.0
+                scale_factor = min(short_scale, long_scale) * 0.95  # 0.95 for safety margin
+
+                new_width = int(width * scale_factor)
+                new_height = int(height * scale_factor)
+
+                # Resize frame using LANCZOS (high quality)
+                frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
+
+            # Encode frame to JPEG with quality=85 (same as understand_image)
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 85]
+            ret, buffer = cv2.imencode(".jpg", frame, encode_param)
 
             if not ret:
                 continue

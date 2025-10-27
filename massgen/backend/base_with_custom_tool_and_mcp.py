@@ -296,7 +296,7 @@ class CustomToolAndMCPBackend(LLMBackend):
 
                         # Load the function first if custom name is needed
                         if names[i] and names[i] != func:
-                            # Need to load function and apply custom name
+                            # Load function to apply custom name
                             if path:
                                 loaded_func = self.custom_tool_manager._load_function_from_path(path, func)
                             else:
@@ -306,7 +306,6 @@ class CustomToolAndMCPBackend(LLMBackend):
                                 logger.error(f"Could not load function '{func}' from path: {path}")
                                 continue
 
-                            # Apply custom name by modifying __name__ attribute
                             loaded_func.__name__ = names[i]
 
                             # Register with loaded function (no path needed)
