@@ -64,6 +64,8 @@ async def text_to_speech_continue_generation(
         audio_format: Audio format for output (default: "wav")
                      Options: "wav", "mp3", "opus", "aac", "flac"
         storage_path: Directory path where to save the audio (optional)
+                     - **IMPORTANT**: Must be a DIRECTORY path only, NOT a file path (e.g., "audio/generated" NOT "audio/output.wav")
+                     - The filename is automatically generated from the prompt and timestamp
                      - Relative path: Resolved relative to agent's workspace (e.g., "audio/generated")
                      - Absolute path: Must be within allowed directories
                      - None/empty: Saves to agent's workspace root

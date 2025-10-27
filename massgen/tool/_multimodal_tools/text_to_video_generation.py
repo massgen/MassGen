@@ -60,7 +60,9 @@ async def text_to_video_generation(
         model: Model to use (default: "sora-2")
         seconds: Video duration in seconds (default: 4)
         storage_path: Directory path where to save the video (optional)
-                     - Relative path: Resolved relative to agent's workspace
+                     - **IMPORTANT**: Must be a DIRECTORY path only, NOT a file path (e.g., "videos/generated" NOT "videos/output.mp4")
+                     - The filename is automatically generated from the prompt and timestamp
+                     - Relative path: Resolved relative to agent's workspace (e.g., "videos/generated")
                      - Absolute path: Must be within allowed directories
                      - None/empty: Saves to agent's workspace root
         allowed_paths: List of allowed base paths for validation (optional)

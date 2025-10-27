@@ -98,6 +98,129 @@ def _generate_pdf(content: str, file_path: Path) -> None:
             )
 
 
+def _generate_pptx(content: str, file_path: Path) -> None:
+    """
+    Generate a PowerPoint presentation from text content.
+
+    Args:
+        content: Text content to convert to PPTX (expects slide-based structure)
+        file_path: Path where PPTX will be saved
+    """
+    try:
+        from pptx import Presentation
+        from pptx.util import Inches, Pt
+
+        # Create presentation
+        prs = Presentation()
+        prs.slide_width = Inches(10)
+        prs.slide_height = Inches(7.5)
+
+        # Parse content into slides
+        # Expected format: slides separated by "---" or "Slide X:" markers
+        # Or parse based on headers (##)
+
+        slides_content = []
+        current_slide = {"title": "", "content": []}
+
+        lines = content.split('\n')
+        i = 0
+
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Check for slide delimiter
+            if line.startswith('---') or line.startswith('==='):
+                if current_slide["title"] or current_slide["content"]:
+                    slides_content.append(current_slide)
+                    current_slide = {"title": "", "content": []}
+                i += 1
+                continue
+
+            # Check for title (marked with # or ##)
+            if line.startswith('# '):
+                if current_slide["title"] or current_slide["content"]:
+                    slides_content.append(current_slide)
+                    current_slide = {"title": "", "content": []}
+                current_slide["title"] = line.lstrip('#').strip()
+                i += 1
+                continue
+
+            # Check for subtitle/section (## or "Slide X:")
+            if line.startswith('## ') or line.lower().startswith('slide '):
+                if current_slide["title"] or current_slide["content"]:
+                    slides_content.append(current_slide)
+                    current_slide = {"title": "", "content": []}
+                current_slide["title"] = line.lstrip('#').strip()
+                i += 1
+                continue
+
+            # Add content to current slide
+            if line:
+                current_slide["content"].append(line)
+
+            i += 1
+
+        # Add last slide if it has content
+        if current_slide["title"] or current_slide["content"]:
+            slides_content.append(current_slide)
+
+        # If no slides were parsed, create a single slide with all content
+        if not slides_content:
+            slides_content = [{
+                "title": "Generated Content",
+                "content": [line.strip() for line in content.split('\n') if line.strip()]
+            }]
+
+        # Create slides
+        for slide_data in slides_content:
+            # Add title slide if it's the first slide and has only title
+            if len(prs.slides) == 0 and slide_data["title"] and not slide_data["content"]:
+                slide_layout = prs.slide_layouts[0]  # Title slide
+                slide = prs.slides.add_slide(slide_layout)
+                title = slide.shapes.title
+                title.text = slide_data["title"]
+            else:
+                # Add title and content slide
+                slide_layout = prs.slide_layouts[1]  # Title and content
+                slide = prs.slides.add_slide(slide_layout)
+
+                # Set title
+                title = slide.shapes.title
+                title.text = slide_data["title"] if slide_data["title"] else "Content"
+
+                # Set content
+                if len(slide.shapes) > 1:
+                    content_shape = slide.shapes[1]
+                    text_frame = content_shape.text_frame
+                    text_frame.clear()
+
+                    for idx, content_line in enumerate(slide_data["content"]):
+                        if idx == 0:
+                            p = text_frame.paragraphs[0]
+                        else:
+                            p = text_frame.add_paragraph()
+
+                        # Handle bullet points
+                        if content_line.startswith('- ') or content_line.startswith('* '):
+                            p.text = content_line[2:].strip()
+                            p.level = 0
+                        elif content_line.startswith('  - ') or content_line.startswith('  * '):
+                            p.text = content_line[4:].strip()
+                            p.level = 1
+                        else:
+                            p.text = content_line
+                            p.level = 0
+
+        # Save presentation
+        prs.save(str(file_path))
+
+    except ImportError:
+        raise ImportError(
+            "PPTX generation requires 'python-pptx' library. "
+            "Install with: pip install python-pptx"
+        )
+
+
 async def text_to_file_generation(
     prompt: str,
     file_format: str = "txt",
@@ -111,17 +234,19 @@ async def text_to_file_generation(
     Generate text content using OpenAI API and save it as various file formats.
 
     This tool uses OpenAI's chat completion API to generate text content based on a prompt,
-    then saves the generated content in the specified file format (TXT, MD, or PDF).
+    then saves the generated content in the specified file format (TXT, MD, PDF, or PPTX).
 
     Args:
         prompt: Description of the content to generate (e.g., "Write a technical report about AI")
-        file_format: Output file format - Options: "txt", "md", "pdf" (default: "txt")
+        file_format: Output file format - Options: "txt", "md", "pdf", "pptx" (default: "txt")
         filename: Custom filename without extension (optional)
                  If not provided, generates from prompt and timestamp
         model: OpenAI model to use (default: "gpt-4o")
                Options: "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"
         storage_path: Directory path where to save the file (optional)
-                     - Relative path: Resolved relative to agent's workspace
+                     - **IMPORTANT**: Must be a DIRECTORY path only, NOT a file path (e.g., "documents/reports" NOT "documents/report.txt")
+                     - The filename is automatically generated from the prompt or custom filename parameter
+                     - Relative path: Resolved relative to agent's workspace (e.g., "documents/reports")
                      - Absolute path: Must be within allowed directories
                      - None/empty: Saves to agent's workspace root
         allowed_paths: List of allowed base paths for validation (optional)
@@ -164,12 +289,14 @@ async def text_to_file_generation(
 
     Note:
         - PDF generation requires either 'reportlab' or 'fpdf2' library
+        - PPTX generation requires 'python-pptx' library
+        - For PPTX format, structure your prompt to include slide titles (using # or ##) and bullet points (using -)
         - The quality and format of generated content depends on the prompt
         - Longer content may consume more tokens
     """
     try:
         # Validate file format
-        supported_formats = ["txt", "md", "pdf"]
+        supported_formats = ["txt", "md", "pdf", "pptx"]
         file_format = file_format.lower()
         if file_format not in supported_formats:
             result = {
@@ -283,6 +410,8 @@ async def text_to_file_generation(
         try:
             if file_format == "pdf":
                 _generate_pdf(generated_content, file_path)
+            elif file_format == "pptx":
+                _generate_pptx(generated_content, file_path)
             else:
                 # For txt and md, save as plain text
                 file_path.write_text(generated_content, encoding='utf-8')

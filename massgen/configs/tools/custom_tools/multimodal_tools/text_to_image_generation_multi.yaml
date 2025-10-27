@@ -1,0 +1,47 @@
+# MassGen Configuration: Text to Image Generation Tool
+# Usage:
+#    uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_multi.yaml "Please generate an image of a cat in space."
+agents:
+  - id: "text_to_image_generation_tool1"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace1"
+      enable_image_generation: true
+      custom_tools:
+        - name: ["text_to_image_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_image_generation.py"
+          function: ["text_to_image_generation"]
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+    system_message: |
+      You are an AI assistant with access to text-to-image generation capabilities.
+
+  - id: "text_to_image_generation_tool2"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace2"
+      enable_image_generation: true
+      custom_tools:
+        - name: ["text_to_image_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/text_to_image_generation.py"
+          function: ["text_to_image_generation"]
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+    system_message: |
+      You are an AI assistant with access to text-to-image generation capabilities.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

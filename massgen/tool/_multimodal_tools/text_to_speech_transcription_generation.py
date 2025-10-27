@@ -65,7 +65,9 @@ async def text_to_speech_transcription_generation(
                Options: "alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "sage"
         instructions: Optional speaking instructions for tone and style (e.g., "Speak in a cheerful tone")
         storage_path: Directory path where to save the audio file (optional)
-                     - Relative path: Resolved relative to agent's workspace
+                     - **IMPORTANT**: Must be a DIRECTORY path only, NOT a file path (e.g., "audio/speech" NOT "audio/speech.mp3")
+                     - The filename is automatically generated from the text content and timestamp
+                     - Relative path: Resolved relative to agent's workspace (e.g., "audio/speech")
                      - Absolute path: Must be within allowed directories
                      - None/empty: Saves to agent's workspace root
         audio_format: Output audio format (default: "mp3")

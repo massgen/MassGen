@@ -57,6 +57,8 @@ async def text_to_image_generation(
         model: Model to use for generation (default: "gpt-4.1")
                Options: "gpt-4.1"
         storage_path: Directory path where to save the image (optional)
+                     - **IMPORTANT**: Must be a DIRECTORY path only, NOT a file path (e.g., "images/generated" NOT "images/cat.png")
+                     - The filename is automatically generated from the prompt
                      - Relative path: Resolved relative to agent's workspace (e.g., "images/generated")
                      - Absolute path: Must be within allowed directories
                      - None/empty: Saves to agent's workspace root

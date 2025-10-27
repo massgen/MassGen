@@ -339,47 +339,164 @@ Present the best possible coordinated answer by combining the strengths from all
         # Add image generation instructions only if enabled
         if enable_image_generation:
             presentation_instructions += """For image generation tasks:
-- Extract image paths from the existing answer and resolve them in the shared reference.
-- Gather all agent-produced images (ignore non-existent files).
-- IMPORTANT: If you find ANY existing images (from yourself or other agents), you MUST call the understand_image tool to analyze EACH image and extract their key visual elements, composition, style, and quality.
-- IMPORTANT: Synthesize insights from all analyzed images into a detailed, combined prompt that captures the best elements.
-- IMPORTANT: Call text_to_image_generation with this synthesized prompt to generate the final image.
-- IMPORTANT: Save the final output in your workspace and output the saved path.
-- If no existing images are found, generate based on the original task requirements.
-"""
+
+  **MANDATORY WORKFLOW - You MUST follow these steps in order:**
+
+  Step 1: **Check for existing images (REQUIRED)**
+  - First, list all files in the Shared Reference directory (temp_workspaces) to find ALL images from EVERY agent
+  - Look for image files (.png, .jpg, .jpeg, .gif, .webp, etc.) in each agent's workspace subdirectory
+
+  Step 2: **Understand ALL existing images (REQUIRED if images exist)**
+  - For EACH image file you found, you MUST call the **understand_image** tool to extract its key visual elements, composition, style, and quality
+  - Do this for images from yourself AND from other agents - analyze ALL images found
+  - DO NOT skip this step even if you think you know the content
+
+  Step 3: **Synthesize and generate final image (REQUIRED)**
+  - If existing images were found and analyzed:
+    * Synthesize ALL image analyses into a single, detailed, combined prompt
+    * The combined prompt should capture the best visual elements, composition, style, and quality from all analyzed images
+    * Call **text_to_image_generation** with this synthesized prompt to create the final unified image
+  - If NO existing images were found:
+    * Generate a new image based directly on the original task requirements
+    * Call **text_to_image_generation** with a prompt derived from the original task
+
+  Step 4: **Save and report (REQUIRED)**
+  - Save the final generated image in your workspace
+  - Report the saved path in your final answer
+
+  **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing images. Do not skip calling
+  understand_image on found images. This is a mandatory synthesis workflow.
+  """
+#             presentation_instructions += """For image generation tasks:
+# - Extract image paths from the existing answer and resolve them in the shared reference.
+# - Gather all agent-produced images (ignore non-existent files).
+# - IMPORTANT: If you find ANY existing images (from yourself or other agents), you MUST call the understand_image tool to analyze EACH image and extract their key visual elements, composition, style, and quality.
+# - IMPORTANT: Synthesize insights from all analyzed images into a detailed, combined prompt that captures the best elements.
+# - IMPORTANT: Call text_to_image_generation with this synthesized prompt to generate the final image.
+# - IMPORTANT: Save the final output in your workspace and output the saved path.
+# - If no existing images are found, generate based on the original task requirements.
+# """
         # Add audio generation instructions only if enabled
         if enable_audio_generation:
             presentation_instructions += """For audio generation tasks:
-- Extract audio paths from the existing answer and resolve them in the shared reference.
-- Gather ALL audio files produced by EVERY agent (ignore non-existent files).
-- IMPORTANT: If you find ANY existing audios (from yourself or other agents), you MUST call the **understand_audio** tool to extract each audio's transcription.
-- IMPORTANT: Synthesize transcriptions from all audios into a detailed, combined transcription.
-- IMPORTANT: You MUST call the **text_to_speech_transcription_generation** tool with this synthesized transcription to generate the final audio.
-- IMPORTANT: Save the final output in your workspace and output the saved path.
-- If no existing audios are found, generate based on the original task requirements.
-"""
+
+  **MANDATORY WORKFLOW - You MUST follow these steps in order:**
+
+  Step 1: **Check for existing audios (REQUIRED)**
+  - First, list all files in the Shared Reference directory (temp_workspaces) to find ALL audio files from EVERY agent
+  - Look for audio files (.mp3, .wav, .flac, etc.) in each agent's workspace subdirectory
+
+  Step 2: **Understand ALL existing audios (REQUIRED if audios exist)**
+  - For EACH audio file you found, you MUST call the **understand_audio** tool to extract its transcription
+  - Do this for audios from yourself AND from other agents - analyze ALL audios found
+  - DO NOT skip this step even if you think you know the content
+
+  Step 3: **Synthesize and generate final audio (REQUIRED)**
+  - If existing audios were found and analyzed:
+    * Synthesize ALL audio transcriptions into a single, detailed, combined transcription
+    * The combined transcription should capture the best content from all analyzed audios
+    * Call **text_to_speech_transcription_generation** with this synthesized transcription to create the final unified audio
+  - If NO existing audios were found:
+    * Generate a new audio based directly on the original task requirements
+    * Call **text_to_speech_transcription_generation** with a transcription derived from the original task
+
+  Step 4: **Save and report (REQUIRED)**
+  - Save the final generated audio in your workspace
+  - Report the saved path in your final answer
+
+  **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing audios. Do not skip calling
+  understand_audio on found audios. This is a mandatory synthesis workflow.
+  """
+#                         presentation_instructions += """For audio generation tasks:
+# - Extract audio paths from the existing answer and resolve them in the shared reference.
+# - Gather ALL audio files produced by EVERY agent (ignore non-existent files).
+# - IMPORTANT: If you find ANY existing audios (from yourself or other agents), you MUST call the **understand_audio** tool to extract each audio's transcription.
+# - IMPORTANT: Synthesize transcriptions from all audios into a detailed, combined transcription.
+# - IMPORTANT: You MUST call the **text_to_speech_transcription_generation** tool with this synthesized transcription to generate the final audio.
+# - IMPORTANT: Save the final output in your workspace and output the saved path.
+# - If no existing audios are found, generate based on the original task requirements.
+# """
         # Add file generation instructions only if enabled
         if enable_file_generation:
             presentation_instructions += """For file generation tasks:
-- Extract file paths from the existing answer and resolve them in the shared reference.
-- Gather ALL files produced by EVERY agent (ignore non-existent files).
-- IMPORTANT: If you find ANY existing files (from yourself or other agents), you MUST call the **understand_file** tool to extract each file's content.
-- IMPORTANT: Synthesize contents from all files into a detailed, combined content.
-- IMPORTANT: You MUST call the **text_to_file_generation** tool with this synthesized content to generate the final file.
-- IMPORTANT: Save the final output in your workspace and output the saved path.
-- If no existing files are found, generate based on the original task requirements.
-"""
+
+  **MANDATORY WORKFLOW - You MUST follow these steps in order:**
+
+  Step 1: **Check for existing files (REQUIRED)**
+  - First, list all files in the Shared Reference directory (temp_workspaces) to find ALL files from EVERY agent
+  - Look for files of the requested type in each agent's workspace subdirectory
+
+  Step 2: **Understand ALL existing files (REQUIRED if files exist)**
+  - For EACH file you found, you MUST call the **understand_file** tool to extract its content, structure, and key elements
+  - Do this for files from yourself AND from other agents - analyze ALL files found
+  - DO NOT skip this step even if you think you know the content
+
+  Step 3: **Synthesize and generate final file (REQUIRED)**
+  - If existing files were found and analyzed:
+    * Synthesize ALL file contents into a single, detailed, combined content
+    * The combined content should capture the best elements, structure, and information from all analyzed files
+    * Call **text_to_file_generation** with this synthesized content to generate the final unified file
+  - If NO existing files were found:
+    * Generate a new file based directly on the original task requirements
+    * Call **text_to_file_generation** with content derived from the original task
+
+  Step 4: **Save and report (REQUIRED)**
+  - Save the final generated file in your workspace
+  - Report the saved path in your final answer
+
+  **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing files. Do not skip calling
+  understand_file on found files. This is a mandatory synthesis workflow.
+  """
+#             presentation_instructions += """For file generation tasks:
+# - Extract file paths from the existing answer and resolve them in the shared reference.
+# - Gather ALL files produced by EVERY agent (ignore non-existent files).
+# - IMPORTANT: If you find ANY existing files (from yourself or other agents), you MUST call the **understand_file** tool to extract each file's content.
+# - IMPORTANT: Synthesize contents from all files into a detailed, combined content.
+# - IMPORTANT: You MUST call the **text_to_file_generation** tool with this synthesized content to generate the final file.
+# - IMPORTANT: Save the final output in your workspace and output the saved path.
+# - If no existing files are found, generate based on the original task requirements.
+# """
         # Add video generation instructions only if enabled
         if enable_video_generation:
             presentation_instructions += """For video generation tasks:
-- Extract video paths from the existing answer and resolve them in the shared reference.
-- Gather ALL videos produced by EVERY agent (ignore non-existent files).
-- IMPORTANT: If you find ANY existing videos (from yourself or other agents), you MUST call the **understand_video** tool to extract each video's description and key features.
-- IMPORTANT: Synthesize descriptions from all videos into a detailed, combined prompt capturing the best elements.
-- IMPORTANT: You MUST call the **text_to_video_generation** tool with this synthesized prompt to generate the final video.
-- IMPORTANT: Save the final output in your workspace and output the saved path.
-- If no existing videos are found, generate based on the original task requirements.
-"""
+
+  **MANDATORY WORKFLOW - You MUST follow these steps in order:**
+
+  Step 1: **Check for existing videos (REQUIRED)**
+  - First, list all files in the Shared Reference directory (temp_workspaces) to find ALL videos from EVERY agent
+  - Look for video files (.mp4, .avi, .mov, etc.) in each agent's workspace subdirectory
+
+  Step 2: **Understand ALL existing videos (REQUIRED if videos exist)**
+  - For EACH video file you found, you MUST call the **understand_video** tool to extract its description, visual features, and 
+  key elements
+  - Do this for videos from yourself AND from other agents - analyze ALL videos found
+  - DO NOT skip this step even if you think you know the content
+
+  Step 3: **Synthesize and generate final video (REQUIRED)**
+  - If existing videos were found and analyzed:
+    * Synthesize ALL video descriptions into a single, detailed, combined prompt
+    * The combined prompt should capture the best visual elements, composition, motion, and style from all analyzed videos
+    * Call **text_to_video_generation** with this synthesized prompt to create the final unified video
+  - If NO existing videos were found:
+    * Generate a new video based directly on the original task requirements
+    * Call **text_to_video_generation** with a prompt derived from the original task
+
+  Step 4: **Save and report (REQUIRED)**
+  - Save the final generated video in your workspace
+  - Report the saved path in your final answer
+
+  **CRITICAL**: You MUST complete Steps 1-4 in order. Do not skip checking for existing videos. Do not skip calling 
+  understand_video on found videos. This is a mandatory synthesis workflow.
+  """
+#             presentation_instructions += """For video generation tasks:
+# - Extract video paths from the existing answer and resolve them in the shared reference.
+# - Gather ALL videos produced by EVERY agent (ignore non-existent files).
+# - IMPORTANT: If you find ANY existing videos (from yourself or other agents), you MUST call the **understand_video** tool to extract each video's description and key features.
+# - IMPORTANT: Synthesize descriptions from all videos into a detailed, combined prompt capturing the best elements.
+# - IMPORTANT: You MUST call the **text_to_video_generation** tool with this synthesized prompt to generate the final video.
+# - IMPORTANT: Save the final output in your workspace and output the saved path.
+# - If no existing videos are found, generate based on the original task requirements.
+# """
 
         # Add irreversible actions reminder if needed
         # TODO: Integrate more general irreversible actions handling in future (i.e., not just for context file delivery)
