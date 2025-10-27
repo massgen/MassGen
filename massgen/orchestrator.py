@@ -32,6 +32,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
+from .configs.rate_limits import get_rate_limit_config
 from .coordination_tracker import CoordinationTracker
 from .logger_config import get_log_session_dir  # Import to get log directory
 from .logger_config import logger  # Import logger directly for INFO logging
@@ -169,12 +170,9 @@ class Orchestrator(ChatAgent):
         self._active_tasks: Dict = {}
         
         # Agent startup rate limiting (per model)
+        # Load from centralized configuration file instead of hardcoding
         self._agent_startup_times: Dict[str, List[float]] = {}  # model -> [timestamps]
-        self._rate_limits: Dict[str, Dict[str, int]] = {  # model -> {max_starts, time_window}
-            "gemini-2.5-flash": {"max_starts": 9, "time_window": 60},  # 9/min for Flash (conservative)
-            "gemini-2.5-pro": {"max_starts": 2, "time_window": 60},    # 2/min for Pro (very limited!)
-            "gemini": {"max_starts": 7, "time_window": 60},            # Default for other Gemini models
-        }
+        self._rate_limits: Dict[str, Dict[str, int]] = self._load_rate_limits_from_config()
 
         # Context sharing for agents with filesystem support
         self._snapshot_storage: Optional[str] = snapshot_storage
@@ -1268,6 +1266,69 @@ class Orchestrator(ChatAgent):
 
         return enforcement_msgs
 
+    def _load_rate_limits_from_config(self) -> Dict[str, Dict[str, int]]:
+        """
+        Load rate limits from centralized configuration file.
+        
+        Converts RPM (Requests Per Minute) values from rate_limits.yaml
+        into agent startup rate limits for the orchestrator.
+        
+        Returns:
+            Dictionary mapping model names to rate limit configs:
+            {"model-name": {"max_starts": N, "time_window": 60}}
+        """
+        rate_limits = {}
+        
+        try:
+            config = get_rate_limit_config()
+            
+            # Load Gemini models
+            gemini_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini']
+            for model in gemini_models:
+                limits = config.get_limits('gemini', model, use_defaults=True)
+                rpm = limits.get('rpm')
+                
+                if rpm:
+                    # Use RPM directly as max_starts for conservative limiting
+                    # For very limited models (rpm <= 2), be extra conservative
+                    if rpm <= 2:
+                        max_starts = 1  # Very conservative for Pro (actual: 2 RPM)
+                    elif rpm <= 10:
+                        max_starts = max(1, rpm - 1)  # Conservative buffer
+                    else:
+                        max_starts = rpm
+                    
+                    rate_limits[model] = {
+                        "max_starts": max_starts,
+                        "time_window": 60  # Always use 60s window (1 minute)
+                    }
+                    logger.info(
+                        f"[Orchestrator] Loaded rate limit for {model}: "
+                        f"{max_starts} starts/min (from RPM: {rpm})"
+                    )
+            
+            # Fallback defaults if config loading failed
+            if not rate_limits:
+                logger.warning(
+                    "[Orchestrator] No rate limits loaded from config, using fallback defaults"
+                )
+                rate_limits = {
+                    "gemini-2.5-flash": {"max_starts": 9, "time_window": 60},
+                    "gemini-2.5-pro": {"max_starts": 2, "time_window": 60},
+                    "gemini": {"max_starts": 7, "time_window": 60},
+                }
+                
+        except Exception as e:
+            logger.error(f"[Orchestrator] Failed to load rate limits from config: {e}")
+            # Fallback to safe defaults
+            rate_limits = {
+                "gemini-2.5-flash": {"max_starts": 9, "time_window": 60},
+                "gemini-2.5-pro": {"max_starts": 2, "time_window": 60},
+                "gemini": {"max_starts": 7, "time_window": 60},
+            }
+        
+        return rate_limits
+
     async def _apply_agent_startup_rate_limit(self, agent_id: str) -> None:
         """
         Apply rate limiting for agent startup based on model.
@@ -1361,6 +1422,21 @@ class Orchestrator(ChatAgent):
                 "max_starts": max_starts,
             },
         )
+        
+        # Add mandatory cooldown after startup to prevent burst API calls
+        # This gives the backend rate limiter time to properly queue requests
+        cooldown_delays = {
+            "gemini-2.5-flash": 3.0,  # 3 second cooldown between Flash agent starts
+            "gemini-2.5-pro": 10.0,   # 10 second cooldown between Pro agent starts (very limited!)
+            "gemini": 5.0,            # 5 second default cooldown
+        }
+        
+        if model_key in cooldown_delays:
+            cooldown = cooldown_delays[model_key]
+            logger.info(
+                f"[Orchestrator] Applying {cooldown}s cooldown after starting {agent_id} ({model_key})"
+            )
+            await asyncio.sleep(cooldown)
 
     async def _stream_agent_execution(
         self,
