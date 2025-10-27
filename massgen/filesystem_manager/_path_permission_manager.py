@@ -142,10 +142,14 @@ class PathPermissionManager:
         ".pyc",
         ".class",
         ".jar",
-        # Old Office formats (not supported by understand_file)
-        ".doc",
-        ".xls",
-        ".ppt",
+        # Office documents (binary formats - use understand_file tool)
+        ".doc",  # Old Word (not supported by understand_file)
+        ".xls",  # Old Excel (not supported by understand_file)
+        ".ppt",  # Old PowerPoint (not supported by understand_file)
+        ".pdf",  # PDF (supported by understand_file with PyPDF2)
+        ".docx",  # Word (supported by understand_file with python-docx)
+        ".xlsx",  # Excel (supported by understand_file with openpyxl)
+        ".pptx",  # PowerPoint (supported by understand_file with python-pptx)
     }
 
     def __init__(

@@ -137,6 +137,19 @@ async def understand_audio(
                     output_blocks=[TextContent(data=json.dumps(result, indent=2))],
                 )
 
+            # Check file size (OpenAI Whisper API has 25MB limit)
+            file_size = audio_path.stat().st_size
+            max_size = 25 * 1024 * 1024  # 25MB
+            if file_size > max_size:
+                result = {
+                    "success": False,
+                    "operation": "generate_text_with_input_audio",
+                    "error": f"Audio file too large: {audio_path} ({file_size/1024/1024:.1f}MB > 25MB). " "Please use a smaller file or compress the audio.",
+                }
+                return ExecutionResult(
+                    output_blocks=[TextContent(data=json.dumps(result, indent=2))],
+                )
+
             validated_audio_paths.append(audio_path)
 
         # Process each audio file separately using OpenAI Transcription API
