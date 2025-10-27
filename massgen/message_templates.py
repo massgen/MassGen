@@ -119,6 +119,105 @@ Make sure you actually call `vote` or `new_answer` (in tool call format).
 
 *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
 
+    def get_planning_guidance(self) -> str:
+        """
+        Generate system message guidance for task planning tools.
+
+        This guidance is appended to the agent's system message when
+        agent task planning is enabled in the coordination config.
+
+        Returns:
+            Formatted planning guidance string
+        """
+        return """
+
+# Task Planning and Management
+
+You have access to task planning tools to organize complex work:
+
+**When to create a task plan:**
+- Multi-step tasks with dependencies
+- Complex features requiring coordination
+- Work that can be parallelized
+- Long-running projects with clear milestones
+
+**Tools available:**
+- `create_task_plan(tasks)` - Create a plan with tasks and dependencies
+- `get_ready_tasks()` - Get tasks ready to start (dependencies satisfied)
+- `get_blocked_tasks()` - See what's waiting on dependencies
+- `update_task_status(task_id, status)` - Mark progress (pending/in_progress/completed/blocked)
+- `add_task(description, depends_on)` - Add new tasks as you discover them
+- `get_task_plan()` - View your complete task plan
+- `edit_task(task_id, description)` - Update task descriptions
+- `delete_task(task_id)` - Remove tasks no longer needed
+
+**Best practices:**
+1. **Break down complex work** into manageable tasks (3-10 tasks is typical)
+2. **Model dependencies explicitly** when creating your plan
+3. **Use named task IDs** for clarity (e.g., "research_oauth", "impl_endpoints")
+4. **Check ready tasks** regularly to identify parallel work opportunities
+5. **Update status immediately** as you complete tasks
+6. **Reflect on your plan** - add tasks as you discover new requirements
+
+**Example:**
+```python
+# Create initial plan
+plan = create_task_plan([
+    {"id": "research", "description": "Research OAuth providers"},
+    {"id": "design", "description": "Design auth flow", "depends_on": ["research"]},
+    {"id": "implement", "description": "Implement endpoints", "depends_on": ["design"]}
+])
+
+# Work on first task
+update_task_status("research", "in_progress")
+# ... do research work ...
+update_task_status("research", "completed")
+
+# Check what's ready next
+ready = get_ready_tasks()  # ["design"]
+update_task_status("design", "in_progress")
+```
+
+**Dependency formats:**
+You can specify dependencies by index (0-based) or by task ID:
+```python
+# By index
+create_task_plan([
+    "Task 1",
+    {"description": "Task 2", "depends_on": [0]}  # Depends on Task 1
+])
+
+# By ID
+create_task_plan([
+    {"id": "auth", "description": "Setup auth"},
+    {"id": "api", "description": "Build API", "depends_on": ["auth"]}
+])
+```
+
+**When to use task planning:**
+Use task planning for multi-step or complex work. Simple single-step tasks don't need formal planning.
+
+**IMPORTANT - Including Task Plan in Your Answer:**
+If you created a task plan, include a summary at the end of your `new_answer` showing each task with:
+1. Task name
+2. Completion status (✓ or ✗)
+3. Brief description of how you completed it
+
+Example format:
+```
+[Your main answer content here]
+
+---
+**Task Execution Summary:**
+✓ Research OAuth providers - Analyzed OAuth 2.0 spec and compared Google, GitHub, Auth0 providers
+✓ Design auth flow - Created flow diagram with PKCE, token refresh, and session management
+✓ Implement endpoints - Built /auth/login, /auth/callback, /auth/refresh with JWT tokens
+
+Status: 3/3 tasks completed
+```
+
+This helps other agents understand your approach and makes voting more specific."""
+
     # =============================================================================
     # USER MESSAGE TEMPLATES
     # =============================================================================

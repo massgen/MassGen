@@ -2422,6 +2422,24 @@ class ConfigBuilder:
                     console.print()
                     console.print("  ✅ Planning mode enabled - MCP tools will plan without executing during coordination")
 
+            # Agent Task Planning
+            console.print()
+            console.print("  [dim]Agent Task Planning: Agents can organize work with task lists and dependencies[/dim]")
+            console.print("  [dim]• Agents can create task plans to break down complex work[/dim]")
+            console.print("  [dim]• Track progress and manage dependencies between tasks[/dim]")
+            console.print("  [dim]• Useful for multi-step projects and coordination[/dim]")
+            console.print()
+
+            task_planning_choice = Confirm.ask("  [prompt]Enable agent task planning?[/prompt]", default=False)
+            if task_planning_choice is None:
+                raise KeyboardInterrupt  # User cancelled
+            if task_planning_choice:
+                if "coordination" not in orchestrator_config:
+                    orchestrator_config["coordination"] = {}
+                orchestrator_config["coordination"]["enable_agent_task_planning"] = True
+                console.print()
+                console.print("  ✅ Agent task planning enabled - agents can create and manage task plans")
+
             # Orchestration Restart Feature
             console.print()
             console.print("  [dim]Orchestration Restart: Automatic quality checks with self-correction[/dim]")

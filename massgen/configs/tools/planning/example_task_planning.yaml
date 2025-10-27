@@ -1,0 +1,51 @@
+# Example Configuration: Agent Task Planning
+#
+# Use Case: Test the new agent task planning feature where agents can create
+#           and manage task lists with dependencies
+#
+# This config enables task planning tools for agents, allowing them to:
+# - Break down complex work into manageable tasks
+# - Track dependencies between tasks
+# - Identify parallel work opportunities
+# - Monitor progress through task completion
+#
+# Run with:
+#   massgen --config massgen/configs/tools/planning/example_task_planning.yaml "Plan and implement a user authentication system with OAuth"
+
+agents:
+  - id: "planner_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace_planner"
+
+  - id: "implementation_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      cwd: "workspace_impl"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  # Enable agent task planning
+  coordination:
+    enable_agent_task_planning: true
+    max_tasks_per_plan: 100
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# What to expect:
+# ✅ Agents can use create_task_plan() to break down work
+# ✅ Agents can track progress with update_task_status()
+# ✅ Agents can identify ready vs blocked tasks
+# ✅ Agents get planning guidance in their system messages
+#
+# Example task plan agents might create:
+# 1. Research OAuth 2.0 providers
+# 2. Design authentication flow (depends on #1)
+# 3. Implement backend endpoints (depends on #2)
+# 4. Write tests (depends on #3)

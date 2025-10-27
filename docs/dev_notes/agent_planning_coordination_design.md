@@ -1533,38 +1533,46 @@ for task in ready:
 
 **IMPORTANT:** Implement phases sequentially. Complete Phase 1 entirely before starting Phase 2, complete Phase 2 before Phase 3, etc. Each phase builds on the previous one.
 
-### Phase 1: Task Planning Tools (IMPLEMENT FIRST)
+### Phase 1: Task Planning Tools (COMPLETE ✅)
 **Priority: Highest - Foundation for all other features**
 
 This phase provides the core planning infrastructure that broadcasts and delegation will build upon.
 
 1. ✅ Design document created
-2. ⏳ Create `TaskPlan` and `Task` dataclasses
-   - Implement dependency tracking
-   - Add validation for circular dependencies
-3. ⏳ Implement planning MCP server (`massgen/tools/_planning_mcp_server.py`)
+2. ✅ Create `TaskPlan` and `Task` dataclasses
+   - Implemented dependency tracking
+   - Added validation for circular dependencies
+3. ✅ Implement planning MCP server (`massgen/tools/_planning_mcp_server.py`)
    - `create_task_plan()` with dependency support
    - `add_task()`, `update_task_status()`, `edit_task()`, `delete_task()`
    - `get_ready_tasks()`, `get_blocked_tasks()`, `get_task_plan()`
-4. ⏳ Integrate with orchestrator
+4. ✅ Integrate with orchestrator
    - Store task plans per agent
    - Inject planning MCP server for each agent
-   - Serialize task plans for resumability
-5. ⏳ Add configuration options
-   - `enable_agent_planning` flag
-   - Max tasks per plan
-6. ⏳ Update message templates (`massgen/message_templates.py`)
-   - Add task planning guidance to system messages
-   - Include when to use, best practices, examples
-7. ⏳ Write unit tests
+   - Task plan serialization ready (in dataclasses)
+5. ✅ Add configuration options
+   - `enable_agent_task_planning` flag in CoordinationConfig
+   - `max_tasks_per_plan` configuration (default: 100)
+   - Config builder interactive prompts
+6. ✅ Update message templates (`massgen/message_templates.py`)
+   - Added task planning guidance to system messages via `get_planning_guidance()`
+   - Included when to use, best practices, examples
+   - Automatically appended when planning enabled
+7. ✅ Write unit tests
+   - 40 unit tests with >80% coverage
    - Task creation and dependency validation
    - Status updates and ready/blocked task detection
    - Serialization/deserialization
-8. ⏳ Update documentation
-   - User guide for task planning
-   - API reference for tools
+8. ✅ Write integration tests
+   - 9 integration tests covering complex workflows
+   - Linear, parallel, and diamond dependency patterns
+   - Dynamic task addition during execution
+9. ✅ Update documentation
+   - User guide: `docs/source/user_guide/agent_task_planning.rst`
+   - API reference: `docs/source/api/planning_tools.rst`
+   - CHANGELOG updated with v0.1.5 entry
 
-**Milestone:** Agents can create, manage, and track task plans with dependencies
+**Milestone: ACHIEVED ✅** - Agents can create, manage, and track task plans with dependencies
 
 ### Phase 2: Broadcast/Coordination System (IMPLEMENT SECOND)
 **Priority: Medium - Enables agent-to-agent and agent-to-human communication**
