@@ -55,7 +55,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Enhanced security and isolation for tool operations
 - **Use Case**: Secure execution of third-party tools in isolated environments
 
-**2. Backend Code Refactoring** (@ncrispino)
+**2. Backend Code Refactoring** (@praneeth999)
 - PR: [#362](https://github.com/Leezekun/MassGen/pull/362)
 - Major backend code refactoring for improved maintainability
 - Enhanced code organization and architectural improvements
