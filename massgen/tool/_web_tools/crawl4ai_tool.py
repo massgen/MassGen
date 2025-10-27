@@ -134,6 +134,7 @@ async def crawl4ai_md(
     url: str,
     filter_type: str = "fit",
     query: Optional[str] = None,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """Extract clean markdown text content from a webpage.
 
@@ -270,7 +271,10 @@ async def crawl4ai_md(
 
 
 @require_docker
-async def crawl4ai_html(url: str) -> ExecutionResult:
+async def crawl4ai_html(
+    url: str,
+    agent_cwd: Optional[str] = None,
+) -> ExecutionResult:
     """Extract preprocessed HTML from a webpage.
 
     Fetches and preprocesses HTML, removing scripts/styles for cleaner
@@ -521,6 +525,7 @@ async def crawl4ai_pdf(
 async def crawl4ai_execute_js(
     url: str,
     scripts: List[str],
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """Execute JavaScript on a webpage and return results.
 
@@ -590,6 +595,7 @@ async def crawl4ai_execute_js(
 async def crawl4ai_crawl(
     urls: List[str],
     max_urls: int = 100,
+    agent_cwd: Optional[str] = None,
 ) -> ExecutionResult:
     """Crawl multiple URLs in parallel.
 
