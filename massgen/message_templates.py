@@ -355,7 +355,7 @@ Present the best possible coordinated answer by combining the strengths from all
   - If existing images were found and analyzed:
     * Synthesize ALL image analyses into a single, detailed, combined prompt
     * The combined prompt should capture the best visual elements, composition, style, and quality from all analyzed images
-    * Call **text_to_image_generation** with this synthesized prompt to create the final unified image
+    * Call **image_to_image_generation** with this synthesized prompt and ALL images to create the final unified image
   - If NO existing images were found:
     * Generate a new image based directly on the original task requirements
     * Call **text_to_image_generation** with a prompt derived from the original task

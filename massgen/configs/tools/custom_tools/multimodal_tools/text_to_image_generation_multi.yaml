@@ -17,6 +17,10 @@ agents:
           category: "multimodal"
           path: "massgen/tool/_multimodal_tools/understand_image.py"
           function: ["understand_image"]
+        - name: ["image_to_image_generation"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/image_to_image_generation.py"
+          function: ["image_to_image_generation"]
     system_message: |
       You are an AI assistant with access to text-to-image generation capabilities.
 
