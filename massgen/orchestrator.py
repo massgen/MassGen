@@ -167,6 +167,11 @@ class Orchestrator(ChatAgent):
         self._selected_agent: Optional[str] = None
         self._final_presentation_content: Optional[str] = None
 
+        # Track winning agents by turn for memory sharing
+        # Format: [{"agent_id": "agent_b", "turn": 1}, {"agent_id": "agent_a", "turn": 2}]
+        self._winning_agents_history: List[Dict[str, Any]] = []
+        self._current_turn: int = 0
+
         # Timeout and resource tracking
         self.total_tokens: int = 0
         self.coordination_start_time: float = 0
@@ -913,6 +918,18 @@ Your answer:"""
         # Determine final agent based on votes
         current_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
         self._selected_agent = self._determine_final_agent_from_votes(votes, current_answers)
+
+        # Track winning agent for memory sharing in future turns
+        self._current_turn += 1
+        if self._selected_agent:
+            winner_entry = {
+                "agent_id": self._selected_agent,
+                "turn": self._current_turn,
+            }
+            self._winning_agents_history.append(winner_entry)
+            logger.info(
+                f"🏆 Turn {self._current_turn} winner: {self._selected_agent} " f"(tracked for memory sharing)",
+            )
 
         log_coordination_step(
             "Final agent selected",
@@ -1955,20 +1972,42 @@ Your answer:"""
                     # First attempt: orchestrator provides initial conversation
                     # But we need the agent to have this in its history for subsequent calls
                     # First attempt: provide complete conversation and reset agent's history
-                    chat_stream = agent.chat(conversation_messages, self.workflow_tools, reset_chat=True, current_stage=CoordinationStage.INITIAL_ANSWER)
+                    # Pass current turn and previous winners for memory sharing
+                    chat_stream = agent.chat(
+                        conversation_messages,
+                        self.workflow_tools,
+                        reset_chat=True,
+                        current_stage=CoordinationStage.INITIAL_ANSWER,
+                        orchestrator_turn=self._current_turn + 1,  # Next turn number
+                        previous_winners=self._winning_agents_history.copy(),
+                    )
                 else:
                     # Subsequent attempts: send enforcement message (set by error handling)
 
                     if isinstance(enforcement_msg, list):
                         # Tool message array
-                        chat_stream = agent.chat(enforcement_msg, self.workflow_tools, reset_chat=False, current_stage=CoordinationStage.ENFORCEMENT)
+                        chat_stream = agent.chat(
+                            enforcement_msg,
+                            self.workflow_tools,
+                            reset_chat=False,
+                            current_stage=CoordinationStage.ENFORCEMENT,
+                            orchestrator_turn=self._current_turn + 1,
+                            previous_winners=self._winning_agents_history.copy(),
+                        )
                     else:
                         # Single user message
                         enforcement_message = {
                             "role": "user",
                             "content": enforcement_msg,
                         }
-                        chat_stream = agent.chat([enforcement_message], self.workflow_tools, reset_chat=False, current_stage=CoordinationStage.ENFORCEMENT)
+                        chat_stream = agent.chat(
+                            [enforcement_message],
+                            self.workflow_tools,
+                            reset_chat=False,
+                            current_stage=CoordinationStage.ENFORCEMENT,
+                            orchestrator_turn=self._current_turn + 1,
+                            previous_winners=self._winning_agents_history.copy(),
+                        )
                 response_text = ""
                 tool_calls = []
                 workflow_tool_found = False
@@ -2746,7 +2785,13 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
 
         try:
             # Track final round iterations (each chunk is like an iteration)
-            async for chunk in agent.chat(presentation_messages, reset_chat=True, current_stage=CoordinationStage.PRESENTATION):
+            async for chunk in agent.chat(
+                presentation_messages,
+                reset_chat=True,
+                current_stage=CoordinationStage.PRESENTATION,
+                orchestrator_turn=self._current_turn,
+                previous_winners=self._winning_agents_history.copy(),
+            ):
                 chunk_type = self._get_chunk_type_value(chunk)
                 # Start new iteration for this chunk
                 self.coordination_tracker.start_new_iteration()
@@ -2995,7 +3040,14 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
         try:
             timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
             async with asyncio.timeout(timeout_seconds):
-                async for chunk in agent.chat(messages=evaluation_messages, tools=post_eval_tools, reset_chat=True, current_stage=CoordinationStage.POST_EVALUATION):
+                async for chunk in agent.chat(
+                    messages=evaluation_messages,
+                    tools=post_eval_tools,
+                    reset_chat=True,
+                    current_stage=CoordinationStage.POST_EVALUATION,
+                    orchestrator_turn=self._current_turn,
+                    previous_winners=self._winning_agents_history.copy(),
+                ):
                     chunk_type = self._get_chunk_type_value(chunk)
 
                     if chunk_type == "content" and chunk.content:

@@ -12,6 +12,7 @@ The memory system is designed to be:
 """
 
 from ._base import MemoryBase, PersistentMemoryBase
+from ._compression import CompressionStats, ContextCompressor
 from ._conversation import ConversationMemory
 from ._persistent import PersistentMemory
 
@@ -20,4 +21,6 @@ __all__ = [
     "PersistentMemoryBase",
     "ConversationMemory",
     "PersistentMemory",
+    "ContextCompressor",
+    "CompressionStats",
 ]

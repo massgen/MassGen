@@ -103,6 +103,7 @@ class PersistentMemory(PersistentMemoryBase):
         vector_store_config: Optional[VectorStoreConfig] = None,
         mem0_config: Optional[MemoryConfig] = None,
         memory_type: str = "semantic",
+        qdrant_client: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -122,6 +123,7 @@ class PersistentMemory(PersistentMemoryBase):
             vector_store_config: mem0 vector store configuration
             mem0_config: Full mem0 configuration (overrides individual configs)
             memory_type: Type of memory storage ('semantic' or 'procedural')
+            qdrant_client: Optional shared QdrantClient instance (avoids concurrent access issues)
             **kwargs: Additional options (e.g., on_disk=True for persistence)
 
         Raises:
@@ -213,8 +215,13 @@ class PersistentMemory(PersistentMemoryBase):
             # Configure vector store
             if vector_store_config is not None:
                 mem0_config.vector_store = vector_store_config
+            elif qdrant_client is not None:
+                # Use shared Qdrant client (avoids concurrent access issues)
+                mem0_config.vector_store = mem0.vector_stores.configs.VectorStoreConfig(
+                    config={"client": qdrant_client},
+                )
             else:
-                # Default to Qdrant with disk persistence
+                # Default to Qdrant with disk persistence (single agent only)
                 persist = kwargs.get("on_disk", True)
                 mem0_config.vector_store = mem0.vector_stores.configs.VectorStoreConfig(
                     config={"on_disk": persist},
@@ -414,6 +421,7 @@ class PersistentMemory(PersistentMemoryBase):
         self,
         query: Union[str, Dict[str, Any], List[Dict[str, Any]]],
         limit: int = 5,
+        previous_winners: Optional[List[Dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> str:
         """
@@ -424,11 +432,14 @@ class PersistentMemory(PersistentMemoryBase):
 
         Args:
             query: Query string or message(s) to search for
-            limit: Maximum number of memories to retrieve
+            limit: Maximum number of memories to retrieve per agent
+            previous_winners: List of previous winning agents with turns
+                             Format: [{"agent_id": "agent_b", "turn": 1}, ...]
+                             If provided, also searches winners' memories from their winning turns
             **kwargs: Additional mem0 search options
 
         Returns:
-            Formatted string of retrieved memories
+            Formatted string of retrieved memories (own + previous winners')
         """
         # Convert query to string format
         query_strings = []
@@ -453,6 +464,8 @@ class PersistentMemory(PersistentMemoryBase):
 
         # Search mem0 for each query string
         all_results = []
+
+        # 1. Search own agent's memories first
         for query_str in query_strings:
             search_result = await self.mem0_memory.search(
                 query=query_str,
@@ -465,6 +478,31 @@ class PersistentMemory(PersistentMemoryBase):
             if search_result and "results" in search_result:
                 memories = [item["memory"] for item in search_result["results"]]
                 all_results.extend(memories)
+
+        # 2. Search previous winning agents' memories (turn-filtered)
+        if previous_winners:
+            for winner in previous_winners:
+                winner_agent_id = winner.get("agent_id")
+                winner_turn = winner.get("turn")
+
+                # Skip if winner is self
+                if winner_agent_id == self.agent_id:
+                    continue
+
+                # Search each query string for this winner
+                for query_str in query_strings:
+                    search_result = await self.mem0_memory.search(
+                        query=query_str,
+                        agent_id=winner_agent_id,
+                        user_id=self.user_id,
+                        run_id=self.session_id,
+                        limit=limit,
+                        metadata_filters={"turn": winner_turn} if winner_turn else None,
+                    )
+
+                    if search_result and "results" in search_result:
+                        memories = [f"[From {winner_agent_id} Turn {winner_turn}] {item['memory']}" for item in search_result["results"]]
+                        all_results.extend(memories)
 
         # Format results as a readable string
         return "\n".join(all_results) if all_results else ""

@@ -488,14 +488,42 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None, config_path: Optional[str] = None) -> Dict[str, ConfigurableAgent]:
-    """Create agents from configuration."""
+def create_agents_from_config(
+    config: Dict[str, Any],
+    orchestrator_config: Optional[Dict[str, Any]] = None,
+    config_path: Optional[str] = None,
+    memory_session_id: Optional[str] = None,
+) -> Dict[str, ConfigurableAgent]:
+    """Create agents from configuration.
+
+    Args:
+        memory_session_id: Optional session ID to use for memory isolation.
+                          If provided, overrides session_name from YAML config.
+    """
     agents = {}
 
     agent_entries = [config["agent"]] if "agent" in config else config.get("agents", None)
 
     if not agent_entries:
         raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
+
+    # Create shared Qdrant client for all agents (avoids concurrent access errors)
+    # ONE client can be used by multiple mem0 instances safely
+    shared_qdrant_client = None
+    global_memory_config = config.get("memory", {})
+    if global_memory_config.get("enabled", False) and global_memory_config.get("persistent_memory", {}).get("enabled", False):
+        try:
+            from qdrant_client import QdrantClient
+
+            pm_config = global_memory_config.get("persistent_memory", {})
+            qdrant_path = pm_config.get("path", ".massgen/qdrant")
+
+            # Create ONE shared client for all agents
+            shared_qdrant_client = QdrantClient(path=qdrant_path)
+            logger.info(f"🗄️  Shared Qdrant client created at {qdrant_path}")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to create shared Qdrant client: {e}")
+            logger.warning("   Persistent memory will be disabled for all agents")
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
@@ -579,7 +607,152 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
 
         # Timeout configuration will be applied to orchestrator instead of individual agents
 
-        agent = ConfigurableAgent(config=agent_config, backend=backend)
+        # Merge global and per-agent memory configuration
+        global_memory_config = config.get("memory", {})
+        agent_memory_config = agent_data.get("memory", {})
+
+        # Deep merge: agent config overrides global config
+        def merge_configs(global_cfg, agent_cfg):
+            """Recursively merge agent config into global config."""
+            merged = global_cfg.copy()
+            for key, value in agent_cfg.items():
+                if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
+                    merged[key] = merge_configs(merged[key], value)
+                else:
+                    merged[key] = value
+            return merged
+
+        memory_config = merge_configs(global_memory_config, agent_memory_config)
+
+        # Create context monitor if memory config is enabled
+        context_monitor = None
+        if memory_config.get("enabled", False):
+            from .context_monitor import ContextWindowMonitor
+
+            compression_config = memory_config.get("compression", {})
+            trigger_threshold = compression_config.get("trigger_threshold", 0.75)
+            target_ratio = compression_config.get("target_ratio", 0.40)
+
+            # Get model name from backend config
+            model_name = backend_config.get("model", "unknown")
+
+            # Normalize provider name for monitor
+            provider_map = {
+                "openai": "openai",
+                "anthropic": "anthropic",
+                "claude": "anthropic",
+                "google": "google",
+                "gemini": "google",
+            }
+            provider = provider_map.get(backend_type_lower, backend_type_lower)
+
+            context_monitor = ContextWindowMonitor(
+                model_name=model_name,
+                provider=provider,
+                trigger_threshold=trigger_threshold,
+                target_ratio=target_ratio,
+                enabled=True,
+            )
+            logger.info(
+                f"📊 Context monitor created for {agent_config.agent_id}: " f"{context_monitor.context_window:,} tokens, " f"trigger={trigger_threshold*100:.0f}%, target={target_ratio*100:.0f}%",
+            )
+
+        # Create per-agent memory objects if memory is enabled
+        conversation_memory = None
+        persistent_memory = None
+
+        if memory_config.get("enabled", False):
+            from .memory import ConversationMemory
+
+            # Create conversation memory for this agent
+            if memory_config.get("conversation_memory", {}).get("enabled", True):
+                conversation_memory = ConversationMemory()
+                logger.info(f"💾 Conversation memory created for {agent_config.agent_id}")
+
+            # Create persistent memory for this agent (if enabled)
+            if memory_config.get("persistent_memory", {}).get("enabled", False):
+                from .memory import PersistentMemory
+
+                pm_config = memory_config.get("persistent_memory", {})
+
+                # Get persistent memory configuration
+                agent_name = pm_config.get("agent_name", agent_config.agent_id)
+
+                # Use unified session: memory_session_id (from CLI) > YAML session_name > None
+                session_name = memory_session_id or pm_config.get("session_name")
+
+                on_disk = pm_config.get("on_disk", True)
+                qdrant_path = pm_config.get("path", ".massgen/qdrant")  # Project dir, not /tmp
+
+                try:
+                    # Create embedding backend for persistent memory
+                    embedding_backend = ChatCompletionsBackend(
+                        type="openai",
+                        model="text-embedding-3-small",
+                        api_key=os.getenv("OPENAI_API_KEY"),
+                    )
+
+                    # Use shared Qdrant client if available
+                    if shared_qdrant_client:
+                        persistent_memory = PersistentMemory(
+                            agent_name=agent_name,
+                            session_name=session_name,
+                            llm_backend=backend,
+                            embedding_backend=embedding_backend,
+                            qdrant_client=shared_qdrant_client,  # Share ONE client
+                            on_disk=on_disk,
+                        )
+                        logger.info(
+                            f"💾 Persistent memory created for {agent_config.agent_id} " f"(agent_name={agent_name}, session={session_name or 'cross-session'}, shared_qdrant=True)",
+                        )
+                    else:
+                        # Fallback: create individual vector store (for backward compatibility)
+                        from mem0.vector_stores.configs import VectorStoreConfig
+
+                        vector_store_config = VectorStoreConfig(
+                            config={
+                                "on_disk": on_disk,
+                                "path": qdrant_path,
+                            },
+                        )
+
+                        persistent_memory = PersistentMemory(
+                            agent_name=agent_name,
+                            session_name=session_name,
+                            llm_backend=backend,
+                            embedding_backend=embedding_backend,
+                            vector_store_config=vector_store_config,
+                            on_disk=on_disk,
+                        )
+                        logger.info(
+                            f"💾 Persistent memory created for {agent_config.agent_id} " f"(agent_name={agent_name}, session={session_name or 'cross-session'}, path={qdrant_path})",
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"⚠️  Failed to create persistent memory for {agent_config.agent_id}: {e}",
+                    )
+                    persistent_memory = None
+
+        # Create agent
+        agent = ConfigurableAgent(
+            config=agent_config,
+            backend=backend,
+            conversation_memory=conversation_memory,
+            persistent_memory=persistent_memory,
+            context_monitor=context_monitor,
+        )
+
+        # Configure retrieval settings from YAML (if memory is enabled)
+        if memory_config.get("enabled", False):
+            retrieval_config = memory_config.get("retrieval", {})
+            agent._retrieval_limit = retrieval_config.get("limit", 5)
+            agent._retrieval_exclude_recent = retrieval_config.get("exclude_recent", True)
+
+            if retrieval_config:  # Only log if custom config provided
+                logger.info(
+                    f"🔧 Retrieval configured for {agent_config.agent_id}: " f"limit={agent._retrieval_limit}, exclude_recent={agent._retrieval_exclude_recent}",
+                )
+
         agents[agent.config.agent_id] = agent
 
     return agents
@@ -1883,6 +2056,7 @@ async def run_interactive_mode(
     original_config: Dict[str, Any] = None,
     orchestrator_cfg: Dict[str, Any] = None,
     config_path: Optional[str] = None,
+    memory_session_id: Optional[str] = None,
     **kwargs,
 ):
     """Run MassGen in interactive mode with conversation history."""
@@ -1971,8 +2145,13 @@ async def run_interactive_mode(
     if original_config and orchestrator_cfg:
         config_modified = prompt_for_context_paths(original_config, orchestrator_cfg)
         if config_modified:
-            # Recreate agents with updated context paths
-            agents = create_agents_from_config(original_config, orchestrator_cfg, config_path=config_path)
+            # Recreate agents with updated context paths (use same session)
+            agents = create_agents_from_config(
+                original_config,
+                orchestrator_cfg,
+                config_path=config_path,
+                memory_session_id=memory_session_id,
+            )
             print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
             print()
 
@@ -1982,7 +2161,8 @@ async def run_interactive_mode(
     conversation_history = []
 
     # Session management for multi-turn filesystem support
-    session_id = None
+    # Use memory_session_id (unified with memory system) if provided, otherwise create later
+    session_id = memory_session_id
     current_turn = 0
     session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")
 
@@ -2029,8 +2209,13 @@ async def run_interactive_mode(
                                 new_turn_config = {"path": str(latest_turn_workspace.resolve()), "permission": "read"}
                                 backend_config["context_paths"] = existing_context_paths + [new_turn_config]
 
-                        # Recreate agents from modified config
-                        agents = create_agents_from_config(modified_config, orchestrator_cfg, config_path=config_path)
+                        # Recreate agents from modified config (use same session)
+                        agents = create_agents_from_config(
+                            modified_config,
+                            orchestrator_cfg,
+                            config_path=config_path,
+                            memory_session_id=session_id,
+                        )
                         logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
 
                 question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
@@ -2322,7 +2507,28 @@ async def main(args):
                     '  agent_temporary_workspace: "your_temp_dir"  # Directory for temporary agent workspaces',
                 )
 
-        agents = create_agents_from_config(config, orchestrator_cfg, config_path=str(resolved_path) if resolved_path else None)
+        # Create unified session ID for memory system (before creating agents)
+        # This ensures memory is isolated per session and unifies orchestrator + memory sessions
+        memory_session_id = None
+        if args.question:
+            # Single question mode: Create temp session per run
+            from datetime import datetime
+
+            memory_session_id = f"temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            logger.info(f"📝 Created temp session for single-question mode: {memory_session_id}")
+        else:
+            # Interactive mode: Create session now (will be reused by orchestrator)
+            from datetime import datetime
+
+            memory_session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            logger.info(f"📝 Created session for interactive mode: {memory_session_id}")
+
+        agents = create_agents_from_config(
+            config,
+            orchestrator_cfg,
+            config_path=str(resolved_path) if resolved_path else None,
+            memory_session_id=memory_session_id,
+        )
 
         if not agents:
             raise ConfigurationError("No agents configured")
@@ -2358,9 +2564,17 @@ async def main(args):
                 #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
                 #     print(f"{response}", flush=True)
             else:
-                # Pass the config path to interactive mode
+                # Pass the config path and session_id to interactive mode
                 config_file_path = str(resolved_path) if args.config and resolved_path else None
-                await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, config_path=config_file_path, **kwargs)
+                await run_interactive_mode(
+                    agents,
+                    ui_config,
+                    original_config=config,
+                    orchestrator_cfg=orchestrator_cfg,
+                    config_path=config_file_path,
+                    memory_session_id=memory_session_id,
+                    **kwargs,
+                )
         finally:
             # Cleanup all agents' filesystem managers (including Docker containers)
             for agent_id, agent in agents.items():

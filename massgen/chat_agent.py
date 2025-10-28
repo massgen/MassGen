@@ -14,6 +14,7 @@ from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .backend.base import LLMBackend, StreamChunk
+from .logger_config import logger
 from .memory import ConversationMemory, PersistentMemoryBase
 from .stream_chunk import ChunkType
 from .utils import CoordinationStage
@@ -144,6 +145,7 @@ class SingleAgent(ChatAgent):
         session_id: Optional[str] = None,
         conversation_memory: Optional[ConversationMemory] = None,
         persistent_memory: Optional[PersistentMemoryBase] = None,
+        context_monitor: Optional[Any] = None,
     ):
         """
         Initialize single agent.
@@ -155,11 +157,41 @@ class SingleAgent(ChatAgent):
             session_id: Optional session identifier
             conversation_memory: Optional conversation memory instance
             persistent_memory: Optional persistent memory instance
+            context_monitor: Optional context window monitor for tracking token usage
         """
         super().__init__(session_id, conversation_memory, persistent_memory)
         self.backend = backend
         self.agent_id = agent_id or f"agent_{uuid.uuid4().hex[:8]}"
         self.system_message = system_message
+        self.context_monitor = context_monitor
+        self._turn_number = 0
+
+        # Track orchestrator turn number (for turn-aware memory)
+        self._orchestrator_turn = None
+
+        # Track if compression has occurred (for smart retrieval)
+        self._compression_has_occurred = False
+
+        # Retrieval configuration (defaults, can be overridden from config)
+        self._retrieval_limit = 5  # Number of memory facts to retrieve from mem0
+        self._retrieval_exclude_recent = True  # Don't retrieve before compression (avoid duplicates)
+
+        # Track previous winning agents for shared memory retrieval
+        # Format: [{"agent_id": "agent_b", "turn": 1}, {"agent_id": "agent_a", "turn": 2}]
+        self._previous_winners = []
+
+        # Create context compressor if monitor and conversation_memory exist
+        self.context_compressor = None
+        if self.context_monitor and self.conversation_memory:
+            from .memory._compression import ContextCompressor
+            from .token_manager.token_manager import TokenCostCalculator
+
+            self.context_compressor = ContextCompressor(
+                token_calculator=TokenCostCalculator(),
+                conversation_memory=self.conversation_memory,
+                persistent_memory=self.persistent_memory,
+            )
+            logger.info(f"🗜️  Context compressor created for {self.agent_id}")
 
         # Add system message to history if provided
         if self.system_message:
@@ -253,10 +285,14 @@ class SingleAgent(ChatAgent):
                             except Exception as e:
                                 # Log but don't fail if memory add fails
                                 print(f"Warning: Failed to add response to conversation memory: {e}")
-                        # Record to persistent memory
+                        # Record to persistent memory with turn metadata
                         if self.persistent_memory:
                             try:
-                                await self.persistent_memory.record(messages_to_record)
+                                # Include turn number in metadata for temporal filtering
+                                await self.persistent_memory.record(
+                                    messages_to_record,
+                                    metadata={"turn": self._orchestrator_turn} if self._orchestrator_turn else None,
+                                )
                             except NotImplementedError:
                                 # Memory backend doesn't support record
                                 pass
@@ -264,6 +300,37 @@ class SingleAgent(ChatAgent):
                                 # Log but don't fail if memory record fails
                                 print(f"Warning: Failed to record to persistent memory: {e}")
 
+                    # Log context usage after response (if monitor enabled)
+                    if self.context_monitor:
+                        # Use conversation history for accurate token count
+                        current_history = self.conversation_history if not self.conversation_memory else await self.conversation_memory.get_messages()
+                        usage_info = self.context_monitor.log_context_usage(current_history, turn_number=self._turn_number)
+
+                        # Compress if needed
+                        if self.context_compressor and usage_info.get("should_compress"):
+                            logger.info(
+                                f"🔄 Attempting compression for {self.agent_id} " f"({usage_info['current_tokens']:,} → {usage_info['target_tokens']:,} tokens)",
+                            )
+                            compression_stats = await self.context_compressor.compress_if_needed(
+                                messages=current_history,
+                                current_tokens=usage_info["current_tokens"],
+                                target_tokens=usage_info["target_tokens"],
+                                should_compress=True,
+                            )
+
+                            # Update conversation_history if compression occurred
+                            if compression_stats and self.conversation_memory:
+                                # Reload from conversation memory (it was updated by compressor)
+                                self.conversation_history = await self.conversation_memory.get_messages()
+                                # Mark that compression has occurred
+                                self._compression_has_occurred = True
+                                logger.info(
+                                    f"✅ Conversation history updated after compression: " f"{len(self.conversation_history)} messages",
+                                )
+                        elif usage_info.get("should_compress") and not self.context_compressor:
+                            logger.warning(
+                                f"⚠️  Should compress but compressor not available " f"(monitor={self.context_monitor is not None}, " f"conv_mem={self.conversation_memory is not None})",
+                            )
                     yield chunk
                 else:
                     yield chunk
@@ -281,12 +348,28 @@ class SingleAgent(ChatAgent):
         reset_chat: bool = False,
         clear_history: bool = False,
         current_stage: CoordinationStage = None,
+        orchestrator_turn: Optional[int] = None,
+        previous_winners: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         # print("Agent: ", self.agent_id)
         # for message in messages:
         #     print(f"Message: {message}\n")
         # print("Messages End. \n")
-        """Process messages through single backend with tool support."""
+        """
+        Process messages through single backend with tool support.
+
+        Args:
+            orchestrator_turn: Current orchestrator turn number (for turn-aware memory)
+            previous_winners: List of previous winning agents with turns
+                             Format: [{"agent_id": "agent_b", "turn": 1}, ...]
+        """
+        # Update orchestrator turn if provided
+        if orchestrator_turn is not None:
+            self._orchestrator_turn = orchestrator_turn
+
+        # Update previous winners if provided
+        if previous_winners is not None:
+            self._previous_winners = previous_winners
         if clear_history:
             # Clear history but keep system message if it exists
             system_messages = [msg for msg in self.conversation_history if msg.get("role") == "system"]
@@ -321,16 +404,46 @@ class SingleAgent(ChatAgent):
                     print(f"Warning: Failed to add messages to conversation memory: {e}")
 
             # Retrieve relevant persistent memories if available
+            # ONLY retrieve if compression has occurred (to avoid duplicating recent context)
             memory_context = ""
-            if self.persistent_memory:
+            should_retrieve = self.persistent_memory and (self._compression_has_occurred or not self._retrieval_exclude_recent)
+
+            if should_retrieve:
                 try:
-                    memory_context = await self.persistent_memory.retrieve(messages)
+                    # Log retrieval with winner info
+                    if self._previous_winners:
+                        logger.info(
+                            f"🔍 Retrieving memories for {self.agent_id} + {len(self._previous_winners)} previous winner(s) " f"(limit={self._retrieval_limit}/agent)...",
+                        )
+                        logger.debug(f"   Previous winners: {self._previous_winners}")
+                    else:
+                        logger.info(
+                            f"🔍 Retrieving memories for {self.agent_id} " f"(limit={self._retrieval_limit}, compressed={self._compression_has_occurred})...",
+                        )
+
+                    memory_context = await self.persistent_memory.retrieve(
+                        messages,
+                        limit=self._retrieval_limit,
+                        previous_winners=self._previous_winners if self._previous_winners else None,
+                    )
+
+                    if memory_context:
+                        memory_lines = memory_context.strip().split("\n")
+                        logger.info(
+                            f"💭 Retrieved {len(memory_lines)} memory fact(s) from mem0",
+                        )
+                        logger.debug(f"   Preview: {memory_context[:200]}...")
+                    else:
+                        logger.debug("   No relevant memories found")
                 except NotImplementedError:
-                    # Memory backend doesn't support retrieve
-                    pass
+                    logger.debug("   Persistent memory doesn't support retrieval")
                 except Exception as e:
-                    # Log but don't fail if memory retrieval fails
+                    logger.warning(f"⚠️  Failed to retrieve from persistent memory: {e}")
                     print(f"Warning: Failed to retrieve from persistent memory: {e}")
+            elif self.persistent_memory and self._retrieval_exclude_recent:
+                logger.debug(
+                    f"⏭️  Skipping retrieval for {self.agent_id} " f"(no compression yet, all context in conversation_memory)",
+                )
 
             # Handle stateful vs stateless backends differently
             if self.backend.is_stateful():
@@ -358,6 +471,11 @@ class SingleAgent(ChatAgent):
 
         if current_stage:
             self.backend.set_stage(current_stage)
+
+        # Log context usage before processing (if monitor enabled)
+        self._turn_number += 1
+        if self.context_monitor:
+            self.context_monitor.log_context_usage(backend_messages, turn_number=self._turn_number)
 
         # Create backend stream and process it
         backend_stream = self.backend.stream_with_tools(
@@ -444,6 +562,7 @@ class ConfigurableAgent(SingleAgent):
         session_id: Optional[str] = None,
         conversation_memory: Optional[ConversationMemory] = None,
         persistent_memory: Optional[PersistentMemoryBase] = None,
+        context_monitor: Optional[Any] = None,
     ):
         """
         Initialize configurable agent.
@@ -454,6 +573,7 @@ class ConfigurableAgent(SingleAgent):
             session_id: Optional session identifier
             conversation_memory: Optional conversation memory instance
             persistent_memory: Optional persistent memory instance
+            context_monitor: Optional context window monitor for tracking token usage
         """
         # Extract system message without triggering deprecation warning
         system_message = None
@@ -467,6 +587,7 @@ class ConfigurableAgent(SingleAgent):
             session_id=session_id,
             conversation_memory=conversation_memory,
             persistent_memory=persistent_memory,
+            context_monitor=context_monitor,
         )
         self.config = config
 
