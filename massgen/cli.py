@@ -915,6 +915,7 @@ async def run_question_with_history(
         snapshot_storage=snapshot_storage,
         agent_temporary_workspace=agent_temporary_workspace,
         previous_turns=previous_turns,
+        enable_rate_limit=kwargs.get("enable_rate_limit", False),
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(
@@ -1131,6 +1132,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             config=orchestrator_config,
             snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace,
+            enable_rate_limit=kwargs.get("enable_rate_limit", False),
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(

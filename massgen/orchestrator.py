@@ -119,6 +119,7 @@ class Orchestrator(ChatAgent):
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
         previous_turns: Optional[List[Dict[str, Any]]] = None,
+        enable_rate_limit: bool = False,
     ):
         """
         Initialize MassGen orchestrator.
@@ -131,6 +132,7 @@ class Orchestrator(ChatAgent):
             snapshot_storage: Optional path to store agent workspace snapshots
             agent_temporary_workspace: Optional path for agent temporary workspaces
             previous_turns: List of previous turn metadata for multi-turn conversations (loaded by CLI)
+            enable_rate_limit: Whether to enable rate limiting and cooldown delays (default: False)
         """
         super().__init__(session_id)
         self.orchestrator_id = orchestrator_id
@@ -179,8 +181,9 @@ class Orchestrator(ChatAgent):
         
         # Agent startup rate limiting (per model)
         # Load from centralized configuration file instead of hardcoding
+        self._enable_rate_limit = enable_rate_limit
         self._agent_startup_times: Dict[str, List[float]] = {}  # model -> [timestamps]
-        self._rate_limits: Dict[str, Dict[str, int]] = self._load_rate_limits_from_config()
+        self._rate_limits: Dict[str, Dict[str, int]] = self._load_rate_limits_from_config() if enable_rate_limit else {}
 
         # Context sharing for agents with filesystem support
         self._snapshot_storage: Optional[str] = snapshot_storage
@@ -1677,6 +1680,10 @@ Your answer:"""
         Args:
             agent_id: ID of the agent to start
         """
+        # Skip rate limiting if not enabled
+        if not self._enable_rate_limit:
+            return
+            
         agent = self.agents.get(agent_id)
         if not agent or not hasattr(agent, "backend"):
             return
