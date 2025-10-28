@@ -19,11 +19,16 @@ TECHNICAL SOLUTION:
 - Maintains compatibility with existing MassGen workflow
 """
 
+import asyncio
+import contextlib
 import json
 import logging
 import os
+import re
 import time
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from io import BytesIO
+from pathlib import Path
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple, Union
 
 from ..api_params_handler._gemini_api_params_handler import GeminiAPIParamsHandler
 from ..formatter._gemini_formatter import GeminiFormatter
@@ -34,6 +39,8 @@ from ..logger_config import (
     log_tool_call,
     logger,
 )
+from ..configs.rate_limits import get_rate_limit_config
+from ..rate_limiter import GlobalRateLimiter
 from .base import FilesystemSupport, StreamChunk
 from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend
 from .gemini_mcp_manager import GeminiMCPManager
@@ -127,6 +134,11 @@ class GeminiBackend(CustomToolAndMCPBackend):
         # Store Gemini-specific API key before calling parent init
         gemini_api_key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
+        # Extract and remove enable_rate_limit BEFORE calling parent init
+        # This prevents it from being stored in self.config and passed to Gemini SDK
+        enable_rate_limit = kwargs.pop('enable_rate_limit', False)
+        model_name = kwargs.get('model', '')
+
         # Call parent class __init__ - this initializes custom_tool_manager and MCP-related attributes
         super().__init__(gemini_api_key, **kwargs)
 
@@ -150,6 +162,56 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
         # Initialize Gemini MCP manager after all attributes are ready
         self.mcp_manager = GeminiMCPManager(self)
+        
+        # Initialize multi-dimensional rate limiter for Gemini API
+        # Supports RPM (Requests Per Minute), TPM (Tokens Per Minute), RPD (Requests Per Day)
+        # Configuration loaded from massgen/config/rate_limits.yaml
+        # This is shared across ALL instances of the SAME MODEL
+        
+        if enable_rate_limit:
+            # Load rate limits from configuration
+            rate_config = get_rate_limit_config()
+            limits = rate_config.get_limits('gemini', model_name)
+            
+            # Create a unique provider key for the rate limiter
+            # Use the full model name to distinguish between different models
+            provider_key = f"gemini-{model_name}" if model_name else "gemini-default"
+            
+            # Initialize multi-dimensional rate limiter
+            self.rate_limiter = GlobalRateLimiter.get_multi_limiter_sync(
+                provider=provider_key,
+                rpm=limits.get('rpm'),
+                tpm=limits.get('tpm'),
+                rpd=limits.get('rpd')
+            )
+            
+            # Log the active rate limits
+            active_limits = []
+            if limits.get('rpm'):
+                active_limits.append(f"RPM: {limits['rpm']}")
+            if limits.get('tpm'):
+                active_limits.append(f"TPM: {limits['tpm']:,}")
+            if limits.get('rpd'):
+                active_limits.append(f"RPD: {limits['rpd']}")
+            
+            if active_limits:
+                logger.info(
+                    f"[Gemini] Multi-dimensional rate limiter enabled for '{model_name}': "
+                    f"{', '.join(active_limits)}"
+                )
+            else:
+                logger.info(f"[Gemini] No rate limits configured for '{model_name}'")
+        else:
+            # No rate limiting - use a pass-through limiter
+            self.rate_limiter = None
+            logger.info(f"[Gemini] Rate limiting disabled for '{model_name}'")
+
+    def _get_rate_limiter_context(self):
+        """Get rate limiter context manager (or nullcontext if rate limiting is disabled)."""
+        if self.rate_limiter is not None:
+            return self.rate_limiter
+        else:
+            return contextlib.nullcontext()
 
     def _setup_permission_hooks(self):
         """Override base class - Gemini uses session-based permissions, not function hooks."""
@@ -218,6 +280,10 @@ class GeminiBackend(CustomToolAndMCPBackend):
             elif not self._mcp_initialized:
                 # Setup MCP without streaming for backward compatibility
                 await self.mcp_manager.setup_mcp_tools(agent_id)
+
+            # Remove enable_rate_limit from kwargs if present (it's already been consumed in __init__)
+            # This prevents it from being passed to Gemini SDK API calls
+            kwargs.pop('enable_rate_limit', None)
 
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
@@ -546,12 +612,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                     # ====================================================================
                     # Streaming phase
                     # ====================================================================
-                    # Use async streaming call with sessions/tools
-                    stream = await client.aio.models.generate_content_stream(
-                        model=model_name,
-                        contents=full_content,
-                        config=session_config,
-                    )
+                    # Use async streaming call with sessions/tools (with rate limiting if enabled)
+                    async with self._get_rate_limiter_context():
+                        stream = await client.aio.models.generate_content_stream(
+                            model=model_name,
+                            contents=full_content,
+                            config=session_config,
+                        )
 
                     # Initialize trackers for both MCP and custom tools
                     mcp_tracker = MCPCallTracker()
@@ -1121,12 +1188,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     source="custom_tools",
                                 )
 
-                                # Use same session_config as before
-                                continuation_stream = await client.aio.models.generate_content_stream(
-                                    model=model_name,
-                                    contents=conversation_history,
-                                    config=session_config,
-                                )
+                                # Use same session_config as before (with rate limiting if enabled)
+                                async with self._get_rate_limiter_context():
+                                    continuation_stream = await client.aio.models.generate_content_stream(
+                                        model=model_name,
+                                        contents=conversation_history,
+                                        config=session_config,
+                                    )
 
                                 # Process continuation stream (same processing as main stream)
                                 async for chunk in continuation_stream:
@@ -1569,12 +1637,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                             manual_config["tools"] = all_tools
                         logger.info("[Gemini] Fallback: using builtin tools only (all advanced tools failed)")
 
-                    # Create new stream for fallback
-                    stream = await client.aio.models.generate_content_stream(
-                        model=model_name,
-                        contents=full_content,
-                        config=manual_config,
-                    )
+                    # Create new stream for fallback (with rate limiting if enabled)
+                    async with self._get_rate_limiter_context():
+                        stream = await client.aio.models.generate_content_stream(
+                            model=model_name,
+                            contents=full_content,
+                            config=manual_config,
+                        )
 
                     async for chunk in stream:
                         # Process text content
@@ -1594,12 +1663,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
             else:
                 # Non-MCP streaming path: execute when MCP is disabled
                 try:
-                    # Use the standard config (with builtin tools if configured)
-                    stream = await client.aio.models.generate_content_stream(
-                        model=model_name,
-                        contents=full_content,
-                        config=config,
-                    )
+                    # Use the standard config (with builtin tools if configured, with rate limiting if enabled)
+                    async with self._get_rate_limiter_context():
+                        stream = await client.aio.models.generate_content_stream(
+                            model=model_name,
+                            contents=full_content,
+                            config=config,
+                        )
 
                     # Process streaming chunks
                     async for chunk in stream:
@@ -1846,6 +1916,26 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 agent_id,
             )
             yield StreamChunk(type="complete_message", complete_message=complete_message)
+            
+            # Record token usage for TPM tracking (if available)
+            try:
+                if final_response and hasattr(final_response, 'usage_metadata'):
+                    usage = final_response.usage_metadata
+                    total_tokens = 0
+                    
+                    # Extract total tokens from usage metadata
+                    if hasattr(usage, 'total_token_count'):
+                        total_tokens = usage.total_token_count
+                    elif hasattr(usage, 'candidates_token_count') and hasattr(usage, 'prompt_token_count'):
+                        total_tokens = usage.candidates_token_count + usage.prompt_token_count
+                    
+                    if total_tokens > 0 and self.rate_limiter is not None:
+                        await self.rate_limiter.record_tokens(total_tokens)
+                        logger.debug(f"[Gemini] Recorded {total_tokens} tokens for TPM tracking")
+            except Exception as token_error:
+                # Token tracking should not break the flow
+                logger.debug(f"[Gemini] Could not record tokens for TPM tracking: {token_error}")
+            
             log_stream_chunk("backend.gemini", "done", None, agent_id)
             yield StreamChunk(type="done")
 

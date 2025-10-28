@@ -488,8 +488,15 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None, config_path: Optional[str] = None) -> Dict[str, ConfigurableAgent]:
-    """Create agents from configuration."""
+def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None, enable_rate_limit: bool = False, config_path: Optional[str] = None) -> Dict[str, ConfigurableAgent]:
+    """Create agents from configuration.
+    
+    Args:
+        config: Configuration dictionary
+        orchestrator_config: Optional orchestrator configuration
+        enable_rate_limit: Whether to enable rate limiting (from CLI flag)
+        config_path: Optional path to the config file for error messages
+    """
     agents = {}
 
     agent_entries = [config["agent"]] if "agent" in config else config.get("agents", None)
@@ -499,6 +506,9 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
+
+        # Inject rate limiting flag from CLI
+        backend_config["enable_rate_limit"] = enable_rate_limit
 
         # Substitute variables like ${cwd} in backend config
         if "cwd" in backend_config:
@@ -905,6 +915,7 @@ async def run_question_with_history(
         snapshot_storage=snapshot_storage,
         agent_temporary_workspace=agent_temporary_workspace,
         previous_turns=previous_turns,
+        enable_rate_limit=kwargs.get("enable_rate_limit", False),
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(
@@ -1121,6 +1132,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             config=orchestrator_config,
             snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace,
+            enable_rate_limit=kwargs.get("enable_rate_limit", False),
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
@@ -1972,7 +1984,8 @@ async def run_interactive_mode(
         config_modified = prompt_for_context_paths(original_config, orchestrator_cfg)
         if config_modified:
             # Recreate agents with updated context paths
-            agents = create_agents_from_config(original_config, orchestrator_cfg, config_path=config_path)
+            enable_rate_limit = kwargs.get("enable_rate_limit", False)
+            agents = create_agents_from_config(original_config, orchestrator_cfg, enable_rate_limit=enable_rate_limit, config_path=config_path)
             print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
             print()
 
@@ -2030,7 +2043,8 @@ async def run_interactive_mode(
                                 backend_config["context_paths"] = existing_context_paths + [new_turn_config]
 
                         # Recreate agents from modified config
-                        agents = create_agents_from_config(modified_config, orchestrator_cfg, config_path=config_path)
+                        enable_rate_limit = kwargs.get("enable_rate_limit", False)
+                        agents = create_agents_from_config(modified_config, orchestrator_cfg, enable_rate_limit=enable_rate_limit, config_path=config_path)
                         logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
 
                 question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
@@ -2284,9 +2298,13 @@ async def main(args):
         # Update config with timeout settings
         config["timeout_settings"] = timeout_settings
 
+        # Get rate limiting flag from CLI
+        enable_rate_limit = args.rate_limit
+
         # Create agents
         if args.debug:
             logger.debug("Creating agents from config...")
+            logger.debug(f"Rate limiting enabled: {enable_rate_limit}")
         # Extract orchestrator config for agent setup
         orchestrator_cfg = config.get("orchestrator", {})
 
@@ -2322,7 +2340,7 @@ async def main(args):
                     '  agent_temporary_workspace: "your_temp_dir"  # Directory for temporary agent workspaces',
                 )
 
-        agents = create_agents_from_config(config, orchestrator_cfg, config_path=str(resolved_path) if resolved_path else None)
+        agents = create_agents_from_config(config, orchestrator_cfg, enable_rate_limit=enable_rate_limit, config_path=str(resolved_path) if resolved_path else None)
 
         if not agents:
             raise ConfigurationError("No agents configured")
@@ -2339,6 +2357,9 @@ async def main(args):
         # Add orchestrator configuration if present
         if "orchestrator" in config:
             kwargs["orchestrator"] = config["orchestrator"]
+        
+        # Add rate limit flag to kwargs for interactive mode
+        kwargs["enable_rate_limit"] = enable_rate_limit
 
         # Save execution metadata for debugging and reconstruction
         if args.question:
@@ -2404,6 +2425,9 @@ Examples:
 
   # Timeout control examples
   massgen --config config.yaml --orchestrator-timeout 600 "Complex task"
+
+  # Enable rate limiting (uses limits from rate_limits.yaml)
+  massgen --config config.yaml --rate-limit "Your question"
 
   # Configuration management
   massgen --init          # Create new configuration interactively
@@ -2525,6 +2549,13 @@ Environment Variables:
         "--orchestrator-timeout",
         type=int,
         help="Maximum time for orchestrator coordination in seconds (default: 1800)",
+    )
+
+    # Rate limit options
+    parser.add_argument(
+        "--rate-limit",
+        action="store_true",
+        help="Enable rate limiting (uses limits from rate_limits.yaml config)",
     )
 
     args = parser.parse_args()
