@@ -119,6 +119,7 @@ class Orchestrator(ChatAgent):
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
         previous_turns: Optional[List[Dict[str, Any]]] = None,
+        winning_agents_history: Optional[List[Dict[str, Any]]] = None,
         shared_conversation_memory: Optional[ConversationMemory] = None,
         shared_persistent_memory: Optional[PersistentMemoryBase] = None,
     ):
@@ -133,6 +134,9 @@ class Orchestrator(ChatAgent):
             snapshot_storage: Optional path to store agent workspace snapshots
             agent_temporary_workspace: Optional path for agent temporary workspaces
             previous_turns: List of previous turn metadata for multi-turn conversations (loaded by CLI)
+            winning_agents_history: List of previous winning agents for memory sharing
+                                   Format: [{"agent_id": "agent_b", "turn": 1}, ...]
+                                   Loaded from session storage to persist across orchestrator recreations
             shared_conversation_memory: Optional shared conversation memory for all agents
             shared_persistent_memory: Optional shared persistent memory for all agents
         """
@@ -169,7 +173,10 @@ class Orchestrator(ChatAgent):
 
         # Track winning agents by turn for memory sharing
         # Format: [{"agent_id": "agent_b", "turn": 1}, {"agent_id": "agent_a", "turn": 2}]
-        self._winning_agents_history: List[Dict[str, Any]] = []
+        # Restore from session storage if provided (for multi-turn persistence)
+        self._winning_agents_history: List[Dict[str, Any]] = winning_agents_history or []
+        if self._winning_agents_history:
+            logger.info(f"📚 Restored {len(self._winning_agents_history)} winning agent(s) from session: {self._winning_agents_history}")
         self._current_turn: int = 0
 
         # Timeout and resource tracking
@@ -3278,7 +3285,8 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
         Get final result for session persistence.
 
         Returns:
-            Dict with final_answer, winning_agent_id, and workspace_path, or None if not available
+            Dict with final_answer, winning_agent_id, workspace_path, and winning_agents_history,
+            or None if not available
         """
         if not self._selected_agent or not self._final_presentation_content:
             return None
@@ -3292,6 +3300,7 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
             "final_answer": self._final_presentation_content,
             "winning_agent_id": self._selected_agent,
             "workspace_path": workspace_path,
+            "winning_agents_history": self._winning_agents_history.copy(),  # For cross-turn memory sharing
         }
 
     def get_status(self) -> Dict[str, Any]:

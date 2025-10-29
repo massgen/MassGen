@@ -440,13 +440,33 @@ class PersistentMemory(PersistentMemoryBase):
             infer: Whether to let mem0 infer key information
             **kwargs: Additional mem0 recording options
         """
+        from ..logger_config import logger
+
         if not messages:
             return
 
-        # Filter out None values
-        valid_messages = [msg for msg in messages if msg is not None]
+        # Filter out None values, system messages, and messages with None/empty content
+        valid_messages = []
+        for msg in messages:
+            if msg is None:
+                continue
+
+            # Skip system messages (orchestrator prompts, not conversation content)
+            role = msg.get("role")
+            if role == "system":
+                logger.debug("⏭️  Skipping system message from memory recording (not conversation content)")
+                continue
+
+            # Skip messages with None or empty content
+            content = msg.get("content")
+            if content is None or (isinstance(content, str) and not content.strip()):
+                logger.warning(f"⚠️  Skipping message with None/empty content: role={role}")
+                continue
+
+            valid_messages.append(msg)
 
         if not valid_messages:
+            logger.warning("⚠️  No valid messages to record (all were None or empty)")
             return
 
         # Convert to mem0 format
@@ -487,28 +507,52 @@ class PersistentMemory(PersistentMemoryBase):
         from ..logger_config import logger
 
         try:
-            # Debug logging - show what we're sending to mem0
-            logger.debug("🔍 [_mem0_add] Starting mem0.add() call")
-            logger.debug(f"   agent_id={self.agent_id}")
-            logger.debug(f"   user_id={self.user_id}")
-            logger.debug(f"   run_id={self.session_id}")
-            logger.debug(f"   memory_type={memory_type or self.default_memory_type}")
-            logger.debug(f"   infer={infer}")
-            logger.debug(f"   metadata={kwargs.get('metadata')}")
+            # Logging - show what we're sending to mem0
+            logger.info(f"🔍 [_mem0_add] Recording to mem0 (agent={self.agent_id}, session={self.session_id}, turn={kwargs.get('metadata', {}).get('turn', 'N/A')})")
 
-            # Show message preview
+            # Log full messages to separate debug file
+            import json
+            from pathlib import Path
+
+            from ..logger_config import get_log_session_dir
+
+            debug_dir = Path(get_log_session_dir()) / "memory_debug"
+            debug_dir.mkdir(parents=True, exist_ok=True)
+
+            timestamp = __import__("datetime").datetime.now().strftime("%H%M%S_%f")
+            debug_file = debug_dir / f"mem0_add_{self.agent_id}_{timestamp}.json"
+
+            debug_data = {
+                "timestamp": timestamp,
+                "agent_id": self.agent_id,
+                "user_id": self.user_id,
+                "run_id": self.session_id,
+                "memory_type": memory_type or self.default_memory_type,
+                "infer": infer,
+                "metadata": kwargs.get("metadata"),
+                "messages": messages,
+            }
+
+            with open(debug_file, "w") as f:
+                json.dump(debug_data, f, indent=2)
+
+            logger.info(f"   📝 Full messages logged to: {debug_file.name}")
+
+            # Show message preview in main log
             if isinstance(messages, str):
                 preview = messages[:100] + "..." if len(messages) > 100 else messages
-                logger.debug(f"   messages (string): {preview}")
+                logger.info(f"   messages (string): {preview}")
             elif isinstance(messages, list):
-                logger.debug(f"   messages (list): {len(messages)} message(s)")
-                for i, msg in enumerate(messages[:2]):  # Show first 2
+                logger.info(f"   messages: {len(messages)} message(s)")
+                for i, msg in enumerate(messages[:1]):  # Show first one
+                    if msg is None:
+                        logger.warning(f"      ⚠️  Message [{i}] is None!")
+                        continue
                     content = msg.get("content", "") if isinstance(msg, dict) else str(msg)
-                    preview = content[:80] + "..." if len(content) > 80 else content
-                    logger.debug(f"      [{i}] {msg.get('role', 'unknown') if isinstance(msg, dict) else 'str'}: {preview}")
+                    preview = content[:100] + "..." if len(content) > 100 else content
+                    logger.info(f"      {msg.get('role', 'unknown') if isinstance(msg, dict) else 'str'}: {preview}")
 
             # Call mem0
-            logger.debug("   📞 Calling mem0_memory.add()...")
             results = await self.mem0_memory.add(
                 messages=messages,
                 agent_id=self.agent_id,
@@ -520,12 +564,12 @@ class PersistentMemory(PersistentMemoryBase):
             )
 
             # Show results
-            logger.debug(f"   ✅ mem0.add() returned: {results}")
             if isinstance(results, dict):
-                if "results" in results:
-                    logger.debug(f"      - {len(results.get('results', []))} result(s)")
-                if "relations" in results:
-                    logger.debug(f"      - {len(results.get('relations', []))} relation(s)")
+                result_count = len(results.get("results", []))
+                relation_count = len(results.get("relations", []))
+                logger.info(f"   ✅ mem0 extracted {result_count} fact(s), {relation_count} relation(s)")
+            else:
+                logger.info("   ✅ mem0.add() completed")
 
             return results
 
@@ -571,10 +615,9 @@ class PersistentMemory(PersistentMemoryBase):
         """
         from ..logger_config import logger
 
-        logger.debug("🔍 [retrieve] Starting memory retrieval")
-        logger.debug(f"   agent_id={self.agent_id}")
-        logger.debug(f"   limit={limit}")
-        logger.debug(f"   previous_winners={previous_winners}")
+        logger.info(f"🔍 [retrieve] Searching memories (agent={self.agent_id}, limit={limit}, winners={len(previous_winners) if previous_winners else 0})")
+        if previous_winners:
+            logger.info(f"   Previous winners: {previous_winners}")
 
         # Convert query to string format
         query_strings = []
@@ -595,19 +638,16 @@ class PersistentMemory(PersistentMemoryBase):
                         query_strings.append(str(content))
 
         if not query_strings:
-            logger.debug("   ⚠️  No valid query strings extracted")
+            logger.info("   ⚠️  No valid query strings extracted")
             return ""
 
-        logger.debug(f"   Query strings: {len(query_strings)}")
-        for i, qs in enumerate(query_strings[:2]):
-            preview = qs[:60] + "..." if len(qs) > 60 else qs
-            logger.debug(f"      [{i}] {preview}")
+        logger.info(f"   Queries: {len(query_strings)} query string(s)")
 
         # Search mem0 for each query string
         all_results = []
 
         # 1. Search own agent's memories first
-        logger.debug(f"   📞 Searching own memories ({self.agent_id})...")
+        logger.info(f"   🔎 Searching own memories ({self.agent_id})...")
         for query_str in query_strings:
             search_result = await self.mem0_memory.search(
                 query=query_str,
@@ -619,24 +659,21 @@ class PersistentMemory(PersistentMemoryBase):
 
             if search_result and "results" in search_result:
                 memories = [item["memory"] for item in search_result["results"]]
-                logger.debug(f"      Found {len(memories)} memory/memories for query")
+                logger.info(f"      → Found {len(memories)} memory/memories")
                 all_results.extend(memories)
-            else:
-                logger.debug("      No memories found for query")
 
         # 2. Search previous winning agents' memories (turn-filtered)
         if previous_winners:
-            logger.debug(f"   📞 Searching {len(previous_winners)} previous winner(s)...")
+            logger.info(f"   🔎 Searching {len(previous_winners)} previous winner(s)...")
             for winner in previous_winners:
                 winner_agent_id = winner.get("agent_id")
                 winner_turn = winner.get("turn")
 
                 # Skip if winner is self
                 if winner_agent_id == self.agent_id:
-                    logger.debug(f"      Skipping {winner_agent_id} (self)")
                     continue
 
-                logger.debug(f"      Searching {winner_agent_id} (turn {winner_turn})...")
+                logger.info(f"      → Searching {winner_agent_id} (turn {winner_turn})...")
 
                 # Search each query string for this winner
                 for query_str in query_strings:
@@ -651,14 +688,15 @@ class PersistentMemory(PersistentMemoryBase):
 
                     if search_result and "results" in search_result:
                         memories = [f"[From {winner_agent_id} Turn {winner_turn}] {item['memory']}" for item in search_result["results"]]
-                        logger.debug(f"         Found {len(memories)} memory/memories")
+                        logger.info(f"         Found {len(memories)} memory/memories")
                         all_results.extend(memories)
-                    else:
-                        logger.debug("         No memories found")
 
         # Format results as a readable string
-        logger.debug(f"   ✅ Total memories retrieved: {len(all_results)}")
+        logger.info(f"   ✅ Total: {len(all_results)} memories retrieved")
         if all_results:
-            logger.debug(f"   Preview of first memory: {all_results[0][:80]}...")
+            # Show first 2 memories as preview
+            for i, mem in enumerate(all_results[:2]):
+                preview = mem[:100] + "..." if len(mem) > 100 else mem
+                logger.info(f"      [{i+1}] {preview}")
 
         return "\n".join(all_results) if all_results else ""

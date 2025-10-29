@@ -937,21 +937,25 @@ def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
             backend_config["cwd"] = str(massgen_dir / "workspaces" / user_cwd)
 
 
-def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> List[Dict[str, Any]]:
+def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Load previous turns from session storage.
+    Load previous turns and winning agents history from session storage.
 
     Returns:
-        List of previous turn metadata dicts
+        tuple: (previous_turns, winning_agents_history)
+            - previous_turns: List of previous turn metadata dicts
+            - winning_agents_history: List of winning agents for memory sharing
+                                     Format: [{"agent_id": "agent_b", "turn": 1}, ...]
     """
     session_id = session_info.get("session_id")
     if not session_id:
-        return []
+        return [], []
 
     session_dir = Path(session_storage) / session_id
     if not session_dir.exists():
-        return []
+        return [], []
 
+    # Load previous turns
     previous_turns = []
     turn_num = 1
 
@@ -976,7 +980,17 @@ def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> L
 
         turn_num += 1
 
-    return previous_turns
+    # Load winning agents history for memory sharing across turns
+    winning_agents_history = []
+    winning_agents_file = session_dir / "winning_agents_history.json"
+    if winning_agents_file.exists():
+        try:
+            winning_agents_history = json.loads(winning_agents_file.read_text(encoding="utf-8"))
+            logger.info(f"📚 Loaded {len(winning_agents_history)} winning agent(s) from session storage: {winning_agents_history}")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to load winning agents history: {e}")
+
+    return previous_turns, winning_agents_history
 
 
 async def handle_session_persistence(
@@ -1035,6 +1049,16 @@ async def handle_session_persistence(
     }
     metadata_file = turn_dir / "metadata.json"
     metadata_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+    # Save winning agents history for memory sharing across turns
+    # This allows the orchestrator to restore winner tracking when recreated
+    if final_result.get("winning_agents_history"):
+        winning_agents_file = session_dir / "winning_agents_history.json"
+        winning_agents_file.write_text(
+            json.dumps(final_result["winning_agents_history"], indent=2),
+            encoding="utf-8",
+        )
+        logger.info(f"📚 Saved {len(final_result['winning_agents_history'])} winning agent(s) to session storage")
 
     # Create/update session summary for easy viewing
     session_summary_file = session_dir / "SESSION_SUMMARY.txt"
@@ -1137,8 +1161,8 @@ async def run_question_with_history(
             max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
         )
 
-    # Load previous turns from session storage for multi-turn conversations
-    previous_turns = load_previous_turns(session_info, session_storage)
+    # Load previous turns and winning agents history from session storage for multi-turn conversations
+    previous_turns, winning_agents_history = load_previous_turns(session_info, session_storage)
 
     orchestrator = Orchestrator(
         agents=agents,
@@ -1146,6 +1170,7 @@ async def run_question_with_history(
         snapshot_storage=snapshot_storage,
         agent_temporary_workspace=agent_temporary_workspace,
         previous_turns=previous_turns,
+        winning_agents_history=winning_agents_history,  # Restore for memory sharing
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(

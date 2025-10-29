@@ -369,11 +369,15 @@ class SingleAgent(ChatAgent):
         """
         # Update orchestrator turn if provided
         if orchestrator_turn is not None:
+            logger.info(f"🔍 [chat] Setting orchestrator_turn={orchestrator_turn} for {self.agent_id}")
             self._orchestrator_turn = orchestrator_turn
 
         # Update previous winners if provided
         if previous_winners is not None:
+            logger.info(f"🔍 [chat] Setting previous_winners={previous_winners} for {self.agent_id}")
             self._previous_winners = previous_winners
+        else:
+            logger.info(f"🔍 [chat] No previous_winners provided to {self.agent_id} (current: {self._previous_winners})")
         if clear_history:
             # Clear history but keep system message if it exists
             system_messages = [msg for msg in self.conversation_history if msg.get("role") == "system"]
