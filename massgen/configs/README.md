@@ -227,53 +227,62 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.3 - Latest
-**New Features:** Post-Evaluation Workflow, Custom Multimodal Understanding Tools, Docker Sudo Mode
+### v0.1.4 - Latest
+**New Features:** Multimodal Generation Tools, Binary File Protection, Crawl4AI Integration
 
 **Configuration Files:**
-- `configs/tools/custom_tools/multimodal_tools/understand_image.yaml` - Image analysis configuration
-- `configs/tools/custom_tools/multimodal_tools/understand_audio.yaml` - Audio transcription configuration
-- `configs/tools/custom_tools/multimodal_tools/understand_video.yaml` - Video analysis configuration
-- `configs/tools/custom_tools/multimodal_tools/understand_file.yaml` - Document processing configuration
+- `text_to_image_generation_single.yaml` / `text_to_image_generation_multi.yaml` - Image generation
+- `text_to_video_generation_single.yaml` / `text_to_video_generation_multi.yaml` - Video generation
+- `text_to_speech_generation_single.yaml` / `text_to_speech_generation_multi.yaml` - Audio generation
+- `text_to_file_generation_single.yaml` / `text_to_file_generation_multi.yaml` - Document generation
+- `crawl4ai_example.yaml` - Web scraping configuration
 
 **Documentation:**
-- `massgen/tool/docs/multimodal_tools.md` - Complete 779-line multimodal tools guide
-- `docs/source/user_guide/multimodal.rst` - Updated multimodal documentation with custom tools
-- `docs/source/user_guide/code_execution.rst` - Enhanced with 98 lines documenting sudo mode
-- `massgen/docker/README.md` - Updated Docker documentation with sudo mode instructions
-
-**Case Study:**
-- [Multimodal Video Understanding](../../docs/case_studies/multimodal-case-study-video-analysis.md)
-
-**Example Resources:**
-- `configs/resources/v0.1.3-example/multimodality.jpg` - Image example
-- `configs/resources/v0.1.3-example/Sherlock_Holmes.mp3` - Audio example
-- `configs/resources/v0.1.3-example/oppenheimer_trailer_1920.mp4` - Video example
-- `configs/resources/v0.1.3-example/TUMIX.pdf` - PDF document example
+- `README_PYPI.md` - Standalone PyPI package documentation
+- `docs/dev_notes/release_checklist.md` - Release workflow guide
+- `docs/source/user_guide/protected_paths.rst` - Binary file protection documentation
+- `.github/workflows/docs-automation.yml` - Documentation CI/CD automation
 
 **Key Features:**
-- **Post-Evaluation Tools**: Submit and restart capabilities for winning agents with confidence assessments
-- **Multimodal Understanding**: Analyze images, audio, video, and documents using GPT-4.1
-- **Docker Sudo Mode**: Execute privileged commands in containerized environments
-- **Config Builder**: Improved workflow with auto-detection and better provider handling
+- **Generation Tools**: Create images, videos, audio, and documents using OpenAI APIs
+- **Binary File Protection**: Automatic blocking prevents text tools from reading 40+ binary file types
+- **Web Scraping**: Crawl4AI integration for intelligent content extraction
+- **Enhanced Security**: Smart tool suggestions guide users to appropriate specialized tools
 
 **Try it:**
 ```bash
 # Install or upgrade
 pip install --upgrade massgen
 
+# Generate an image from text
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_image_generation_single \
+  "Please generate an image of a cat in space."
+
+# Generate a video from text
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_video_generation_single \
+  "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
+
+# Generate documents (PDF, DOCX, etc.)
+massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_file_generation_single \
+  "Please generate a comprehensive technical report about the latest developments in Large Language Models (LLMs)."
+```
+
+### v0.1.3
+**New Features:** Post-Evaluation Workflow, Custom Multimodal Understanding Tools, Docker Sudo Mode
+
+**Configuration Files:**
+- `understand_image.yaml`, `understand_audio.yaml`, `understand_video.yaml`, `understand_file.yaml`
+
+**Key Features:**
+- **Post-Evaluation Tools**: Submit and restart capabilities for winning agents
+- **Multimodal Understanding**: Analyze images, audio, video, and documents
+- **Docker Sudo Mode**: Execute privileged commands in containers
+
+**Try it:**
+```bash
 # Try multimodal image understanding
-# (Requires OPENAI_API_KEY in .env)
 massgen --config @examples/tools/custom_tools/multimodal_tools/understand_image \
   "Please summarize the content in this image."
-
-# Try multimodal audio understanding
-massgen --config @examples/tools/custom_tools/multimodal_tools/understand_audio \
-  "Please summarize the content in this audio."
-
-# Try multimodal video understanding
-massgen --config @examples/tools/custom_tools/multimodal_tools/understand_video \
-  "What's happening in this video?"
 ```
 
 ### v0.1.2
@@ -284,7 +293,7 @@ massgen --config @examples/tools/custom_tools/multimodal_tools/understand_video 
 - `configs/basic/multi/three_agents_default.yaml` - Updated with Grok-4-fast model
 
 **Documentation:**
-- `docs/case_studies/INTELLIGENT_PLANNING_MODE.md` - Complete intelligent planning mode guide
+- `docs/dev_notes/intelligent_planning_mode.md` - Complete intelligent planning mode guide
 
 **Key Features:**
 - **Intelligent Planning Mode**: Automatic analysis of question irreversibility for dynamic MCP tool blocking
@@ -392,7 +401,7 @@ massgen --config @examples/tools/code-execution/docker_with_resource_limits \
 - `massgen/configs/basic/single/single_gpt4o_video_generation.yaml` - Video generation with OpenAI Sora-2
 
 **Case Study:**
-- [Universal Code Execution via MCP](../../docs/case_studies/universal-code-execution-mcp.md)
+- [Universal Code Execution via MCP](../../docs/source/examples/case_studies/universal-code-execution-mcp.md)
 
 **Key Features:**
 - Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
@@ -465,7 +474,7 @@ massgen --config @examples/tools/filesystem/cc_gpt5_gemini_filesystem \
 - New `FileOperationTracker` class for read-before-delete enforcement
 - Enhanced PathPermissionManager with operation tracking methods
 
-**Case Study:** [MCP Planning Mode](../../docs/case_studies/mcp-planning-mode.md)
+**Case Study:** [MCP Planning Mode](../../docs/source/examples/case_studies/mcp-planning-mode.md)
 
 **Try it:**
 ```bash
@@ -492,7 +501,7 @@ massgen --config @examples/tools/planning/five_agents_twitter_mcp_planning_mode 
 - New `ExternalAgentBackend` class bridging MassGen with external frameworks
 - Multiple code executor types: LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
 
-**Case Study:** [AG2 Framework Integration](../../docs/case_studies/ag2-framework-integration.md)
+**Case Study:** [AG2 Framework Integration](../../docs/source/examples/case_studies/ag2-framework-integration.md)
 
 **Try it:**
 ```bash
@@ -561,7 +570,7 @@ massgen --config @examples/tools/filesystem/gemini_gpt5nano_file_context_path \
 - Automatic `.massgen` directory management for persistent conversation context
 - Enhanced path permissions with `will_be_writable` flag and smart exclusion patterns
 
-**Case Study:** [Multi-Turn Filesystem Support](../../docs/case_studies/multi-turn-filesystem-support.md)
+**Case Study:** [Multi-Turn Filesystem Support](../../docs/source/examples/case_studies/multi-turn-filesystem-support.md)
 ```bash
 # Turn 1 - Initial creation
 Turn 1: Make a website about Bob Dylan
@@ -599,7 +608,7 @@ massgen --config @examples/basic/multi/two_qwen_vllm \
 - All configs now organized by provider & use case (basic/, providers/, tools/, teams/)
 - Use same configs as v0.0.21 for compatibility, but now with improved performance
 
-**Case Study:** [Advanced Filesystem with User Context Path Support](../../docs/case_studies/v0.0.21-v0.0.22-filesystem-permissions.md)
+**Case Study:** [Advanced Filesystem with User Context Path Support](../../docs/source/examples/case_studies/v0.0.21-v0.0.22-filesystem-permissions.md)
 ```bash
 # Multi-agent collaboration with granular filesystem permissions
 massgen --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
@@ -645,7 +654,7 @@ massgen --config @examples/tools/mcp/gpt5_nano_mcp_example \
 
 ### v0.0.16
 **New Features:** Unified Filesystem Support with MCP Integration
-**Case Study:** [Cross-Backend Collaboration with Gemini MCP Filesystem](../../docs/case_studies/unified-filesystem-mcp-integration.md)
+**Case Study:** [Cross-Backend Collaboration with Gemini MCP Filesystem](../../docs/source/examples/case_studies/unified-filesystem-mcp-integration.md)
 ```bash
 # Gemini and Claude Code agents with unified filesystem via MCP
 massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
@@ -658,7 +667,7 @@ massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code
 
 ### v0.0.12 - v0.0.14
 **New Features:** Enhanced Logging and Workspace Management
-**Case Study:** [Claude Code Workspace Management with Comprehensive Logging](../../docs/case_studies/claude-code-workspace-management.md)
+**Case Study:** [Claude Code Workspace Management with Comprehensive Logging](../../docs/source/examples/case_studies/claude-code-workspace-management.md)
 ```bash
 # Multi-agent Claude Code collaboration with enhanced workspace isolation
 massgen --config @examples/tools/filesystem/claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"

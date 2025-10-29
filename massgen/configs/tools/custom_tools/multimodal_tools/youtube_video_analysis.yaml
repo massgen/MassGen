@@ -51,7 +51,7 @@ orchestrator:
   snapshot_storage: "snapshots"
   agent_temporary_workspace: "temp_workspaces"
   context_paths:
-    - path: "docs/case_studies"
+    - path: "docs/source/examples/case_studies"
       permission: "read"
 
 ui:
