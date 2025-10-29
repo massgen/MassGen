@@ -7,16 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.5 (October 2025)** - Memory System
+Long-term memory with semantic retrieval via mem0, automatic context compression, and cross-agent memory sharing for multi-turn conversations.
+
 **v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
 Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
 
 **v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
 Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
 
-**v0.1.2 (October 2025)** - Intelligent Planning Mode & Model Updates
-Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
-
 ---
+
+## [0.1.5] - 2025-10-29
+
+### Added
+- **Memory System**: Complete long-term memory implementation with semantic retrieval
+  - New `massgen/memory/` module with comprehensive memory management
+  - **PersistentMemory** via mem0 integration for semantic fact storage and retrieval
+  - **ConversationMemory** for short-term verbatim message tracking
+  - **Automatic Context Compression** when approaching token limits
+  - **Cross-Agent Memory Sharing** with turn-aware filtering to prevent temporal leakage
+  - **Session Management** for memory isolation and continuation across runs
+  - **Qdrant Vector Database Integration** for efficient semantic search (server and local modes)
+  - **Context Monitoring** with real-time token usage tracking
+  - Fact extraction prompts with customizable LLM and embedding providers
+  - Supports OpenAI, Anthropic, Groq, and other mem0-compatible providers
+
+- **Memory Configuration Support**: New YAML configuration options
+  - Memory enable/disable toggle at global and per-agent levels
+  - Configurable compression thresholds (trigger_threshold, target_ratio)
+  - Retrieval settings (limit, exclude_recent for smart retrieval)
+  - Session naming for continuation and cross-session memory
+  - LLM and embedding provider configuration for mem0
+  - Qdrant connection settings (server/local mode, host, port, path)
+
+### Changed
+- **Chat Agent Enhancement**: Memory integration for agent workflows
+  - Memory recording after agent responses (conversation and persistent)
+  - Memory retrieval on restart/reset for context restoration
+  - Integration with compression and context monitoring modules
+
+- **Orchestrator Enhancement**: Memory coordination for multi-agent workflows
+  - Memory initialization and management across agent lifecycles
+  - Memory cleanup on orchestrator shutdown
+
+### Documentations, Configurations and Resources
+
+- **Memory Documentation**: Comprehensive memory system user guide
+  - New `docs/source/user_guide/memory.rst`
+  - Complete usage guide with quick start, configuration reference, and examples
+  - Design decisions documentation explaining architecture choices
+  - Troubleshooting guide for common memory issues
+  - Monitoring and debugging instructions with log examples
+  - API reference for PersistentMemory, ConversationMemory, and ContextMonitor
+
+- **Configuration Examples**: 5 new memory-focused YAML configurations
+  - `gpt5mini_gemini_context_window_management.yaml`: Multi-agent with context compression
+  - `gpt5mini_gemini_research_to_implementation.yaml`: Research to implementation workflow
+  - `gpt5mini_high_reasoning_gemini.yaml`: High reasoning agents with memory
+  - `gpt5mini_gemini_baseline_research_to_implementation.yaml`: Baseline research workflow
+  - `single_agent_compression_test.yaml`: Testing compression behavior
+
+- **Infrastructure and Testing**:
+  - Memory test suite with 4 test files in `massgen/tests/memory/`
+  - Additional memory tests: `test_agent_memory.py`, `test_conversation_memory.py`, `test_orchestrator_memory.py`, `test_persistent_memory.py`
+
+### Technical Details
+- **Major Focus**: Long-term memory system with semantic retrieval and cross-agent memory sharing
+- **Contributors**: @ncrispino @qidanrui @kitrakrev @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.4] - 2025-10-27
 
@@ -60,14 +118,6 @@ Automatic irreversibility analysis for MCP tools, selective tool blocking, Claud
 - **Binary File Protection Documentation**: Enhanced protected paths user guide
   - Updated `docs/source/user_guide/protected_paths.rst` with binary file protection section
   - Documents 40+ protected binary file types and specialized tool suggestions
-
-- **Enhanced Pre-commit Hooks**: Improved code quality automation
-  - Updated `.pre-commit-config.yaml` with additional checks
-  - Better README synchronization and validation
-
-- **Documentation Automation**: CI/CD for documentation deployment
-  - New `.github/workflows/docs-automation.yml` for automated doc builds
-  - Removed legacy docs.yml workflow
 
 - **Configuration Examples**: 9 new YAML configuration files
   - **Generation Tools**: 8 multimodal generation configurations
