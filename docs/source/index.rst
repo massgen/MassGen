@@ -298,6 +298,7 @@ Documentation Sections
 
    user_guide/concepts
    user_guide/backends
+   user_guide/validating_configs
    user_guide/tools
    user_guide/file_operations
    user_guide/multi_turn_mode
