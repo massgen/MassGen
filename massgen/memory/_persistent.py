@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from pydantic import field_validator
 
 from ._base import PersistentMemoryBase
+from ._fact_extraction_prompts import get_fact_extraction_prompt
 
 if TYPE_CHECKING:
     from mem0.configs.base import MemoryConfig
@@ -238,6 +239,10 @@ class PersistentMemory(PersistentMemoryBase):
             if vector_store_config is not None:
                 mem0_config.vector_store = vector_store_config
 
+            # Add custom fact extraction prompt if not already set
+            if not hasattr(mem0_config, "custom_fact_extraction_prompt") or mem0_config.custom_fact_extraction_prompt is None:
+                mem0_config.custom_fact_extraction_prompt = get_fact_extraction_prompt("default")
+
         else:
             # Build mem0_config from scratch
 
@@ -283,9 +288,13 @@ class PersistentMemory(PersistentMemoryBase):
                     config={"model": embedding_backend},
                 )
 
+            # Add custom fact extraction prompt for better memory quality
+            custom_prompt = get_fact_extraction_prompt("default")
+
             mem0_config = mem0.configs.base.MemoryConfig(
                 llm=llm,
                 embedder=embedder,
+                custom_fact_extraction_prompt=custom_prompt,
             )
 
             # Configure vector store

@@ -222,6 +222,10 @@ class SingleAgent(ChatAgent):
         complete_message = None
         messages_to_record = []
 
+        # Accumulate all chunks for complete memory recording
+        reasoning_chunks = []  # Accumulate reasoning content
+        reasoning_summaries = []  # Accumulate reasoning summaries
+
         try:
             async for chunk in backend_stream:
                 chunk_type = self._get_chunk_type_value(chunk)
@@ -231,6 +235,16 @@ class SingleAgent(ChatAgent):
                 elif chunk_type == "tool_calls":
                     chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
                     tool_calls.extend(chunk_tool_calls)
+                    yield chunk
+                elif chunk_type == "reasoning":
+                    # Accumulate reasoning chunks for memory
+                    if hasattr(chunk, "content") and chunk.content:
+                        reasoning_chunks.append(chunk.content)
+                    yield chunk
+                elif chunk_type == "reasoning_summary":
+                    # Accumulate reasoning summaries
+                    if hasattr(chunk, "content") and chunk.content:
+                        reasoning_summaries.append(chunk.content)
                     yield chunk
                 elif chunk_type == "complete_message":
                     # Backend provided the complete message structure
@@ -254,37 +268,71 @@ class SingleAgent(ChatAgent):
                                 yield StreamChunk(type="tool_calls", tool_calls=response_tool_calls)
                     # Complete response is for internal use - don't yield it
                 elif chunk_type == "done":
-                    # Add complete response to history
+                    # Assemble complete memory from all accumulated chunks
+                    messages_to_record = []
+
+                    # 1. Add reasoning if present (full context for memory)
+                    if reasoning_chunks:
+                        combined_reasoning = "\n".join(reasoning_chunks)
+                        messages_to_record.append(
+                            {
+                                "role": "assistant",
+                                "content": f"[Reasoning]\n{combined_reasoning}",
+                            },
+                        )
+
+                    # 2. Add reasoning summaries if present
+                    if reasoning_summaries:
+                        combined_summary = "\n".join(reasoning_summaries)
+                        messages_to_record.append(
+                            {
+                                "role": "assistant",
+                                "content": f"[Reasoning Summary]\n{combined_summary}",
+                            },
+                        )
+
+                    # 3. Add final text response (MCP tools not included - they're implementation details)
                     if complete_message:
                         # For Responses API: complete_message is the response object with 'output' array
-                        # Each item in output should be added to conversation history individually
                         if isinstance(complete_message, dict) and "output" in complete_message:
+                            # Store raw output for orchestrator (needs full format)
                             self.conversation_history.extend(complete_message["output"])
-                            messages_to_record = complete_message["output"]
+
+                            # Extract text from output items
+                            for output_item in complete_message["output"]:
+                                if isinstance(output_item, dict) and output_item.get("type") == "output_text":
+                                    text_content = output_item.get("text", "")
+                                    if text_content:
+                                        messages_to_record.append(
+                                            {
+                                                "role": "assistant",
+                                                "content": text_content,
+                                            },
+                                        )
                         else:
                             # Fallback if it's already in message format
                             self.conversation_history.append(complete_message)
-                            messages_to_record = [complete_message]
-                    elif assistant_response.strip() or tool_calls:
-                        # Fallback for legacy backends
+                            if isinstance(complete_message, dict) and complete_message.get("content"):
+                                messages_to_record.append(complete_message)
+                    elif assistant_response.strip():
+                        # Fallback for legacy backends - use accumulated text
                         message_data = {
                             "role": "assistant",
                             "content": assistant_response.strip(),
                         }
-                        if tool_calls:
-                            message_data["tool_calls"] = tool_calls
                         self.conversation_history.append(message_data)
-                        messages_to_record = [message_data]
+                        messages_to_record.append(message_data)
 
                     # Record to memories
                     if messages_to_record:
-                        # Add to conversation memory
+                        # Add to conversation memory (use formatted messages, not raw output)
                         if self.conversation_memory:
                             try:
                                 await self.conversation_memory.add(messages_to_record)
+                                logger.debug(f"📝 Added {len(messages_to_record)} message(s) to conversation memory")
                             except Exception as e:
                                 # Log but don't fail if memory add fails
-                                print(f"Warning: Failed to add response to conversation memory: {e}")
+                                logger.warning(f"⚠️  Failed to add response to conversation memory: {e}")
                         # Record to persistent memory with turn metadata
                         if self.persistent_memory:
                             try:
@@ -390,21 +438,13 @@ class SingleAgent(ChatAgent):
                 await self.conversation_memory.clear()
 
         if reset_chat:
-            # Before clearing, record current conversation_memory to persistent_memory
-            # This ensures recent messages survive the restart
-            if self.conversation_memory and self.persistent_memory:
-                try:
-                    current_messages = await self.conversation_memory.get_messages()
-                    if current_messages:
-                        logger.info(
-                            f"💾 Recording {len(current_messages)} messages to persistent memory before reset",
-                        )
-                        await self.persistent_memory.record(
-                            current_messages,
-                            metadata={"turn": self._orchestrator_turn, "pre_restart": True} if self._orchestrator_turn else None,
-                        )
-                except Exception as e:
-                    logger.warning(f"⚠️  Failed to preserve messages before reset: {e}")
+            # Skip pre-restart recording - messages are already recorded via done chunks
+            # Pre-restart would duplicate content and include orchestrator system prompts (noise)
+            # The conversation_memory contains:
+            # 1. User messages - will be in new conversation after reset
+            # 2. Agent responses - already recorded to persistent_memory via done chunks
+            # 3. System messages - orchestrator prompts, don't want in long-term memory
+            logger.debug(f"🔄 Resetting chat for {self.agent_id} (skipping pre-restart recording - already captured via done chunks)")
 
             # Reset conversation history to the provided messages
             self.conversation_history = messages.copy()
