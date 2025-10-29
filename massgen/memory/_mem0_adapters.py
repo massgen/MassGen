@@ -7,7 +7,23 @@ backends to work seamlessly with the mem0 memory system.
 """
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
+import concurrent.futures
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Coroutine,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+)
+
+from mem0.embeddings.base import EmbeddingBase
+from mem0.llms.base import LLMBase
+
+T = TypeVar("T")
 
 if TYPE_CHECKING:
     from mem0.configs.embeddings.base import BaseEmbedderConfig
@@ -16,8 +32,48 @@ else:
     BaseEmbedderConfig = Any
     BaseLlmConfig = Any
 
-from mem0.embeddings.base import EmbeddingBase
-from mem0.llms.base import LLMBase
+
+def _run_async_safely(coro: Coroutine[Any, Any, T]) -> T:
+    """
+    Run async code properly, handling both sync and nested async contexts.
+
+    This is needed because mem0's sync adapter interface (LLMBase.generate_response,
+    EmbeddingBase.embed) can be called from async contexts when using AsyncMemory.
+
+    The problem with naive asyncio.run():
+    - If we're already in an event loop, asyncio.run() raises RuntimeError
+    - If we force a new loop, httpcore connections get confused about which loop owns them
+    - This causes "async generator ignored GeneratorExit" and lifecycle errors
+
+    Solution:
+    - Detect if we're in an async context (running event loop exists)
+    - If YES: Run the coroutine in a separate thread with its own event loop
+    - If NO: Use asyncio.run() normally
+
+    Args:
+        coro: Coroutine to execute
+
+    Returns:
+        Result of the coroutine
+
+    Example:
+        >>> async def get_data():
+        ...     return "data"
+        >>> result = _run_async_safely(get_data())  # Works in both sync and async contexts
+    """
+    try:
+        # Check if we're already in an event loop
+        asyncio.get_running_loop()
+
+        # We are in an async context - run in a thread pool to avoid conflicts
+        # This gives the coroutine its own event loop in a separate thread
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, coro)
+            return future.result()
+
+    except RuntimeError:
+        # No running loop - safe to use asyncio.run() directly
+        return asyncio.run(coro)
 
 
 class MassGenLLMAdapter(LLMBase):
@@ -88,13 +144,13 @@ class MassGenLLMAdapter(LLMBase):
 
             # Call the MassGen backend asynchronously
             async def _async_generate():
-                # Most MassGen backends have an async chat() or similar method
+                # MassGen backends use stream_with_tools() method
                 # We collect the streaming response into a single string
                 response_text = ""
 
-                async for chunk in self.massgen_backend.chat(
-                    massgen_messages,
-                    tools=tools,
+                async for chunk in self.massgen_backend.stream_with_tools(
+                    messages=massgen_messages,
+                    tools=tools or [],
                 ):
                     # Extract text content from chunks
                     if hasattr(chunk, "content") and chunk.content:
@@ -106,9 +162,8 @@ class MassGenLLMAdapter(LLMBase):
 
                 return response_text
 
-            # Run the async function in a new event loop
-            # (mem0 calls this synchronously)
-            result = asyncio.run(_async_generate())
+            # Run the async function safely (handles both sync and async contexts)
+            result = _run_async_safely(_async_generate())
             return result
 
         except Exception as e:
@@ -123,6 +178,9 @@ class MassGenEmbeddingAdapter(EmbeddingBase):
 
     This enables mem0 to use any MassGen-compatible embedding model for
     creating vector representations of memories.
+
+    NOTE: Currently, we do not have any MassGen embedding backends integrated,
+    so this adapter serves as a template for future implementations.
     """
 
     def __init__(self, config: Optional[BaseEmbedderConfig] = None):
@@ -178,8 +236,8 @@ class MassGenEmbeddingAdapter(EmbeddingBase):
 
                 return response
 
-            # Run async call synchronously
-            response = asyncio.run(_async_embed())
+            # Run async call safely (handles both sync and async contexts)
+            response = _run_async_safely(_async_embed())
 
             # Extract embedding vector from response
             # MassGen embedding response format: response.embeddings[0]

@@ -99,10 +99,12 @@ class PersistentMemory(PersistentMemoryBase):
         user_name: Optional[str] = None,
         session_name: Optional[str] = None,
         llm_backend: Optional[Any] = None,
+        llm_config: Optional[Dict[str, Any]] = None,
         embedding_backend: Optional[Any] = None,
+        embedding_config: Optional[Dict[str, Any]] = None,
         vector_store_config: Optional[VectorStoreConfig] = None,
         mem0_config: Optional[MemoryConfig] = None,
-        memory_type: str = "semantic",
+        memory_type: Optional[str] = None,
         qdrant_client: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
@@ -118,12 +120,39 @@ class PersistentMemory(PersistentMemoryBase):
             At least one of agent_name, user_name, or session_name is required.
             These serve as metadata for organizing and filtering memories.
 
-            llm_backend: MassGen LLM backend for memory summarization
-            embedding_backend: MassGen embedding backend for vector search
+            llm_backend: DEPRECATED. Use llm_config instead.
+                Legacy support: MassGen LLM backend object (uses MassGenLLMAdapter)
+
+            llm_config: RECOMMENDED. Configuration dict for mem0's native LLMs.
+                Supports mem0's built-in providers: openai, anthropic, groq, together, etc.
+                Example: {"provider": "openai", "model": "gpt-4.1-nano-2025-04-14", "api_key": "..."}
+                Default: {"provider": "openai", "model": "gpt-4.1-nano-2025-04-14"} if not specified
+
+                When to use each approach:
+                - Use llm_config (native mem0): For standard providers (OpenAI, Anthropic, etc.)
+                  Simpler, no adapter overhead, no async complexity, direct mem0 integration
+                - Use llm_backend (custom): Only if you need a custom MassGen backend
+                  that mem0 doesn't natively support (requires async adapter)
+
+            embedding_backend: DEPRECATED. Use embedding_config instead.
+                Legacy support: MassGen embedding backend object (uses MassGenEmbeddingAdapter)
+
+            embedding_config: RECOMMENDED. Configuration dict for mem0's native embedders.
+                Supports mem0's built-in providers: openai, together, azure_openai, gemini, etc.
+                Example: {"provider": "openai", "model": "text-embedding-3-small", "api_key": "..."}
+
+                When to use each approach:
+                - Use embedding_config (native mem0): For standard providers (OpenAI, Together, etc.)
+                  Simpler, no adapter overhead, direct mem0 integration
+                - Use embedding_backend (custom): Only if you need a custom MassGen backend
+                  that mem0 doesn't natively support
+
             vector_store_config: mem0 vector store configuration
             mem0_config: Full mem0 configuration (overrides individual configs)
-            memory_type: Type of memory storage ('semantic' or 'procedural')
-            qdrant_client: Optional shared QdrantClient instance (avoids concurrent access issues)
+            memory_type: Type of memory storage (None for semantic, "procedural_memory" for procedural)
+            qdrant_client: Optional shared QdrantClient instance (for multi-agent concurrent access)
+                Note: Local file-based Qdrant doesn't support concurrent access.
+                Use qdrant_client from a Qdrant server for multi-agent scenarios.
             **kwargs: Additional options (e.g., on_disk=True for persistence)
 
         Raises:
@@ -179,13 +208,28 @@ class PersistentMemory(PersistentMemoryBase):
         # Configure mem0 instance
         if mem0_config is not None:
             # Use provided mem0_config, optionally overriding components
-            if llm_backend is not None:
+
+            # Handle LLM configuration (prefer llm_config over llm_backend)
+            if llm_config is not None:
+                # Use mem0's native LLM (RECOMMENDED)
+                from mem0.llms.configs import LlmConfig
+
+                mem0_config.llm = LlmConfig(**llm_config)
+            elif llm_backend is not None:
+                # Use custom MassGen backend via adapter (LEGACY)
                 mem0_config.llm = _LlmConfig(
                     provider="massgen",
                     config={"model": llm_backend},
                 )
 
-            if embedding_backend is not None:
+            # Handle embedder configuration (prefer embedding_config over embedding_backend)
+            if embedding_config is not None:
+                # Use mem0's native embedder (RECOMMENDED)
+                from mem0.embeddings.configs import EmbedderConfig
+
+                mem0_config.embedder = EmbedderConfig(**embedding_config)
+            elif embedding_backend is not None:
+                # Use custom MassGen backend via adapter (LEGACY)
                 mem0_config.embedder = _EmbedderConfig(
                     provider="massgen",
                     config={"model": embedding_backend},
@@ -196,32 +240,66 @@ class PersistentMemory(PersistentMemoryBase):
 
         else:
             # Build mem0_config from scratch
-            if llm_backend is None or embedding_backend is None:
+
+            # Require at least one LLM configuration
+            if llm_config is None and llm_backend is None:
                 raise ValueError(
-                    "Both llm_backend and embedding_backend are required " "when mem0_config is not provided.",
+                    "Either llm_config or llm_backend is required when mem0_config is not provided.\n"
+                    "RECOMMENDED: Use llm_config with mem0's native LLMs.\n"
+                    "Example: llm_config={'provider': 'openai', 'model': 'gpt-4.1-nano-2025-04-14'}",
+                )
+
+            # Require at least one embedding configuration
+            if embedding_config is None and embedding_backend is None:
+                raise ValueError(
+                    "Either embedding_config or embedding_backend is required when mem0_config is not provided.\n"
+                    "RECOMMENDED: Use embedding_config with mem0's native embedders.\n"
+                    "Example: embedding_config={'provider': 'openai', 'model': 'text-embedding-3-small'}",
+                )
+
+            # Configure LLM (prefer llm_config)
+            if llm_config is not None:
+                # Use mem0's native LLM (RECOMMENDED)
+                from mem0.llms.configs import LlmConfig
+
+                llm = LlmConfig(**llm_config)
+            else:
+                # Use custom MassGen backend via adapter (LEGACY)
+                llm = _LlmConfig(
+                    provider="massgen",
+                    config={"model": llm_backend},
+                )
+
+            # Configure embedder (prefer embedding_config)
+            if embedding_config is not None:
+                # Use mem0's native embedder (RECOMMENDED)
+                from mem0.embeddings.configs import EmbedderConfig
+
+                embedder = EmbedderConfig(**embedding_config)
+            else:
+                # Use custom MassGen backend via adapter (LEGACY)
+                embedder = _EmbedderConfig(
+                    provider="massgen",
+                    config={"model": embedding_backend},
                 )
 
             mem0_config = mem0.configs.base.MemoryConfig(
-                llm=_LlmConfig(
-                    provider="massgen",
-                    config={"model": llm_backend},
-                ),
-                embedder=_EmbedderConfig(
-                    provider="massgen",
-                    config={"model": embedding_backend},
-                ),
+                llm=llm,
+                embedder=embedder,
             )
 
             # Configure vector store
             if vector_store_config is not None:
                 mem0_config.vector_store = vector_store_config
             elif qdrant_client is not None:
-                # Use shared Qdrant client (avoids concurrent access issues)
+                # Use shared Qdrant client (for multi-agent scenarios)
+                # NOTE: Must be from a Qdrant server, not local file-based storage
                 mem0_config.vector_store = mem0.vector_stores.configs.VectorStoreConfig(
                     config={"client": qdrant_client},
                 )
             else:
                 # Default to Qdrant with disk persistence (single agent only)
+                # WARNING: File-based Qdrant doesn't support concurrent access
                 persist = kwargs.get("on_disk", True)
                 mem0_config.vector_store = mem0.vector_stores.configs.VectorStoreConfig(
                     config={"on_disk": persist},
@@ -406,16 +484,66 @@ class PersistentMemory(PersistentMemoryBase):
         Returns:
             mem0 add operation result
         """
-        results = await self.mem0_memory.add(
-            messages=messages,
-            agent_id=self.agent_id,
-            user_id=self.user_id,
-            run_id=self.session_id,
-            memory_type=memory_type or self.default_memory_type,
-            infer=infer,
-            **kwargs,
-        )
-        return results
+        from ..logger_config import logger
+
+        try:
+            # Debug logging - show what we're sending to mem0
+            logger.debug("🔍 [_mem0_add] Starting mem0.add() call")
+            logger.debug(f"   agent_id={self.agent_id}")
+            logger.debug(f"   user_id={self.user_id}")
+            logger.debug(f"   run_id={self.session_id}")
+            logger.debug(f"   memory_type={memory_type or self.default_memory_type}")
+            logger.debug(f"   infer={infer}")
+            logger.debug(f"   metadata={kwargs.get('metadata')}")
+
+            # Show message preview
+            if isinstance(messages, str):
+                preview = messages[:100] + "..." if len(messages) > 100 else messages
+                logger.debug(f"   messages (string): {preview}")
+            elif isinstance(messages, list):
+                logger.debug(f"   messages (list): {len(messages)} message(s)")
+                for i, msg in enumerate(messages[:2]):  # Show first 2
+                    content = msg.get("content", "") if isinstance(msg, dict) else str(msg)
+                    preview = content[:80] + "..." if len(content) > 80 else content
+                    logger.debug(f"      [{i}] {msg.get('role', 'unknown') if isinstance(msg, dict) else 'str'}: {preview}")
+
+            # Call mem0
+            logger.debug("   📞 Calling mem0_memory.add()...")
+            results = await self.mem0_memory.add(
+                messages=messages,
+                agent_id=self.agent_id,
+                user_id=self.user_id,
+                run_id=self.session_id,
+                memory_type=memory_type or self.default_memory_type,
+                infer=infer,
+                **kwargs,
+            )
+
+            # Show results
+            logger.debug(f"   ✅ mem0.add() returned: {results}")
+            if isinstance(results, dict):
+                if "results" in results:
+                    logger.debug(f"      - {len(results.get('results', []))} result(s)")
+                if "relations" in results:
+                    logger.debug(f"      - {len(results.get('relations', []))} relation(s)")
+
+            return results
+
+        except Exception as e:
+            # Enhanced error logging
+            logger.error(f"❌ mem0.add() failed: {type(e).__name__}: {str(e)}")
+            logger.error(f"   agent_id={self.agent_id}, user_id={self.user_id}, run_id={self.session_id}")
+
+            if "PointStruct" in str(e) or "vector" in str(e).lower():
+                logger.error("   💡 Hint: This usually means embedding generation returned None")
+                logger.error("   Check: 1) API key is set, 2) Model name is correct, 3) API is accessible")
+                logger.error("   Debug: Run 'uv run python scripts/test_memory_setup.py' to isolate the issue")
+
+            # Show full error for debugging
+            import traceback
+
+            logger.error(f"   Full traceback:\n{traceback.format_exc()}")
+            raise
 
     async def retrieve(
         self,
@@ -441,6 +569,13 @@ class PersistentMemory(PersistentMemoryBase):
         Returns:
             Formatted string of retrieved memories (own + previous winners')
         """
+        from ..logger_config import logger
+
+        logger.debug("🔍 [retrieve] Starting memory retrieval")
+        logger.debug(f"   agent_id={self.agent_id}")
+        logger.debug(f"   limit={limit}")
+        logger.debug(f"   previous_winners={previous_winners}")
+
         # Convert query to string format
         query_strings = []
 
@@ -460,12 +595,19 @@ class PersistentMemory(PersistentMemoryBase):
                         query_strings.append(str(content))
 
         if not query_strings:
+            logger.debug("   ⚠️  No valid query strings extracted")
             return ""
+
+        logger.debug(f"   Query strings: {len(query_strings)}")
+        for i, qs in enumerate(query_strings[:2]):
+            preview = qs[:60] + "..." if len(qs) > 60 else qs
+            logger.debug(f"      [{i}] {preview}")
 
         # Search mem0 for each query string
         all_results = []
 
         # 1. Search own agent's memories first
+        logger.debug(f"   📞 Searching own memories ({self.agent_id})...")
         for query_str in query_strings:
             search_result = await self.mem0_memory.search(
                 query=query_str,
@@ -477,17 +619,24 @@ class PersistentMemory(PersistentMemoryBase):
 
             if search_result and "results" in search_result:
                 memories = [item["memory"] for item in search_result["results"]]
+                logger.debug(f"      Found {len(memories)} memory/memories for query")
                 all_results.extend(memories)
+            else:
+                logger.debug("      No memories found for query")
 
         # 2. Search previous winning agents' memories (turn-filtered)
         if previous_winners:
+            logger.debug(f"   📞 Searching {len(previous_winners)} previous winner(s)...")
             for winner in previous_winners:
                 winner_agent_id = winner.get("agent_id")
                 winner_turn = winner.get("turn")
 
                 # Skip if winner is self
                 if winner_agent_id == self.agent_id:
+                    logger.debug(f"      Skipping {winner_agent_id} (self)")
                     continue
+
+                logger.debug(f"      Searching {winner_agent_id} (turn {winner_turn})...")
 
                 # Search each query string for this winner
                 for query_str in query_strings:
@@ -502,7 +651,14 @@ class PersistentMemory(PersistentMemoryBase):
 
                     if search_result and "results" in search_result:
                         memories = [f"[From {winner_agent_id} Turn {winner_turn}] {item['memory']}" for item in search_result["results"]]
+                        logger.debug(f"         Found {len(memories)} memory/memories")
                         all_results.extend(memories)
+                    else:
+                        logger.debug("         No memories found")
 
         # Format results as a readable string
+        logger.debug(f"   ✅ Total memories retrieved: {len(all_results)}")
+        if all_results:
+            logger.debug(f"   Preview of first memory: {all_results[0][:80]}...")
+
         return "\n".join(all_results) if all_results else ""

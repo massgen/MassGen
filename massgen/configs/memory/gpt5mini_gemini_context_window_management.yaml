@@ -56,6 +56,28 @@ memory:
     # Vector store backend (default: qdrant)
     vector_store: "qdrant"
 
+    # LLM configuration for memory operations (fact extraction)
+    # RECOMMENDED: Use mem0's native LLMs (no adapter overhead, no async complexity)
+    llm:
+      provider: "openai"  # Options: openai, anthropic, groq, together, etc.
+      model: "gpt-4.1-nano-2025-04-14"  # Fast and cheap model for memory ops (mem0's default)
+
+    # Embedding configuration (uses mem0's native embedders)
+    # RECOMMENDED: Specify provider and model for clarity
+    embedding:
+      provider: "openai"  # Options: openai, together, azure_openai, gemini, huggingface, etc.
+      model: "text-embedding-3-small"  # OpenAI's efficient embedding model
+
+    # Qdrant client configuration
+    # IMPORTANT: For multi-agent setups, use server mode to avoid concurrent access errors
+    qdrant:
+      mode: "server"  # Options: "server" (recommended for multi-agent) or "local" (single agent only)
+      host: "localhost"  # Qdrant server host (default: localhost)
+      port: 6333         # Qdrant server port (default: 6333)
+      # For local mode (single agent only):
+      # mode: "local"
+      # path: ".massgen/qdrant"  # Local storage path
+
   # Context window management thresholds
   compression:
     trigger_threshold: 0.25  # Compress when context usage exceeds 25%

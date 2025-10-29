@@ -289,15 +289,19 @@ class SingleAgent(ChatAgent):
                         if self.persistent_memory:
                             try:
                                 # Include turn number in metadata for temporal filtering
+                                logger.debug(f"📝 Recording {len(messages_to_record)} messages to persistent memory (turn {self._orchestrator_turn})")
                                 await self.persistent_memory.record(
                                     messages_to_record,
                                     metadata={"turn": self._orchestrator_turn} if self._orchestrator_turn else None,
                                 )
+                                logger.debug("✅ Successfully recorded to persistent memory")
                             except NotImplementedError:
                                 # Memory backend doesn't support record
                                 pass
                             except Exception as e:
                                 # Log but don't fail if memory record fails
+                                logger.warning(f"⚠️  Failed to record to persistent memory: {e}")
+                                logger.debug(f"   Error details: {type(e).__name__}: {str(e)}")
                                 print(f"Warning: Failed to record to persistent memory: {e}")
 
                     # Log context usage after response (if monitor enabled)
@@ -382,6 +386,22 @@ class SingleAgent(ChatAgent):
                 await self.conversation_memory.clear()
 
         if reset_chat:
+            # Before clearing, record current conversation_memory to persistent_memory
+            # This ensures recent messages survive the restart
+            if self.conversation_memory and self.persistent_memory:
+                try:
+                    current_messages = await self.conversation_memory.get_messages()
+                    if current_messages:
+                        logger.info(
+                            f"💾 Recording {len(current_messages)} messages to persistent memory before reset",
+                        )
+                        await self.persistent_memory.record(
+                            current_messages,
+                            metadata={"turn": self._orchestrator_turn, "pre_restart": True} if self._orchestrator_turn else None,
+                        )
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to preserve messages before reset: {e}")
+
             # Reset conversation history to the provided messages
             self.conversation_history = messages.copy()
             # Reset backend state completely
@@ -402,72 +422,80 @@ class SingleAgent(ChatAgent):
                 except Exception as e:
                     # Log but don't fail if memory add fails
                     print(f"Warning: Failed to add messages to conversation memory: {e}")
+            backend_messages = self.conversation_history.copy()
 
-            # Retrieve relevant persistent memories if available
-            # ONLY retrieve if compression has occurred (to avoid duplicating recent context)
-            memory_context = ""
-            should_retrieve = self.persistent_memory and (self._compression_has_occurred or not self._retrieval_exclude_recent)
+        # Retrieve relevant persistent memories if available
+        # ALWAYS retrieve on reset_chat (to restore recent context after restart)
+        # Otherwise, only retrieve if compression has occurred (to avoid duplicating recent context)
+        memory_context = ""
+        should_retrieve = self.persistent_memory and (reset_chat or self._compression_has_occurred or not self._retrieval_exclude_recent)  # Always retrieve on reset to restore context
 
-            if should_retrieve:
-                try:
-                    # Log retrieval with winner info
-                    if self._previous_winners:
-                        logger.info(
-                            f"🔍 Retrieving memories for {self.agent_id} + {len(self._previous_winners)} previous winner(s) " f"(limit={self._retrieval_limit}/agent)...",
-                        )
-                        logger.debug(f"   Previous winners: {self._previous_winners}")
-                    else:
-                        logger.info(
-                            f"🔍 Retrieving memories for {self.agent_id} " f"(limit={self._retrieval_limit}, compressed={self._compression_has_occurred})...",
-                        )
-
-                    memory_context = await self.persistent_memory.retrieve(
-                        messages,
-                        limit=self._retrieval_limit,
-                        previous_winners=self._previous_winners if self._previous_winners else None,
+        if should_retrieve:
+            try:
+                # Log retrieval reason and scope
+                if reset_chat:
+                    logger.info(
+                        f"🔄 Retrieving memories after reset for {self.agent_id} " f"(restoring recent context + {len(self._previous_winners) if self._previous_winners else 0} winner(s))...",
+                    )
+                elif self._previous_winners:
+                    logger.info(
+                        f"🔍 Retrieving memories for {self.agent_id} + {len(self._previous_winners)} previous winner(s) " f"(limit={self._retrieval_limit}/agent)...",
+                    )
+                    logger.debug(f"   Previous winners: {self._previous_winners}")
+                else:
+                    logger.info(
+                        f"🔍 Retrieving memories for {self.agent_id} " f"(limit={self._retrieval_limit}, compressed={self._compression_has_occurred})...",
                     )
 
-                    if memory_context:
-                        memory_lines = memory_context.strip().split("\n")
-                        logger.info(
-                            f"💭 Retrieved {len(memory_lines)} memory fact(s) from mem0",
-                        )
-                        logger.debug(f"   Preview: {memory_context[:200]}...")
-                    else:
-                        logger.debug("   No relevant memories found")
-                except NotImplementedError:
-                    logger.debug("   Persistent memory doesn't support retrieval")
-                except Exception as e:
-                    logger.warning(f"⚠️  Failed to retrieve from persistent memory: {e}")
-                    print(f"Warning: Failed to retrieve from persistent memory: {e}")
-            elif self.persistent_memory and self._retrieval_exclude_recent:
-                logger.debug(
-                    f"⏭️  Skipping retrieval for {self.agent_id} " f"(no compression yet, all context in conversation_memory)",
+                memory_context = await self.persistent_memory.retrieve(
+                    messages,
+                    limit=self._retrieval_limit,
+                    previous_winners=self._previous_winners if self._previous_winners else None,
                 )
 
-            # Handle stateful vs stateless backends differently
-            if self.backend.is_stateful():
-                # Stateful: only send new messages, backend maintains context
-                backend_messages = messages.copy()
-                # Inject memory context before user messages if available
                 if memory_context:
-                    memory_msg = {
-                        "role": "system",
-                        "content": f"Relevant memories:\n{memory_context}",
-                    }
-                    backend_messages.insert(0, memory_msg)
-            else:
-                # Stateless: send full conversation history
-                backend_messages = self.conversation_history.copy()
-                # Inject memory context after system message but before conversation
-                if memory_context:
-                    memory_msg = {
-                        "role": "system",
-                        "content": f"Relevant memories:\n{memory_context}",
-                    }
-                    # Insert after existing system messages
-                    system_count = sum(1 for msg in backend_messages if msg.get("role") == "system")
-                    backend_messages.insert(system_count, memory_msg)
+                    memory_lines = memory_context.strip().split("\n")
+                    logger.info(
+                        f"💭 Retrieved {len(memory_lines)} memory fact(s) from mem0",
+                    )
+                    # Show preview at INFO level (truncate to first 300 chars for readability)
+                    preview = memory_context[:300] + "..." if len(memory_context) > 300 else memory_context
+                    logger.info(f"   📝 Preview:\n{preview}")
+                else:
+                    logger.info("   ℹ️  No relevant memories found")
+            except NotImplementedError:
+                logger.debug("   Persistent memory doesn't support retrieval")
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to retrieve from persistent memory: {e}")
+                print(f"Warning: Failed to retrieve from persistent memory: {e}")
+        elif self.persistent_memory and self._retrieval_exclude_recent:
+            logger.debug(
+                f"⏭️  Skipping retrieval for {self.agent_id} " f"(no compression yet, all context in conversation_memory)",
+            )
+
+        # Handle stateful vs stateless backends differently
+        if self.backend.is_stateful():
+            # Stateful: only send new messages, backend maintains context
+            backend_messages = messages.copy()
+            # Inject memory context before user messages if available
+            if memory_context:
+                memory_msg = {
+                    "role": "system",
+                    "content": f"Relevant memories:\n{memory_context}",
+                }
+                backend_messages.insert(0, memory_msg)
+        else:
+            # Stateless: send full conversation history
+            backend_messages = self.conversation_history.copy()
+            # Inject memory context after system message but before conversation
+            if memory_context:
+                memory_msg = {
+                    "role": "system",
+                    "content": f"Relevant memories:\n{memory_context}",
+                }
+                # Insert after existing system messages
+                system_count = sum(1 for msg in backend_messages if msg.get("role") == "system")
+                backend_messages.insert(system_count, memory_msg)
 
         if current_stage:
             self.backend.set_stage(current_stage)

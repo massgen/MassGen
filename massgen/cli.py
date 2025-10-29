@@ -516,14 +516,33 @@ def create_agents_from_config(
             from qdrant_client import QdrantClient
 
             pm_config = global_memory_config.get("persistent_memory", {})
-            qdrant_path = pm_config.get("path", ".massgen/qdrant")
 
-            # Create ONE shared client for all agents
-            shared_qdrant_client = QdrantClient(path=qdrant_path)
-            logger.info(f"🗄️  Shared Qdrant client created at {qdrant_path}")
+            # Support both server mode and file-based mode
+            qdrant_config = pm_config.get("qdrant", {})
+            mode = qdrant_config.get("mode", "local")  # "local" or "server"
+
+            if mode == "server":
+                # Server mode (RECOMMENDED for multi-agent)
+                host = qdrant_config.get("host", "localhost")
+                port = qdrant_config.get("port", 6333)
+                shared_qdrant_client = QdrantClient(host=host, port=port)
+                logger.info(f"🗄️  Shared Qdrant client created (server mode: {host}:{port})")
+            else:
+                # Local file-based mode (single agent only)
+                # WARNING: Does NOT support concurrent access by multiple agents
+                qdrant_path = pm_config.get("path", ".massgen/qdrant")
+                shared_qdrant_client = QdrantClient(path=qdrant_path)
+                logger.info(f"🗄️  Shared Qdrant client created (local mode: {qdrant_path})")
+                if len(agent_entries) > 1:
+                    logger.warning(
+                        "⚠️  Multi-agent setup detected with local Qdrant mode. "
+                        "This may cause concurrent access errors. "
+                        "Consider using server mode: set memory.persistent_memory.qdrant.mode='server'",
+                    )
         except Exception as e:
             logger.warning(f"⚠️  Failed to create shared Qdrant client: {e}")
             logger.warning("   Persistent memory will be disabled for all agents")
+            logger.warning("   For multi-agent setup, start Qdrant server: docker-compose -f docker-compose.qdrant.yml up -d")
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
@@ -685,28 +704,74 @@ def create_agents_from_config(
                 qdrant_path = pm_config.get("path", ".massgen/qdrant")  # Project dir, not /tmp
 
                 try:
-                    # Create embedding backend for persistent memory
-                    embedding_backend = ChatCompletionsBackend(
-                        type="openai",
-                        model="text-embedding-3-small",
-                        api_key=os.getenv("OPENAI_API_KEY"),
-                    )
+                    # Configure LLM for memory operations (fact extraction)
+                    # RECOMMENDED: Use mem0's native LLMs (no adapter overhead, no async complexity)
+                    llm_cfg = pm_config.get("llm", {})
+
+                    if not llm_cfg:
+                        # Default: gpt-4.1-nano-2025-04-14 (mem0's default, fast and cheap for memory ops)
+                        llm_cfg = {
+                            "provider": "openai",
+                            "model": "gpt-4.1-nano-2025-04-14",
+                        }
+
+                    # Add API key if not specified
+                    if "api_key" not in llm_cfg:
+                        llm_provider = llm_cfg.get("provider", "openai")
+                        if llm_provider == "openai":
+                            llm_cfg["api_key"] = os.getenv("OPENAI_API_KEY")
+                        elif llm_provider == "anthropic":
+                            llm_cfg["api_key"] = os.getenv("ANTHROPIC_API_KEY")
+                        elif llm_provider == "groq":
+                            llm_cfg["api_key"] = os.getenv("GROQ_API_KEY")
+                        # Add more providers as needed
+
+                    # Configure embedding for persistent memory
+                    # RECOMMENDED: Use mem0's native embedders (no adapter overhead)
+                    embedding_cfg = pm_config.get("embedding", {})
+
+                    if not embedding_cfg:
+                        # Default: OpenAI text-embedding-3-small
+                        embedding_cfg = {
+                            "provider": "openai",
+                            "model": "text-embedding-3-small",
+                        }
+
+                    # Add API key if not specified
+                    if "api_key" not in embedding_cfg:
+                        emb_provider = embedding_cfg.get("provider", "openai")
+                        if emb_provider == "openai":
+                            api_key = os.getenv("OPENAI_API_KEY")
+                            if not api_key:
+                                logger.warning("⚠️  OPENAI_API_KEY not found in environment - embedding will fail!")
+                            else:
+                                logger.debug(f"✅ Using OPENAI_API_KEY from environment (key starts with: {api_key[:7]}...)")
+                            embedding_cfg["api_key"] = api_key
+                        elif emb_provider == "together":
+                            embedding_cfg["api_key"] = os.getenv("TOGETHER_API_KEY")
+                        elif emb_provider == "azure_openai":
+                            embedding_cfg["api_key"] = os.getenv("AZURE_OPENAI_API_KEY")
+                        # Add more providers as needed
 
                     # Use shared Qdrant client if available
                     if shared_qdrant_client:
                         persistent_memory = PersistentMemory(
                             agent_name=agent_name,
                             session_name=session_name,
-                            llm_backend=backend,
-                            embedding_backend=embedding_backend,
-                            qdrant_client=shared_qdrant_client,  # Share ONE client
+                            llm_config=llm_cfg,  # Use native mem0 LLM
+                            embedding_config=embedding_cfg,  # Use native mem0 embedder
+                            qdrant_client=shared_qdrant_client,  # Share ONE client from server
                             on_disk=on_disk,
                         )
                         logger.info(
-                            f"💾 Persistent memory created for {agent_config.agent_id} " f"(agent_name={agent_name}, session={session_name or 'cross-session'}, shared_qdrant=True)",
+                            f"💾 Persistent memory created for {agent_config.agent_id} "
+                            f"(agent_name={agent_name}, session={session_name or 'cross-session'}, "
+                            f"llm={llm_cfg.get('provider')}/{llm_cfg.get('model')}, "
+                            f"embedder={embedding_cfg.get('provider')}/{embedding_cfg.get('model')}, shared_qdrant=True)",
                         )
                     else:
                         # Fallback: create individual vector store (for backward compatibility)
+                        # WARNING: File-based Qdrant doesn't support concurrent access
                         from mem0.vector_stores.configs import VectorStoreConfig
 
                         vector_store_config = VectorStoreConfig(
@@ -719,13 +784,16 @@ def create_agents_from_config(
                         persistent_memory = PersistentMemory(
                             agent_name=agent_name,
                             session_name=session_name,
-                            llm_backend=backend,
-                            embedding_backend=embedding_backend,
+                            llm_config=llm_cfg,  # Use native mem0 LLM
+                            embedding_config=embedding_cfg,  # Use native mem0 embedder
                             vector_store_config=vector_store_config,
                             on_disk=on_disk,
                         )
                         logger.info(
-                            f"💾 Persistent memory created for {agent_config.agent_id} " f"(agent_name={agent_name}, session={session_name or 'cross-session'}, path={qdrant_path})",
+                            f"💾 Persistent memory created for {agent_config.agent_id} "
+                            f"(agent_name={agent_name}, session={session_name or 'cross-session'}, "
+                            f"llm={llm_cfg.get('provider')}/{llm_cfg.get('model')}, "
+                            f"embedder={embedding_cfg.get('provider')}/{embedding_cfg.get('model')}, path={qdrant_path})",
                         )
                 except Exception as e:
                     logger.warning(
