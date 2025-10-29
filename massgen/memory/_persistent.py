@@ -479,10 +479,19 @@ class PersistentMemory(PersistentMemoryBase):
             return
 
         # Convert to mem0 format
+        # Combine all messages into a single conversation context for mem0
+        # mem0's LLM will extract facts from this combined content
+        conversation_parts = []
+        for msg in valid_messages:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            # Format: "role: content" for each message
+            conversation_parts.append(f"{role}: {content}")
+
         mem0_messages = [
             {
                 "role": "assistant",
-                "content": "\n".join([f"{msg.get('role', 'unknown')}: {msg.get('content', '')}" for msg in valid_messages]),
+                "content": "\n".join(conversation_parts),
                 "name": "conversation",
             },
         ]
@@ -519,47 +528,19 @@ class PersistentMemory(PersistentMemoryBase):
             # Logging - show what we're sending to mem0
             logger.info(f"🔍 [_mem0_add] Recording to mem0 (agent={self.agent_id}, session={self.session_id}, turn={kwargs.get('metadata', {}).get('turn', 'N/A')})")
 
-            # Log full messages to separate debug file
-            import json
-            from pathlib import Path
-
-            from ..logger_config import get_log_session_dir
-
-            debug_dir = Path(get_log_session_dir()) / "memory_debug"
-            debug_dir.mkdir(parents=True, exist_ok=True)
-
-            timestamp = __import__("datetime").datetime.now().strftime("%H%M%S_%f")
-            debug_file = debug_dir / f"mem0_add_{self.agent_id}_{timestamp}.json"
-
-            debug_data = {
-                "timestamp": timestamp,
-                "agent_id": self.agent_id,
-                "user_id": self.user_id,
-                "run_id": self.session_id,
-                "memory_type": memory_type or self.default_memory_type,
-                "infer": infer,
-                "metadata": kwargs.get("metadata"),
-                "messages": messages,
-            }
-
-            with open(debug_file, "w") as f:
-                json.dump(debug_data, f, indent=2)
-
-            logger.info(f"   📝 Full messages logged to: {debug_file.name}")
-
-            # Show message preview in main log
+            # Debug: Show message preview
             if isinstance(messages, str):
                 preview = messages[:100] + "..." if len(messages) > 100 else messages
-                logger.info(f"   messages (string): {preview}")
+                logger.debug(f"   messages (string): {preview}")
             elif isinstance(messages, list):
-                logger.info(f"   messages: {len(messages)} message(s)")
+                logger.debug(f"   messages: {len(messages)} message(s)")
                 for i, msg in enumerate(messages[:1]):  # Show first one
                     if msg is None:
                         logger.warning(f"      ⚠️  Message [{i}] is None!")
                         continue
                     content = msg.get("content", "") if isinstance(msg, dict) else str(msg)
                     preview = content[:100] + "..." if len(content) > 100 else content
-                    logger.info(f"      {msg.get('role', 'unknown') if isinstance(msg, dict) else 'str'}: {preview}")
+                    logger.debug(f"      {msg.get('role', 'unknown') if isinstance(msg, dict) else 'str'}: {preview}")
 
             # Call mem0
             results = await self.mem0_memory.add(
@@ -592,10 +573,6 @@ class PersistentMemory(PersistentMemoryBase):
                 logger.error("   Check: 1) API key is set, 2) Model name is correct, 3) API is accessible")
                 logger.error("   Debug: Run 'uv run python scripts/test_memory_setup.py' to isolate the issue")
 
-            # Show full error for debugging
-            import traceback
-
-            logger.error(f"   Full traceback:\n{traceback.format_exc()}")
             raise
 
     async def retrieve(
@@ -625,8 +602,7 @@ class PersistentMemory(PersistentMemoryBase):
         from ..logger_config import logger
 
         logger.info(f"🔍 [retrieve] Searching memories (agent={self.agent_id}, limit={limit}, winners={len(previous_winners) if previous_winners else 0})")
-        if previous_winners:
-            logger.info(f"   Previous winners: {previous_winners}")
+        logger.debug(f"   Previous winners: {previous_winners}" if previous_winners else "   No previous winners")
 
         # Convert query to string format
         query_strings = []
@@ -647,16 +623,16 @@ class PersistentMemory(PersistentMemoryBase):
                         query_strings.append(str(content))
 
         if not query_strings:
-            logger.info("   ⚠️  No valid query strings extracted")
+            logger.warning("   ⚠️  No valid query strings extracted")
             return ""
 
-        logger.info(f"   Queries: {len(query_strings)} query string(s)")
+        logger.debug(f"   Queries: {len(query_strings)} query string(s)")
 
         # Search mem0 for each query string
         all_results = []
 
         # 1. Search own agent's memories first
-        logger.info(f"   🔎 Searching own memories ({self.agent_id})...")
+        logger.debug(f"   🔎 Searching own memories ({self.agent_id})...")
         for query_str in query_strings:
             search_result = await self.mem0_memory.search(
                 query=query_str,
@@ -668,12 +644,12 @@ class PersistentMemory(PersistentMemoryBase):
 
             if search_result and "results" in search_result:
                 memories = [item["memory"] for item in search_result["results"]]
-                logger.info(f"      → Found {len(memories)} memory/memories")
+                logger.debug(f"      → Found {len(memories)} memory/memories")
                 all_results.extend(memories)
 
         # 2. Search previous winning agents' memories (turn-filtered)
         if previous_winners:
-            logger.info(f"   🔎 Searching {len(previous_winners)} previous winner(s)...")
+            logger.debug(f"   🔎 Searching {len(previous_winners)} previous winner(s)...")
             for winner in previous_winners:
                 winner_agent_id = winner.get("agent_id")
                 winner_turn = winner.get("turn")
@@ -682,7 +658,7 @@ class PersistentMemory(PersistentMemoryBase):
                 if winner_agent_id == self.agent_id:
                     continue
 
-                logger.info(f"      → Searching {winner_agent_id} (turn {winner_turn})...")
+                logger.debug(f"      → Searching {winner_agent_id} (turn {winner_turn})...")
 
                 # Search each query string for this winner
                 for query_str in query_strings:
@@ -697,7 +673,7 @@ class PersistentMemory(PersistentMemoryBase):
 
                     if search_result and "results" in search_result:
                         memories = [f"[From {winner_agent_id} Turn {winner_turn}] {item['memory']}" for item in search_result["results"]]
-                        logger.info(f"         Found {len(memories)} memory/memories")
+                        logger.debug(f"         Found {len(memories)} memory/memories")
                         all_results.extend(memories)
 
         # Format results as a readable string
@@ -706,6 +682,6 @@ class PersistentMemory(PersistentMemoryBase):
             # Show first 2 memories as preview
             for i, mem in enumerate(all_results[:2]):
                 preview = mem[:100] + "..." if len(mem) > 100 else mem
-                logger.info(f"      [{i+1}] {preview}")
+                logger.debug(f"      [{i+1}] {preview}")
 
         return "\n".join(all_results) if all_results else ""

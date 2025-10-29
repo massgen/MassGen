@@ -646,7 +646,7 @@ def create_agents_from_config(
         # Create context monitor if memory config is enabled
         context_monitor = None
         if memory_config.get("enabled", False):
-            from .context_monitor import ContextWindowMonitor
+            from .memory._context_monitor import ContextWindowMonitor
 
             compression_config = memory_config.get("compression", {})
             trigger_threshold = compression_config.get("trigger_threshold", 0.75)

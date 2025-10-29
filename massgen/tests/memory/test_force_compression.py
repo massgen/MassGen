@@ -16,8 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from massgen.context_monitor import ContextWindowMonitor  # noqa: E402
 from massgen.memory import ContextCompressor, ConversationMemory  # noqa: E402
+from massgen.memory._context_monitor import ContextWindowMonitor  # noqa: E402
 from massgen.token_manager.token_manager import TokenCostCalculator  # noqa: E402
 
 

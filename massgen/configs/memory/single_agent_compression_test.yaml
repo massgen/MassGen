@@ -4,9 +4,7 @@
 # Set very low thresholds to trigger compression quickly.
 #
 # Run with:
-#   uv run massgen \
-#     --config massgen/configs/memory/single_agent_compression_test.yaml \
-#     "Explain Python's garbage collection, GIL, asyncio, descriptors, and metaclasses in extreme detail with many code examples."
+#   uv run massgen --config massgen/configs/memory/single_agent_compression_test.yaml "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
 
 agents:
   - id: "test_agent"
@@ -25,9 +23,25 @@ memory:
   persistent_memory:
     enabled: true
 
+    # LLM for memory operations
+    llm:
+      provider: "openai"
+      model: "gpt-4.1-nano-2025-04-14"
+
+    # Embedding for vector search
+    embedding:
+      provider: "openai"
+      model: "text-embedding-3-small"
+
+    # Qdrant configuration (use server mode)
+    qdrant:
+      mode: "server"
+      host: "localhost"
+      port: 6333
+
   compression:
-    trigger_threshold: 0.01   # Compress at 1% (very low for quick testing)
-    target_ratio: 0.005       # Keep 0.5% after compression
+    trigger_threshold: 0.02   # Compress at 2% (very low for quick testing)
+    target_ratio: 0.01      # Keep 1% after compression
 
   # Memory retrieval configuration
   retrieval:
@@ -48,34 +62,3 @@ orchestrator:
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
-
-# Expected behavior:
-# Turn 1:
-#   - Agent responds with long response
-#   - Context window logged: e.g., 2,500 / 128,000 tokens (2.0%)
-#   - ⏭️ Skipping retrieval (no compression yet, all context in conversation_memory)
-#   - Response added to conversation_memory
-#
-# Turn 2 (if context grows):
-#   - Context: 5,200 tokens (4.1%)
-#   - Still no retrieval (exclude_recent=true, no compression yet)
-#
-# Turn X (context exceeds 1% trigger):
-#   - ⚠️ Context Window: X tokens - Approaching limit!
-#   - 🔄 Attempting compression (X → Y tokens)
-#   - 📦 Context compressed: Removed N old messages
-#   - ✅ Conversation history updated
-#   - _compression_has_occurred = True
-#
-# Turn X+1 (after compression):
-#   - 🔍 Retrieving compressed memories (limit=5)
-#   - 💭 Retrieved N memory facts from mem0
-#   - Facts injected as system message
-#   - Agent sees: recent context + retrieved facts (no duplication!)
-#
-# Session management:
-# - Unified sessions: orchestrator session = memory session
-# - Single question mode: Creates temp_YYYYMMDD_HHMMSS per run (isolated)
-# - Qdrant database: Shared at .massgen/qdrant (not /tmp)
-# - Memories persist across machine restarts
-# - Each agent isolated by agent_id + session_id

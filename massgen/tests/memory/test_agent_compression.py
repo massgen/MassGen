@@ -21,8 +21,8 @@ from dotenv import load_dotenv  # noqa: E402
 
 from massgen.backend.chat_completions import ChatCompletionsBackend  # noqa: E402
 from massgen.chat_agent import SingleAgent  # noqa: E402
-from massgen.context_monitor import ContextWindowMonitor  # noqa: E402
 from massgen.memory import ConversationMemory, PersistentMemory  # noqa: E402
+from massgen.memory._context_monitor import ContextWindowMonitor  # noqa: E402
 
 load_dotenv()
 

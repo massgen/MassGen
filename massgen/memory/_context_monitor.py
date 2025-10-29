@@ -8,8 +8,8 @@ Helps debug memory and token management by showing real-time context usage.
 
 from typing import Any, Dict, List, Optional
 
-from .logger_config import logger
-from .token_manager.token_manager import TokenCostCalculator
+from ..logger_config import logger
+from ..token_manager.token_manager import TokenCostCalculator
 
 
 class ContextWindowMonitor:

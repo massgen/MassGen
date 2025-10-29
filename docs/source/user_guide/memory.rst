@@ -930,6 +930,117 @@ See complete examples in:
 - ``massgen/configs/memory/gpt5mini_gemini_context_window_management.yaml``
 - ``massgen/configs/memory/gpt5mini_high_reasoning_gemini.yaml``
 
+Future Improvements
+-------------------
+
+.. note::
+   The memory system is production-ready but has several planned enhancements.
+
+Planned Features
+~~~~~~~~~~~~~~~~
+
+**1. Chunk-Level Token Tracking**
+
+**Current**: Token counting happens after complete response (message-level)
+
+.. code-block:: text
+
+   [Agent streaming response...]
+   → [Response complete]
+   → [Count tokens on full message]
+   → [Compress if needed]
+
+**Issue**: Can't stop mid-stream if response exceeds budget
+
+**Planned**: Track tokens during streaming, warn agent when approaching limit
+
+.. code-block:: text
+
+   [Agent streaming...]
+   → [Token counter: 45K / 50K budget]
+   → [Agent sees: "⚠️ Approaching token limit, wrap up"]
+   → [Agent concludes early]
+
+**2. Configurable Memory Granularity**
+
+**Planned**: Control what gets recorded to memory
+
+.. code-block:: yaml
+
+   memory:
+     recording:
+       include_mcp_tools: false       # Skip MCP tools (default)
+       include_reasoning: true        # Include reasoning (default)
+       include_reasoning_summary: true
+       tool_argument_limit: 1000      # Max chars for tool args
+       content_filters:
+         - "workflow_tools"  # vote, new_answer
+         - "system_messages"
+
+**3. MCP Tool Recording (Optional)**
+
+**Currently**: MCP tools (read_file, list_directory) excluded as implementation details
+
+**Planned**: Optional recording with summarization
+
+.. code-block:: yaml
+
+   memory:
+     recording:
+       include_mcp_tools: true
+       mcp_summarization: "aggregate"  # "aggregate", "each", "none"
+
+**Output**:
+   - ``aggregate``: "[Tools used: read_file (3x), list_directory (2x)]"
+   - ``each``: Full detail per tool
+   - ``none``: Current behavior (skip)
+
+**4. Memory Summarization on Compression**
+
+**Current**: Just remove old messages
+
+**Planned**: Generate summary of compressed context
+
+.. code-block:: text
+
+   Compression:
+   - Remove messages 1-10
+   - Generate summary: "User analyzed MassGen codebase, identified 3 key components..."
+   - Inject summary as context for future turns
+
+Known Limitations
+~~~~~~~~~~~~~~~~~
+
+**Token Counting During Streaming**
+
+Context is counted **after** response completes, not during streaming chunks. This means:
+
+- ✅ Accurate final count
+- ❌ Can't stop mid-response if too large
+- ❌ No proactive budget warnings
+
+**Workaround**: Set conservative compression thresholds (50-60%) to leave headroom.
+
+**MCP Tools Not in Memory**
+
+MCP tool executions (read_file, list_directory) are **intentionally excluded** as implementation details.
+
+**Rationale**: The final answer captures what was learned; tool execution trace is noise for semantic memory.
+
+**If you need execution history**: Check orchestrator logs or agent workspace snapshots, not memory.
+
+**Session-Level Memory Isolation**
+
+Memories are isolated per session. To access knowledge from previous sessions, either:
+- Set ``session_name: null`` (search all sessions)
+- Explicitly continue a session with ``session_name: "my_session"``
+
+**Local Qdrant Single-Agent Only**
+
+File-based Qdrant (``mode: "local"``) does NOT support concurrent access.
+
+**For multi-agent**: Always use ``mode: "server"`` with Docker.
+
 Next Steps
 ----------
 
