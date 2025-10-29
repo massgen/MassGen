@@ -227,7 +227,58 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.4 - Latest
+### v0.1.5 - Latest
+**New Features:** Memory System with Semantic Retrieval
+
+**Configuration Files:**
+- `gpt5mini_gemini_context_window_management.yaml` - Multi-agent with automatic context compression
+- `gpt5mini_gemini_research_to_implementation.yaml` - **Research-to-implementation workflow** (featured in case study)
+- `gpt5mini_high_reasoning_gemini.yaml` - High reasoning agents with memory integration
+- `gpt5mini_gemini_baseline_research_to_implementation.yaml` - Baseline research workflow
+- `single_agent_compression_test.yaml` - Testing context compression behavior
+
+**Documentation & Case Studies:**
+- `docs/source/user_guide/memory.rst` - Complete memory system user guide
+- `docs/source/examples/case_studies/multi-turn-persistent-memory.md` - **Memory case study with demo video**
+- Memory design decisions and architecture documentation
+- API reference for PersistentMemory, ConversationMemory, and ContextMonitor
+
+**Key Features:**
+- **Long-Term Memory**: Semantic storage via mem0 with vector database integration
+- **Context Compression**: Automatic compression when approaching token limits
+- **Cross-Agent Sharing**: Agents learn from each other's experiences
+- **Session Management**: Memory persistence across conversations
+
+**Try it:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# Multi-agent collaboration with context compression
+massgen --config @examples/memory/gpt5mini_gemini_context_window_management \
+  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+
+# Research-to-implementation workflow with memory persistence
+# Prerequisites: Start Qdrant and crawl4ai Docker containers
+docker run -d -p 6333:6333 -p 6334:6334 \
+  -v $(pwd)/.massgen/qdrant_storage:/qdrant/storage:z qdrant/qdrant
+docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+
+# Session 1 - Research phase:
+massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation \
+  "Use crawl4ai to research the latest multi-agent AI papers and techniques from 2025. Focus on: coordination mechanisms, voting strategies, tool-use patterns, and architectural innovations."
+
+# Session 2 - Implementation analysis (continue in same session):
+# "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
+
+→ See [Multi-Turn Persistent Memory Case Study](../../docs/source/examples/case_studies/multi-turn-persistent-memory.md) for detailed analysis
+
+# Test automatic context compression
+massgen --config @examples/memory/single_agent_compression_test \
+  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+```
+
+### v0.1.4
 **New Features:** Multimodal Generation Tools, Binary File Protection, Crawl4AI Integration
 
 **Configuration Files:**
@@ -237,12 +288,6 @@ Most configurations use environment variables for API keys:so
 - `text_to_file_generation_single.yaml` / `text_to_file_generation_multi.yaml` - Document generation
 - `crawl4ai_example.yaml` - Web scraping configuration
 
-**Documentation:**
-- `README_PYPI.md` - Standalone PyPI package documentation
-- `docs/dev_notes/release_checklist.md` - Release workflow guide
-- `docs/source/user_guide/protected_paths.rst` - Binary file protection documentation
-- `.github/workflows/docs-automation.yml` - Documentation CI/CD automation
-
 **Key Features:**
 - **Generation Tools**: Create images, videos, audio, and documents using OpenAI APIs
 - **Binary File Protection**: Automatic blocking prevents text tools from reading 40+ binary file types
@@ -251,9 +296,6 @@ Most configurations use environment variables for API keys:so
 
 **Try it:**
 ```bash
-# Install or upgrade
-pip install --upgrade massgen
-
 # Generate an image from text
 massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_image_generation_single \
   "Please generate an image of a cat in space."
