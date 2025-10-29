@@ -146,7 +146,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 **What's New in v0.1.5:**
 - **🧠 Long-Term Memory System** - Semantic memory with retrieval across sessions
 - **🗜️ Automatic Context Compression** - Smart compression when approaching token limits
-- **🔄 Cross-Agent Memory Sharing** - Agents learn from each other's experiences
+- **🔄 Memory Sharing for Multi-Turn Conversations** - Agents access knowledge from previous turns
 
 **Key Improvements:**
 - Persistent memory via mem0 integration with vector storage
@@ -164,12 +164,20 @@ pip install --upgrade massgen
 massgen --config @examples/memory/gpt5mini_gemini_context_window_management \
   "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
 
-# Research workflow with memory persistence (requires Qdrant and crawl4ai Docker containers)
+# Research-to-implementation workflow with memory persistence
+# Prerequisites: Start Qdrant and crawl4ai Docker containers
+docker run -d -p 6333:6333 -p 6334:6334 \
+  -v $(pwd)/.massgen/qdrant_storage:/qdrant/storage:z qdrant/qdrant
+docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+
 # Session 1 - Research phase:
 massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation \
   "Use crawl4ai to research the latest multi-agent AI papers and techniques from 2025. Focus on: coordination mechanisms, voting strategies, tool-use patterns, and architectural innovations."
+
 # Session 2 - Implementation analysis (continue in same session):
 # "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
+
+→ See [Multi-Turn Persistent Memory Case Study](docs/source/examples/case_studies/multi-turn-persistent-memory.md) for detailed analysis
 
 # Test automatic context compression
 massgen --config @examples/memory/single_agent_compression_test \
@@ -1001,6 +1009,10 @@ All sessions are automatically logged with detailed information for debugging an
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
+**Featured:**
+- [**Multi-Turn Persistent Memory**](docs/source/examples/case_studies/multi-turn-persistent-memory.md) - Research-to-implementation workflow demonstrating memory system (v0.1.5) | [📹 Watch Demo](https://youtu.be/wWxxFgyw40Y)
+
+**All Case Studies:**
 - [**MassGen Case Studies**](docs/source/examples/case_studies/README.md)
 - [**Case Studies Documentation**](https://docs.massgen.ai/en/latest/examples/case_studies.html) - Browse case studies online
 

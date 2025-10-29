@@ -232,13 +232,14 @@ Most configurations use environment variables for API keys:so
 
 **Configuration Files:**
 - `gpt5mini_gemini_context_window_management.yaml` - Multi-agent with automatic context compression
-- `gpt5mini_gemini_research_to_implementation.yaml` - Research-to-implementation workflow with memory
+- `gpt5mini_gemini_research_to_implementation.yaml` - **Research-to-implementation workflow** (featured in case study)
 - `gpt5mini_high_reasoning_gemini.yaml` - High reasoning agents with memory integration
 - `gpt5mini_gemini_baseline_research_to_implementation.yaml` - Baseline research workflow
 - `single_agent_compression_test.yaml` - Testing context compression behavior
 
-**Documentation:**
+**Documentation & Case Studies:**
 - `docs/source/user_guide/memory.rst` - Complete memory system user guide
+- `docs/source/examples/case_studies/multi-turn-persistent-memory.md` - **Memory case study with demo video**
 - Memory design decisions and architecture documentation
 - API reference for PersistentMemory, ConversationMemory, and ContextMonitor
 
@@ -257,12 +258,20 @@ pip install --upgrade massgen
 massgen --config @examples/memory/gpt5mini_gemini_context_window_management \
   "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
 
-# Research workflow with memory persistence (requires Qdrant and crawl4ai Docker containers)
+# Research-to-implementation workflow with memory persistence
+# Prerequisites: Start Qdrant and crawl4ai Docker containers
+docker run -d -p 6333:6333 -p 6334:6334 \
+  -v $(pwd)/.massgen/qdrant_storage:/qdrant/storage:z qdrant/qdrant
+docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+
 # Session 1 - Research phase:
 massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation \
   "Use crawl4ai to research the latest multi-agent AI papers and techniques from 2025. Focus on: coordination mechanisms, voting strategies, tool-use patterns, and architectural innovations."
+
 # Session 2 - Implementation analysis (continue in same session):
 # "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
+
+→ See [Multi-Turn Persistent Memory Case Study](../../docs/source/examples/case_studies/multi-turn-persistent-memory.md) for detailed analysis
 
 # Test automatic context compression
 massgen --config @examples/memory/single_agent_compression_test \

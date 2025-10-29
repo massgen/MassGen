@@ -204,10 +204,12 @@ orchestrator:
   snapshot_storage: "snapshots"
   agent_temporary_workspace: "temp_workspaces"
 
-# Memory configuration (schema not yet implemented but may evolve when it does)
+# Memory configuration (implemented in v0.1.5 - see docs/source/user_guide/memory.rst)
 memory:
   enabled: true
-  provider: mem0
+  persistent_memory:
+    enabled: true
+    vector_store: "qdrant"
 ```
 
 ## 📋 Prerequisites

@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Recent Releases
 
 **v0.1.5 (October 2025)** - Memory System
-Long-term memory with semantic retrieval via mem0, automatic context compression, and cross-agent memory sharing for multi-turn conversations.
+Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
 
 **v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
 Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
@@ -26,7 +26,7 @@ Post-evaluation workflow with submit/restart capabilities, custom multimodal und
   - **PersistentMemory** via mem0 integration for semantic fact storage and retrieval
   - **ConversationMemory** for short-term verbatim message tracking
   - **Automatic Context Compression** when approaching token limits
-  - **Cross-Agent Memory Sharing** with turn-aware filtering to prevent temporal leakage
+  - **Memory Sharing for Multi-Turn Conversations** with turn-aware filtering to prevent temporal leakage
   - **Session Management** for memory isolation and continuation across runs
   - **Qdrant Vector Database Integration** for efficient semantic search (server and local modes)
   - **Context Monitoring** with real-time token usage tracking
@@ -73,7 +73,7 @@ Post-evaluation workflow with submit/restart capabilities, custom multimodal und
   - Additional memory tests: `test_agent_memory.py`, `test_conversation_memory.py`, `test_orchestrator_memory.py`, `test_persistent_memory.py`
 
 ### Technical Details
-- **Major Focus**: Long-term memory system with semantic retrieval and cross-agent memory sharing
+- **Major Focus**: Long-term memory system with semantic retrieval and memory sharing for multi-turn conversations
 - **Contributors**: @ncrispino @qidanrui @kitrakrev @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.4] - 2025-10-27

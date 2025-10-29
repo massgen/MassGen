@@ -113,7 +113,7 @@ Recent Releases
 
 **v0.1.5 (October 2025)** - Memory System
 
-Long-term memory with semantic retrieval via mem0, automatic context compression, and cross-agent memory sharing for multi-turn conversations.
+Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
 
 **v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
 
