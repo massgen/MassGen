@@ -38,8 +38,10 @@ docs/presentation/
 │   ├── slide-call-to-action-columbia.html    # "Thank you Columbia DAPLab!"
 │   └── slide-call-to-action-aibuilders.html  # "Thank you Arize & GitHub!"
 ├── build_presentation.py    # Build script
+├── generate_pdf.py          # PDF export script
 ├── columbia.html           # Generated from components
 ├── m2l.html               # Generated from components  
+├── m2l.pdf                # PDF export of m2l presentation
 ├── aibuilders.html        # Generated from components
 └── README_MODULAR.md      # This file
 ```
@@ -54,6 +56,22 @@ python build_presentation.py aibuilders
 python build_presentation.py columbia
 python build_presentation.py m2l
 ```
+
+### Generating PDF Exports
+
+Convert any HTML presentation to PDF format:
+
+```bash
+cd docs/presentation
+python generate_pdf.py m2l.html          # Creates m2l.pdf
+python generate_pdf.py m2l.html custom.pdf  # Custom output name
+```
+
+**Requirements**: The script uses Chromium/Chrome for PDF generation. It automatically:
+- Shows all slides in the PDF
+- Removes navigation elements
+- Maintains all styling and backgrounds
+- Creates landscape-oriented pages
 
 ### Creating New Components
 
