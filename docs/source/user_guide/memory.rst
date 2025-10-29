@@ -104,6 +104,30 @@ Run with Memory
 How It Works
 ------------
 
+Custom Fact Extraction
+~~~~~~~~~~~~~~~~~~~~~~~
+
+MassGen uses custom prompts designed to extract high-quality, domain-focused memories. The goal is to filter facts to be:
+
+**Self-Contained and Specific**:
+   Facts should be understandable 6 months later without the original conversation
+
+**Focused on Domain Knowledge**:
+   - ✅ Concrete data points with context ("OpenAI revenue reached $12B annualized")
+   - ✅ Insights with explanations ("Narrative depth valued in creative writing because...")
+   - ✅ Capabilities with use cases ("MassGen v0.1.1 supports Python tools via YAML")
+   - ✅ Domain expertise with details ("Binet's formula uses golden ratio phi=(1+√5)/2")
+   - ✅ Specific recommendations with WHAT, WHEN, WHY
+
+**Intended to Exclude System Internals** (to improve in future):
+   - ❌ Agent comparisons ("Agent 1's response is better")
+   - ❌ Voting details ("The reason for voting...")
+   - ❌ File paths and line numbers (become outdated)
+   - ❌ Meta-instructions ("Response should start with...")
+   - ❌ Generic advice ("Providing templates improves docs")
+
+**Implementation**: ``massgen/memory/_fact_extraction_prompts.py::MASSGEN_UNIVERSAL_FACT_EXTRACTION_PROMPT``
+
 Memory Flow
 ~~~~~~~~~~~
 
@@ -917,10 +941,11 @@ Why Turn-Aware Memory Filtering?
 API Reference
 -------------
 
-For programmatic usage, see:
+For programmatic usage, see the memory module docstrings:
 
-- :doc:`../api/memory` - Memory API documentation
-- :doc:`../api/context_monitor` - Context monitoring utilities
+- ``massgen.memory.PersistentMemory`` - Persistent memory API
+- ``massgen.memory.ConversationMemory`` - Conversation memory API
+- ``massgen.memory._context_monitor`` - Context monitoring utilities
 
 Examples
 --------
