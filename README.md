@@ -141,7 +141,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ## 🆕 Latest Features (v0.1.5)
 
-**🎉 Released: October 2025**
+**🎉 Released: October 29 2025**
 
 **What's New in v0.1.5:**
 - **🧠 Long-Term Memory System** - Semantic memory with retrieval across sessions
