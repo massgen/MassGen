@@ -1,0 +1,64 @@
+# Single Agent Compression Test
+#
+# Simple config to test per-agent memory and compression with ONE agent.
+# Set very low thresholds to trigger compression quickly.
+#
+# Run with:
+#   uv run massgen --config massgen/configs/memory/single_agent_compression_test.yaml "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+
+agents:
+  - id: "test_agent"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+
+# Global memory configuration
+memory:
+  enabled: true
+
+  conversation_memory:
+    enabled: true
+
+  persistent_memory:
+    enabled: true
+
+    # LLM for memory operations
+    llm:
+      provider: "openai"
+      model: "gpt-4.1-nano-2025-04-14"
+
+    # Embedding for vector search
+    embedding:
+      provider: "openai"
+      model: "text-embedding-3-small"
+
+    # Qdrant configuration (use server mode)
+    qdrant:
+      mode: "server"
+      host: "localhost"
+      port: 6333
+
+  compression:
+    trigger_threshold: 0.02   # Compress at 2% (very low for quick testing)
+    target_ratio: 0.01      # Keep 1% after compression
+
+  # Memory retrieval configuration
+  retrieval:
+    limit: 5              # Number of memory facts to retrieve from mem0 (default: 5)
+    exclude_recent: true  # Only retrieve after compression to avoid duplicates (default: true)
+                          # When true: retrieval skipped until compression occurs
+                          # When false: always retrieve (may duplicate recent context)
+
+# Orchestrator config
+orchestrator:
+  snapshot_storage: "test_compression_sessions"
+  agent_temporary_workspace: "test_compression_workspace"
+  context_paths:
+    - path: "massgen"
+      permission: "read"
+
+# UI
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

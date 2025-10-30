@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.4
+**Current Version:** v0.1.5
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** October 27, 2025
+**Last Updated:** October 29, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -34,46 +34,31 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.5** | 10/30/25 | Memory implementation | @ncrispino @qidanrui | Short and long-term memory implementation for agents |
-| | | Backend Code Refactoring | @praneeth999 | Improved code organization and maintainability |
-| **v0.1.6** | 11/01/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
-| **v0.1.7** | 11/04/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
+| **v0.1.6** | 11/01/25 | Backend Code Refactoring | @praneeth999 | Improved code organization and maintainability |
+| **v0.1.7** | 11/04/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
+| **v0.1.8** | 11/06/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks || | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.5 - Memory Implementation & Backend Refactoring
+## 📋 v0.1.6 - Backend Code Refactoring
 
 ### Features
 
-**1. Handle Context Limit Overflow** (@ncrispino, @qidanrui)
-- Issue: [#347](https://github.com/Leezekun/MassGen/issues/347)
-- Implement strategies to handle when context passes context limit
-- Automatic context management and truncation
-- **Use Case**: Enable agents to work on long-running tasks without hitting context limits
-
-**2. Persistent Memory Across Restarts** (@ncrispino, @qidanrui)
-- Issue: [#348](https://github.com/Leezekun/MassGen/issues/348)
-- Ensure memory persists across system restarts
-- Short and long-term memory implementation for agents
-- **Use Case**: Maintain continuity in agent reasoning and learning across sessions
-
-**3. Backend Code Refactoring** (@praneeth999)
+**1. Backend Code Refactoring** (@praneeth999)
 - PR: [#362](https://github.com/Leezekun/MassGen/pull/362)
 - Major backend code refactoring for improved maintainability
 - Enhanced code organization and architectural improvements
 - **Use Case**: Improved developer experience and easier future enhancements
 
 ### Success Criteria
-- ✅ Agents handle context limit overflow gracefully
-- ✅ Memory persists reliably across restarts
 - ✅ Backend refactoring merged with improved code structure
+- ✅ Cleaner architecture and better code organization
 
 ---
 
-## 📋 v0.1.6 - Interoperability & Memory
+## 📋 v0.1.7 - Interoperability
 
 ### Features
 
@@ -91,7 +76,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.7 - Intelligent Optimization & Advanced Voting
+## 📋 v0.1.8 - Intelligent Optimization & Advanced Voting
 
 ### Features
 
@@ -135,7 +120,7 @@ These features are being actively developed on **separate parallel tracks** and 
 ### Track: Memory Module (@qidanrui, @ncrispino, danrui2020, nickcrispino)
 - Issues: [#347](https://github.com/Leezekun/MassGen/issues/347), [#348](https://github.com/Leezekun/MassGen/issues/348)
 - Short and long-term memory implementation with persistence
-- **Target:** v0.1.5 (Context management & persistence)
+- **Status:** ✅ Completed in v0.1.5
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
@@ -217,5 +202,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 27, 2025
+**Last Updated:** October 29, 2025
 **Maintained By:** MassGen Team
