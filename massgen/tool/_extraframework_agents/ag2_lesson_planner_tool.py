@@ -186,7 +186,7 @@ def run_ag2_lesson_planner_agent(
 @context_params("prompt")
 async def ag2_lesson_planner(
     prompt: List[Dict[str, Any]],
-) -> AsyncGenerator[ExecutionResult]:
+) -> AsyncGenerator[ExecutionResult, None]:
     """
     MassGen custom tool wrapper for AG2 lesson planner.
 

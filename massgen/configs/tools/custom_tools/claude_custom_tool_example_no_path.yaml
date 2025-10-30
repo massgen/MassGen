@@ -18,5 +18,5 @@ agents:
       When users ask about adding two numbers together, use the two_num_tool to calculate the sum and provide
       a clear, accurate result.
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true

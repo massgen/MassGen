@@ -338,8 +338,20 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 # Process MCP and/or custom tools
                 try:
                     # ====================================================================
-                    # Preparation phase: Initialize MCP and custom tools
+                    # Preparation phase: Initialize execution context and tools
                     # ====================================================================
+                    # Initialize execution context for custom tool execution
+                    # This is required by stream_custom_tool_execution() inherited from parent class
+                    from .base_with_custom_tool_and_mcp import ExecutionContext
+
+                    self._execution_context = ExecutionContext(
+                        messages=messages,
+                        agent_system_message=kwargs.get("system_message", None),
+                        agent_id=self.agent_id,
+                        backend_name=self.backend_name,
+                        current_stage=self.coordination_stage,
+                    )
+
                     mcp_sessions = []
                     mcp_error = None
                     custom_tools_functions = []
