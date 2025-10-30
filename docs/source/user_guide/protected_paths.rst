@@ -483,6 +483,65 @@ Best Practices
         coordination:
           enable_planning_mode: true  # Prevents accidental modifications during coordination
 
+Binary File Protection
+----------------------
+
+MassGen automatically prevents agents from using text-based read tools on binary files, directing them to use appropriate specialized tools instead.
+
+What's Protected
+~~~~~~~~~~~~~~~~
+
+Text-based read tools (``read_file``, ``find_and_read_text``, ``grep``) are automatically blocked from accessing 40+ binary file types:
+
+**Images**:
+  ``.jpg``, ``.jpeg``, ``.png``, ``.gif``, ``.bmp``, ``.svg``, ``.webp``, ``.tiff``
+
+**Videos**:
+  ``.mp4``, ``.avi``, ``.mov``, ``.mkv``, ``.flv``, ``.wmv``, ``.webm``, ``.mpg``
+
+**Audio**:
+  ``.mp3``, ``.wav``, ``.ogg``, ``.flac``, ``.aac``, ``.m4a``, ``.wma``
+
+**Archives**:
+  ``.zip``, ``.tar``, ``.gz``, ``.7z``, ``.rar``
+
+**Documents**:
+  ``.pdf``, ``.docx``, ``.xlsx``, ``.pptx`` (use ``understand_file`` tool)
+
+**Executables**:
+  ``.exe``, ``.bin``, ``.dll``, ``.so``, ``.dylib``, ``.pyc``
+
+How It Works
+~~~~~~~~~~~~
+
+When an agent attempts to read a binary file with a text tool, they receive a helpful error message:
+
+.. code-block:: text
+
+   Cannot read image file 'screenshot.png' with text-based tool 'read_file'.
+   Please use 'understand_image' tool for image files.
+
+.. code-block:: text
+
+   Cannot read video file 'demo.mp4' with text-based tool 'grep'.
+   Please use 'understand_video' tool for video files.
+
+The error messages automatically suggest the correct tool for each file type:
+
+* **Images** → ``understand_image``
+* **Videos** → ``understand_video``
+* **Audio** → ``understand_audio``
+* **PDF/Office docs** → ``understand_file``
+* **Archives** → Extract first, then read contents
+
+Benefits
+~~~~~~~~
+
+1. **Prevents Confusion**: Agents can't accidentally try to read binary data as text
+2. **Better Tool Usage**: Guides agents to use appropriate multimodal tools
+3. **Clearer Errors**: Actionable error messages instead of garbled binary output
+4. **No Configuration Needed**: Works automatically for all agents
+
 Security Considerations
 -----------------------
 
@@ -497,6 +556,8 @@ Security Considerations
 * Store sensitive data outside agent-accessible directories
 * Use read-only context paths instead of protected paths
 * Review all agent operations before deploying
+
+**Binary file protection** is also a convenience feature that guides agents to use correct tools, not a security boundary.
 
 Related Features
 ----------------

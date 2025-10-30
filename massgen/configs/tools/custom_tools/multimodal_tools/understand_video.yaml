@@ -1,6 +1,6 @@
 # MassGen Configuration: Understand Video Tool
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/understand_video.yaml "What's happening in this video?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/understand_video.yaml "What's happening in this video?"
 agents:
   - id: "understand_video_tool"
     backend:

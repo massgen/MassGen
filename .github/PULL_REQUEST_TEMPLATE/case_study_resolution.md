@@ -13,8 +13,8 @@ Describe the key changes made to the codebase, including new features, modificat
 
 Explain how the changes made address the issues and requirements outlined in the original case study. Reference specific sections of the case study as needed.
 
-For this PR to be merged, you MUST complete the case study by running it with the new version of MassGen and documenting the results. Create a new markdown file following [the case study template](./docs/case_studies/case-study-template.md) and link it below:
-- [Link to the completed case study markdown file](./docs/case_studies/[your-case-study-file].md)
+For this PR to be merged, you MUST complete the case study by running it with the new version of MassGen and documenting the results. Create a new markdown file following [the case study template](./docs/source/examples/case_studies/case-study-template.md) and link it below:
+- [Link to the completed case study markdown file](./docs/source/examples/case_studies/[your-case-study-file].md)
 
 ---
 

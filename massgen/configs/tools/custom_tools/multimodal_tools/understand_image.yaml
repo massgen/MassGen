@@ -1,6 +1,6 @@
 # MassGen Configuration: Understand Image Tool
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml "Please summarize the content in this image."
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml "Please summarize the content in this image."
 agents:
   - id: "understand_image_tool"
     backend:

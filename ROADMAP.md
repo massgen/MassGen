@@ -1,8 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.2
+**Current Version:** v0.1.5
+
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
-**Last Updated:** October 23, 2025
+
+**Last Updated:** October 29, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -32,61 +34,49 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.4** | 10/27/25 | Running MCP Tools in Docker | @ncrispino | Enhanced security and isolation for MCP tool execution |
-| | | Move Image/Audio/Video Generation Tools to Customized Tool System | @qidanrui | Streamlined media generation tool management |
-| **v0.1.5** | 10/29/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
-| | | Memory Module (Phase 1) | @qidanrui @ncrispino | Long-term memory for reasoning tasks and document understanding |
-| **v0.1.6** | 10/31/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
+| **v0.1.6** | 11/01/25 | Backend Code Refactoring | @praneeth999 | Improved code organization and maintainability |
+| **v0.1.7** | 11/04/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
+| **v0.1.8** | 11/06/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks || | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.4 - Docker Integration & Enhanced Coding
+## 📋 v0.1.6 - Backend Code Refactoring
 
 ### Features
 
-**1. Running MCP Tools in Docker** (@ncrispino)
-- Issue: [#346](https://github.com/Leezekun/MassGen/issues/346)
-- Containerized execution environment for MCP tools
-- Enhanced security and isolation for tool operations
-- **Use Case**: Secure execution of third-party tools in isolated environments
-
-**2. Move Image/Audio/Video Generation Tools to Customized Tool System** (@qidanrui)
-- Issue: [#357](https://github.com/Leezekun/MassGen/issues/357)
-- Refactor existing image, audio, and video generation capabilities
-- Integrate generation tools with customized tool system
-- **Use Case**: Streamlined tool management and better integration of media generation capabilities
+**1. Backend Code Refactoring** (@praneeth999)
+- PR: [#362](https://github.com/Leezekun/MassGen/pull/362)
+- Major backend code refactoring for improved maintainability
+- Enhanced code organization and architectural improvements
+- **Use Case**: Improved developer experience and easier future enhancements
 
 ### Success Criteria
-- ✅ MCP tools run securely in Docker containers
-- ✅ Media generation tools successfully integrated into custom tool system
+- ✅ Backend refactoring merged with improved code structure
+- ✅ Cleaner architecture and better code organization
 
 ---
 
-## 📋 v0.1.5 - Interoperability & Memory
+## 📋 v0.1.7 - Interoperability
 
 ### Features
 
-**1. General Interoperability** (@qidanrui)
-- Issue: [#341](https://github.com/Leezekun/MassGen/issues/341)
-- Framework integration for external agent systems
-- Unified agent interface for seamless integration
-- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source
-
-**2. Memory Module (Phase 1)** (@qidanrui, @ncrispino)
-- Long-term memory implementation using mem0
-- Persistent context across sessions
-- **Use Case**: Long-term reasoning tasks and document understanding requiring memory persistence
+**1. Agent Framework Interoperability** (@qidanrui)
+- Issue: [#374](https://github.com/Leezekun/MassGen/issues/374)
+- PR: [#341](https://github.com/Leezekun/MassGen/pull/341) (Draft)
+- Agent-as-tool wrapper system for cross-framework collaboration
+- Enable agents from AG2, LangGraph, and other frameworks to work together
+- Unified interface for framework-agnostic collaboration
+- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source without rewriting them
 
 ### Success Criteria
-- ✅ External agents can be integrated seamlessly
-- ✅ Memory module provides persistent context across sessions
+- ✅ Agents from different frameworks (AG2, LangGraph) can be wrapped as tools
+- ✅ Cross-framework agent collaboration works seamlessly
 
 ---
 
-## 📋 v0.1.6 - Intelligent Optimization & Advanced Voting
+## 📋 v0.1.8 - Intelligent Optimization & Advanced Voting
 
 ### Features
 
@@ -128,9 +118,9 @@ These features are being actively developed on **separate parallel tracks** and 
 - **Shipping:** Incremental improvements each release
 
 ### Track: Memory Module (@qidanrui, @ncrispino, danrui2020, nickcrispino)
-- PR: TODO
-- Long-term memory implementation using mem0
-- **Target:** v0.1.5 (Phase 1), later releases (Phase 2)
+- Issues: [#347](https://github.com/Leezekun/MassGen/issues/347), [#348](https://github.com/Leezekun/MassGen/issues/348)
+- Short and long-term memory implementation with persistence
+- **Status:** ✅ Completed in v0.1.5
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
@@ -212,5 +202,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 24, 2025
+**Last Updated:** October 29, 2025
 **Maintained By:** MassGen Team
