@@ -224,6 +224,10 @@ class ConfigValidator:
         if "ui" in config:
             self._validate_ui(config["ui"], result)
 
+        # Validate memory (if present)
+        if "memory" in config:
+            self._validate_memory(config["memory"], result)
+
         # Check for warnings (best practices, deprecations, etc.)
         self._check_warnings(config, result)
 
@@ -690,6 +694,207 @@ class ConfigValidator:
                     f"{location}.logging_enabled",
                     "Use 'true' or 'false'",
                 )
+
+    def _validate_memory(self, memory_config: Dict[str, Any], result: ValidationResult) -> None:
+        """Validate memory configuration."""
+        location = "memory"
+
+        if not isinstance(memory_config, dict):
+            result.add_error(
+                f"Memory must be a dictionary, got {type(memory_config).__name__}",
+                location,
+                "Use memory fields like enabled, conversation_memory, persistent_memory, etc.",
+            )
+            return
+
+        # Validate enabled if present
+        if "enabled" in memory_config:
+            enabled = memory_config["enabled"]
+            if not isinstance(enabled, bool):
+                result.add_error(
+                    f"'enabled' must be a boolean, got {type(enabled).__name__}",
+                    f"{location}.enabled",
+                    "Use 'true' or 'false'",
+                )
+
+        # Validate conversation_memory if present
+        if "conversation_memory" in memory_config:
+            conv_memory = memory_config["conversation_memory"]
+            if not isinstance(conv_memory, dict):
+                result.add_error(
+                    f"'conversation_memory' must be a dictionary, got {type(conv_memory).__name__}",
+                    f"{location}.conversation_memory",
+                    "Use 'enabled: true/false'",
+                )
+            elif "enabled" in conv_memory:
+                enabled = conv_memory["enabled"]
+                if not isinstance(enabled, bool):
+                    result.add_error(
+                        f"'enabled' must be a boolean, got {type(enabled).__name__}",
+                        f"{location}.conversation_memory.enabled",
+                        "Use 'true' or 'false'",
+                    )
+
+        # Validate persistent_memory if present
+        if "persistent_memory" in memory_config:
+            persist_memory = memory_config["persistent_memory"]
+            if not isinstance(persist_memory, dict):
+                result.add_error(
+                    f"'persistent_memory' must be a dictionary, got {type(persist_memory).__name__}",
+                    f"{location}.persistent_memory",
+                    "Use fields like enabled, on_disk, vector_store, etc.",
+                )
+            else:
+                # Validate boolean fields
+                boolean_fields = ["enabled", "on_disk"]
+                for field_name in boolean_fields:
+                    if field_name in persist_memory:
+                        value = persist_memory[field_name]
+                        if not isinstance(value, bool):
+                            result.add_error(
+                                f"'{field_name}' must be a boolean, got {type(value).__name__}",
+                                f"{location}.persistent_memory.{field_name}",
+                                "Use 'true' or 'false'",
+                            )
+
+                # Validate vector_store if present
+                if "vector_store" in persist_memory:
+                    vector_store = persist_memory["vector_store"]
+                    if not isinstance(vector_store, str):
+                        result.add_error(
+                            f"'vector_store' must be a string, got {type(vector_store).__name__}",
+                            f"{location}.persistent_memory.vector_store",
+                            "Use 'qdrant' or other vector store name",
+                        )
+
+                # Validate llm config if present
+                if "llm" in persist_memory:
+                    llm_config = persist_memory["llm"]
+                    if not isinstance(llm_config, dict):
+                        result.add_error(
+                            f"'llm' must be a dictionary, got {type(llm_config).__name__}",
+                            f"{location}.persistent_memory.llm",
+                            "Use 'provider' and 'model' fields",
+                        )
+                    else:
+                        # Check provider and model are strings
+                        for field_name in ["provider", "model"]:
+                            if field_name in llm_config:
+                                value = llm_config[field_name]
+                                if not isinstance(value, str):
+                                    result.add_error(
+                                        f"'{field_name}' must be a string, got {type(value).__name__}",
+                                        f"{location}.persistent_memory.llm.{field_name}",
+                                        "Use a string value",
+                                    )
+
+                # Validate embedding config if present
+                if "embedding" in persist_memory:
+                    embedding_config = persist_memory["embedding"]
+                    if not isinstance(embedding_config, dict):
+                        result.add_error(
+                            f"'embedding' must be a dictionary, got {type(embedding_config).__name__}",
+                            f"{location}.persistent_memory.embedding",
+                            "Use 'provider' and 'model' fields",
+                        )
+                    else:
+                        # Check provider and model are strings
+                        for field_name in ["provider", "model"]:
+                            if field_name in embedding_config:
+                                value = embedding_config[field_name]
+                                if not isinstance(value, str):
+                                    result.add_error(
+                                        f"'{field_name}' must be a string, got {type(value).__name__}",
+                                        f"{location}.persistent_memory.embedding.{field_name}",
+                                        "Use a string value",
+                                    )
+
+                # Validate qdrant config if present
+                if "qdrant" in persist_memory:
+                    qdrant_config = persist_memory["qdrant"]
+                    if not isinstance(qdrant_config, dict):
+                        result.add_error(
+                            f"'qdrant' must be a dictionary, got {type(qdrant_config).__name__}",
+                            f"{location}.persistent_memory.qdrant",
+                            "Use 'mode', 'host', 'port' or 'path' fields",
+                        )
+                    else:
+                        # Validate mode if present
+                        if "mode" in qdrant_config:
+                            mode = qdrant_config["mode"]
+                            if mode not in ["server", "local"]:
+                                result.add_error(
+                                    f"Invalid qdrant mode: '{mode}'",
+                                    f"{location}.persistent_memory.qdrant.mode",
+                                    "Use 'server' or 'local'",
+                                )
+
+                        # Validate port if present (for server mode)
+                        if "port" in qdrant_config:
+                            port = qdrant_config["port"]
+                            if not isinstance(port, int) or port <= 0 or port > 65535:
+                                result.add_error(
+                                    "'port' must be a valid port number (1-65535)",
+                                    f"{location}.persistent_memory.qdrant.port",
+                                    "Use a port number like 6333",
+                                )
+
+        # Validate compression if present
+        if "compression" in memory_config:
+            compression = memory_config["compression"]
+            if not isinstance(compression, dict):
+                result.add_error(
+                    f"'compression' must be a dictionary, got {type(compression).__name__}",
+                    f"{location}.compression",
+                    "Use 'trigger_threshold' and 'target_ratio' fields",
+                )
+            else:
+                # Validate threshold values (should be between 0 and 1)
+                for field_name in ["trigger_threshold", "target_ratio"]:
+                    if field_name in compression:
+                        value = compression[field_name]
+                        if not isinstance(value, (int, float)):
+                            result.add_error(
+                                f"'{field_name}' must be a number, got {type(value).__name__}",
+                                f"{location}.compression.{field_name}",
+                                "Use a decimal value between 0 and 1",
+                            )
+                        elif not 0 <= value <= 1:
+                            result.add_error(
+                                f"'{field_name}' must be between 0 and 1, got {value}",
+                                f"{location}.compression.{field_name}",
+                                "Use a decimal value between 0 and 1 (e.g., 0.75 for 75%)",
+                            )
+
+        # Validate retrieval if present
+        if "retrieval" in memory_config:
+            retrieval = memory_config["retrieval"]
+            if not isinstance(retrieval, dict):
+                result.add_error(
+                    f"'retrieval' must be a dictionary, got {type(retrieval).__name__}",
+                    f"{location}.retrieval",
+                    "Use 'limit' and 'exclude_recent' fields",
+                )
+            else:
+                # Validate limit if present
+                if "limit" in retrieval:
+                    limit = retrieval["limit"]
+                    if not isinstance(limit, int) or limit <= 0:
+                        result.add_error(
+                            "'limit' must be a positive integer",
+                            f"{location}.retrieval.limit",
+                            "Use a value like 5 or 10",
+                        )
+
+                # Validate exclude_recent if present
+                if "exclude_recent" in retrieval:
+                    exclude_recent = retrieval["exclude_recent"]
+                    if not isinstance(exclude_recent, bool):
+                        result.add_error(
+                            f"'exclude_recent' must be a boolean, got {type(exclude_recent).__name__}",
+                            f"{location}.retrieval.exclude_recent",
+                            "Use 'true' or 'false'",
+                        )
 
     def _check_warnings(self, config: Dict[str, Any], result: ValidationResult) -> None:
         """Check for warnings (best practices, deprecations, etc.)."""

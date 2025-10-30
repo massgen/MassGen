@@ -995,3 +995,162 @@ class TestCommonBadConfigs:
         assert "max_rounds" in error_messages
         assert "voting_enabled" in error_messages
         assert "consensus_threshold" in error_messages
+
+
+class TestMemoryValidation:
+    """Test suite for memory configuration validation."""
+
+    def test_valid_memory_config(self):
+        """Test valid memory configuration."""
+        config = {
+            "agents": [
+                {"id": "test", "backend": {"type": "openai", "model": "gpt-4o"}},
+            ],
+            "memory": {
+                "enabled": True,
+                "conversation_memory": {
+                    "enabled": True,
+                },
+                "persistent_memory": {
+                    "enabled": True,
+                    "on_disk": True,
+                    "vector_store": "qdrant",
+                    "llm": {
+                        "provider": "openai",
+                        "model": "gpt-4.1-nano-2025-04-14",
+                    },
+                    "embedding": {
+                        "provider": "openai",
+                        "model": "text-embedding-3-small",
+                    },
+                    "qdrant": {
+                        "mode": "server",
+                        "host": "localhost",
+                        "port": 6333,
+                    },
+                },
+                "compression": {
+                    "trigger_threshold": 0.75,
+                    "target_ratio": 0.40,
+                },
+                "retrieval": {
+                    "limit": 10,
+                    "exclude_recent": True,
+                },
+            },
+        }
+
+        validator = ConfigValidator()
+        result = validator.validate_config(config)
+
+        assert result.is_valid()
+        assert not result.has_errors()
+
+    def test_memory_enabled_wrong_type(self):
+        """Test memory enabled with wrong type."""
+        config = {
+            "agents": [{"id": "test", "backend": {"type": "openai", "model": "gpt-4o"}}],
+            "memory": {
+                "enabled": "yes",  # Should be boolean
+            },
+        }
+
+        validator = ConfigValidator()
+        result = validator.validate_config(config)
+
+        assert not result.is_valid()
+        assert any("'enabled' must be a boolean" in error.message for error in result.errors)
+
+    def test_memory_qdrant_invalid_mode(self):
+        """Test invalid qdrant mode."""
+        config = {
+            "agents": [{"id": "test", "backend": {"type": "openai", "model": "gpt-4o"}}],
+            "memory": {
+                "persistent_memory": {
+                    "qdrant": {
+                        "mode": "distributed",  # Should be 'server' or 'local'
+                    },
+                },
+            },
+        }
+
+        validator = ConfigValidator()
+        result = validator.validate_config(config)
+
+        assert not result.is_valid()
+        assert any("Invalid qdrant mode" in error.message for error in result.errors)
+        assert any("'server' or 'local'" in error.suggestion for error in result.errors if error.suggestion)
+
+    def test_memory_compression_out_of_range(self):
+        """Test compression threshold out of valid range."""
+        config = {
+            "agents": [{"id": "test", "backend": {"type": "openai", "model": "gpt-4o"}}],
+            "memory": {
+                "compression": {
+                    "trigger_threshold": 1.5,  # Should be 0-1
+                },
+            },
+        }
+
+        validator = ConfigValidator()
+        result = validator.validate_config(config)
+
+        assert not result.is_valid()
+        assert any("must be between 0 and 1" in error.message for error in result.errors)
+
+    def test_memory_retrieval_negative_limit(self):
+        """Test negative retrieval limit."""
+        config = {
+            "agents": [{"id": "test", "backend": {"type": "openai", "model": "gpt-4o"}}],
+            "memory": {
+                "retrieval": {
+                    "limit": -5,  # Should be positive
+                },
+            },
+        }
+
+        validator = ConfigValidator()
+        result = validator.validate_config(config)
+
+        assert not result.is_valid()
+        assert any("must be a positive integer" in error.message for error in result.errors)
+
+    def test_memory_qdrant_invalid_port(self):
+        """Test invalid qdrant port."""
+        config = {
+            "agents": [{"id": "test", "backend": {"type": "openai", "model": "gpt-4o"}}],
+            "memory": {
+                "persistent_memory": {
+                    "qdrant": {
+                        "mode": "server",
+                        "port": 99999,  # Out of valid range
+                    },
+                },
+            },
+        }
+
+        validator = ConfigValidator()
+        result = validator.validate_config(config)
+
+        assert not result.is_valid()
+        assert any("must be a valid port number" in error.message for error in result.errors)
+
+    def test_memory_llm_provider_wrong_type(self):
+        """Test llm provider with wrong type."""
+        config = {
+            "agents": [{"id": "test", "backend": {"type": "openai", "model": "gpt-4o"}}],
+            "memory": {
+                "persistent_memory": {
+                    "llm": {
+                        "provider": 123,  # Should be string
+                        "model": "gpt-4o",
+                    },
+                },
+            },
+        }
+
+        validator = ConfigValidator()
+        result = validator.validate_config(config)
+
+        assert not result.is_valid()
+        assert any("must be a string" in error.message for error in result.errors)
