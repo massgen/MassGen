@@ -39,12 +39,22 @@ FOCUS ON THESE CATEGORIES:
    - "File-based Qdrant vector database doesn't support concurrent multi-agent access, requiring server-mode Qdrant for multi-agent scenarios"
    - "Custom tools work across all MassGen backends (Gemini, OpenAI, Claude) through unified tool interface"
 
-4. **DOMAIN_EXPERTISE**: Subject-specific knowledge with technical details and explanations
+4. **TOOL USAGE PATTERNS**: Which tools were used, in what order, and what outcomes they produced
+   - "For analyzing Python codebases, reading the main entry point first (e.g., __main__.py or app.py) followed by reading imported modules provides better understanding than random file exploration"
+   - "When web scraping fails with 403 errors, using a custom API tool or authenticated request tool is more reliable than retrying with different user agents"
+   - "Sequential file reading (list directory → read main files → read dependencies) proved more effective than parallel reading for understanding code architecture"
+
+5. **PROBLEM-SOLVING APPROACHES**: What strategies worked or failed, with specific reasoning
+   - "Breaking large research tasks into smaller focused searches with specific queries yielded more relevant results than broad general searches"
+   - "When initial tool calls fail, examining the error message and adjusting parameters is more effective than retrying with identical arguments"
+   - "Using bash commands to verify file existence before attempting to read prevents unnecessary errors and tool call retries"
+
+6. **DOMAIN_EXPERTISE**: Subject-specific knowledge with technical details and explanations
    - "Binet's formula provides closed-form Fibonacci calculation using golden ratio phi=(1+√5)/2, allowing direct computation without iteration"
    - "Matrix exponentiation computes n-th Fibonacci in O(log n) time by raising transformation matrix [[1,1],[1,0]] to nth power"
    - "Pisano periods enable efficient modular Fibonacci computation by exploiting periodic nature of Fibonacci sequences under modulo operations"
 
-5. **SPECIFIC RECOMMENDATIONS**: Only if they include WHAT to use, WHEN to use it, and WHY (skip
+7. **SPECIFIC RECOMMENDATIONS**: Only if they include WHAT to use, WHEN to use it, and WHY (skip
    generic advice)
    - "For Stockholm autumn café experience, visit Tössebageriet, Café Saturnus, or Skeppsbro
      Bageri which offer cozy atmosphere and traditional Swedish pastries during October's cooler
@@ -74,30 +84,38 @@ WHAT TO EXTRACT:
 ✓ Domain knowledge with enough context to understand without the original conversation
 ✓ Recommendations with WHY they're recommended and WHEN to use them
 ✓ Insights about what works/doesn't work with specific examples or reasons
+✓ Tool usage patterns when you see [Tool Call: X] markers: which tools, in what sequence, with what outcomes
+✓ Problem-solving approaches: what strategies worked or failed with reasoning
+✓ File paths and technical context when they demonstrate patterns or decisions
+✓ Specific tool names and their effectiveness for different task types
+
+IMPORTANT: When you see [Tool Call: tool_name] patterns in the conversation, extract insights about:
+- Tool sequences that proved effective (e.g., "directory_tree → read_file → grep")
+- What outcomes each tool produced and why the sequence worked
+- Actionable guidance for when to use this pattern in the future
 
 WHAT TO SKIP:
 
 ✗ Agent comparisons ("Agent 1's response is more detailed than Agent 2", "Agent X better addresses the question")
-✗ Agent internal process (voting procedures, tool call instructions, "need to call the vote tool", "after using the tool")
 ✗ Voting outcomes and rationales ("evaluator votes in favor of Agent 1", "the reason for agent1's vote")
+✗ Voting procedures and instructions ("need to call the vote tool", "after voting we should")
 ✗ Meta-instructions about how to respond ("response should start with", "should include", "avoid heavy formatting")
 ✗ Made-up code examples that aren't from the actual conversation
 ✗ Generic suggestions without specifics ("enhances clarity and usability", "providing templates improves documentation")
 ✗ Obvious definitions without context ("stateful means maintains state")
 ✗ Generic statements ("the system is complex", "good progress made")
-✗ File paths and line numbers (__init__.py, base.py:45, massgen/backend/*)
-✗ Specific method/variable names in implementation (_is_stateful, stream_with_tools)
 ✗ Process updates without content ("still working", "making progress")
 ✗ Greetings and social pleasantries
-✗ Vague references ("this approach", "that method", "the system", "the base class")
+✗ Vague references without specifics ("this approach", "that method", "the system", "the base class")
 
 CRITICAL RULES:
-1. Extract knowledge about THE USER'S DOMAIN, not about the AI system's internal operations
-2. Skip ALL voting/tool-use procedures AND agent comparisons - these are ephemeral system internals
-3. Do NOT mention specific agents by name or number (Agent 1, Agent 2, etc.) - focus on the knowledge itself
-4. Do NOT make up example code - only extract facts stated in the conversation
-5. Avoid generic suggestions - only extract specific, actionable recommendations with clear use cases
-6. Each fact must answer: "What would be useful to know when working on a similar task in the future?"
+1. Extract knowledge about THE USER'S DOMAIN and effective problem-solving approaches
+2. INCLUDE tool usage patterns, problem-solving strategies, and technical decisions with reasoning
+3. Skip voting procedures and agent comparisons - but KEEP tool usage and approaches
+4. Do NOT mention specific agents by name or number (Agent 1, Agent 2, etc.) - focus on the knowledge itself
+5. Do NOT make up example code - only extract facts stated in the conversation
+6. Avoid generic suggestions - only extract specific, actionable recommendations with clear use cases
+7. Each fact must answer: "What would be useful to know when working on a similar task in the future?"
 
 SELF-CONTAINED CHECK:
 Before including a fact, ask: "Can someone read this fact 6 months from now and understand it WITHOUT seeing the original conversation?" If no, add more context.
@@ -228,7 +246,38 @@ Output:
 ```
 
 ---
-**Example 6: What NOT to Extract**
+**Example 6: Tool Usage Patterns (Code Analysis)**
+
+Input:
+user: Analyze the MassGen memory system implementation
+assistant: [Tool Call: read_file]
+Arguments: {'file_path': '/Users/user/massgen/memory/_persistent.py'}
+Result: File contains PersistentMemory class with record() and retrieve() methods...
+assistant: [Tool Call: read_file]
+Arguments: {'file_path': '/Users/user/massgen/memory/_conversation.py'}
+Result: File contains ConversationMemory class for short-term storage...
+assistant: [Tool Call: grep]
+Arguments: {'pattern': 'mem0', 'path': '/Users/user/massgen/memory/'}
+Result: Found mem0 imports in _persistent.py, _mem0_adapters.py, and __init__.py
+assistant: The memory system uses a two-tier architecture with conversation memory for recent context and persistent memory backed by mem0 for long-term semantic storage.
+
+Output:
+```json
+{
+  "facts": [
+    "For analyzing multi-file Python architecture, reading main implementation files first (e.g., _persistent.py) "
+    "followed by related modules (e.g., _conversation.py) and then using grep to find cross-references provides "
+    "systematic understanding",
+    "MassGen memory system implements two-tier architecture where ConversationMemory handles short-term verbatim "
+    "storage while PersistentMemory uses mem0 for long-term semantic retrieval",
+    "Using grep with specific patterns (like 'mem0') across a directory helps discover integration points and "
+    "dependencies that aren't obvious from single-file reading"
+  ]
+}
+```
+
+---
+**Example 7: What NOT to Extract**
 
 Input:
 user: Explain MassGen's backend architecture
@@ -238,30 +287,32 @@ assistant: Agent 1's response is more detailed than Agent 2's. I should vote for
 assistant: The response should start with a summary and avoid heavy Markdown formatting.
 assistant: Providing templates on request enhances documentation clarity.
 
-Output (WRONG - includes agent comparisons, files, voting, generic advice):
+Output (WRONG - includes agent comparisons, voting procedures, generic advice):
 ```json
 {
   "facts": [
     "Agent 1's response is more detailed and comprehensive about MassGen backends",
     "Based on evaluation, the evaluator votes in favor of Agent 1",
-    "Backend code is in massgen/backend/base.py with _is_stateful property",
     "Response should start with summary and avoid Markdown",
     "Providing templates on request enhances documentation clarity and usability"
   ]
 }
 ```
 
-Output (CORRECT - only domain knowledge, no agents/voting/generic advice):
+Output (CORRECT - domain knowledge and technical insights without agent/voting references):
 ```json
 {
   "facts": [
-    "MassGen's LLM backend supports both stateful and stateless modes where stateful backends maintain conversation history across turns while stateless backends treat each request independently"
+    "MassGen's LLM backend supports both stateful and stateless modes where stateful backends maintain "
+    "conversation history across turns while stateless backends treat each request independently",
+    "MassGen backend architecture uses _is_stateful property in LLMBackend base class (massgen/backend/base.py) "
+    "to differentiate between backends that maintain conversation state versus those requiring explicit history management"
   ]
 }
 ```
 
 ---
-**Example 7: Empty Cases (Skip These)**
+**Example 8: Empty Cases (Skip These)**
 
 Input:
 user: Hi, how are you?

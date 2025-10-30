@@ -78,6 +78,11 @@ memory:
       # mode: "local"
       # path: ".massgen/qdrant"  # Local storage path
 
+  # # Enable detailed recording for testing
+  # recording:
+  #   record_all_tool_calls: true   # Capture ALL MCP tools
+  #   record_reasoning: true         # Capture reasoning separately
+
   # Context window management thresholds
   compression:
     trigger_threshold: 0.25  # Compress when context usage exceeds 25%
@@ -111,6 +116,10 @@ memory:
 # - To continue a previous session: Specify session_name in YAML (overrides auto-generation)
 # - For cross-session memory: Remove session_name from YAML or set to null
 # - Qdrant database: Shared at .massgen/qdrant, filtered by agent_id + session_id
+#
+# Recording options (NEW - v0.1.6):
+# memory.recording.record_all_tool_calls: false  # Record ALL MCP tools (list_directory, read_file, etc.)
+# memory.recording.record_reasoning: false       # Record reasoning chunks separately
 #
 # To disable persistent memory for testing, set:
 #   memory.persistent_memory.enabled: false

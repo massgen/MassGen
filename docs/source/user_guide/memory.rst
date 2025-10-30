@@ -88,6 +88,11 @@ Add memory configuration to your YAML config:
        limit: 5              # Facts to retrieve
        exclude_recent: true  # Only retrieve after compression
 
+     # Recording settings (v0.1.6+)
+     recording:
+       record_all_tool_calls: false  # Set true to capture ALL MCP tools
+       record_reasoning: false       # Set true to capture thinking separately
+
 Run with Memory
 ~~~~~~~~~~~~~~~
 
@@ -119,12 +124,17 @@ MassGen uses custom prompts designed to extract high-quality, domain-focused mem
    - ✅ Domain expertise with details ("Binet's formula uses golden ratio phi=(1+√5)/2")
    - ✅ Specific recommendations with WHAT, WHEN, WHY
 
-**Intended to Exclude System Internals** (to improve in future):
+**Tool Usage Patterns** (v0.1.6+):
+   - ✅ Tool sequences that work ("For code analysis, directory_tree → read_file → grep provides systematic understanding")
+   - ✅ Problem-solving approaches ("Breaking large tasks into focused searches yields better results than broad queries")
+   - ✅ What worked/failed with reasoning ("Sequential exploration prevents getting lost in implementation details")
+
+**Excluded for Quality**:
    - ❌ Agent comparisons ("Agent 1's response is better")
    - ❌ Voting details ("The reason for voting...")
-   - ❌ File paths and line numbers (become outdated)
    - ❌ Meta-instructions ("Response should start with...")
-   - ❌ Generic advice ("Providing templates improves docs")
+   - ❌ Generic advice without specifics ("Providing templates improves docs")
+   - ❌ Usage statistics without insight ("Used grep 5 times")
 
 **Implementation**: ``massgen/memory/_fact_extraction_prompts.py::MASSGEN_UNIVERSAL_FACT_EXTRACTION_PROMPT``
 
@@ -145,20 +155,30 @@ Memory Flow
    - **Below threshold**: Continue normally
    - **Above threshold**: Compress old messages, enable retrieval
 
-**What Gets Recorded**:
+**What Gets Recorded** (Default):
 
 .. code-block:: text
 
    ✅ User messages
-   ✅ Agent reasoning (full reasoning chains)
-   ✅ Reasoning summaries
-   ✅ Final answer text
+   ✅ Final answer text (accumulated from content chunks)
+   ✅ Workflow tools (new_answer, vote) with full arguments
 
    ❌ System messages (orchestrator prompts - filtered out)
-   ❌ Workflow tools (vote/new_answer - internal coordination)
-   ❌ MCP tool calls (read_file, list_directory - implementation details)
+   ❌ MCP tool calls (unless record_all_tool_calls: true)
+   ❌ Reasoning chunks (unless record_reasoning: true)
 
-**Why these filters?** See :ref:`design-decisions` below.
+**Configurable Recording** (v0.1.6+):
+
+You can now control what gets recorded to memory via YAML configuration:
+
+.. code-block:: yaml
+
+   memory:
+     recording:
+       record_all_tool_calls: false  # Set to true to capture ALL MCP tools
+       record_reasoning: false       # Set to true to capture thinking separately
+
+See :ref:`recording-configuration` below for details.
 
 Context Compression
 ~~~~~~~~~~~~~~~~~~~
@@ -357,6 +377,11 @@ Complete Configuration
        limit: 5              # Max facts per agent
        exclude_recent: true  # Skip retrieval before compression
 
+     # Memory recording (v0.1.6+)
+     recording:
+       record_all_tool_calls: false  # Record ALL MCP tools (not just workflow)
+       record_reasoning: false       # Record reasoning chunks separately
+
 Configuration Options
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -449,6 +474,74 @@ Session Management
    persistent_memory:
      session_name: null  # or omit the field
 
+Loading Previous Sessions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+MassGen automatically tracks all memory sessions in a registry (``~/.massgen/sessions.json``). You can list and load previous sessions to continue conversations with their memory context intact.
+
+**List available sessions**:
+
+.. code-block:: bash
+
+   massgen --list-sessions
+
+Example output:
+
+.. code-block:: text
+
+   Available Memory Sessions:
+   ============================================================
+
+   Session ID: session_20251028_143000
+     Status:  completed
+     Started: 2025-10-28 14:30:00
+     Model:   gpt-4o-mini
+     Config:  memory_config.yaml
+
+   Session ID: session_20251027_091500
+     Status:  completed
+     Started: 2025-10-27 09:15:00
+     Model:   gpt-4o
+     Description: Codebase analysis project
+     Config:  research_config.yaml
+
+   ============================================================
+   To load a session, use: massgen --session-id <SESSION_ID> "Your question"
+
+**Load session via CLI**:
+
+.. code-block:: bash
+
+   # Continue previous session
+   massgen --session-id session_20251028_143000 "What did we discuss about the backend?"
+
+   # Interactive mode with previous session
+   massgen --session-id session_20251028_143000 --config my_config.yaml
+
+**Load session via YAML config**:
+
+.. code-block:: yaml
+
+   # Add to your config file
+   session_id: "session_20251028_143000"
+
+   memory:
+     enabled: true
+     persistent_memory:
+       enabled: true
+       # ... rest of memory config
+
+**Priority order**: CLI argument (``--session-id``) > YAML config (``session_id:``) > Auto-generated
+
+**Benefits**:
+
+- Continue conversations across multiple CLI runs
+- Access memory from previous analysis sessions
+- Build on previous agents' knowledge without re-analysis
+- Maintain context for long-running research projects
+
+**Note**: Only non-temporary sessions (not starting with ``temp_``) are tracked in the registry
+
 Compression Settings
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -474,6 +567,81 @@ Retrieval Settings
 
 - **More context**: Increase ``limit`` to 10-20 (uses more tokens)
 - **Always retrieve**: Set ``exclude_recent: false`` (may duplicate recent context)
+
+.. _recording-configuration:
+
+Recording Settings (v0.1.6+)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**New in v0.1.6**: Control what gets recorded to memory for better observability and learning.
+
+.. code-block:: yaml
+
+   memory:
+     recording:
+       record_all_tool_calls: false  # Record ALL MCP tools (not just workflow)
+       record_reasoning: false       # Record reasoning chunks separately
+
+**record_all_tool_calls** (default: ``false``):
+
+:``false``: Only workflow tools (``new_answer``, ``vote``) are recorded
+:``true``: ALL MCP tools are captured (``list_directory``, ``read_file``, ``write_file``, etc.)
+
+**When to enable**:
+- Learning tool usage patterns across sessions
+- Debugging which tools agents use most
+- Understanding tool sequences (e.g., "directory_tree → read_file → grep")
+- Maximum observability during development
+
+**Example with ALL tools enabled**:
+
+.. code-block:: text
+
+   [Tool Usage]
+   [Tool Call: mcp__filesystem__directory_tree]
+   Arguments: {"path": "/Users/.../massgen"}
+   Result: [directory structure with 50+ files...]
+
+   [Tool Call: mcp__filesystem__read_text_file]
+   Arguments: {"path": ".../orchestrator.py"}
+   Result: [full file contents...]
+
+   [Tool Call: new_answer]
+   Arguments: {"content": "Architecture analysis complete..."}
+   Result: Answer submitted
+
+**record_reasoning** (default: ``false``):
+
+:``false``: Reasoning mixed with final answer in main response
+:``true``: Reasoning chunks saved separately with ``[Reasoning]`` prefix
+
+**When to enable**:
+- Debugging agent decision-making
+- Learning problem-solving approaches
+- Capturing strategic thinking separate from final output
+
+**Example with reasoning enabled**:
+
+.. code-block:: text
+
+   [Reasoning]
+   I should analyze the file structure first before diving into specific implementations.
+   This will help me build a mental model of the codebase organization.
+
+   [Reasoning Summary]
+   Decided to use directory_tree followed by selective file reads for systematic analysis.
+
+   Final answer: The codebase follows a modular architecture...
+
+**Performance Impact**:
+
+- **With both disabled** (default): ~1-2 KB per recording, concise memory
+- **With both enabled**: ~10-50 KB per recording, maximum detail
+- **mem0 extraction cost**: Same LLM calls regardless (extracts from whatever is sent)
+
+**Recommendation**:
+- **Development**: Enable both for debugging
+- **Production**: Keep disabled for concise, focused memory
 
 Monitoring and Debugging
 -------------------------
@@ -525,38 +693,63 @@ Memory Operations
       [1] User asked about MassGen architecture
       [2] [From agent_b Turn 1] Explained the adapter pattern
 
-Debug Files
-~~~~~~~~~~~
+Debug Files (v0.1.6+)
+~~~~~~~~~~~~~~~~~~~~~
 
-Full message dumps saved to:
+**New in v0.1.6**: Memory debug mode saves complete message→fact mappings when using the ``--debug`` flag.
+
+**Enable debug mode**:
+
+.. code-block:: bash
+
+   massgen --debug --config your_config.yaml "Your question"
+
+**Debug files saved to**:
 
 .. code-block:: text
 
-   .massgen/massgen_logs/log_{timestamp}/turn_{N}/attempt_{M}/memory_debug/
-   ├── mem0_add_agent_a_143022_123456.json  # What was recorded
-   ├── mem0_add_agent_b_143025_789012.json
-   └── ...
+   .massgen/massgen_logs/log_{timestamp}/attempt_{N}/memory_debug/
+   └── {agent_id}/
+       ├── turn_1_20251029_200335.json
+       ├── turn_2_20251029_200438.json
+       └── turn_3_20251029_200557.json
 
-Each file contains:
+**File structure**:
 
 .. code-block:: json
 
    {
-     "timestamp": "143022_123456",
-     "agent_id": "agent_a",
-     "session_id": "session_20251028_143000",
-     "metadata": {"turn": 1},
-     "messages": [
+     "timestamp": "2025-10-29T20:03:35.123456",
+     "agent_id": "test_agent",
+     "session_id": "temp_20251029_200122",
+     "turn": 1,
+     "metadata": {
+       "tools_used": ["mcp__filesystem__directory_tree", "read_text_file"],
+       "has_tools": true,
+       "message_count": 1
+     },
+     "messages_sent": [
        {
          "role": "assistant",
-         "content": "[Reasoning]\nI need to analyze..."
-       },
-       {
-         "role": "assistant",
-         "content": "The backend system uses..."
+         "content": "[Tool Usage]\n[Tool Call: directory_tree]\nArguments: {...}\nResult: ..."
        }
-     ]
+     ],
+     "facts_extracted": [
+       {
+         "id": "abc123",
+         "memory": "For analyzing Python codebases, directory_tree → read_file sequence...",
+         "event": "ADD"
+       }
+     ],
+     "extraction_count": 10
    }
+
+**Use cases**:
+
+- **Verify tool capture**: Check if MCP tools appear in ``messages_sent``
+- **Tune prompts**: Compare input vs. extracted facts to improve extraction quality
+- **Debug 0 facts**: See what content was sent when extraction fails
+- **Monitor quality**: Review if facts are actionable or generic
 
 Testing Memory Setup
 ~~~~~~~~~~~~~~~~~~~~
@@ -745,6 +938,51 @@ Create ``.env`` file in project root:
 2. Browse Qdrant collections: http://localhost:6333/dashboard
 3. Check debug files: ``.massgen/.../memory_debug/*.json``
 
+**0 Facts Extracted**
+
+.. code-block:: text
+
+   ✅ mem0 extracted 0 fact(s), 0 relation(s)
+   ⚠️  mem0 extracted 0 facts (check fact extraction prompt or content quality)
+
+**Common causes**:
+1. **Content too short**: Less than 10 chars or empty messages
+2. **Weak extraction model**: gpt-4o-mini may fail on complex content
+3. **Generic content**: No extractable facts (e.g., voting messages)
+4. **JSON parsing error**: Model hit token limit mid-response
+
+**Solutions**:
+1. Use stronger model: Change ``llm.model`` to ``"gpt-4o"``
+2. Enable debug mode: ``--debug`` to inspect ``messages_sent``
+3. Check content length in logs: ``Combined content length: X chars``
+4. Enable ``record_all_tool_calls: true`` to provide more context
+
+**PointStruct Validation Errors**
+
+.. code-block:: text
+
+   Error: 6 validation errors for PointStruct
+   vector.list[float] Input should be a valid list [type=list_type, input_value=None]
+
+**Cause**: Embedding API returned ``None`` instead of valid vector
+
+**Common reasons**:
+1. **Empty content**: Message with no text sent to embedding API
+2. **API failure**: Rate limit, timeout, or invalid API key
+3. **Malformed input**: Special characters or encoding issues
+
+**Solution**: This is now automatically prevented by content validation (messages < 10 chars filtered out). If still occurring, check API key and embedding provider status.
+
+**JSON Parsing Errors from mem0**
+
+.. code-block:: text
+
+   Invalid JSON response: Unterminated string starting at: line 108 column 7
+
+**Cause**: mem0's extraction LLM hit token limit mid-response, didn't close JSON string
+
+**Solution**: Use stronger extraction model (gpt-4o) or reduce content length
+
 Cleaning Up
 ~~~~~~~~~~~
 
@@ -795,25 +1033,54 @@ Why mem0's Native LLMs/Embedders?
 
 **Trade-off**: Requires separate API keys (can't reuse agent's backend). But memory operations are cheap (~1-2 cents/session).
 
-Why Skip MCP Tool Calls in Memory?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Why MCP Tools Are Optional in Memory (v0.1.6+)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Decision**: Don't record MCP tool executions (read_file, list_directory, etc.)
+**Default**: MCP tool calls (read_file, list_directory, etc.) are **not** recorded
 
 **Rationale**:
 
 1. **Implementation details**: HOW the work was done, not WHAT was learned
-2. **Redundant**: The final answer already captures insights from reading those files
-3. **Noise**: 50+ file reads create clutter, make it harder for mem0 to extract semantic facts
-4. **Focus on decisions**: Agent's reasoning ("I analyzed the backend") is more valuable than execution trace
+2. **Redundant**: The final answer usually captures insights from reading those files
+3. **Noise**: 50+ file reads can overwhelm mem0's extraction, making it harder to extract semantic facts
+4. **Focus on outcomes**: Agent's conclusions more valuable than execution trace
+5. **Token efficiency**: Keeps memory concise and focused
 
-**Example**:
+**Example (default mode)**:
 
-- ❌ Don't record: ``[Tool: read_file] path=/foo/bar.py``
-- ✅ Do record: ``[Reasoning] I analyzed bar.py and found the adapter pattern``
-- ✅ Final answer contains: "The backend uses an adapter pattern located in bar.py"
+.. code-block:: text
 
-**If you need execution history**: Check orchestrator logs or agent context files, not memory.
+   Recorded to memory:
+   ✅ Final answer: "The backend uses an adapter pattern in base.py that enables provider abstraction"
+
+   Not recorded:
+   ❌ [Tool: read_file] path=/foo/base.py
+   ❌ [Tool: read_file] path=/foo/openai.py
+   ❌ [Tool: read_file] path=/foo/claude.py
+
+**When to Enable** (``record_all_tool_calls: true``):
+
+- **Learning tool patterns**: Understand which tool sequences work best
+- **Debugging**: See exactly what agent explored
+- **Pattern analysis**: Extract insights like "directory_tree before read_file is more effective"
+- **Development**: Maximum observability during testing
+
+**Example (all tools mode)**:
+
+.. code-block:: text
+
+   Recorded to memory:
+   ✅ [Tool Call: mcp__filesystem__directory_tree]
+      Arguments: {"path": "/massgen"}
+      Result: [50+ files and directories...]
+   ✅ [Tool Call: mcp__filesystem__read_text_file]
+      Arguments: {"path": "/massgen/base.py"}
+      Result: [full file contents...]
+   ✅ Final answer: "The backend uses an adapter pattern..."
+
+mem0's LLM can then extract: "For analyzing codebases, using directory_tree first followed by reading key files provides systematic understanding"
+
+**If you just need execution history** (not learning patterns): Check orchestrator logs or agent workspace snapshots instead.
 
 Why Record Reasoning?
 ~~~~~~~~~~~~~~~~~~~~~
@@ -986,39 +1253,40 @@ Planned Features
    → [Agent sees: "⚠️ Approaching token limit, wrap up"]
    → [Agent concludes early]
 
-**2. Configurable Memory Granularity**
+**2. Memory Analytics Dashboard**
 
-**Planned**: Control what gets recorded to memory
+**Planned**: Visualize memory quality and tool usage patterns
+
+.. code-block:: text
+
+   Memory Analytics Dashboard
+   ===========================
+
+   Facts Extracted: 245 (last 7 days)
+   Tool Patterns Learned: 12
+
+   Top Tool Sequences:
+   1. directory_tree → read_file → grep (85% success)
+   2. list_directory → read_file (92% success)
+
+   Fact Quality:
+   - Actionable: 78%
+   - Generic: 15%
+   - Redundant: 7%
+
+**3. Smart Tool Result Summarization**
+
+**Planned**: Automatically summarize large MCP tool results before recording
 
 .. code-block:: yaml
 
    memory:
      recording:
-       include_mcp_tools: false       # Skip MCP tools (default)
-       include_reasoning: true        # Include reasoning (default)
-       include_reasoning_summary: true
-       tool_argument_limit: 1000      # Max chars for tool args
-       content_filters:
-         - "workflow_tools"  # vote, new_answer
-         - "system_messages"
+       record_all_tool_calls: true
+       summarize_large_results: true  # Auto-summarize results > 5KB
+       summary_model: "gpt-4o-mini"   # Model for summarization
 
-**3. MCP Tool Recording (Optional)**
-
-**Currently**: MCP tools (read_file, list_directory) excluded as implementation details
-
-**Planned**: Optional recording with summarization
-
-.. code-block:: yaml
-
-   memory:
-     recording:
-       include_mcp_tools: true
-       mcp_summarization: "aggregate"  # "aggregate", "each", "none"
-
-**Output**:
-   - ``aggregate``: "[Tools used: read_file (3x), list_directory (2x)]"
-   - ``each``: Full detail per tool
-   - ``none``: Current behavior (skip)
+**Benefit**: Capture tool usage patterns without overwhelming mem0's extraction LLM with 50KB directory trees
 
 **4. Memory Summarization on Compression**
 
@@ -1046,13 +1314,22 @@ Context is counted **after** response completes, not during streaming chunks. Th
 
 **Workaround**: Set conservative compression thresholds (50-60%) to leave headroom.
 
-**MCP Tools Not in Memory**
+**Extraction Quality Depends on Model**
 
-MCP tool executions (read_file, list_directory) are **intentionally excluded** as implementation details.
+The quality of extracted facts varies significantly by model:
 
-**Rationale**: The final answer captures what was learned; tool execution trace is noise for semantic memory.
+- **gpt-4.1-nano / gpt-4o-mini**: Fast, cheap, but may produce generic facts or JSON parsing errors on complex content
+- **gpt-4o / gpt-4-turbo**: Slower, more expensive, but extracts specific, actionable insights
 
-**If you need execution history**: Check orchestrator logs or agent workspace snapshots, not memory.
+**Recommendation**: Use gpt-4o-mini for development, gpt-4o for production if fact quality matters.
+
+**MCP Tools Recording is Opt-In**
+
+By default, MCP tool calls (read_file, list_directory) are excluded to keep memory concise.
+
+**To enable**: Set ``memory.recording.record_all_tool_calls: true``
+
+**Trade-off**: More data for pattern learning vs. potential information overload for mem0's extraction LLM.
 
 **Session-Level Memory Isolation**
 

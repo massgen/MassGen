@@ -493,6 +493,7 @@ def create_agents_from_config(
     orchestrator_config: Optional[Dict[str, Any]] = None,
     config_path: Optional[str] = None,
     memory_session_id: Optional[str] = None,
+    debug: bool = False,
 ) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration.
 
@@ -761,6 +762,7 @@ def create_agents_from_config(
                             llm_config=llm_cfg,  # Use native mem0 LLM
                             embedding_config=embedding_cfg,  # Use native mem0 embedder
                             qdrant_client=shared_qdrant_client,  # Share ONE client from server
+                            debug=debug,  # Enable memory debug mode if --debug flag used
                             on_disk=on_disk,
                         )
                         logger.info(
@@ -787,6 +789,7 @@ def create_agents_from_config(
                             llm_config=llm_cfg,  # Use native mem0 LLM
                             embedding_config=embedding_cfg,  # Use native mem0 embedder
                             vector_store_config=vector_store_config,
+                            debug=debug,  # Enable memory debug mode if --debug flag used
                             on_disk=on_disk,
                         )
                         logger.info(
@@ -801,6 +804,11 @@ def create_agents_from_config(
                     )
                     persistent_memory = None
 
+        # Get memory recording settings
+        recording_config = memory_config.get("recording", {})
+        record_all_tool_calls = recording_config.get("record_all_tool_calls", False)
+        record_reasoning = recording_config.get("record_reasoning", False)
+
         # Create agent
         agent = ConfigurableAgent(
             config=agent_config,
@@ -808,6 +816,8 @@ def create_agents_from_config(
             conversation_memory=conversation_memory,
             persistent_memory=persistent_memory,
             context_monitor=context_monitor,
+            record_all_tool_calls=record_all_tool_calls,
+            record_reasoning=record_reasoning,
         )
 
         # Configure retrieval settings from YAML (if memory is enabled)
@@ -816,10 +826,13 @@ def create_agents_from_config(
             agent._retrieval_limit = retrieval_config.get("limit", 5)
             agent._retrieval_exclude_recent = retrieval_config.get("exclude_recent", True)
 
-            if retrieval_config:  # Only log if custom config provided
-                logger.info(
-                    f"🔧 Retrieval configured for {agent_config.agent_id}: " f"limit={agent._retrieval_limit}, exclude_recent={agent._retrieval_exclude_recent}",
-                )
+            if retrieval_config or recording_config:  # Log if custom config provided
+                config_info = []
+                if retrieval_config:
+                    config_info.append(f"retrieval(limit={agent._retrieval_limit}, exclude_recent={agent._retrieval_exclude_recent})")
+                if recording_config:
+                    config_info.append(f"recording(all_tools={record_all_tool_calls}, reasoning={record_reasoning})")
+                logger.info(f"🔧 Memory configured for {agent_config.agent_id}: {', '.join(config_info)}")
 
         agents[agent.config.agent_id] = agent
 
@@ -2150,6 +2163,7 @@ async def run_interactive_mode(
     orchestrator_cfg: Dict[str, Any] = None,
     config_path: Optional[str] = None,
     memory_session_id: Optional[str] = None,
+    debug: bool = False,
     **kwargs,
 ):
     """Run MassGen in interactive mode with conversation history."""
@@ -2242,6 +2256,7 @@ async def run_interactive_mode(
             agents = create_agents_from_config(
                 original_config,
                 orchestrator_cfg,
+                debug=debug,
                 config_path=config_path,
                 memory_session_id=memory_session_id,
             )
@@ -2306,6 +2321,7 @@ async def run_interactive_mode(
                         agents = create_agents_from_config(
                             modified_config,
                             orchestrator_cfg,
+                            debug=debug,
                             config_path=config_path,
                             memory_session_id=session_id,
                         )
@@ -2497,6 +2513,22 @@ async def main(args):
             print("❌ Configuration error: Either --config, --model, or --backend must be specified", flush=True)
             sys.exit(1)
 
+    # Validate session_id if provided
+    if args.session_id:
+        from massgen.memory import SessionRegistry
+
+        registry = SessionRegistry()
+        if not registry.session_exists(args.session_id):
+            print(f"❌ Session error: Session '{args.session_id}' not found in registry", flush=True)
+            print("Run 'massgen --list-sessions' to see available sessions", flush=True)
+            sys.exit(1)
+        else:
+            session_metadata = registry.get_session(args.session_id)
+            if args.debug:
+                logger.info(f"Loading session: {args.session_id}")
+                logger.debug(f"Session metadata: {json.dumps(session_metadata, indent=2)}")
+            print(f"📚 Loading memory from session: {args.session_id}", flush=True)
+
     # Track config path for error messages
     resolved_path = None
 
@@ -2603,7 +2635,17 @@ async def main(args):
         # Create unified session ID for memory system (before creating agents)
         # This ensures memory is isolated per session and unifies orchestrator + memory sessions
         memory_session_id = None
-        if args.question:
+
+        # Priority order: CLI arg > config file > generate new
+        if args.session_id:
+            # Use session_id from CLI argument (already validated)
+            memory_session_id = args.session_id
+            logger.info(f"📚 Using session from CLI: {memory_session_id}")
+        elif "session_id" in config:
+            # Use session_id from YAML config
+            memory_session_id = config["session_id"]
+            logger.info(f"📚 Using session from config: {memory_session_id}")
+        elif args.question:
             # Single question mode: Create temp session per run
             from datetime import datetime
 
@@ -2616,11 +2658,32 @@ async def main(args):
             memory_session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             logger.info(f"📝 Created session for interactive mode: {memory_session_id}")
 
+        # Register session with SessionRegistry (for persistent tracking)
+        if memory_session_id and not memory_session_id.startswith("temp_"):
+            from massgen.memory import SessionRegistry
+
+            registry = SessionRegistry()
+            # Determine model for metadata
+            model_name = None
+            if "agent" in config:
+                model_name = config["agent"].get("backend", {}).get("model")
+            elif "agents" in config and config["agents"]:
+                model_name = config["agents"][0].get("backend", {}).get("model")
+
+            registry.register_session(
+                session_id=memory_session_id,
+                config_path=str(resolved_path) if resolved_path else None,
+                model=model_name,
+            )
+            if args.debug:
+                logger.debug(f"Registered session in registry: {memory_session_id}")
+
         agents = create_agents_from_config(
             config,
             orchestrator_cfg,
             config_path=str(resolved_path) if resolved_path else None,
             memory_session_id=memory_session_id,
+            debug=args.debug,
         )
 
         if not agents:
@@ -2666,9 +2729,19 @@ async def main(args):
                     orchestrator_cfg=orchestrator_cfg,
                     config_path=config_file_path,
                     memory_session_id=memory_session_id,
+                    debug=args.debug,
                     **kwargs,
                 )
         finally:
+            # Mark session as completed (if not a temp session)
+            if memory_session_id and not memory_session_id.startswith("temp_"):
+                from massgen.memory import SessionRegistry
+
+                registry = SessionRegistry()
+                registry.complete_session(memory_session_id)
+                if args.debug:
+                    logger.debug(f"Marked session as completed: {memory_session_id}")
+
             # Cleanup all agents' filesystem managers (including Docker containers)
             for agent_id, agent in agents.items():
                 if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager"):
@@ -2826,6 +2899,19 @@ Environment Variables:
         help="Include example configurations in schema display",
     )
 
+    # Session options
+    session_group = parser.add_argument_group("session management", "Load or list memory sessions")
+    session_group.add_argument(
+        "--session-id",
+        type=str,
+        help="Load memory from a previous session by ID (e.g., chat_session_a1b2c3d4)",
+    )
+    session_group.add_argument(
+        "--list-sessions",
+        action="store_true",
+        help="List all available memory sessions with their metadata",
+    )
+
     # Timeout options
     timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
     timeout_group.add_argument(
@@ -2844,6 +2930,14 @@ Environment Variables:
         logger.debug(f"Command line arguments: {vars(args)}")
 
     # Handle special commands first
+    if args.list_sessions:
+        from massgen.memory import SessionRegistry, format_session_list
+
+        registry = SessionRegistry()
+        sessions = registry.list_sessions(limit=20)
+        print(format_session_list(sessions))
+        return
+
     if args.list_examples:
         show_available_examples()
         return

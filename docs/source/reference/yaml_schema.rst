@@ -17,6 +17,7 @@ MassGen configurations have a clear hierarchy of settings. Understanding this st
 1. **Top Level** - Global settings
 
    - ``agents`` or ``agent``: List of agents (or single agent)
+   - ``memory``: Memory system configuration (conversation + persistent)
    - ``orchestrator``: Coordination and workspace settings
    - ``ui``: Display and logging settings
 
