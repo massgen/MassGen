@@ -90,7 +90,7 @@ Key Features
 
    .. grid-item-card:: 🔗 Framework Interoperability
 
-      Integrate external frameworks (AG2, LangGraph) as tools within MassGen's coordination.
+      Integrate external frameworks (AG2, LangGraph, AgentScope, OpenAI, SmolAgent) as tools within MassGen's coordination.
 
    .. grid-item-card:: 📊 Live Visualization
 

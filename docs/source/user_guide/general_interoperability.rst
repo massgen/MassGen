@@ -3,7 +3,7 @@ General Framework Interoperability
 
 **NEW in v0.1.6**
 
-MassGen provides interoperability with external agent frameworks through its custom tool system. This enables you to leverage specialized multi-agent frameworks like AG2 and LangGraph as powerful tools within MassGen's coordination ecosystem.
+MassGen provides comprehensive interoperability with external agent frameworks through its custom tool system. This enables you to leverage specialized multi-agent frameworks as powerful tools within MassGen's coordination ecosystem.
 
 Quick Start
 -----------
@@ -11,7 +11,7 @@ Quick Start
 Try Framework Integrations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**AG2 Lesson Planner:**
+**AG2 (AutoGen) - Nested Chat Patterns:**
 
 .. code-block:: bash
 
@@ -19,7 +19,7 @@ Try Framework Integrations
      --config @examples/tools/custom_tools/interop/ag2_lesson_planner_example.yaml \
      "Create a lesson plan for teaching fractions to fourth graders"
 
-**LangGraph Lesson Planner:**
+**LangGraph - State Graph Workflows:**
 
 .. code-block:: bash
 
@@ -27,15 +27,39 @@ Try Framework Integrations
      --config @examples/tools/custom_tools/interop/langgraph_lesson_planner_example.yaml \
      "Design a lesson plan for the water cycle"
 
-**Compare Both Approaches:**
+**AgentScope - Sequential Pipelines:**
+
+.. code-block:: bash
+
+   massgen \
+     --config @examples/tools/custom_tools/interop/agentscope_lesson_planner_example.yaml \
+     "Create a lesson plan for photosynthesis"
+
+**OpenAI Chat Completions - Multi-Agent API:**
+
+.. code-block:: bash
+
+   massgen \
+     --config @examples/tools/custom_tools/interop/openai_assistant_lesson_planner_example.yaml \
+     "Develop a lesson plan for ecosystems"
+
+**SmolAgent - Tool-Using Agents:**
+
+.. code-block:: bash
+
+   massgen \
+     --config @examples/tools/custom_tools/interop/smolagent_lesson_planner_example.yaml \
+     "Build a lesson plan for fractions"
+
+**Compare Multiple Frameworks:**
 
 .. code-block:: bash
 
    massgen \
      --config @examples/tools/custom_tools/interop/ag2_and_langgraph_lesson_planner.yaml \
-     "Create a lesson plan for photosynthesis"
+     "Create a lesson plan comparing different approaches"
 
-These examples demonstrate how AG2 and LangGraph can be used as tools within MassGen agents, each leveraging their unique orchestration patterns while participating in MassGen's multi-agent coordination.
+These examples demonstrate how each framework can be used as a tool within MassGen agents, leveraging their unique orchestration patterns while participating in MassGen's multi-agent coordination.
 
 Installation
 ------------
@@ -54,17 +78,41 @@ Install the required framework dependencies:
 
    pip install langgraph langchain-openai
 
-**For both:**
+**For AgentScope:**
 
 .. code-block:: bash
 
-   pip install langgraph langchain-openai
+   pip install agentscope
+
+**For SmolAgent:**
+
+.. code-block:: bash
+
+   pip install smolagents
+
+**OpenAI Chat Completions:**
+
+No additional installation needed - uses standard OpenAI SDK already included with MassGen.
+
+**For all frameworks:**
+
+.. code-block:: bash
+
+   pip install agentscope langgraph langchain-openai smolagents
    uv pip install -e ".[external]"
 
 What is Framework Interoperability?
 ------------------------------------
 
-Framework interoperability means using specialized agent frameworks like AG2 and LangGraph as tools within MassGen. Each framework becomes a powerful capability that MassGen agents can invoke.
+Framework interoperability means using specialized agent frameworks as tools within MassGen. Each framework becomes a powerful capability that MassGen agents can invoke.
+
+**Supported Frameworks:**
+
+* **AG2 (AutoGen)** - Nested chats and group collaboration
+* **LangGraph** - State graph-based workflows
+* **AgentScope** - Sequential agent pipelines
+* **OpenAI Chat Completions** - Multi-agent API patterns
+* **SmolAgent** - Tool-using agent framework from HuggingFace
 
 **Key Benefits:**
 
@@ -96,6 +144,7 @@ AG2 Integration
 * Group chat collaboration between multiple agents
 * Code execution capabilities
 * Rich agent conversation management
+* **Streaming support** for real-time output
 
 **Basic Configuration:**
 
@@ -119,7 +168,7 @@ AG2 Integration
 
 .. code-block:: bash
 
-   massgen --config path/to/config.yaml \
+   massgen --config @examples/tools/custom_tools/interop/ag2_lesson_planner_example.yaml \
      "Create a lesson plan for fractions"
 
 **How AG2 Integration Works:**
@@ -144,6 +193,8 @@ LangGraph Integration
 * Integration with LangChain ecosystem
 * Persistent state management
 
+**Note:** Streaming support coming in future release.
+
 **Basic Configuration:**
 
 .. code-block:: yaml
@@ -166,7 +217,7 @@ LangGraph Integration
 
 .. code-block:: bash
 
-   massgen --config path/to/config.yaml \
+   massgen --config @examples/tools/custom_tools/interop/langgraph_lesson_planner_example.yaml \
      "Design a lesson plan for the water cycle"
 
 **How LangGraph Integration Works:**
@@ -184,6 +235,150 @@ The graph maintains state throughout execution:
 * ``lesson_plan``: Draft plan from second node
 * ``reviewed_plan``: Reviewed plan from third node
 * ``final_plan``: Formatted output from final node
+
+AgentScope Integration
+~~~~~~~~~~~~~~~~~~~~~~
+
+`AgentScope <https://github.com/modelscope/agentscope>`_ is a multi-agent framework providing flexible agent orchestration patterns.
+
+**Key Features:**
+
+* Sequential agent pipelines
+* Memory and message passing
+* Multiple LLM backend support
+* Flexible conversation management
+
+**Note:** Streaming support coming in future release.
+
+**Basic Configuration:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "agentscope_assistant"
+       backend:
+         type: "openai"
+         model: "gpt-4o"
+         custom_tools:
+           - name: ["agentscope_lesson_planner"]
+             category: "education"
+             path: "massgen/tool/_extraframework_agents/agentscope_lesson_planner_tool.py"
+             function: ["agentscope_lesson_planner"]
+       system_message: |
+         You have access to an AgentScope-powered lesson planning tool.
+         Use it to create comprehensive fourth-grade lesson plans.
+
+**Usage:**
+
+.. code-block:: bash
+
+   massgen --config @examples/tools/custom_tools/interop/agentscope_lesson_planner_example.yaml \
+     "Create a lesson plan for photosynthesis"
+
+**How AgentScope Integration Works:**
+
+The tool orchestrates four specialized AgentScope agents in sequence:
+
+1. **Curriculum Standards Expert**: Identifies grade-level standards
+2. **Lesson Planning Specialist**: Creates detailed lesson structure
+3. **Lesson Plan Reviewer**: Reviews for age-appropriateness
+4. **Lesson Plan Formatter**: Formats the final output
+
+Each agent uses AgentScope's ``SimpleDialogAgent`` with OpenAI models, maintaining conversation history through AgentScope's memory system.
+
+OpenAI Chat Completions Integration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Direct integration with OpenAI's Chat Completions API as a multi-agent system.
+
+**Key Features:**
+
+* **Native streaming support** for real-time output
+* Multiple specialized "agents" via system prompts
+* Sequential processing pipeline
+* Full control over temperature and parameters
+
+**Basic Configuration:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "openai_assistant"
+       backend:
+         type: "openai"
+         model: "gpt-4o"
+         custom_tools:
+           - name: ["openai_assistant_lesson_planner"]
+             category: "education"
+             path: "massgen/tool/_extraframework_agents/openai_assistant_lesson_planner_tool.py"
+             function: ["openai_assistant_lesson_planner"]
+       system_message: |
+         You have access to an OpenAI-powered multi-agent lesson planning tool
+         with streaming support.
+
+**Usage:**
+
+.. code-block:: bash
+
+   massgen --config @examples/tools/custom_tools/interop/openai_assistant_lesson_planner_example.yaml \
+     "Develop a lesson plan for ecosystems"
+
+**How OpenAI Integration Works:**
+
+Each "agent" is implemented as a separate API call with specialized system prompt:
+
+1. **Curriculum Agent**: Role-specific prompt for standards
+2. **Lesson Planner Agent**: Role-specific prompt for lesson design
+3. **Reviewer Agent**: Role-specific prompt for quality review
+4. **Formatter Agent**: Role-specific prompt for output formatting
+
+SmolAgent Integration
+~~~~~~~~~~~~~~~~~~~~~
+
+`SmolAgent <https://github.com/huggingface/smolagents>`_ is HuggingFace's lightweight tool-using agent framework.
+
+**Key Features:**
+
+* Tool-using agents with code execution
+* CodeAgent for autonomous tool management
+* Integration with HuggingFace models
+* Lightweight and efficient
+
+**Note:** Streaming support coming in future release.
+
+**Basic Configuration:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "smolagent_assistant"
+       backend:
+         type: "openai"
+         model: "gpt-4o"
+         custom_tools:
+           - name: ["smolagent_lesson_planner"]
+             category: "education"
+             path: "massgen/tool/_extraframework_agents/smolagent_lesson_planner_tool.py"
+             function: ["smolagent_lesson_planner"]
+       system_message: |
+         You have access to a SmolAgent-powered lesson planning tool
+         that uses tool-calling agents.
+
+**Usage:**
+
+.. code-block:: bash
+
+   massgen --config @examples/tools/custom_tools/interop/smolagent_lesson_planner_example.yaml \
+     "Build a lesson plan for fractions"
+
+**How SmolAgent Integration Works:**
+
+The tool uses SmolAgent's ``CodeAgent`` with custom tools:
+
+1. **Tool Definition**: Custom tools for each planning stage
+2. **Agent Orchestration**: CodeAgent manages tool execution
+3. **Sequential Processing**: Tools called in order by the agent
+4. **Result Aggregation**: Final lesson plan assembled from tool outputs
 
 Hybrid Multi-Framework Setups
 ------------------------------
@@ -466,7 +661,7 @@ Best Practices
 
 4. **Streaming Support**
 
-   For long-running operations, yield intermediate results:
+   For long-running operations, yield intermediate results (currently supported for AG2 and OpenAI Chat Completions):
 
    .. code-block:: python
 
@@ -474,6 +669,8 @@ Best Practices
           output_blocks=[TextContent(data="Step 1 complete\n")],
           is_log=True,  # Mark as log output
       )
+
+   **Note:** Streaming support is currently available for AG2 and OpenAI Chat Completions. Other frameworks will receive streaming support in future releases.
 
 5. **Message Extraction**
 
@@ -643,17 +840,27 @@ Create a Python file with your AG2 logic wrapped as a custom tool following the 
 
 The new approach gives you more control and better integration with MassGen's coordination system.
 
-Additional Framework Support
------------------------------
+Future Framework Support
+-------------------------
 
-Beyond AG2 and LangGraph, we also have experimental support for:
+MassGen v0.1.6 includes full support for five agent frameworks:
 
-* **AgentScope** - Sequential agent pipelines with flexible orchestration
-* **OpenAI Chat Completions** - Direct multi-agent patterns using OpenAI's API
+* **AG2 (AutoGen)** - Nested chats and group collaboration
+* **LangGraph** - State graph-based workflows
+* **AgentScope** - Sequential agent pipelines
+* **OpenAI Chat Completions** - Multi-agent API patterns
+* **SmolAgent** - Tool-using agents from HuggingFace
 
-These frameworks follow the same custom tool integration pattern. See the examples in ``massgen/tool/_extraframework_agents/`` for implementation details.
+All frameworks follow the same custom tool integration pattern. See the examples in ``massgen/tool/_extraframework_agents/`` for implementation details.
 
-Want to integrate another framework? We welcome contributions! See :doc:`../development/contributing` for contribution guidelines.
+**Want to integrate another framework?** We welcome contributions for additional frameworks:
+
+* CrewAI
+* Haystack
+* Semantic Kernel
+* AutoGPT
+
+See :doc:`../development/contributing` for contribution guidelines.
 
 Next Steps
 ----------
