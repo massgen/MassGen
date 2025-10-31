@@ -35,7 +35,7 @@ from ..logger_config import (
 )
 from .base import FilesystemSupport, StreamChunk
 from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, ToolExecutionConfig
-from .gemini_utils import CoordinationResponse
+from .gemini_utils import CoordinationResponse, PostEvaluationResponse
 
 # MCP integration imports
 try:
@@ -201,6 +201,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
             # Detect coordination mode
             is_coordination = self.formatter.has_coordination_tools(tools)
+            is_post_evaluation = self.formatter.has_post_evaluation_tools(tools)
             valid_agent_ids = None
 
             if is_coordination:
@@ -342,10 +343,14 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 if builtin_tools:
                     config["tools"] = builtin_tools
 
-            # For coordination requests, use JSON response format when no tools present
-            if is_coordination and not tools_to_apply and not builtin_tools:
-                config["response_mime_type"] = "application/json"
-                config["response_schema"] = CoordinationResponse.model_json_schema()
+            # For coordination/post-evaluation requests, use JSON response format when no tools present
+            if not tools_to_apply and not builtin_tools:
+                if is_coordination:
+                    config["response_mime_type"] = "application/json"
+                    config["response_schema"] = CoordinationResponse.model_json_schema()
+                elif is_post_evaluation:
+                    config["response_mime_type"] = "application/json"
+                    config["response_schema"] = PostEvaluationResponse.model_json_schema()
 
             # Log messages being sent
             log_backend_agent_message(
@@ -939,16 +944,184 @@ class GeminiBackend(CustomToolAndMCPBackend):
                             conversation_history.append(types.Content(parts=response_parts, role="user"))
 
             # ====================================================================
-            # Completion Phase: No function calls, we're done
+            # Completion Phase: Process structured tool calls and builtin indicators
             # ====================================================================
-            # Inspect builtin tool usage from last chunk
-            if last_response_with_candidates:
-                for candidate in last_response_with_candidates.candidates:
+            final_response = last_response_with_candidates
+
+            tool_calls_detected: List[Dict[str, Any]] = []
+
+            if (is_coordination or is_post_evaluation) and full_content_text.strip():
+                content = full_content_text
+                structured_response = None
+
+                try:
+                    structured_response = json.loads(content.strip())
+                except json.JSONDecodeError:
+                    structured_response = self.formatter.extract_structured_response(content)
+
+                if structured_response and isinstance(structured_response, dict) and structured_response.get("action_type"):
+                    raw_tool_calls = self.formatter.convert_structured_to_tool_calls(structured_response)
+
+                    if raw_tool_calls:
+                        tool_type = "post_evaluation" if is_post_evaluation else "coordination"
+                        workflow_tool_calls: List[Dict[str, Any]] = []
+
+                        for call in raw_tool_calls:
+                            tool_name = call.get("name", "")
+                            tool_args_str = call.get("arguments", "{}")
+
+                            if isinstance(tool_args_str, str):
+                                try:
+                                    tool_args = json.loads(tool_args_str)
+                                except json.JSONDecodeError:
+                                    tool_args = {}
+                            else:
+                                tool_args = tool_args_str
+
+                            try:
+                                log_tool_call(
+                                    agent_id,
+                                    tool_name or f"unknown_{tool_type}_tool",
+                                    tool_args,
+                                    result=f"{tool_type}_tool_called",
+                                    backend_name="gemini",
+                                )
+                            except Exception:
+                                pass
+
+                            workflow_tool_calls.append(
+                                {
+                                    "id": call.get("call_id", f"call_{len(workflow_tool_calls)}"),
+                                    "type": "function",
+                                    "function": {
+                                        "name": tool_name,
+                                        "arguments": tool_args,
+                                    },
+                                },
+                            )
+
+                        if workflow_tool_calls:
+                            tool_calls_detected = workflow_tool_calls
+                            log_stream_chunk("backend.gemini", "tool_calls", workflow_tool_calls, agent_id)
+
+            if tool_calls_detected:
+                yield StreamChunk(type="tool_calls", tool_calls=tool_calls_detected, source="gemini")
+
+                if mcp_used:
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="mcp_session_complete",
+                        content="✅ [MCP] Session completed",
+                        source="mcp_tools",
+                    )
+
+                yield StreamChunk(type="done")
+                return
+
+            if builtin_tools and final_response and hasattr(final_response, "candidates") and final_response.candidates:
+                candidate = final_response.candidates[0]
+
+                if hasattr(candidate, "grounding_metadata") and candidate.grounding_metadata:
+                    search_actually_used = False
+                    search_queries: List[str] = []
+
+                    if hasattr(candidate.grounding_metadata, "web_search_queries") and candidate.grounding_metadata.web_search_queries:
+                        try:
+                            for query in candidate.grounding_metadata.web_search_queries:
+                                if query and isinstance(query, str) and query.strip():
+                                    trimmed_query = query.strip()
+                                    search_queries.append(trimmed_query)
+                                    search_actually_used = True
+                        except (TypeError, AttributeError):
+                            pass
+
+                    if hasattr(candidate.grounding_metadata, "grounding_chunks") and candidate.grounding_metadata.grounding_chunks:
+                        try:
+                            if len(candidate.grounding_metadata.grounding_chunks) > 0:
+                                search_actually_used = True
+                        except (TypeError, AttributeError):
+                            pass
+
+                    if search_actually_used:
+                        log_stream_chunk(
+                            "backend.gemini",
+                            "web_search_result",
+                            {"queries": search_queries, "results_integrated": True},
+                            agent_id,
+                        )
+                        log_tool_call(
+                            agent_id,
+                            "google_search_retrieval",
+                            {
+                                "queries": search_queries,
+                                "chunks_found": len(getattr(candidate.grounding_metadata, "grounding_chunks", []) or []),
+                            },
+                            result="search_completed",
+                            backend_name="gemini",
+                        )
+
+                        yield StreamChunk(
+                            type="content",
+                            content="🔍 [Builtin Tool: Web Search] Results integrated\n",
+                        )
+
+                        for query in search_queries:
+                            log_stream_chunk(
+                                "backend.gemini",
+                                "web_search_result",
+                                {"queries": search_queries, "results_integrated": True},
+                                agent_id,
+                            )
+                            yield StreamChunk(type="content", content=f"🔍 [Search Query] '{query}'\n")
+
+                        self.search_count += 1
+
+                enable_code_execution = bool(
+                    all_params.get("enable_code_execution") or all_params.get("code_execution"),
+                )
+
+                if enable_code_execution and hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
+                    code_parts: List[str] = []
+
+                    for part in candidate.content.parts:
+                        if hasattr(part, "executable_code") and part.executable_code:
+                            code_content = getattr(part.executable_code, "code", str(part.executable_code))
+                            code_parts.append(f"Code: {code_content}")
+                        elif hasattr(part, "code_execution_result") and part.code_execution_result:
+                            result_content = getattr(part.code_execution_result, "output", str(part.code_execution_result))
+                            code_parts.append(f"Result: {result_content}")
+
+                    if code_parts:
+                        log_stream_chunk(
+                            "backend.gemini",
+                            "code_execution",
+                            "Code executed",
+                            agent_id,
+                        )
+                        log_tool_call(
+                            agent_id,
+                            "code_execution",
+                            {"details": code_parts},
+                            result="code_execution_completed",
+                            backend_name="gemini",
+                        )
+
+                        yield StreamChunk(
+                            type="content",
+                            content="🧮 [Builtin Tool: Code Execution] Results integrated\n",
+                        )
+
+                        for entry in code_parts:
+                            yield StreamChunk(type="content", content=f"🧮 {entry}\n")
+
+                        self.code_execution_count += 1
+
+            elif final_response and hasattr(final_response, "candidates"):
+                for candidate in final_response.candidates:
                     if hasattr(candidate, "grounding_metadata"):
                         self.search_count += 1
                         logger.debug(f"[Gemini] Grounding (web search) used, count: {self.search_count}")
 
-                    # Check for code execution usage
                     if hasattr(candidate, "content") and candidate.content:
                         if hasattr(candidate.content, "parts"):
                             for part in candidate.content.parts:
