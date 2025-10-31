@@ -1,0 +1,48 @@
+# MassGen Configuration: AG2 (AutoGen) Lesson Planner Tool
+# This demonstrates interoperability by using AutoGen's nested chat as a custom tool
+#
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#
+# Description:
+#   This configuration uses the AG2 (AutoGen) nested chat architecture to create comprehensive
+#   lesson plans. The tool uses multiple AutoGen agents working together:
+#   - Curriculum Agent: Determines standards and objectives
+#   - Lesson Planner Agent: Creates detailed lesson plans
+#   - Lesson Reviewer Agent: Reviews and provides feedback
+#   - Lesson Formatter Agent: Formats the final output
+#
+# Requirements:
+#   - pip install pyautogen
+#   - OPENAI_API_KEY environment variable must be set
+
+agents:
+  - id: "ag2_lesson_planner" # OpenAI GPT-4o with AG2 custom tool
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      custom_tools:
+        - name: ["ag2_lesson_planner"]
+          category: "education"
+          path: "massgen/tool/_extraframework_agents/ag2_lesson_planner_tool.py"
+          function: ["ag2_lesson_planner"]
+    system_message: |
+      You are an AI assistant with access to an advanced lesson planning tool powered by AutoGen.
+
+      The ag2_lesson_planner tool is available as a custom tool that creates comprehensive fourth-grade
+      lesson plans using a multi-agent collaborative approach. This tool demonstrates interoperability
+      between MassGen and AutoGen frameworks.
+
+      When users ask for a lesson plan on any topic, use the ag2_lesson_planner tool. The tool will coordinate multiple specialized agents to:
+      1. Identify relevant curriculum standards and learning objectives
+      2. Design engaging lesson activities with proper timing
+      3. Review the plan for age-appropriateness and effectiveness
+      4. Format the final lesson plan in a structured format
+
+      After receiving the lesson plan, present it clearly to the user and offer to make any adjustments
+      they'd like.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

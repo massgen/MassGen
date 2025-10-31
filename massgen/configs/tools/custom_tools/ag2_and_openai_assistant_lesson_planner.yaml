@@ -1,0 +1,65 @@
+# MassGen Configuration: Lesson Planner Comparison
+# This demonstrates interoperability by comparing AG2 and OpenAI Assistant lesson planner implementations
+#
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/ag2_and_openai_assistant_lesson_planner.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/ag2_and_openai_assistant_lesson_planner.yaml "Create a lesson plan for photosynthesis"
+#
+# Description:
+#   This configuration provides access to both AG2 (AutoGen) and OpenAI Assistant lesson planning tools,
+#   allowing you to compare different multi-agent framework approaches within MassGen.
+#
+#   AG2 Version:
+#   - Uses AutoGen's nested chat architecture
+#   - Multiple agents in group chat collaboration
+#   - Demonstrates AutoGen → MassGen interoperability
+#
+#   OpenAI Assistant Version:
+#   - Uses OpenAI's Chat Completions API with streaming
+#   - Multi-agent collaboration pattern with sequential workflow
+#   - Demonstrates OpenAI Assistant → MassGen interoperability
+#
+# Requirements:
+#   - pip install pyautogen openai
+#   - OPENAI_API_KEY environment variable must be set
+
+agents:
+  - id: "ag2_planner" # AG2 (AutoGen) implementation
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      custom_tools:
+        - name: ["ag2_lesson_planner"]
+          category: "education"
+          path: "massgen/tool/_extraframework_agents/ag2_lesson_planner_tool.py"
+          function: ["ag2_lesson_planner"]
+    system_message: |
+      You are an AI assistant with access to the AG2 (AutoGen) lesson planning tool.
+
+      The ag2_lesson_planner tool creates comprehensive fourth-grade lesson plans using AutoGen's
+      nested chat architecture with multiple collaborative agents.
+
+      When users ask for a lesson plan, use the ag2_lesson_planner tool. After receiving the result,
+      present it clearly and mention that this was generated using the AG2 (AutoGen) framework.
+
+  - id: "openai_assistant_planner" # OpenAI Assistant implementation
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      custom_tools:
+        - name: ["openai_assistant_lesson_planner"]
+          category: "education"
+          path: "massgen/tool/_extraframework_agents/openai_assistant_lesson_planner_tool.py"
+          function: ["openai_assistant_lesson_planner"]
+    system_message: |
+      You are an AI assistant with access to the OpenAI Assistant lesson planning tool.
+
+      The openai_assistant_lesson_planner tool creates comprehensive fourth-grade lesson plans using
+      OpenAI's Chat Completions API with multi-agent collaboration pattern and streaming support.
+
+      When users ask for a lesson plan, use the openai_assistant_lesson_planner tool. After receiving the result,
+      present it clearly and mention that this was generated using the OpenAI Assistant framework.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

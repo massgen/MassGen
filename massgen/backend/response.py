@@ -25,6 +25,7 @@ from ..stream_chunk import ChunkType, TextStreamChunk
 from .base import FilesystemSupport, StreamChunk
 from .base_with_custom_tool_and_mcp import (
     CustomToolAndMCPBackend,
+    CustomToolChunk,
     ToolExecutionConfig,
     UploadFileError,
 )
@@ -211,6 +212,27 @@ class ResponseBackend(CustomToolAndMCPBackend):
             "output": error_msg,
         }
         updated_messages.append(error_output_msg)
+
+    async def _execute_custom_tool(self, call: Dict[str, Any]) -> AsyncGenerator[CustomToolChunk, None]:
+        """Execute custom tool with streaming support - async generator for base class.
+
+        This method is called by _execute_tool_with_logging and yields CustomToolChunk
+        objects for intermediate streaming output. The base class detects the async
+        generator and streams intermediate results to users in real-time.
+
+        Args:
+            call: Tool call dictionary with name and arguments
+
+        Yields:
+            CustomToolChunk objects with streaming data
+
+        Note:
+            - Intermediate chunks (completed=False) are streamed to users in real-time
+            - Final chunk (completed=True) contains the accumulated result for message history
+            - The base class automatically handles extracting and displaying intermediate chunks
+        """
+        async for chunk in self.stream_custom_tool_execution(call):
+            yield chunk
 
     async def _stream_with_custom_and_mcp_tools(
         self,

@@ -13,12 +13,24 @@ import mimetypes
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Set, Tuple
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+)
 
 import httpx
+from pydantic import BaseModel
 
 from ..logger_config import log_backend_activity, logger
 from ..tool import ToolManager
+from ..utils import CoordinationStage
 from .base import LLMBackend, StreamChunk
 
 
@@ -48,6 +60,93 @@ class UploadFileError(Exception):
 
 class UnsupportedUploadSourceError(UploadFileError):
     """Raised when a provided upload source cannot be processed (e.g., URL without fetch support)."""
+
+
+class CustomToolChunk(NamedTuple):
+    """Streaming chunk from custom tool execution."""
+
+    data: str  # Chunk data to stream to user
+    completed: bool  # True for the last chunk only
+    accumulated_result: str  # Final accumulated result (only when completed=True)
+
+
+class ExecutionContext(BaseModel):
+    """Execution context for MCP tool execution."""
+
+    messages: List[Dict[str, Any]] = []
+    agent_system_message: Optional[str] = None
+    agent_id: Optional[str] = None
+    backend_name: Optional[str] = None
+    current_stage: Optional[CoordinationStage] = None
+
+    # These will be computed after initialization
+    system_messages: Optional[List[Dict[str, Any]]] = None
+    user_messages: Optional[List[Dict[str, Any]]] = None
+    prompt: Optional[List[Dict[str, Any]]] = None
+
+    def __init__(
+        self,
+        messages: Optional[List[Dict[str, Any]]] = None,
+        agent_system_message: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        backend_name: Optional[str] = None,
+        current_stage: Optional[CoordinationStage] = None,
+    ):
+        """Initialize execution context."""
+        super().__init__(
+            messages=messages or [],
+            agent_system_message=agent_system_message,
+            agent_id=agent_id,
+            backend_name=backend_name,
+            current_stage=current_stage,
+        )
+        # Now you can process messages after Pydantic initialization
+        self._process_messages()
+
+    def _process_messages(self) -> None:
+        """Process messages to extract commonly used fields."""
+        if self.messages:
+            self.system_messages = []
+            self.user_messages = []
+
+            for msg in self.messages:
+                role = msg.get("role")
+
+                if role == "system":
+                    self.system_messages.append(msg)
+
+                if role == "user":
+                    self.user_messages.append(msg)
+
+            if self.current_stage == CoordinationStage.INITIAL_ANSWER:
+                self.prompt = [self.exec_instruction()] + self.user_messages
+            elif self.current_stage == CoordinationStage.ENFORCEMENT:
+                self.prompt = self.user_messages
+            elif self.current_stage == CoordinationStage.PRESENTATION:
+                if len(self.system_messages) > 1:
+                    raise ValueError("Execution Context expects only one system message during PRESENTATION stage")
+                system_message = self._filter_system_message(self.system_messages[0])
+                self.prompt = [system_message] + self.user_messages
+
+    # Todo: Temporary solution. We should change orchestrator not to preprend agent system message
+    def _filter_system_message(self, sys_msg):
+        """Filter out agent system message prefix from system message content."""
+        content = sys_msg.get("content", "")
+        # Remove agent_system_message prefix if present
+        if self.agent_system_message and isinstance(content, str):
+            if content.startswith(self.agent_system_message):
+                # Remove the prefix and any following whitespace/newlines
+                remaining = content[len(self.agent_system_message) :].lstrip("\n ")
+                sys_msg["content"] = remaining
+
+        return sys_msg
+
+    @staticmethod
+    def exec_instruction() -> dict:
+        instruction = (
+            "You MUST digest existing answers, combine their strengths, " "and do additional work to address their weaknesses, " "then generate a better answer to address the ORIGINAL MESSAGE."
+        )
+        return {"role": "system", "content": instruction}
 
 
 # MCP integration imports
@@ -140,6 +239,9 @@ class CustomToolAndMCPBackend(LLMBackend):
         self.custom_tool_manager = ToolManager()
         self._custom_tool_names: set[str] = set()
 
+        # Store execution context for custom tool execution
+        self._execution_context = None
+
         # Register custom tools if provided
         custom_tools = kwargs.get("custom_tools", [])
         if custom_tools:
@@ -199,6 +301,7 @@ class CustomToolAndMCPBackend(LLMBackend):
     @abstractmethod
     async def _process_stream(self, stream, all_params, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
         """Process stream."""
+        yield StreamChunk(type="error", error="Not implemented")
 
     # Custom tools support
     def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
@@ -423,14 +526,55 @@ class CustomToolAndMCPBackend(LLMBackend):
             )
             return None
 
-    async def _execute_custom_tool(self, call: Dict[str, Any]) -> str:
-        """Execute a custom tool and return the result.
+    async def _stream_execution_results(
+        self,
+        tool_request: Dict[str, Any],
+    ) -> AsyncGenerator[Tuple[str, bool], None]:
+        """Stream execution results from tool manager, yielding (data, is_log) tuples.
+
+        Args:
+            tool_request: Tool request dictionary with name and input
+
+        Yields:
+            Tuple of (data: str, is_log: bool) for each result block
+        """
+        try:
+            async for result in self.custom_tool_manager.execute_tool(
+                tool_request,
+                execution_context=self._execution_context.model_dump(),
+            ):
+                is_log = getattr(result, "is_log", False)
+
+                if hasattr(result, "output_blocks"):
+                    for block in result.output_blocks:
+                        data = ""
+                        if hasattr(block, "data"):
+                            data = str(block.data)
+
+                        if data:
+                            yield (data, is_log)
+
+        except Exception as e:
+            logger.error(f"Error in custom tool execution: {e}")
+            yield (f"Error: {str(e)}", True)
+
+    async def stream_custom_tool_execution(
+        self,
+        call: Dict[str, Any],
+    ) -> AsyncGenerator[CustomToolChunk, None]:
+        """Stream custom tool execution with differentiation between logs and final results.
+
+        This method:
+        - Streams all results (logs and final) to users in real-time
+        - Accumulates only is_log=False results for message history
+        - Yields CustomToolChunk with completed=False for intermediate results
+        - Yields final CustomToolChunk with completed=True and accumulated result
 
         Args:
             call: Function call dictionary with name and arguments
 
-        Returns:
-            The execution result as a string
+        Yields:
+            CustomToolChunk instances for streaming to user
         """
         import json
 
@@ -449,25 +593,27 @@ class CustomToolAndMCPBackend(LLMBackend):
             "input": arguments,
         }
 
-        result_text = ""
-        try:
-            async for result in self.custom_tool_manager.execute_tool(tool_request):
-                # Accumulate results
-                if hasattr(result, "output_blocks"):
-                    for block in result.output_blocks:
-                        if hasattr(block, "data"):
-                            result_text += str(block.data)
-                        elif hasattr(block, "content"):
-                            result_text += str(block.content)
-                elif hasattr(result, "content"):
-                    result_text += str(result.content)
-                else:
-                    result_text += str(result)
-        except Exception as e:
-            logger.error(f"Error in custom tool execution: {e}")
-            result_text = f"Error: {str(e)}"
+        accumulated_result = ""
 
-        return result_text or "Tool executed successfully"
+        # Stream all results and accumulate only is_log=True
+        async for data, is_log in self._stream_execution_results(tool_request):
+            # Yield streaming chunk to user
+            yield CustomToolChunk(
+                data=data,
+                completed=False,
+                accumulated_result="",
+            )
+
+            # Accumulate only final results for message history
+            if not is_log:
+                accumulated_result += data
+
+        # Yield final chunk with accumulated result
+        yield CustomToolChunk(
+            data="",
+            completed=True,
+            accumulated_result=accumulated_result or "Tool executed successfully",
+        )
 
     def _get_custom_tools_schemas(self) -> List[Dict[str, Any]]:
         """Get OpenAI-formatted schemas for all registered custom tools."""
@@ -608,8 +754,30 @@ class CustomToolAndMCPBackend(LLMBackend):
             result_obj = None
 
             if config.tool_type == "custom":
-                result = await config.execution_callback(call)
-                result_str = str(result)
+                # Check if execution_callback returns an async generator (streaming)
+                callback_result = config.execution_callback(call)
+
+                # Handle async generator (streaming custom tools)
+                if hasattr(callback_result, "__aiter__"):
+                    # This is an async generator - stream intermediate results
+                    async for chunk in callback_result:
+                        # Yield intermediate chunks if available
+                        if hasattr(chunk, "data") and chunk.data and not chunk.completed:
+                            # Stream intermediate output to user
+                            yield StreamChunk(
+                                type=config.chunk_type,
+                                status="custom_tool_output",
+                                content=chunk.data,
+                                source=f"{config.source_prefix}{tool_name}",
+                            )
+                        elif hasattr(chunk, "completed") and chunk.completed:
+                            # Extract final accumulated result
+                            result_str = chunk.accumulated_result
+                    result = result_str
+                else:
+                    # Handle regular await (non-streaming custom tools)
+                    result = await callback_result
+                    result_str = str(result)
             else:  # MCP
                 result_str, result_obj = await config.execution_callback(call["name"], call["arguments"])
                 result = result_str
@@ -1283,6 +1451,15 @@ class CustomToolAndMCPBackend(LLMBackend):
 
         agent_id = kwargs.get("agent_id", None)
 
+        # Build execution context for tools (generic, not tool-specific)
+        self._execution_context = ExecutionContext(
+            messages=messages,
+            agent_system_message=kwargs.get("system_message", None),
+            agent_id=self.agent_id,
+            backend_name=self.backend_name,
+            current_stage=self.coordination_stage,
+        )
+
         log_backend_activity(
             self.get_provider_name(),
             "Starting stream_with_tools",
@@ -1342,6 +1519,8 @@ class CustomToolAndMCPBackend(LLMBackend):
         except Exception as e:
             # Handle exceptions that occur during MCP setup (__aenter__) or teardown
             # Provide a clear user-facing message and fall back to non-MCP streaming
+            client = None
+
             try:
                 client = self._create_client(**kwargs)
 
@@ -1367,6 +1546,20 @@ class CustomToolAndMCPBackend(LLMBackend):
                 yield StreamChunk(type="error", error=str(inner_e))
             finally:
                 await self._cleanup_client(client)
+
+    @abstractmethod
+    async def _stream_with_custom_and_mcp_tools(
+        self,
+        current_messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        yield StreamChunk(type="error", error="Not implemented")
+
+    @abstractmethod
+    def _create_client(self, **kwargs):
+        pass
 
     async def _stream_without_custom_and_mcp_tools(
         self,

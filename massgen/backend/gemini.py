@@ -35,7 +35,11 @@ from ..logger_config import (
     logger,
 )
 from .base import FilesystemSupport, StreamChunk
-from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, ToolExecutionConfig
+from .base_with_custom_tool_and_mcp import (
+    CustomToolAndMCPBackend,
+    CustomToolChunk,
+    ToolExecutionConfig,
+)
 from .gemini_utils import CoordinationResponse, PostEvaluationResponse
 
 
@@ -153,6 +157,18 @@ class GeminiBackend(CustomToolAndMCPBackend):
         """
         return False
 
+    def _create_client(self, **kwargs):
+        pass
+
+    async def _stream_with_custom_and_mcp_tools(
+        self,
+        current_messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        yield StreamChunk(type="error", error="Not implemented")
+
     async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using Gemini API with manual MCP execution pattern.
 
@@ -165,6 +181,18 @@ class GeminiBackend(CustomToolAndMCPBackend):
         agent_id = self.agent_id or kwargs.get("agent_id", None)
         client = None
         stream = None
+
+        # Build execution context for tools (generic, not tool-specific)
+        # This is required for custom tool execution
+        from .base_with_custom_tool_and_mcp import ExecutionContext
+
+        self._execution_context = ExecutionContext(
+            messages=messages,
+            agent_system_message=kwargs.get("system_message", None),
+            agent_id=self.agent_id,
+            backend_name="gemini",
+            current_stage=self.coordination_stage,
+        )
 
         # Track whether MCP tools were actually used in this turn
         mcp_used = False
@@ -1303,6 +1331,27 @@ class GeminiBackend(CustomToolAndMCPBackend):
         call_id = call.get("call_id")
         if isinstance(tool_results_store, dict) and call_id:
             tool_results_store[call_id] = f"Error: {error_msg}"
+
+    async def _execute_custom_tool(self, call: Dict[str, Any]) -> AsyncGenerator[CustomToolChunk, None]:
+        """Execute custom tool with streaming support - async generator for base class.
+
+        This method is called by _execute_tool_with_logging and yields CustomToolChunk
+        objects for intermediate streaming output. The base class detects the async
+        generator and streams intermediate results to users in real-time.
+
+        Args:
+            call: Tool call dictionary with name and arguments
+
+        Yields:
+            CustomToolChunk objects with streaming data
+
+        Note:
+            - Intermediate chunks (completed=False) are streamed to users in real-time
+            - Final chunk (completed=True) contains the accumulated result for message history
+            - The base class automatically handles extracting and displaying intermediate chunks
+        """
+        async for chunk in self.stream_custom_tool_execution(call):
+            yield chunk
 
     def get_provider_name(self) -> str:
         """Get the provider name."""
