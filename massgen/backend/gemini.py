@@ -35,7 +35,11 @@ from ..logger_config import (
     logger,
 )
 from .base import FilesystemSupport, StreamChunk
-from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, CustomToolChunk, ToolExecutionConfig
+from .base_with_custom_tool_and_mcp import (
+    CustomToolAndMCPBackend,
+    CustomToolChunk,
+    ToolExecutionConfig,
+)
 from .gemini_utils import CoordinationResponse, PostEvaluationResponse
 
 
@@ -152,7 +156,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
         Returns False to skip upload_files processing in parent class methods.
         """
         return False
-    
+
     def _create_client(self, **kwargs):
         pass
 

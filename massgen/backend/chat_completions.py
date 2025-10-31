@@ -31,7 +31,11 @@ from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 
 # Local imports
 from .base import FilesystemSupport, StreamChunk
-from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, CustomToolChunk, ToolExecutionConfig
+from .base_with_custom_tool_and_mcp import (
+    CustomToolAndMCPBackend,
+    CustomToolChunk,
+    ToolExecutionConfig,
+)
 
 
 class ChatCompletionsBackend(CustomToolAndMCPBackend):

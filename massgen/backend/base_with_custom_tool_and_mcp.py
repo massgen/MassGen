@@ -13,7 +13,17 @@ import mimetypes
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncGenerator, Callable, Dict, List, NamedTuple, Optional, Set, Tuple
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+)
 
 import httpx
 from pydantic import BaseModel
@@ -748,11 +758,11 @@ class CustomToolAndMCPBackend(LLMBackend):
                 callback_result = config.execution_callback(call)
 
                 # Handle async generator (streaming custom tools)
-                if hasattr(callback_result, '__aiter__'):
+                if hasattr(callback_result, "__aiter__"):
                     # This is an async generator - stream intermediate results
                     async for chunk in callback_result:
                         # Yield intermediate chunks if available
-                        if hasattr(chunk, 'data') and chunk.data and not chunk.completed:
+                        if hasattr(chunk, "data") and chunk.data and not chunk.completed:
                             # Stream intermediate output to user
                             yield StreamChunk(
                                 type=config.chunk_type,
@@ -760,7 +770,7 @@ class CustomToolAndMCPBackend(LLMBackend):
                                 content=chunk.data,
                                 source=f"{config.source_prefix}{tool_name}",
                             )
-                        elif hasattr(chunk, 'completed') and chunk.completed:
+                        elif hasattr(chunk, "completed") and chunk.completed:
                             # Extract final accumulated result
                             result_str = chunk.accumulated_result
                     result = result_str

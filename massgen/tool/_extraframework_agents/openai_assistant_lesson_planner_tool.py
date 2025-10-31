@@ -7,11 +7,11 @@ and multi-agent collaboration pattern similar to AG2.
 
 import os
 from typing import Any, AsyncGenerator, Dict, List
+
 from openai import AsyncOpenAI
 
 from massgen.tool import context_params
 from massgen.tool._result import ExecutionResult, TextContent
-
 
 # Define role-specific system prompts (similar to AG2 agents)
 CURRICULUM_AGENT_PROMPT = """You are a curriculum standards expert for fourth grade education.
@@ -215,7 +215,10 @@ async def openai_assistant_lesson_planner(
 
         messages = [
             {"role": "system", "content": LESSON_FORMATTER_AGENT_PROMPT},
-            {"role": "user", "content": f"Format this complete lesson plan:\n\nStandards and Objectives:\n{standards_and_objectives}\n\nLesson Plan:\n{lesson_plan}\n\nReview Feedback:\n{review_feedback}"},
+            {
+                "role": "user",
+                "content": f"Format this complete lesson plan:\n\nStandards and Objectives:\n{standards_and_objectives}\n\nLesson Plan:\n{lesson_plan}\n\nReview Feedback:\n{review_feedback}",
+            },
         ]
 
         stream = await client.chat.completions.create(
