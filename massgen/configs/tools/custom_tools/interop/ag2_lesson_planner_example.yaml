@@ -2,8 +2,8 @@
 # This demonstrates interoperability by using AutoGen's nested chat as a custom tool
 #
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   massgen --config @examples/tools/custom_tools/interop/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config @examples/tools/custom_tools/interop/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 #
 # Description:
 #   This configuration uses the AG2 (AutoGen) nested chat architecture to create comprehensive

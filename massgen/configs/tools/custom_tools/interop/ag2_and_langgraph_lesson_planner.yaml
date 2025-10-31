@@ -2,8 +2,8 @@
 # This demonstrates interoperability by comparing AG2 and LangGraph lesson planner implementations
 #
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
+#   massgen --config @examples/tools/custom_tools/interop/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config @examples/tools/custom_tools/interop/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
 #
 # Description:
 #   This configuration provides access to both AG2 (AutoGen) and LangGraph lesson planning tools,

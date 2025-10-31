@@ -2,8 +2,8 @@
 # This demonstrates interoperability by using AgentScope's multi-agent framework as a custom tool
 #
 # Usage:
-#   massgen --config massgen/configs/tools/custom_tools/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   massgen --config @examples/tools/custom_tools/interop/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config @examples/tools/custom_tools/interop/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 #
 # Description:
 #   This configuration uses AgentScope to create comprehensive lesson plans through a multi-agent

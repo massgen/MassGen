@@ -88,9 +88,9 @@ Key Features
 
       Model Context Protocol support for tools via YAML configuration.
 
-   .. grid-item-card:: 🔗 AG2 Framework Support
+   .. grid-item-card:: 🔗 Framework Interoperability
 
-      Integrate AG2 agents with code execution alongside native MassGen agents.
+      Integrate external frameworks (AG2, LangGraph) as tools within MassGen's coordination.
 
    .. grid-item-card:: 📊 Live Visualization
 
@@ -253,7 +253,6 @@ Documentation Sections
       * :doc:`user_guide/tools`
       * :doc:`user_guide/file_operations`
       * :doc:`user_guide/multi_turn_mode`
-      * :doc:`user_guide/ag2_integration`
       * :doc:`user_guide/general_interoperability`
 
    .. grid-item::
@@ -305,7 +304,6 @@ Documentation Sections
    user_guide/memory
    user_guide/orchestration_restart
    user_guide/multimodal
-   user_guide/ag2_integration
    user_guide/general_interoperability
    user_guide/logging
 
