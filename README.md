@@ -61,7 +61,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.5 Features](#-latest-features-v015)
+- [v0.1.6 Features](#-latest-features-v016)
 </details>
 
 <details open>
@@ -106,15 +106,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.5](#recent-achievements-v015)
-  - [v0.0.3 - v0.1.4](#previous-achievements-v003---v014)
+  - [v0.1.6](#recent-achievements-v016)
+  - [v0.0.3 - v0.1.5](#previous-achievements-v003---v015)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.6 Roadmap](#v016-roadmap)
+- [v0.1.7 Roadmap](#v017-roadmap)
 </details>
 
 <details open>
@@ -139,51 +139,54 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.5)
+## 🆕 Latest Features (v0.1.6)
 
-**🎉 Released: October 2025**
+**🎉 Released: October 31, 2025**
 
-**What's New in v0.1.5:**
-- **🧠 Long-Term Memory System** - Semantic memory with retrieval across sessions
-- **🗜️ Automatic Context Compression** - Smart compression when approaching token limits
-- **🔄 Memory Sharing for Multi-Turn Conversations** - Agents access knowledge from previous turns
+**What's New in v0.1.6:**
+- **🔗 Framework Interoperability** - Use agents from AG2, LangGraph, AgentScope, OpenAI Assistants, and SmoLAgent as tools
+- **✅ Configuration Validator** - Pre-flight YAML validation with detailed error messages and suggestions
+- **🔧 Unified Tool Execution** - Streamlined backend architecture with consistent tool handling
+- **⚡ Gemini Backend Simplification** - Major cleanup reducing codebase by 1,598 lines
 
 **Key Improvements:**
-- Persistent memory via mem0 integration with vector storage
-- Conversational memory for short-term context tracking
-- Context monitoring with real-time token usage tracking
-- Session management for memory isolation and continuation
-- Qdrant vector database integration for semantic search
+- External agent frameworks work as MassGen custom tools
+- Comprehensive config validation with pre-commit hooks
+- ToolExecutionConfig dataclass for standardized tool handling across backends
+- Simplified Gemini backend with improved maintainability
+- Enhanced ToolManager with category management
 
-**Get Started with v0.1.5:**
+**Try v0.1.6 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Multi-agent collaboration with context compression
-massgen --config @examples/memory/gpt5mini_gemini_context_window_management \
-  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+# Use AG2 agents as tools for lesson planning (supports streaming)
+# Requirements: pip install pyautogen, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
-# Research-to-implementation workflow with memory persistence
-# Prerequisites: Start Qdrant and crawl4ai Docker containers
-docker run -d -p 6333:6333 -p 6334:6334 \
-  -v $(pwd)/.massgen/qdrant_storage:/qdrant/storage:z qdrant/qdrant
-docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+# Use LangGraph workflows as tools
+# Requirements: pip install langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
-# Session 1 - Research phase:
-massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation \
-  "Use crawl4ai to research the latest multi-agent AI papers and techniques from 2025. Focus on: coordination mechanisms, voting strategies, tool-use patterns, and architectural innovations."
+# Use AgentScope multi-agent framework as tools
+# Requirements: pip install agentscope, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
-# Session 2 - Implementation analysis (continue in same session):
-# "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
-```
+# Use OpenAI Assistants API as tools
+# Requirements: pip install openai, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/openai_assistant_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
-→ See [Multi-Turn Persistent Memory Case Study](docs/source/examples/case_studies/multi-turn-persistent-memory.md) for detailed analysis
+# Use SmolAgent (HuggingFace) as tools
+# Requirements: pip install smolagents, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/smolagent_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
-```bash
-# Test automatic context compression
-massgen --config @examples/memory/single_agent_compression_test \
-  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+# Combine multiple frameworks - AG2 + LangGraph collaboration
+# Requirements: pip install pyautogen langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
+
+# Validate your configuration before running
+python -m massgen.config_validator your_config.yaml
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1027,43 +1030,60 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.5)
+### Recent Achievements (v0.1.6)
 
-**🎉 Released: October 2025**
+**🎉 Released: October 31, 2025**
 
-#### Memory System
-- **PersistentMemory**: Long-term semantic memory storage via mem0 integration with fact extraction and retrieval across sessions
-- **ConversationMemory**: Short-term verbatim message tracking for active conversation context
-- **Automatic Context Compression**: Smart compression when approaching token limits with configurable thresholds (trigger_threshold, target_ratio)
-- **Cross-Agent Memory Sharing**: Agents share memory with turn-aware filtering to prevent temporal information leakage
-- **Context Monitoring**: Real-time token usage tracking with automatic compression triggers
-- **Session Management**: Memory isolation and continuation across runs with session naming support
-- **Qdrant Integration**: Vector database support for efficient semantic search in both server and local modes
-- **Configurable Memory Providers**: Support for OpenAI, Anthropic, Groq, and other mem0-compatible LLM and embedding providers
+#### Framework Interoperability
+- **AG2 Integration**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning (supports streaming)
+- **LangGraph Integration**: Graph-based workflows integrated as tools for structured task execution
+- **AgentScope Integration**: AgentScope agent system wrapped for collaborative task handling
+- **OpenAI Assistants Integration**: OpenAI Assistants API integrated as tools for specialized workflows
+- **SmoLAgent Integration**: HuggingFace SmoLAgent wrapped for flexible agent orchestration
+- **Cross-Framework Collaboration**: MassGen orchestrates agents from multiple frameworks seamlessly
+- **Tool Module**: New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
+- **Streaming Support**: Only AG2 currently supports streaming; other frameworks return complete results
 
-#### Memory Configuration
-- **Global and Per-Agent Control**: Enable/disable memory at system or individual agent level
-- **Compression Settings**: Configurable trigger thresholds and target ratios for context window management
-- **Retrieval Configuration**: Customizable retrieval limits and smart filtering to exclude recent messages
-- **Memory Persistence**: Session continuation with named sessions for cross-session memory access
+#### Configuration Validator
+- **ConfigValidator Class**: Comprehensive YAML validation in `massgen/config_validator.py`
+- **Memory Validation**: Detailed validation for memory configuration parameters
+- **Pre-commit Integration**: Automatic configuration validation before commits
+- **Error Messaging**: Actionable error messages with suggestions for common mistakes
+- **Test Coverage**: Comprehensive test suite in `massgen/tests/test_config_validator.py`
+
+#### Backend Architecture Refactoring
+- **ToolExecutionConfig**: Unified tool execution with new dataclass in `base_with_custom_tool_and_mcp.py`
+- **ResponseBackend Refactoring**: Unified tool execution flow eliminating duplicate code paths
+- **ChatCompletionsBackend Refactoring**: Consistent tool handling across Chat Completions providers
+- **ClaudeBackend Refactoring**: Unified tool execution methods for Claude backend
+- **Consistent Error Handling**: Standardized status reporting across all tool types
+
+#### Gemini Backend Simplification
+- **Module Removal**: Removed `gemini_mcp_manager.py` and `gemini_trackers.py` modules
+- **Code Consolidation**: Refactored to use manual tool execution via base class
+- **Streamlined Logic**: Removed continuation logic and duplicate code
+- **Codebase Reduction**: Net reduction of 1,598 lines through consolidation
+- **Formatter Updates**: Updated `_gemini_formatter.py` for simplified tool conversion
+
+#### Custom Tool System Enhancement
+- **ToolManager Improvements**: Enhanced category management capabilities
+- **Registration System**: Improved tool registration and validation
+- **Result Handling**: Enhanced error reporting and async execution support
+- **Schema Generation**: Improved tool schema generation for LLM consumption
 
 #### Configuration Files
-- `gpt5mini_gemini_context_window_management.yaml` - Multi-agent with automatic context compression
-- `gpt5mini_gemini_research_to_implementation.yaml` - Research-to-implementation workflow with memory
-- `gpt5mini_high_reasoning_gemini.yaml` - High reasoning agents with memory integration
-- `gpt5mini_gemini_baseline_research_to_implementation.yaml` - Baseline research workflow for comparison
-- `single_agent_compression_test.yaml` - Single agent testing context compression behavior
+- `ag2_lesson_planner_example.yaml` - AG2 nested chat as custom tool
+- `langgraph_lesson_planner_example.yaml` - LangGraph workflows integrated
+- `agentscope_lesson_planner_example.yaml` - AgentScope agent integration
+- `openai_assistant_lesson_planner_example.yaml` - OpenAI Assistants as tools
+- `smolagent_lesson_planner_example.yaml` - SmoLAgent integration
+- `ag2_and_langgraph_lesson_planner.yaml` - Multi-framework collaboration
+- `ag2_and_openai_assistant_lesson_planner.yaml` - AG2 + OpenAI Assistants combo
+- `two_models_with_tools_example.yaml` - Multiple models with custom tools
 
-#### Documentation
-- Complete memory system user guide: `docs/source/user_guide/memory.rst`
-- Design decisions documentation explaining architectural choices
-- API reference for PersistentMemory, ConversationMemory, and ContextMonitor classes
-- Comprehensive troubleshooting guide and monitoring instructions
+### Previous Achievements (v0.0.3 - v0.1.5)
 
-#### Testing Infrastructure
-- Memory test suite: `test_agent_memory.py`, `test_conversation_memory.py`, `test_orchestrator_memory.py`, `test_persistent_memory.py`
-
-### Previous Achievements (v0.0.3 - v0.1.4)
+✅ **Memory System (v0.1.5)**: Long-term semantic memory via mem0 integration with fact extraction and retrieval across sessions, short-term conversational memory for active context, automatic context compression when approaching token limits, cross-agent memory sharing with turn-aware filtering, session management for memory isolation and continuation, Qdrant vector database integration for semantic search
 
 ✅ **Multimodal Generation Tools (v0.1.4)**: Create images from text via DALL-E API, generate videos from descriptions, text-to-speech with audio transcription support, document generation for PDF/DOCX/XLSX/PPTX formats, image transformation capabilities for existing images
 
@@ -1183,21 +1203,22 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.6 Roadmap
+### v0.1.7 Roadmap
 
-Version 0.1.6 focuses on backend code refactoring for improved maintainability and developer experience:
+Version 0.1.7 focuses on agent task planning and rate limiting for improved coordination and cost management:
 
 #### Planned Features
-- **Backend Code Refactoring**: Major code refactoring for improved maintainability and developer experience with better code organization, modularity, and architectural improvements
+- **Agent Task Planning System**: Enable agents to organize complex multi-step work with task plans, dependency tracking, and progress monitoring via 8 new MCP planning tools
+- **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs with model-specific limits and configurable thresholds
 
 Key technical approach:
-- **Code Architecture**: Enhanced code organization with improved modularity and separation of concerns
-- **Developer Experience**: Simplified backend extension points, improved API clarity, better error handling and debugging support
-- **Quality Assurance**: Comprehensive testing to ensure no functionality regressions
+- **Task Planning**: MCP-based planning tools with dependency graphs, status tracking, and maximum 100 tasks per plan safety limit
+- **Rate Limiting**: Sliding window tracking, external YAML configuration, optional CLI flag, mandatory cooldown periods after startup
+- **Configuration**: Both features are optional and configurable via flags (`enable_agent_task_planning`, `--rate-limit`)
 
-**Target Release**: November 1, 2025 (Friday @ 9am PT)
+**Target Release**: November 3, 2025 (Monday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.6 roadmap](ROADMAP_v0.1.6.md).
+For detailed milestones and technical specifications, see the [full v0.1.7 roadmap](ROADMAP_v0.1.7.md).
 
 ---
 

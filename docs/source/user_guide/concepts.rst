@@ -473,26 +473,27 @@ External Framework Integration
 AG2 Integration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Integrate :term:`AG2` agents with code execution:
+Integrate :term:`AG2` framework as a custom tool:
 
 .. code-block:: yaml
 
    agents:
-     - id: "ag2_coder"
+     - id: "ag2_assistant"
        backend:
-         type: ag2
-         agent_config:
-           type: assistant
-           llm_config:
-             api_type: "openai"
-             model: "gpt-4o"
-           code_execution_config:
-             executor:
-               type: "LocalCommandLineCodeExecutor"
+         type: "openai"
+         model: "gpt-4o"
+         custom_tools:
+           - name: ["ag2_lesson_planner"]
+             category: "education"
+             path: "massgen/tool/_extraframework_agents/ag2_lesson_planner_tool.py"
+             function: ["ag2_lesson_planner"]
+       system_message: |
+         You have access to an AG2-powered tool that uses
+         nested chats and group collaboration.
 
-AG2 agents participate in MassGen's coordination system alongside native agents.
+AG2's multi-agent orchestration patterns are wrapped as tools that MassGen agents can invoke.
 
-See :doc:`ag2_integration` for details.
+See :doc:`general_interoperability` for details.
 
 File Operation Safety
 ---------------------
@@ -641,10 +642,13 @@ Hybrid Teams
 .. code-block:: yaml
 
    agents:
-     - id: "ag2_executor"  # Code execution
+     - id: "ag2_executor"  # AG2 framework tool
        backend:
-         type: ag2
-         # ... AG2 config
+         custom_tools:
+           - name: ["ag2_lesson_planner"]
+             # ... AG2 tool config
+         type: "openai"
+         # ... backend config
      - id: "claude_analyst"  # File operations
        backend:
          type: "claude_code"
@@ -672,4 +676,4 @@ Next Steps
 * :doc:`mcp_integration` - Add tools to agents
 * :doc:`multi_turn_mode` - Interactive conversations
 * :doc:`project_integration` - Work with your codebase
-* :doc:`ag2_integration` - External framework integration
+* :doc:`general_interoperability` - External framework integration

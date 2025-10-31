@@ -1,6 +1,7 @@
 # MassGen Configuration: Qwen API with MCP Integration
 # Usage:
 #   massgen --config @examples/tools/custom_tools/qwen_api_custom_tool_with_mcp_example "whats the sum of 123 and 456? and whats the weather of Tokyo?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/qwen_api_custom_tool_with_mcp_example.yaml "whats the sum of 123 and 456? and whats the weather of Tokyo?"
 agents:
   - id: "qwen-mcp_weather" # Cerebras AI
     backend:

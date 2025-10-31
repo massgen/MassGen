@@ -243,7 +243,7 @@ Integrate AG2 agents with code execution:
      --config @examples/ag2/ag2_coder_case_study.yaml \
      "Compare AG2 and MassGen frameworks, use code to fetch documentation"
 
-See :doc:`../user_guide/ag2_integration` for configuration details.
+See :doc:`../user_guide/general_interoperability` for AG2 configuration details.
 
 Viewing Results
 ---------------
