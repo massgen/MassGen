@@ -36,6 +36,7 @@ Feature case studies organized by release version (newest first).
    :maxdepth: 1
    :titlesonly:
 
+   case_studies/multi-turn-persistent-memory
    case_studies/multimodal-case-study-video-analysis
    case_studies/github-issue-market-analysis
    case_studies/universal-code-execution-mcp
