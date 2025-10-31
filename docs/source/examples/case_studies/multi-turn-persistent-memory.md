@@ -1,4 +1,4 @@
-# MassGen v0.1.5: Persistent Memory for Self-Evolution
+# MassGen v0.1.5: Persistent Memory with Semantic Retrieval
 
 MassGen is focused on **case-driven development**. This case study demonstrates the introduction of **persistent memory with semantic retrieval**, enabling agents to build cumulative knowledge across multi-turn sessions and achieve true self-evolution through research-to-implementation workflows.
 

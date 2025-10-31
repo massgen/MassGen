@@ -37,7 +37,7 @@
 </p>
 
 <p align="center">
-  <i>Multi-agent scaling through intelligent collaboration in Grok Heavy style</i>
+  <i>Scaling AI with collaborative, continuously improving agents</i>
 </p>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
@@ -176,9 +176,11 @@ massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation \
 
 # Session 2 - Implementation analysis (continue in same session):
 # "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
+```
 
 → See [Multi-Turn Persistent Memory Case Study](docs/source/examples/case_studies/multi-turn-persistent-memory.md) for detailed analysis
 
+```bash
 # Test automatic context compression
 massgen --config @examples/memory/single_agent_compression_test \
   "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
