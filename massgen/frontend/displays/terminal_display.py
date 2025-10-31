@@ -220,8 +220,6 @@ class TerminalDisplay(BaseDisplay):
 
         # Add working indicator if transitioning to working
         if old_status != "working" and status == "working":
-            agent_prefix = f"[{agent_id}] " if self.num_agents > 1 else ""
-            print(f"\n{agent_prefix}⚡  Working...")
             if not self.agent_outputs[agent_id] or not self.agent_outputs[agent_id][-1].startswith("⚡"):
                 self.agent_outputs[agent_id].append("⚡  Working...")
 
@@ -244,6 +242,28 @@ class TerminalDisplay(BaseDisplay):
             vote_summary = ", ".join([f"{agent}: {votes}" for agent, votes in vote_results.items()])
             print(f"🗳️ Vote results: {vote_summary}")
         print("=" * 60)
+
+    def show_post_evaluation_content(self, content: str, agent_id: str):
+        """Display post-evaluation streaming content."""
+        print(f"🔍 Post-Evaluation [{agent_id}]: {content}", end="", flush=True)
+
+    def show_restart_banner(self, reason: str, instructions: str, attempt: int, max_attempts: int):
+        """Display restart decision banner."""
+        print("\n" + "=" * 80)
+        print(f"🔄 ORCHESTRATION RESTART (Attempt {attempt}/{max_attempts})")
+        print("=" * 80)
+        print(f"\nREASON:\n{reason}")
+        print(f"\nINSTRUCTIONS FOR NEXT ATTEMPT:\n{instructions}")
+        print("\n" + "=" * 80 + "\n")
+
+    def show_restart_context_panel(self, reason: str, instructions: str):
+        """Display restart context panel at top of UI (for attempt 2+)."""
+        print("\n" + "⚠" * 40)
+        print("⚠️  PREVIOUS ATTEMPT FEEDBACK")
+        print("⚠" * 40)
+        print(f"\nReason: {reason}")
+        print(f"\nInstructions: {instructions}")
+        print("\n" + "⚠" * 40 + "\n")
 
     def cleanup(self):
         """Clean up display resources."""

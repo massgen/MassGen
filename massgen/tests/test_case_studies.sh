@@ -1,6 +1,6 @@
 #!/bin/bash
 # MassGen Case Study Test Commands
-# Based on the original case studies from docs/case_studies/
+# Based on the original case studies from docs/source/examples/case_studies/
 
 echo "🚀 MassGen Case Study Test Suite"
 echo "===================================="
@@ -39,15 +39,15 @@ run_test() {
     local test_name="$1"
     local config="$2"
     local prompt="$3"
-    
+
     echo "🔷 Running: $test_name"
     echo "📁 Config: $config"
     echo "❓ Prompt: $prompt"
     echo "---"
-    
+
     # Run with proper Python path setup
     PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH" python -m massgen.cli --config "$config" "$prompt"
-    
+
     echo ""
     echo "✅ Completed: $test_name"
     echo "=================================="

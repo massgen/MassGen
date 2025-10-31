@@ -228,7 +228,7 @@ Enables browser automation with screenshot and PDF capabilities:
 Discord
 ~~~~~~~
 
-Requires Discord bot token. See `Discord MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/docs/DISCORD_MCP_SETUP.md>`_:
+Requires Discord bot token. See `Discord MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/docs/DISCORD_MCP_SETUP.md>`_:
 
 .. code-block:: yaml
 
@@ -243,7 +243,7 @@ Requires Discord bot token. See `Discord MCP Setup Guide <https://github.com/Lee
 Twitter
 ~~~~~~~
 
-Requires Twitter API credentials. See `Twitter MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/docs/TWITTER_MCP_ENESCINAR_SETUP.md>`_:
+Requires Twitter API credentials. See `Twitter MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/docs/TWITTER_MCP_ENESCINAR_SETUP.md>`_:
 
 .. code-block:: yaml
 

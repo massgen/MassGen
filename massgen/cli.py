@@ -51,6 +51,7 @@ from .backend.inference import InferenceBackend
 from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
+from .config_builder import ConfigBuilder
 from .frontend.coordination_ui import CoordinationUI
 from .logger_config import _DEBUG_MODE, logger, save_execution_metadata, setup_logging
 from .orchestrator import Orchestrator
@@ -203,7 +204,8 @@ def resolve_config_path(config_arg: Optional[str]) -> Optional[Path]:
 
     # Try in user config directory (~/.config/massgen/agents/)
     user_agents_dir = Path.home() / ".config/massgen/agents"
-    user_config = user_agents_dir / f"{config_arg}.yaml"
+    # Try with config_arg as-is first
+    user_config = user_agents_dir / config_arg
     if user_config.exists():
         return user_config
 
@@ -212,13 +214,15 @@ def resolve_config_path(config_arg: Optional[str]) -> Optional[Path]:
         user_config_with_ext = user_agents_dir / f"{config_arg}.yaml"
         if user_config_with_ext.exists():
             return user_config_with_ext
+        # For error message, show the path with .yaml extension
+        user_config = user_config_with_ext
 
     # Config not found anywhere
     raise ConfigurationError(
         f"Configuration file not found: {config_arg}\n"
         f"Searched in:\n"
         f"  - Current directory: {Path.cwd() / config_arg}\n"
-        f"  - User configs: {user_agents_dir / config_arg}.yaml\n"
+        f"  - User configs: {user_config}\n"
         f"Use --list-examples to see available package configs.",
     )
 
@@ -271,6 +275,21 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
         raise ConfigurationError(f"Error reading config file: {e}")
 
 
+def _api_key_error_message(provider_name: str, env_var: str, config_path: Optional[str] = None) -> str:
+    """Generate standard API key error message."""
+    msg = (
+        f"{provider_name} API key not found. Set {env_var} environment variable.\n"
+        "You can add it to a .env file in:\n"
+        "  - Current directory: .env\n"
+        "  - User config: ~/.config/massgen/.env\n"
+        "  - Global: ~/.massgen/.env\n"
+        "\nOr run: massgen --setup"
+    )
+    if config_path:
+        msg += f"\n\n📄 Using config: {config_path}"
+    return msg
+
+
 def create_backend(backend_type: str, **kwargs) -> Any:
     """Create backend instance from type and parameters.
 
@@ -299,6 +318,9 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     """
     backend_type = backend_type.lower()
 
+    # Extract config path for error messages (and remove it from kwargs so it doesn't interfere)
+    config_path = kwargs.pop("_config_path", None)
+
     # Check if this is a framework/adapter type
     from massgen.adapters import adapter_registry
 
@@ -311,33 +333,25 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     if backend_type == "openai":
         api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "OpenAI API key not found. Set OPENAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
-            )
+            raise ConfigurationError(_api_key_error_message("OpenAI", "OPENAI_API_KEY", config_path))
         return ResponseBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "grok":
         api_key = kwargs.get("api_key") or os.getenv("XAI_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "Grok API key not found. Set XAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
-            )
+            raise ConfigurationError(_api_key_error_message("Grok", "XAI_API_KEY", config_path))
         return GrokBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "claude":
         api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "Claude API key not found. Set ANTHROPIC_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
-            )
+            raise ConfigurationError(_api_key_error_message("Claude", "ANTHROPIC_API_KEY", config_path))
         return ClaudeBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "gemini":
         api_key = kwargs.get("api_key") or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
-            raise ConfigurationError(
-                "Gemini API key not found. Set GOOGLE_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
-            )
+            raise ConfigurationError(_api_key_error_message("Gemini", "GOOGLE_API_KEY", config_path))
         return GeminiBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "chatcompletion":
@@ -465,7 +479,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         api_key = kwargs.get("api_key") or os.getenv("AZURE_OPENAI_API_KEY")
         endpoint = kwargs.get("base_url") or os.getenv("AZURE_OPENAI_ENDPOINT")
         if not api_key:
-            raise ConfigurationError("Azure OpenAI API key not found. Set AZURE_OPENAI_API_KEY or provide in config.")
+            raise ConfigurationError(_api_key_error_message("Azure OpenAI", "AZURE_OPENAI_API_KEY", config_path))
         if not endpoint:
             raise ConfigurationError("Azure OpenAI endpoint not found. Set AZURE_OPENAI_ENDPOINT or provide base_url in config.")
         return AzureOpenAIBackend(**kwargs)
@@ -474,14 +488,61 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None) -> Dict[str, ConfigurableAgent]:
-    """Create agents from configuration."""
+def create_agents_from_config(
+    config: Dict[str, Any],
+    orchestrator_config: Optional[Dict[str, Any]] = None,
+    config_path: Optional[str] = None,
+    memory_session_id: Optional[str] = None,
+) -> Dict[str, ConfigurableAgent]:
+    """Create agents from configuration.
+
+    Args:
+        memory_session_id: Optional session ID to use for memory isolation.
+                          If provided, overrides session_name from YAML config.
+    """
     agents = {}
 
     agent_entries = [config["agent"]] if "agent" in config else config.get("agents", None)
 
     if not agent_entries:
         raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
+
+    # Create shared Qdrant client for all agents (avoids concurrent access errors)
+    # ONE client can be used by multiple mem0 instances safely
+    shared_qdrant_client = None
+    global_memory_config = config.get("memory", {})
+    if global_memory_config.get("enabled", False) and global_memory_config.get("persistent_memory", {}).get("enabled", False):
+        try:
+            from qdrant_client import QdrantClient
+
+            pm_config = global_memory_config.get("persistent_memory", {})
+
+            # Support both server mode and file-based mode
+            qdrant_config = pm_config.get("qdrant", {})
+            mode = qdrant_config.get("mode", "local")  # "local" or "server"
+
+            if mode == "server":
+                # Server mode (RECOMMENDED for multi-agent)
+                host = qdrant_config.get("host", "localhost")
+                port = qdrant_config.get("port", 6333)
+                shared_qdrant_client = QdrantClient(host=host, port=port)
+                logger.info(f"🗄️  Shared Qdrant client created (server mode: {host}:{port})")
+            else:
+                # Local file-based mode (single agent only)
+                # WARNING: Does NOT support concurrent access by multiple agents
+                qdrant_path = pm_config.get("path", ".massgen/qdrant")
+                shared_qdrant_client = QdrantClient(path=qdrant_path)
+                logger.info(f"🗄️  Shared Qdrant client created (local mode: {qdrant_path})")
+                if len(agent_entries) > 1:
+                    logger.warning(
+                        "⚠️  Multi-agent setup detected with local Qdrant mode. "
+                        "This may cause concurrent access errors. "
+                        "Consider using server mode: set memory.persistent_memory.qdrant.mode='server'",
+                    )
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to create shared Qdrant client: {e}")
+            logger.warning("   Persistent memory will be disabled for all agents")
+            logger.warning("   For multi-agent setup, start Qdrant server: docker-compose -f docker-compose.qdrant.yml up -d")
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
@@ -516,8 +577,12 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
 
                 backend_config["context_paths"] = merged_paths
 
+        # Add config path for better error messages
+        if config_path:
+            backend_config["_config_path"] = config_path
+
         backend = create_backend(backend_type, **backend_config)
-        backend_params = {k: v for k, v in backend_config.items() if k != "type"}
+        backend_params = {k: v for k, v in backend_config.items() if k not in ("type", "_config_path")}
 
         backend_type_lower = backend_type.lower()
         if backend_type_lower == "openai":
@@ -538,8 +603,12 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             agent_config = AgentConfig.create_vllm_config(**backend_params)
         elif backend_type_lower == "sglang":
             agent_config = AgentConfig.create_sglang_config(**backend_params)
+        elif backend_type_lower == "claude_code":
+            agent_config = AgentConfig.create_claude_code_config(**backend_params)
+        elif backend_type_lower == "azure_openai":
+            agent_config = AgentConfig.create_azure_openai_config(**backend_params)
         else:
-            agent_config = AgentConfig(backend_params=backend_config)
+            agent_config = AgentConfig(backend_params=backend_params)
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
 
@@ -552,11 +621,206 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             else:
                 # For other backends, fall back to deprecated custom_system_instruction
                 # TODO: Add backend-specific routing for other backends
-                agent_config.custom_system_instruction = system_msg
+                # Set private attribute directly to avoid deprecation warning
+                agent_config._custom_system_instruction = system_msg
 
         # Timeout configuration will be applied to orchestrator instead of individual agents
 
-        agent = ConfigurableAgent(config=agent_config, backend=backend)
+        # Merge global and per-agent memory configuration
+        global_memory_config = config.get("memory", {})
+        agent_memory_config = agent_data.get("memory", {})
+
+        # Deep merge: agent config overrides global config
+        def merge_configs(global_cfg, agent_cfg):
+            """Recursively merge agent config into global config."""
+            merged = global_cfg.copy()
+            for key, value in agent_cfg.items():
+                if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
+                    merged[key] = merge_configs(merged[key], value)
+                else:
+                    merged[key] = value
+            return merged
+
+        memory_config = merge_configs(global_memory_config, agent_memory_config)
+
+        # Create context monitor if memory config is enabled
+        context_monitor = None
+        if memory_config.get("enabled", False):
+            from .memory._context_monitor import ContextWindowMonitor
+
+            compression_config = memory_config.get("compression", {})
+            trigger_threshold = compression_config.get("trigger_threshold", 0.75)
+            target_ratio = compression_config.get("target_ratio", 0.40)
+
+            # Get model name from backend config
+            model_name = backend_config.get("model", "unknown")
+
+            # Normalize provider name for monitor
+            provider_map = {
+                "openai": "openai",
+                "anthropic": "anthropic",
+                "claude": "anthropic",
+                "google": "google",
+                "gemini": "google",
+            }
+            provider = provider_map.get(backend_type_lower, backend_type_lower)
+
+            context_monitor = ContextWindowMonitor(
+                model_name=model_name,
+                provider=provider,
+                trigger_threshold=trigger_threshold,
+                target_ratio=target_ratio,
+                enabled=True,
+            )
+            logger.info(
+                f"📊 Context monitor created for {agent_config.agent_id}: " f"{context_monitor.context_window:,} tokens, " f"trigger={trigger_threshold*100:.0f}%, target={target_ratio*100:.0f}%",
+            )
+
+        # Create per-agent memory objects if memory is enabled
+        conversation_memory = None
+        persistent_memory = None
+
+        if memory_config.get("enabled", False):
+            from .memory import ConversationMemory
+
+            # Create conversation memory for this agent
+            if memory_config.get("conversation_memory", {}).get("enabled", True):
+                conversation_memory = ConversationMemory()
+                logger.info(f"💾 Conversation memory created for {agent_config.agent_id}")
+
+            # Create persistent memory for this agent (if enabled)
+            if memory_config.get("persistent_memory", {}).get("enabled", False):
+                from .memory import PersistentMemory
+
+                pm_config = memory_config.get("persistent_memory", {})
+
+                # Get persistent memory configuration
+                agent_name = pm_config.get("agent_name", agent_config.agent_id)
+
+                # Use unified session: memory_session_id (from CLI) > YAML session_name > None
+                session_name = memory_session_id or pm_config.get("session_name")
+
+                on_disk = pm_config.get("on_disk", True)
+                qdrant_path = pm_config.get("path", ".massgen/qdrant")  # Project dir, not /tmp
+
+                try:
+                    # Configure LLM for memory operations (fact extraction)
+                    # RECOMMENDED: Use mem0's native LLMs (no adapter overhead, no async complexity)
+                    llm_cfg = pm_config.get("llm", {})
+
+                    if not llm_cfg:
+                        # Default: gpt-4.1-nano-2025-04-14 (mem0's default, fast and cheap for memory ops)
+                        llm_cfg = {
+                            "provider": "openai",
+                            "model": "gpt-4.1-nano-2025-04-14",
+                        }
+
+                    # Add API key if not specified
+                    if "api_key" not in llm_cfg:
+                        llm_provider = llm_cfg.get("provider", "openai")
+                        if llm_provider == "openai":
+                            llm_cfg["api_key"] = os.getenv("OPENAI_API_KEY")
+                        elif llm_provider == "anthropic":
+                            llm_cfg["api_key"] = os.getenv("ANTHROPIC_API_KEY")
+                        elif llm_provider == "groq":
+                            llm_cfg["api_key"] = os.getenv("GROQ_API_KEY")
+                        # Add more providers as needed
+
+                    # Configure embedding for persistent memory
+                    # RECOMMENDED: Use mem0's native embedders (no adapter overhead)
+                    embedding_cfg = pm_config.get("embedding", {})
+
+                    if not embedding_cfg:
+                        # Default: OpenAI text-embedding-3-small
+                        embedding_cfg = {
+                            "provider": "openai",
+                            "model": "text-embedding-3-small",
+                        }
+
+                    # Add API key if not specified
+                    if "api_key" not in embedding_cfg:
+                        emb_provider = embedding_cfg.get("provider", "openai")
+                        if emb_provider == "openai":
+                            api_key = os.getenv("OPENAI_API_KEY")
+                            if not api_key:
+                                logger.warning("⚠️  OPENAI_API_KEY not found in environment - embedding will fail!")
+                            else:
+                                logger.debug(f"✅ Using OPENAI_API_KEY from environment (key starts with: {api_key[:7]}...)")
+                            embedding_cfg["api_key"] = api_key
+                        elif emb_provider == "together":
+                            embedding_cfg["api_key"] = os.getenv("TOGETHER_API_KEY")
+                        elif emb_provider == "azure_openai":
+                            embedding_cfg["api_key"] = os.getenv("AZURE_OPENAI_API_KEY")
+                        # Add more providers as needed
+
+                    # Use shared Qdrant client if available
+                    if shared_qdrant_client:
+                        persistent_memory = PersistentMemory(
+                            agent_name=agent_name,
+                            session_name=session_name,
+                            llm_config=llm_cfg,  # Use native mem0 LLM
+                            embedding_config=embedding_cfg,  # Use native mem0 embedder
+                            qdrant_client=shared_qdrant_client,  # Share ONE client from server
+                            on_disk=on_disk,
+                        )
+                        logger.info(
+                            f"💾 Persistent memory created for {agent_config.agent_id} "
+                            f"(agent_name={agent_name}, session={session_name or 'cross-session'}, "
+                            f"llm={llm_cfg.get('provider')}/{llm_cfg.get('model')}, "
+                            f"embedder={embedding_cfg.get('provider')}/{embedding_cfg.get('model')}, shared_qdrant=True)",
+                        )
+                    else:
+                        # Fallback: create individual vector store (for backward compatibility)
+                        # WARNING: File-based Qdrant doesn't support concurrent access
+                        from mem0.vector_stores.configs import VectorStoreConfig
+
+                        vector_store_config = VectorStoreConfig(
+                            config={
+                                "on_disk": on_disk,
+                                "path": qdrant_path,
+                            },
+                        )
+
+                        persistent_memory = PersistentMemory(
+                            agent_name=agent_name,
+                            session_name=session_name,
+                            llm_config=llm_cfg,  # Use native mem0 LLM
+                            embedding_config=embedding_cfg,  # Use native mem0 embedder
+                            vector_store_config=vector_store_config,
+                            on_disk=on_disk,
+                        )
+                        logger.info(
+                            f"💾 Persistent memory created for {agent_config.agent_id} "
+                            f"(agent_name={agent_name}, session={session_name or 'cross-session'}, "
+                            f"llm={llm_cfg.get('provider')}/{llm_cfg.get('model')}, "
+                            f"embedder={embedding_cfg.get('provider')}/{embedding_cfg.get('model')}, path={qdrant_path})",
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"⚠️  Failed to create persistent memory for {agent_config.agent_id}: {e}",
+                    )
+                    persistent_memory = None
+
+        # Create agent
+        agent = ConfigurableAgent(
+            config=agent_config,
+            backend=backend,
+            conversation_memory=conversation_memory,
+            persistent_memory=persistent_memory,
+            context_monitor=context_monitor,
+        )
+
+        # Configure retrieval settings from YAML (if memory is enabled)
+        if memory_config.get("enabled", False):
+            retrieval_config = memory_config.get("retrieval", {})
+            agent._retrieval_limit = retrieval_config.get("limit", 5)
+            agent._retrieval_exclude_recent = retrieval_config.get("exclude_recent", True)
+
+            if retrieval_config:  # Only log if custom config provided
+                logger.info(
+                    f"🔧 Retrieval configured for {agent_config.agent_id}: " f"limit={agent._retrieval_limit}, exclude_recent={agent._retrieval_exclude_recent}",
+                )
+
         agents[agent.config.agent_id] = agent
 
     return agents
@@ -673,21 +937,25 @@ def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
             backend_config["cwd"] = str(massgen_dir / "workspaces" / user_cwd)
 
 
-def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> List[Dict[str, Any]]:
+def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Load previous turns from session storage.
+    Load previous turns and winning agents history from session storage.
 
     Returns:
-        List of previous turn metadata dicts
+        tuple: (previous_turns, winning_agents_history)
+            - previous_turns: List of previous turn metadata dicts
+            - winning_agents_history: List of winning agents for memory sharing
+                                     Format: [{"agent_id": "agent_b", "turn": 1}, ...]
     """
     session_id = session_info.get("session_id")
     if not session_id:
-        return []
+        return [], []
 
     session_dir = Path(session_storage) / session_id
     if not session_dir.exists():
-        return []
+        return [], []
 
+    # Load previous turns
     previous_turns = []
     turn_num = 1
 
@@ -712,7 +980,17 @@ def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> L
 
         turn_num += 1
 
-    return previous_turns
+    # Load winning agents history for memory sharing across turns
+    winning_agents_history = []
+    winning_agents_file = session_dir / "winning_agents_history.json"
+    if winning_agents_file.exists():
+        try:
+            winning_agents_history = json.loads(winning_agents_file.read_text(encoding="utf-8"))
+            logger.info(f"📚 Loaded {len(winning_agents_history)} winning agent(s) from session storage: {winning_agents_history}")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to load winning agents history: {e}")
+
+    return previous_turns, winning_agents_history
 
 
 async def handle_session_persistence(
@@ -771,6 +1049,16 @@ async def handle_session_persistence(
     }
     metadata_file = turn_dir / "metadata.json"
     metadata_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+    # Save winning agents history for memory sharing across turns
+    # This allows the orchestrator to restore winner tracking when recreated
+    if final_result.get("winning_agents_history"):
+        winning_agents_file = session_dir / "winning_agents_history.json"
+        winning_agents_file.write_text(
+            json.dumps(final_result["winning_agents_history"], indent=2),
+            encoding="utf-8",
+        )
+        logger.info(f"📚 Saved {len(final_result['winning_agents_history'])} winning agent(s) to session storage")
 
     # Create/update session summary for easy viewing
     session_summary_file = session_dir / "SESSION_SUMMARY.txt"
@@ -856,8 +1144,25 @@ async def run_question_with_history(
     if orchestrator_cfg.get("skip_coordination_rounds", False):
         orchestrator_config.skip_coordination_rounds = True
 
-    # Load previous turns from session storage for multi-turn conversations
-    previous_turns = load_previous_turns(session_info, session_storage)
+    if orchestrator_cfg.get("debug_final_answer"):
+        orchestrator_config.debug_final_answer = orchestrator_cfg["debug_final_answer"]
+
+    # Parse coordination config if present
+    if "coordination" in orchestrator_cfg:
+        from .agent_config import CoordinationConfig
+
+        coord_cfg = orchestrator_cfg["coordination"]
+        orchestrator_config.coordination_config = CoordinationConfig(
+            enable_planning_mode=coord_cfg.get("enable_planning_mode", False),
+            planning_mode_instruction=coord_cfg.get(
+                "planning_mode_instruction",
+                "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+            ),
+            max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+        )
+
+    # Load previous turns and winning agents history from session storage for multi-turn conversations
+    previous_turns, winning_agents_history = load_previous_turns(session_info, session_storage)
 
     orchestrator = Orchestrator(
         agents=agents,
@@ -865,6 +1170,7 @@ async def run_question_with_history(
         snapshot_storage=snapshot_storage,
         agent_temporary_workspace=agent_temporary_workspace,
         previous_turns=previous_turns,
+        winning_agents_history=winning_agents_history,  # Restore for memory sharing
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(
@@ -903,16 +1209,73 @@ async def run_question_with_history(
     # For multi-agent with history, we need to use a different approach
     # that maintains coordination UI display while supporting conversation context
 
-    if history and len(history) > 0:
-        # Use coordination UI with conversation context
-        # Extract current question from messages
-        current_question = messages[-1].get("content", question) if messages else question
+    # Restart loop (similar to multiturn pattern) - continues until no restart pending
+    response_content = None
+    while True:
+        if history and len(history) > 0:
+            # Use coordination UI with conversation context
+            # Extract current question from messages
+            current_question = messages[-1].get("content", question) if messages else question
 
-        # Pass the full message context to the UI coordination
-        response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
-    else:
-        # Standard coordination for new conversations
-        response_content = await ui.coordinate(orchestrator, question)
+            # Pass the full message context to the UI coordination
+            response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
+        else:
+            # Standard coordination for new conversations
+            response_content = await ui.coordinate(orchestrator, question)
+
+        # Check if restart is needed
+        if hasattr(orchestrator, "restart_pending") and orchestrator.restart_pending:
+            # Restart needed - create fresh UI for next attempt
+            print(f"\n{'='*80}")
+            print(f"🔄 Restarting coordination - Attempt {orchestrator.current_attempt + 1}/{orchestrator.max_attempts}")
+            print(f"{'='*80}\n")
+
+            # Reset all agent backends to ensure clean state for next attempt
+            for agent_id, agent in orchestrator.agents.items():
+                if hasattr(agent.backend, "reset_state"):
+                    try:
+                        await agent.backend.reset_state()
+                        logger.info(f"Reset backend state for {agent_id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to reset backend for {agent_id}: {e}")
+
+            # Create fresh UI instance for next attempt
+            ui = CoordinationUI(
+                display_type=ui_config.get("display_type", "rich_terminal"),
+                logging_enabled=ui_config.get("logging_enabled", True),
+                enable_final_presentation=True,
+            )
+
+            # Continue to next attempt
+            continue
+        else:
+            # Coordination complete - exit loop
+            break
+
+    # Copy final results to root level for convenience
+    try:
+        import shutil
+
+        from massgen.logger_config import get_log_session_dir, get_log_session_dir_base
+
+        # Get the current attempt's final directory
+        attempt_final_dir = get_log_session_dir() / "final"
+
+        # Get the base directory (without attempt subdirectory)
+        base_dir = get_log_session_dir_base()
+        root_final_dir = base_dir / "final"
+
+        # Copy if the attempt's final directory exists
+        if attempt_final_dir.exists():
+            # Remove root final dir if it already exists
+            if root_final_dir.exists():
+                shutil.rmtree(root_final_dir)
+
+            # Copy attempt's final to root final
+            shutil.copytree(attempt_final_dir, root_final_dir)
+            logger.info(f"Copied final results from {attempt_final_dir} to {root_final_dir}")
+    except Exception as e:
+        logger.warning(f"Failed to copy final results to root: {e}")
 
     # Handle session persistence if applicable
     session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
@@ -1002,6 +1365,23 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         if orchestrator_cfg.get("skip_coordination_rounds", False):
             orchestrator_config.skip_coordination_rounds = True
 
+        if orchestrator_cfg.get("debug_final_answer"):
+            orchestrator_config.debug_final_answer = orchestrator_cfg["debug_final_answer"]
+
+        # Parse coordination config if present
+        if "coordination" in orchestrator_cfg:
+            from .agent_config import CoordinationConfig
+
+            coord_cfg = orchestrator_cfg["coordination"]
+            orchestrator_config.coordination_config = CoordinationConfig(
+                enable_planning_mode=coord_cfg.get("enable_planning_mode", False),
+                planning_mode_instruction=coord_cfg.get(
+                    "planning_mode_instruction",
+                    "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+                ),
+                max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+            )
+
         orchestrator = Orchestrator(
             agents=agents,
             config=orchestrator_config,
@@ -1020,7 +1400,70 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
-        final_response = await ui.coordinate(orchestrator, question)
+        # Restart loop (similar to multiturn pattern)
+        # Continues calling coordinate() until no restart is pending
+        final_response = None
+        while True:
+            # Call coordinate with current orchestrator state
+            final_response = await ui.coordinate(orchestrator, question)
+
+            # Check if restart is needed
+            if hasattr(orchestrator, "restart_pending") and orchestrator.restart_pending:
+                # Restart needed - create fresh UI for next attempt
+                print(f"\n{'='*80}")
+                print(f"🔄 Restarting coordination - Attempt {orchestrator.current_attempt + 1}/{orchestrator.max_attempts}")
+                print(f"{'='*80}\n")
+
+                # Reset all agent backends to ensure clean state for next attempt
+                for agent_id, agent in orchestrator.agents.items():
+                    if hasattr(agent.backend, "reset_state"):
+                        try:
+                            await agent.backend.reset_state()
+                            logger.info(f"Reset backend state for {agent_id}")
+                        except Exception as e:
+                            logger.warning(f"Failed to reset backend for {agent_id}: {e}")
+
+                # Create fresh UI instance for next attempt
+                ui = CoordinationUI(
+                    display_type=ui_config.get("display_type", "rich_terminal"),
+                    logging_enabled=ui_config.get("logging_enabled", True),
+                    enable_final_presentation=True,
+                )
+
+                # Continue to next attempt
+                continue
+            else:
+                # Coordination complete - exit loop
+                break
+
+        # Copy final results to root level for convenience
+        try:
+            import shutil
+
+            from massgen.logger_config import (
+                get_log_session_dir,
+                get_log_session_dir_base,
+            )
+
+            # Get the current attempt's final directory
+            attempt_final_dir = get_log_session_dir() / "final"
+
+            # Get the base directory (without attempt subdirectory)
+            base_dir = get_log_session_dir_base()
+            root_final_dir = base_dir / "final"
+
+            # Copy if the attempt's final directory exists
+            if attempt_final_dir.exists():
+                # Remove root final dir if it already exists
+                if root_final_dir.exists():
+                    shutil.rmtree(root_final_dir)
+
+                # Copy attempt's final to root final
+                shutil.copytree(attempt_final_dir, root_final_dir)
+                logger.info(f"Copied final results from {attempt_final_dir} to {root_final_dir}")
+        except Exception as e:
+            logger.warning(f"Failed to copy final results to root: {e}")
+
         return final_response
 
 
@@ -1706,6 +2149,7 @@ async def run_interactive_mode(
     original_config: Dict[str, Any] = None,
     orchestrator_cfg: Dict[str, Any] = None,
     config_path: Optional[str] = None,
+    memory_session_id: Optional[str] = None,
     **kwargs,
 ):
     """Run MassGen in interactive mode with conversation history."""
@@ -1794,8 +2238,13 @@ async def run_interactive_mode(
     if original_config and orchestrator_cfg:
         config_modified = prompt_for_context_paths(original_config, orchestrator_cfg)
         if config_modified:
-            # Recreate agents with updated context paths
-            agents = create_agents_from_config(original_config, orchestrator_cfg)
+            # Recreate agents with updated context paths (use same session)
+            agents = create_agents_from_config(
+                original_config,
+                orchestrator_cfg,
+                config_path=config_path,
+                memory_session_id=memory_session_id,
+            )
             print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
             print()
 
@@ -1805,7 +2254,8 @@ async def run_interactive_mode(
     conversation_history = []
 
     # Session management for multi-turn filesystem support
-    session_id = None
+    # Use memory_session_id (unified with memory system) if provided, otherwise create later
+    session_id = memory_session_id
     current_turn = 0
     session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")
 
@@ -1852,8 +2302,13 @@ async def run_interactive_mode(
                                 new_turn_config = {"path": str(latest_turn_workspace.resolve()), "permission": "read"}
                                 backend_config["context_paths"] = existing_context_paths + [new_turn_config]
 
-                        # Recreate agents from modified config
-                        agents = create_agents_from_config(modified_config, orchestrator_cfg)
+                        # Recreate agents from modified config (use same session)
+                        agents = create_agents_from_config(
+                            modified_config,
+                            orchestrator_cfg,
+                            config_path=config_path,
+                            memory_session_id=session_id,
+                        )
                         logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
 
                 question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
@@ -2042,6 +2497,9 @@ async def main(args):
             print("❌ Configuration error: Either --config, --model, or --backend must be specified", flush=True)
             sys.exit(1)
 
+    # Track config path for error messages
+    resolved_path = None
+
     try:
         # Load or create configuration
         if args.config:
@@ -2142,7 +2600,28 @@ async def main(args):
                     '  agent_temporary_workspace: "your_temp_dir"  # Directory for temporary agent workspaces',
                 )
 
-        agents = create_agents_from_config(config, orchestrator_cfg)
+        # Create unified session ID for memory system (before creating agents)
+        # This ensures memory is isolated per session and unifies orchestrator + memory sessions
+        memory_session_id = None
+        if args.question:
+            # Single question mode: Create temp session per run
+            from datetime import datetime
+
+            memory_session_id = f"temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            logger.info(f"📝 Created temp session for single-question mode: {memory_session_id}")
+        else:
+            # Interactive mode: Create session now (will be reused by orchestrator)
+            from datetime import datetime
+
+            memory_session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            logger.info(f"📝 Created session for interactive mode: {memory_session_id}")
+
+        agents = create_agents_from_config(
+            config,
+            orchestrator_cfg,
+            config_path=str(resolved_path) if resolved_path else None,
+            memory_session_id=memory_session_id,
+        )
 
         if not agents:
             raise ConfigurationError("No agents configured")
@@ -2178,9 +2657,17 @@ async def main(args):
                 #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
                 #     print(f"{response}", flush=True)
             else:
-                # Pass the config path to interactive mode
+                # Pass the config path and session_id to interactive mode
                 config_file_path = str(resolved_path) if args.config and resolved_path else None
-                await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, config_path=config_file_path, **kwargs)
+                await run_interactive_mode(
+                    agents,
+                    ui_config,
+                    original_config=config,
+                    orchestrator_cfg=orchestrator_cfg,
+                    config_path=config_file_path,
+                    memory_session_id=memory_session_id,
+                    **kwargs,
+                )
         finally:
             # Cleanup all agents' filesystem managers (including Docker containers)
             for agent_id, agent in agents.items():
@@ -2373,8 +2860,6 @@ Environment Variables:
 
     # Launch interactive API key setup if requested
     if args.setup:
-        from .config_builder import ConfigBuilder
-
         builder = ConfigBuilder()
         api_keys = builder.interactive_api_key_setup()
 
@@ -2399,8 +2884,6 @@ Environment Variables:
 
     # Launch interactive config builder if requested
     if args.init:
-        from .config_builder import ConfigBuilder
-
         builder = ConfigBuilder()
         result = builder.run()
 
@@ -2422,7 +2905,7 @@ Environment Variables:
             # Builder returned None (cancelled or error)
             return
 
-    # First-run detection: auto-trigger builder if no config specified and first run
+    # First-run detection: auto-trigger setup wizard and config builder if no config specified
     if not args.question and not args.config and not args.model and not args.backend:
         if should_run_builder():
             print()
@@ -2431,27 +2914,99 @@ Environment Variables:
             print(f"{BRIGHT_CYAN}  👋  Welcome to MassGen!{RESET}")
             print(f"{BRIGHT_CYAN}{'=' * 60}{RESET}")
             print()
+
+            # Check if API keys already exist
+            builder = ConfigBuilder(default_mode=True)
+            existing_api_keys = builder.detect_api_keys()
+
+            # Only check for cloud provider API keys (exclude local models and Claude Code)
+            cloud_providers = ["openai", "anthropic", "gemini", "grok", "azure_openai"]
+            has_api_keys = any(existing_api_keys.get(provider, False) for provider in cloud_providers)
+
+            # Step 1: API key setup (only if no keys found)
+            if not has_api_keys:
+                print("  Let's first set up your API keys...")
+                print()
+
+                api_keys = builder.interactive_api_key_setup()
+
+                if any(api_keys.values()):
+                    print(f"\n{BRIGHT_GREEN}✅ API key setup complete!{RESET}")
+                    print(f"{BRIGHT_CYAN}💡 You can now use MassGen with these providers{RESET}\n")
+                else:
+                    print(f"\n{BRIGHT_YELLOW}⚠️  No API keys configured{RESET}")
+                    print(f"{BRIGHT_CYAN}💡 You can use local models (vLLM, Ollama) without API keys{RESET}\n")
+            else:
+                print(f"{BRIGHT_GREEN}✅ API keys detected{RESET}")
+                print()
+
+            # Step 2: Launch config builder
             print("  Let's set up your default configuration...")
             print()
 
-            from .config_builder import ConfigBuilder
-
-            builder = ConfigBuilder(default_mode=True)
             result = builder.run()
 
             if result and len(result) == 2:
                 filepath, question = result
                 if filepath:
+                    # Set the config path
                     args.config = filepath
+
+                    # If user provided a question, set it
                     if question:
                         args.question = question
+                        # Will run single question mode
                     else:
-                        print("\n✅ Configuration saved! You can now run queries.")
-                        print('Example: massgen "Your question here"')
-                        return
+                        # No question - will launch interactive mode
+                        # Check if this is NOT already the default config
+                        default_config = Path.home() / ".config/massgen/config.yaml"
+                        is_default = Path(filepath).resolve() == default_config.resolve()
+
+                        if not is_default:
+                            # Ask if they want to save as default (for any non-default config)
+                            # Determine what type of config this is for messaging
+                            is_example = False
+                            try:
+                                from importlib.resources import files
+
+                                package_configs = files("massgen").joinpath("configs")
+                                filepath_path = Path(filepath).resolve()
+                                package_path = Path(str(package_configs)).resolve()
+                                is_example = str(filepath_path).startswith(str(package_path))
+                            except Exception:
+                                pass
+
+                            if is_example:
+                                print(f"\n{BRIGHT_CYAN}📦 You selected a package example{RESET}")
+                            else:
+                                print(f"\n{BRIGHT_CYAN}📄 You selected a config{RESET}")
+                            print(f"   {filepath}")
+
+                            from rich.prompt import Confirm
+
+                            save_as_default = Confirm.ask(
+                                "\n[prompt]Save this as your default config?[/prompt]",
+                                default=False,
+                            )
+
+                            if save_as_default:
+                                # Copy to default location
+                                default_config.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.copy(filepath, default_config)
+                                print(f"\n{BRIGHT_GREEN}✅ Config saved to: {default_config}{RESET}")
+                                args.config = str(default_config)
+                            else:
+                                # Just use for this session
+                                print(f"\n{BRIGHT_CYAN}💡 Using for this session only{RESET}")
+
+                        # Launch into interactive mode
+                        print(f"\n{BRIGHT_GREEN}🚀 Launching interactive mode...{RESET}\n")
+                        # Don't return - continue to main() below
                 else:
+                    # No filepath - user cancelled
                     return
             else:
+                # Builder returned None - user cancelled
                 return
 
     # Now call the async main with the parsed arguments

@@ -42,9 +42,10 @@ from .logger_config import (
     log_stream_chunk,
     log_tool_call,
 )
+from .memory import ConversationMemory, PersistentMemoryBase
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
-from .tool import get_workflow_tools
+from .tool import get_post_evaluation_tools, get_workflow_tools
 from .utils import ActionType, AgentStatus, CoordinationStage
 
 
@@ -118,6 +119,9 @@ class Orchestrator(ChatAgent):
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
         previous_turns: Optional[List[Dict[str, Any]]] = None,
+        winning_agents_history: Optional[List[Dict[str, Any]]] = None,
+        shared_conversation_memory: Optional[ConversationMemory] = None,
+        shared_persistent_memory: Optional[PersistentMemoryBase] = None,
     ):
         """
         Initialize MassGen orchestrator.
@@ -130,12 +134,21 @@ class Orchestrator(ChatAgent):
             snapshot_storage: Optional path to store agent workspace snapshots
             agent_temporary_workspace: Optional path for agent temporary workspaces
             previous_turns: List of previous turn metadata for multi-turn conversations (loaded by CLI)
+            winning_agents_history: List of previous winning agents for memory sharing
+                                   Format: [{"agent_id": "agent_b", "turn": 1}, ...]
+                                   Loaded from session storage to persist across orchestrator recreations
+            shared_conversation_memory: Optional shared conversation memory for all agents
+            shared_persistent_memory: Optional shared persistent memory for all agents
         """
-        super().__init__(session_id)
+        super().__init__(session_id, shared_conversation_memory, shared_persistent_memory)
         self.orchestrator_id = orchestrator_id
         self.agents = agents
         self.agent_states = {aid: AgentState() for aid in agents.keys()}
         self.config = config or AgentConfig.create_openai_config()
+
+        # Shared memory for all agents
+        self.shared_conversation_memory = shared_conversation_memory
+        self.shared_persistent_memory = shared_persistent_memory
 
         # Get message templates from config
         self.message_templates = self.config.message_templates or MessageTemplates(
@@ -158,11 +171,27 @@ class Orchestrator(ChatAgent):
         self._selected_agent: Optional[str] = None
         self._final_presentation_content: Optional[str] = None
 
+        # Track winning agents by turn for memory sharing
+        # Format: [{"agent_id": "agent_b", "turn": 1}, {"agent_id": "agent_a", "turn": 2}]
+        # Restore from session storage if provided (for multi-turn persistence)
+        self._winning_agents_history: List[Dict[str, Any]] = winning_agents_history or []
+        if self._winning_agents_history:
+            logger.info(f"📚 Restored {len(self._winning_agents_history)} winning agent(s) from session: {self._winning_agents_history}")
+        self._current_turn: int = 0
+
         # Timeout and resource tracking
         self.total_tokens: int = 0
         self.coordination_start_time: float = 0
         self.is_orchestrator_timeout: bool = False
         self.timeout_reason: Optional[str] = None
+
+        # Restart feature state tracking
+        self.current_attempt: int = 0
+        max_restarts = self.config.coordination_config.max_orchestration_restarts
+        self.max_attempts: int = 1 + max_restarts
+        self.restart_pending: bool = False
+        self.restart_reason: Optional[str] = None
+        self.restart_instructions: Optional[str] = None
 
         # Coordination state tracking for cleanup
         self._active_streams: Dict = {}
@@ -264,6 +293,9 @@ class Orchestrator(ChatAgent):
             self.coordination_tracker.initialize_session(list(self.agents.keys()), self.current_task)
             self.workflow_phase = "coordinating"
 
+            # Reset restart_pending flag at start of coordination (will be set again if restart needed)
+            self.restart_pending = False
+
             # Clear agent workspaces for new turn (if this is a multi-turn conversation with history)
             if conversation_context and conversation_context.get("conversation_history"):
                 self._clear_agent_workspaces()
@@ -353,6 +385,113 @@ class Orchestrator(ChatAgent):
             "conversation_history": conversation_history,
             "full_messages": messages,
         }
+
+    async def _inject_shared_memory_context(
+        self,
+        messages: List[Dict[str, Any]],
+        agent_id: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Inject shared memory context into agent messages.
+
+        This allows all agents to see shared memories including what other agents
+        have stored in the shared memory.
+
+        Args:
+            messages: Original messages to send to agent
+            agent_id: ID of the agent receiving the messages
+
+        Returns:
+            Messages with shared memory context injected
+        """
+        if not self.shared_conversation_memory and not self.shared_persistent_memory:
+            # No shared memory configured, return original messages
+            return messages
+
+        memory_context_parts = []
+
+        # Get conversation memory content
+        if self.shared_conversation_memory:
+            try:
+                conv_messages = await self.shared_conversation_memory.get_messages()
+                if conv_messages:
+                    memory_context_parts.append("=== SHARED CONVERSATION MEMORY ===")
+                    for msg in conv_messages[-10:]:  # Last 10 messages
+                        role = msg.get("role", "unknown")
+                        content = msg.get("content", "")
+                        agent_source = msg.get("agent_id", "unknown")
+                        memory_context_parts.append(f"[{agent_source}] {role}: {content}")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve shared conversation memory: {e}")
+
+        # Get persistent memory content
+        if self.shared_persistent_memory:
+            try:
+                # Extract user message for retrieval
+                user_messages = [msg for msg in messages if msg.get("role") == "user"]
+                if user_messages:
+                    retrieved = await self.shared_persistent_memory.retrieve(user_messages)
+                    if retrieved:
+                        memory_context_parts.append("\n=== SHARED PERSISTENT MEMORY ===")
+                        memory_context_parts.append(retrieved)
+            except NotImplementedError:
+                # Memory backend doesn't support retrieve
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to retrieve shared persistent memory: {e}")
+
+        # Inject memory context if we have any
+        if memory_context_parts:
+            memory_message = {
+                "role": "system",
+                "content": ("You have access to shared memory that all agents can see and contribute to.\n" + "\n".join(memory_context_parts)),
+            }
+
+            # Insert after existing system messages but before user messages
+            system_count = sum(1 for msg in messages if msg.get("role") == "system")
+            modified_messages = messages.copy()
+            modified_messages.insert(system_count, memory_message)
+            return modified_messages
+
+        return messages
+
+    async def _record_to_shared_memory(
+        self,
+        agent_id: str,
+        content: str,
+        role: str = "assistant",
+    ) -> None:
+        """
+        Record agent's contribution to shared memory.
+
+        Args:
+            agent_id: ID of the agent contributing
+            content: Content to record
+            role: Role of the message (default: "assistant")
+        """
+        message = {
+            "role": role,
+            "content": content,
+            "agent_id": agent_id,
+            "timestamp": time.time(),
+        }
+
+        # Add to conversation memory
+        if self.shared_conversation_memory:
+            try:
+                await self.shared_conversation_memory.add(message)
+            except Exception as e:
+                logger.warning(f"Failed to add to shared conversation memory: {e}")
+
+        # Record to persistent memory
+        if self.shared_persistent_memory:
+            try:
+                await self.shared_persistent_memory.record([message])
+            except NotImplementedError:
+                # Memory backend doesn't support record
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to record to shared persistent memory: {e}")
 
     def save_coordination_logs(self):
         """Public method to save coordination logs after final presentation is complete."""
@@ -651,7 +790,12 @@ Your answer:"""
             return {"has_irreversible": True, "blocked_tools": set()}
 
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
-        """Execute coordination with orchestrator-level timeout protection."""
+        """Execute coordination with orchestrator-level timeout protection.
+
+        When restart is needed, this method completes and returns control to CLI,
+        which will call coordinate() again (similar to multiturn pattern).
+        """
+        # Reset timing and state for this attempt
         self.coordination_start_time = time.time()
         self.total_tokens = 0
         self.is_orchestrator_timeout = False
@@ -659,12 +803,18 @@ Your answer:"""
 
         log_orchestrator_activity(
             self.orchestrator_id,
-            "Starting coordination with timeout",
+            f"Starting coordination attempt {self.current_attempt + 1}/{self.max_attempts}",
             {
                 "timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds,
                 "agents": list(self.agents.keys()),
+                "has_restart_context": bool(self.restart_reason),
             },
         )
+
+        # Set log attempt for directory organization
+        from massgen.logger_config import set_log_attempt
+
+        set_log_attempt(self.current_attempt + 1)
 
         # Track active coordination state for cleanup
         self._active_streams = {}
@@ -698,6 +848,8 @@ Your answer:"""
         if self.is_orchestrator_timeout:
             async for chunk in self._handle_orchestrator_timeout():
                 yield chunk
+
+        # Exit here - if restart is needed, CLI will call coordinate() again
 
     async def _coordinate_agents(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
@@ -773,6 +925,18 @@ Your answer:"""
         # Determine final agent based on votes
         current_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
         self._selected_agent = self._determine_final_agent_from_votes(votes, current_answers)
+
+        # Track winning agent for memory sharing in future turns
+        self._current_turn += 1
+        if self._selected_agent:
+            winner_entry = {
+                "agent_id": self._selected_agent,
+                "turn": self._current_turn,
+            }
+            self._winning_agents_history.append(winner_entry)
+            logger.info(
+                f"🏆 Turn {self._current_turn} winner: {self._selected_agent} " f"(tracked for memory sharing)",
+            )
 
         log_coordination_step(
             "Final agent selected",
@@ -1666,10 +1830,16 @@ Your answer:"""
 
                 # Extract command execution parameters
                 enable_command_execution = False
+                docker_mode = False
+                enable_sudo = False
                 if hasattr(agent, "config") and agent.config:
                     enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+                    docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
+                    enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
                 elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
                     enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+                    docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
+                    enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
 
                 filesystem_system_message = self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
@@ -1680,6 +1850,8 @@ Your answer:"""
                     enable_image_generation=enable_image_generation,
                     agent_answers=answers,
                     enable_command_execution=enable_command_execution,
+                    docker_mode=docker_mode,
+                    enable_sudo=enable_sudo,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -1724,6 +1896,15 @@ Your answer:"""
                     base_system_message=agent_system_message,
                 )
 
+            # Inject restart context if this is a restart attempt (like multi-turn context)
+            if self.restart_reason and self.restart_instructions:
+                restart_context = self.message_templates.format_restart_context(
+                    self.restart_reason,
+                    self.restart_instructions,
+                )
+                # Prepend restart context to user message
+                conversation["user_message"] = restart_context + "\n\n" + conversation["user_message"]
+
             # Track all the context used for this agent execution
             self.coordination_tracker.track_agent_context(
                 agent_id,
@@ -1765,6 +1946,13 @@ Your answer:"""
                 {"role": "system", "content": conversation["system_message"]},
                 {"role": "user", "content": conversation["user_message"]},
             ]
+
+            # Inject shared memory context
+            conversation_messages = await self._inject_shared_memory_context(
+                conversation_messages,
+                agent_id,
+            )
+
             enforcement_msg = self.message_templates.enforcement_message()
 
             # Update agent status to STREAMING
@@ -1791,20 +1979,42 @@ Your answer:"""
                     # First attempt: orchestrator provides initial conversation
                     # But we need the agent to have this in its history for subsequent calls
                     # First attempt: provide complete conversation and reset agent's history
-                    chat_stream = agent.chat(conversation_messages, self.workflow_tools, reset_chat=True, current_stage=CoordinationStage.INITIAL_ANSWER)
+                    # Pass current turn and previous winners for memory sharing
+                    chat_stream = agent.chat(
+                        conversation_messages,
+                        self.workflow_tools,
+                        reset_chat=True,
+                        current_stage=CoordinationStage.INITIAL_ANSWER,
+                        orchestrator_turn=self._current_turn + 1,  # Next turn number
+                        previous_winners=self._winning_agents_history.copy(),
+                    )
                 else:
                     # Subsequent attempts: send enforcement message (set by error handling)
 
                     if isinstance(enforcement_msg, list):
                         # Tool message array
-                        chat_stream = agent.chat(enforcement_msg, self.workflow_tools, reset_chat=False, current_stage=CoordinationStage.ENFORCEMENT)
+                        chat_stream = agent.chat(
+                            enforcement_msg,
+                            self.workflow_tools,
+                            reset_chat=False,
+                            current_stage=CoordinationStage.ENFORCEMENT,
+                            orchestrator_turn=self._current_turn + 1,
+                            previous_winners=self._winning_agents_history.copy(),
+                        )
                     else:
                         # Single user message
                         enforcement_message = {
                             "role": "user",
                             "content": enforcement_msg,
                         }
-                        chat_stream = agent.chat([enforcement_message], self.workflow_tools, reset_chat=False, current_stage=CoordinationStage.ENFORCEMENT)
+                        chat_stream = agent.chat(
+                            [enforcement_message],
+                            self.workflow_tools,
+                            reset_chat=False,
+                            current_stage=CoordinationStage.ENFORCEMENT,
+                            orchestrator_turn=self._current_turn + 1,
+                            previous_winners=self._winning_agents_history.copy(),
+                        )
                 response_text = ""
                 tool_calls = []
                 workflow_tool_found = False
@@ -2060,6 +2270,14 @@ Your answer:"""
                                 "reason": reason,
                             }
 
+                            # Record vote to shared memory
+                            vote_message = f"Voted for {voted_agent}. Reason: {reason}"
+                            await self._record_to_shared_memory(
+                                agent_id=agent_id,
+                                content=vote_message,
+                                role="assistant",
+                            )
+
                             # Send tool result - orchestrator will decide if vote is accepted
                             # Vote submitted (result will be shown by orchestrator)
                             yield (
@@ -2152,6 +2370,14 @@ Your answer:"""
                                         return
                             # Send successful tool result back to agent
                             # Answer recorded (result will be shown by orchestrator)
+
+                            # Record to shared memory
+                            await self._record_to_shared_memory(
+                                agent_id=agent_id,
+                                content=content,
+                                role="assistant",
+                            )
+
                             yield ("result", ("answer", content))
                             yield ("done", None)
                             return
@@ -2205,48 +2431,81 @@ Your answer:"""
             return ("error", str(e))
 
     async def _present_final_answer(self) -> AsyncGenerator[StreamChunk, None]:
-        """Present the final coordinated answer."""
-        log_stream_chunk("orchestrator", "content", "## 🎯 Final Coordinated Answer\n")
-        yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
+        """Present the final coordinated answer with optional post-evaluation and restart loop."""
 
         # Select the best agent based on current state
         if not self._selected_agent:
             self._selected_agent = self._determine_final_agent_from_states()
-            if self._selected_agent:
-                log_stream_chunk(
-                    "orchestrator",
-                    "content",
-                    f"🏆 Selected Agent: {self._selected_agent}\n",
-                )
-                yield StreamChunk(
-                    type="content",
-                    content=f"🏆 Selected Agent: {self._selected_agent}\n",
-                )
 
-        if self._selected_agent and self._selected_agent in self.agent_states and self.agent_states[self._selected_agent].answer:
-            final_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
-
-            # Add to conversation history
-            self.add_to_history("assistant", final_answer)
-
-            log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
-            yield StreamChunk(type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n")
-            log_stream_chunk("orchestrator", "content", final_answer)
-            yield StreamChunk(type="content", content=final_answer)
-            log_stream_chunk(
-                "orchestrator",
-                "content",
-                f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*",
-            )
-            yield StreamChunk(
-                type="content",
-                content=f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*",
-            )
-        else:
+        if not self._selected_agent:
             error_msg = "❌ Unable to provide coordinated answer - no successful agents"
             self.add_to_history("assistant", error_msg)
             log_stream_chunk("orchestrator", "error", error_msg)
             yield StreamChunk(type="content", content=error_msg)
+            self.workflow_phase = "presenting"
+            log_stream_chunk("orchestrator", "done", None)
+            yield StreamChunk(type="done")
+            return
+
+        # Get vote results for presentation
+        vote_results = self._get_vote_results()
+
+        log_stream_chunk("orchestrator", "content", "## 🎯 Final Coordinated Answer\n")
+        yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
+
+        # Stream final presentation from winning agent
+        log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
+        yield StreamChunk(type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n")
+
+        # Stream the final presentation (with full tool support)
+        presentation_content = ""
+        async for chunk in self.get_final_presentation(self._selected_agent, vote_results):
+            if chunk.type == "content" and chunk.content:
+                presentation_content += chunk.content
+            yield chunk
+
+        # Check if post-evaluation should run
+        # Skip post-evaluation on final attempt (user clarification #4)
+        is_final_attempt = self.current_attempt >= (self.max_attempts - 1)
+        should_evaluate = self.max_attempts > 1 and not is_final_attempt
+
+        if should_evaluate:
+            # Run post-evaluation
+            final_answer_to_evaluate = self._final_presentation_content or presentation_content
+            async for chunk in self.post_evaluate_answer(self._selected_agent, final_answer_to_evaluate):
+                yield chunk
+
+            # Check if restart was requested
+            if self.restart_pending and self.current_attempt < (self.max_attempts - 1):
+                # Show restart banner
+                restart_banner = f"""
+
+🔄 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ORCHESTRATION RESTART (Attempt {self.current_attempt + 2}/{self.max_attempts})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REASON:
+{self.restart_reason}
+
+INSTRUCTIONS FOR NEXT ATTEMPT:
+{self.restart_instructions}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+                log_stream_chunk("orchestrator", "status", restart_banner)
+                yield StreamChunk(type="restart_banner", content=restart_banner, source="orchestrator")
+
+                # Reset state for restart (prepare for next coordinate() call)
+                self.handle_restart()
+
+                # Don't add to history or set workflow phase - restart is pending
+                # Exit here - CLI will detect restart_pending and call coordinate() again
+                return
+
+        # No restart - add final answer to conversation history
+        if self._final_presentation_content:
+            self.add_to_history("assistant", self._final_presentation_content)
 
         # Update workflow phase
         self.workflow_phase = "presenting"
@@ -2422,16 +2681,36 @@ Your answer:"""
 
         # Extract command execution parameters
         enable_command_execution = False
+        docker_mode = False
+        enable_sudo = False
         if hasattr(agent, "config") and agent.config:
             enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+            docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
+            enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+            docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
+            enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
         # Check if audio generation is enabled for this agent
         enable_audio_generation = False
         if hasattr(agent, "config") and agent.config:
             enable_audio_generation = agent.config.backend_params.get("enable_audio_generation", False)
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_audio_generation = agent.backend.backend_params.get("enable_audio_generation", False)
+
+        # Check if file generation is enabled for this agent
+        enable_file_generation = False
+        if hasattr(agent, "config") and agent.config:
+            enable_file_generation = agent.config.backend_params.get("enable_file_generation", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_file_generation = agent.backend.backend_params.get("enable_file_generation", False)
+
+        # Check if video generation is enabled for this agent
+        enable_video_generation = False
+        if hasattr(agent, "config") and agent.config:
+            enable_video_generation = agent.config.backend_params.get("enable_video_generation", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_video_generation = agent.backend.backend_params.get("enable_video_generation", False)
 
         # Check if agent has write access to context paths (requires file delivery)
         has_irreversible_actions = False
@@ -2445,6 +2724,8 @@ Your answer:"""
             agent_system_message,
             enable_image_generation,
             enable_audio_generation,
+            enable_file_generation,
+            enable_video_generation,
             has_irreversible_actions,
             enable_command_execution,
         )
@@ -2483,6 +2764,8 @@ Your answer:"""
                     enable_image_generation=enable_image_generation,
                     agent_answers=all_answers,
                     enable_command_execution=enable_command_execution,
+                    docker_mode=docker_mode,
+                    enable_sudo=enable_sudo,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message
@@ -2525,7 +2808,13 @@ Your answer:"""
 
         try:
             # Track final round iterations (each chunk is like an iteration)
-            async for chunk in agent.chat(presentation_messages, reset_chat=True, current_stage=CoordinationStage.PRESENTATION):
+            async for chunk in agent.chat(
+                presentation_messages,
+                reset_chat=True,
+                current_stage=CoordinationStage.PRESENTATION,
+                orchestrator_turn=self._current_turn,
+                previous_winners=self._winning_agents_history.copy(),
+            ):
                 chunk_type = self._get_chunk_type_value(chunk)
                 # Start new iteration for this chunk
                 self.coordination_tracker.start_new_iteration()
@@ -2674,6 +2963,211 @@ Your answer:"""
             # Save logs
             self.save_coordination_logs()
 
+        # Don't yield done here - let _present_final_answer handle final done after post-evaluation
+
+    async def post_evaluate_answer(self, selected_agent_id: str, final_answer: str) -> AsyncGenerator[StreamChunk, None]:
+        """Post-evaluation phase where winning agent evaluates its own answer.
+
+        The agent reviews the final answer and decides whether to submit or restart
+        with specific improvement instructions.
+
+        Args:
+            selected_agent_id: The agent that won the vote and presented the answer
+            final_answer: The final answer that was presented
+
+        Yields:
+            StreamChunk: Stream chunks from the evaluation process
+        """
+        if selected_agent_id not in self.agents:
+            log_stream_chunk("orchestrator", "error", f"Selected agent {selected_agent_id} not found for post-evaluation")
+            yield StreamChunk(type="error", error=f"Selected agent {selected_agent_id} not found")
+            return
+
+        agent = self.agents[selected_agent_id]
+
+        # Use debug override on first attempt if configured
+        eval_answer = final_answer
+        if self.config.debug_final_answer and self.current_attempt == 0:
+            eval_answer = self.config.debug_final_answer
+            log_stream_chunk("orchestrator", "debug", f"Using debug override for post-evaluation: {self.config.debug_final_answer}")
+            yield StreamChunk(
+                type="debug",
+                content=f"[DEBUG MODE] Overriding answer for evaluation: {self.config.debug_final_answer}",
+                source="orchestrator",
+            )
+
+        # Build evaluation message
+        evaluation_content = f"""{self.message_templates.format_original_message(self.current_task or "Task")}
+
+FINAL ANSWER TO EVALUATE:
+{eval_answer}
+
+Review this answer carefully and determine if it fully addresses the original task. Use your available tools to verify claims and check files as needed.
+Then call either submit(confirmed=True) if the answer is satisfactory, or restart_orchestration(reason, instructions) if improvements are needed."""
+
+        # Get agent's configurable system message
+        agent_system_message = agent.get_configurable_system_message()
+
+        # Build post-evaluation system message
+        base_system_message = self.message_templates.post_evaluation_system_message(agent_system_message)
+
+        # Add filesystem context if available (same as final presentation)
+        if agent.backend.filesystem_manager:
+            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
+            previous_turns_context = self._get_previous_turns_context_paths()
+            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
+            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
+            workspace_prepopulated = len(previous_turns_context) > 0
+
+            # Get all answers for context
+            all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
+
+            base_system_message = (
+                self.message_templates.filesystem_system_message(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace,
+                    context_paths=context_paths,
+                    previous_turns=turns_to_show,
+                    workspace_prepopulated=workspace_prepopulated,
+                    enable_image_generation=False,
+                    agent_answers=all_answers,
+                    enable_command_execution=False,
+                    docker_mode=False,
+                    enable_sudo=False,
+                )
+                + "\n\n## Post-Evaluation Task\n"
+                + base_system_message
+            )
+
+        # Create evaluation messages
+        evaluation_messages = [
+            {"role": "system", "content": base_system_message},
+            {"role": "user", "content": evaluation_content},
+        ]
+
+        # Get post-evaluation tools
+        api_format = "chat_completions"  # Default format
+        if hasattr(agent.backend, "api_format"):
+            api_format = agent.backend.api_format
+        post_eval_tools = get_post_evaluation_tools(api_format=api_format)
+
+        log_stream_chunk("orchestrator", "status", "🔍 Post-evaluation: Reviewing final answer\n")
+        yield StreamChunk(type="status", content="🔍 Post-evaluation: Reviewing final answer\n", source="orchestrator")
+
+        # Stream evaluation with tools (with timeout protection)
+        evaluation_complete = False
+        tool_call_detected = False
+
+        try:
+            timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
+            async with asyncio.timeout(timeout_seconds):
+                async for chunk in agent.chat(
+                    messages=evaluation_messages,
+                    tools=post_eval_tools,
+                    reset_chat=True,
+                    current_stage=CoordinationStage.POST_EVALUATION,
+                    orchestrator_turn=self._current_turn,
+                    previous_winners=self._winning_agents_history.copy(),
+                ):
+                    chunk_type = self._get_chunk_type_value(chunk)
+
+                    if chunk_type == "content" and chunk.content:
+                        log_stream_chunk("orchestrator", "content", chunk.content, selected_agent_id)
+                        yield StreamChunk(type="content", content=chunk.content, source=selected_agent_id)
+                    elif chunk_type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                        reasoning_chunk = StreamChunk(
+                            type=chunk_type,
+                            content=chunk.content,
+                            source=selected_agent_id,
+                            reasoning_delta=getattr(chunk, "reasoning_delta", None),
+                            reasoning_text=getattr(chunk, "reasoning_text", None),
+                            reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
+                            reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
+                            item_id=getattr(chunk, "item_id", None),
+                            content_index=getattr(chunk, "content_index", None),
+                            summary_index=getattr(chunk, "summary_index", None),
+                        )
+                        log_stream_chunk("orchestrator", chunk.type, chunk.content, selected_agent_id)
+                        yield reasoning_chunk
+                    elif chunk_type == "tool_calls":
+                        # Post-evaluation tool call detected
+                        tool_call_detected = True
+                        if hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                            for tool_call in chunk.tool_calls:
+                                # Use backend's tool extraction (same as regular coordination)
+                                tool_name = agent.backend.extract_tool_name(tool_call)
+                                tool_args = agent.backend.extract_tool_arguments(tool_call)
+
+                                if tool_name == "submit":
+                                    log_stream_chunk("orchestrator", "status", "✅ Evaluation complete - answer approved\n")
+                                    yield StreamChunk(type="status", content="✅ Evaluation complete - answer approved\n", source="orchestrator")
+                                    evaluation_complete = True
+                                elif tool_name == "restart_orchestration":
+                                    # Parse restart parameters from extracted args
+                                    self.restart_reason = tool_args.get("reason", "No reason provided")
+                                    self.restart_instructions = tool_args.get("instructions", "No instructions provided")
+                                    self.restart_pending = True
+
+                                    log_stream_chunk("orchestrator", "status", "🔄 Restart requested\n")
+                                    yield StreamChunk(type="status", content="🔄 Restart requested\n", source="orchestrator")
+                                    evaluation_complete = True
+                    elif chunk_type == "done":
+                        log_stream_chunk("orchestrator", "done", None, selected_agent_id)
+                        yield StreamChunk(type="done", source=selected_agent_id)
+                    elif chunk_type == "error":
+                        log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
+                        yield StreamChunk(type="error", error=chunk.error, source=selected_agent_id)
+                    else:
+                        # Pass through other chunk types
+                        log_stream_chunk("orchestrator", chunk_type, getattr(chunk, "content", ""), selected_agent_id)
+                        yield StreamChunk(
+                            type=chunk_type,
+                            content=getattr(chunk, "content", ""),
+                            source=selected_agent_id,
+                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source", "timestamp", "sequence_number"]},
+                        )
+        except asyncio.TimeoutError:
+            log_stream_chunk("orchestrator", "status", "⏱️ Post-evaluation timed out - auto-submitting answer\n")
+            yield StreamChunk(type="status", content="⏱️ Post-evaluation timed out - auto-submitting answer\n", source="orchestrator")
+            evaluation_complete = True
+            # Don't set restart_pending - let it default to False (auto-submit)
+        finally:
+            # If no tool was called and evaluation didn't complete, auto-submit
+            if not evaluation_complete and not tool_call_detected:
+                log_stream_chunk("orchestrator", "status", "✅ Auto-submitting answer (no tool call detected)\n")
+                yield StreamChunk(type="status", content="✅ Auto-submitting answer (no tool call detected)\n", source="orchestrator")
+
+    def handle_restart(self):
+        """Reset orchestration state for restart attempt.
+
+        Clears agent states and coordination messages while preserving
+        restart reason and instructions for the next attempt.
+        """
+        log_orchestrator_activity("handle_restart", f"Resetting state for restart attempt {self.current_attempt + 1}")
+
+        # Reset agent states
+        for agent_id in self.agent_states:
+            self.agent_states[agent_id] = AgentState()
+
+        # Clear coordination messages
+        self._coordination_messages = []
+        self._selected_agent = None
+        self._final_presentation_content = None
+
+        # Reset coordination tracker for new attempt
+        self.coordination_tracker = CoordinationTracker()
+        self.coordination_tracker.initialize_session(list(self.agents.keys()))
+
+        # Reset workflow phase to idle so next coordinate() call starts fresh
+        self.workflow_phase = "idle"
+
+        # Increment attempt counter
+        self.current_attempt += 1
+
+        log_orchestrator_activity("handle_restart", f"State reset complete - starting attempt {self.current_attempt + 1}")
+
     def _get_vote_results(self) -> Dict[str, Any]:
         """Get current vote results and statistics."""
         agent_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
@@ -2807,7 +3301,8 @@ Your answer:"""
         Get final result for session persistence.
 
         Returns:
-            Dict with final_answer, winning_agent_id, and workspace_path, or None if not available
+            Dict with final_answer, winning_agent_id, workspace_path, and winning_agents_history,
+            or None if not available
         """
         if not self._selected_agent or not self._final_presentation_content:
             return None
@@ -2821,6 +3316,7 @@ Your answer:"""
             "final_answer": self._final_presentation_content,
             "winning_agent_id": self._selected_agent,
             "workspace_path": workspace_path,
+            "winning_agents_history": self._winning_agents_history.copy(),  # For cross-turn memory sharing
         }
 
     def get_status(self) -> Dict[str, Any]:
@@ -2867,8 +3363,9 @@ Your answer:"""
         """
         if self.config and hasattr(self.config, "get_configurable_system_message"):
             return self.config.get_configurable_system_message()
-        elif self.config and hasattr(self.config, "custom_system_instruction"):
-            return self.config.custom_system_instruction
+        elif self.config and hasattr(self.config, "_custom_system_instruction"):
+            # Access private attribute to avoid deprecation warning
+            return self.config._custom_system_instruction
         elif self.config and self.config.backend_params:
             # Check for backend-specific system prompts
             backend_params = self.config.backend_params

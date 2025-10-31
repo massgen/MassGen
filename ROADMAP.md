@@ -1,8 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.2
+**Current Version:** v0.1.5
+
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
-**Last Updated:** October 23, 2025
+
+**Last Updated:** October 29, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -19,7 +21,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | General Interoperability | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
-| Memory Module | [@kitrakrev](https://github.com/kitrakrev) | kitrak_23536 |
+| Memory Module | [@qidanrui](https://github.com/qidanrui) [@ncrispino](https://github.com/ncrispino) | danrui2020, nickcrispino |
 | Final Agent Submit/Restart | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Coding Agent Enhancements | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | DSPy Integration | [@praneeth999](https://github.com/praneeth999) | ram2561 |
@@ -32,38 +34,49 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.3** | 10/24/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
-| | | Final Agent Submit/Restart Tools | @ncrispino | Multi-step task verification and intelligent restart decisions |
-| **v0.1.4** | 10/27/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Memory Module (Phase 1) | @kitrakrev | Long-term memory for reasoning tasks and document understanding |
+| **v0.1.6** | 11/01/25 | Backend Code Refactoring | @praneeth999 | Improved code organization and maintainability |
+| **v0.1.7** | 11/04/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
+| **v0.1.8** | 11/06/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks || | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.3 - General Interoperability & Enterprise Collaboration
+## 📋 v0.1.6 - Backend Code Refactoring
 
 ### Features
 
-**1. General Interoperability** (@qidanrui)
-- Issue: [#341](https://github.com/Leezekun/MassGen/issues/341)
-- Framework integration for external agent systems
-- Unified agent interface for seamless integration
-- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source
-
-**2. Final Agent Submit/Restart Tools** (@ncrispino)
-- Issue: [#325](https://github.com/Leezekun/MassGen/issues/325)
-- Enable final agent to decide whether to submit answer or restart orchestration
-- Agent can access previous agents' responses and workspaces when restarting
-- **Use Case**: Multi-step tasks where completion requires verification (repository cloning + issue resolution, planning-mode scenarios)
+**1. Backend Code Refactoring** (@praneeth999)
+- PR: [#362](https://github.com/Leezekun/MassGen/pull/362)
+- Major backend code refactoring for improved maintainability
+- Enhanced code organization and architectural improvements
+- **Use Case**: Improved developer experience and easier future enhancements
 
 ### Success Criteria
-- ✅ Final agent can intelligently decide to restart when task is incomplete
-- ✅ Documentation with use case examples
+- ✅ Backend refactoring merged with improved code structure
+- ✅ Cleaner architecture and better code organization
 
 ---
 
-## 📋 v0.1.4 - Intelligent Optimization & Safety
+## 📋 v0.1.7 - Interoperability
+
+### Features
+
+**1. Agent Framework Interoperability** (@qidanrui)
+- Issue: [#374](https://github.com/Leezekun/MassGen/issues/374)
+- PR: [#341](https://github.com/Leezekun/MassGen/pull/341) (Draft)
+- Agent-as-tool wrapper system for cross-framework collaboration
+- Enable agents from AG2, LangGraph, and other frameworks to work together
+- Unified interface for framework-agnostic collaboration
+- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source without rewriting them
+
+### Success Criteria
+- ✅ Agents from different frameworks (AG2, LangGraph) can be wrapped as tools
+- ✅ Cross-framework agent collaboration works seamlessly
+
+---
+
+## 📋 v0.1.8 - Intelligent Optimization & Advanced Voting
 
 ### Features
 
@@ -73,15 +86,15 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Issue: [#316](https://github.com/Leezekun/MassGen/issues/316)
 - **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
 
-**2. Irreversible Actions Safety** (@franklinnwren)
-- LLM-generated detection of irreversible MCP tools
-- Optional human-in-the-loop approval
-- Per-user customizable tool lists
-- **Use Case**: Writing to real-world documents, database operations, production deployments where safety is critical
+**2. Add Computer Use Agent to Custom Tools** (@qidanrui)
+- Issue: [#358](https://github.com/Leezekun/MassGen/issues/358)
+- Computer use agent integration with custom tools system
+- Enable agents to interact with computer interfaces
+- **Use Case**: Automated UI testing, browser automation, and desktop application interaction
 
 ### Success Criteria
 - ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
-- ✅ Safety controls prevent accidental irreversible operations
+- ✅ Computer use agent successfully integrated with custom tools
 
 ---
 
@@ -104,10 +117,10 @@ These features are being actively developed on **separate parallel tracks** and 
 - Image, audio, video processing across backends
 - **Shipping:** Incremental improvements each release
 
-### Track: Memory Module (@kitrakrev, kitrak_23536)
-- PR: TODO
-- Long-term memory implementation using mem0
-- **Target:** v0.1.1 (Phase 1), v0.1.2 (Phase 2)
+### Track: Memory Module (@qidanrui, @ncrispino, danrui2020, nickcrispino)
+- Issues: [#347](https://github.com/Leezekun/MassGen/issues/347), [#348](https://github.com/Leezekun/MassGen/issues/348)
+- Short and long-term memory implementation with persistence
+- **Status:** ✅ Completed in v0.1.5
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
@@ -189,5 +202,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 22, 2025
+**Last Updated:** October 29, 2025
 **Maintained By:** MassGen Team

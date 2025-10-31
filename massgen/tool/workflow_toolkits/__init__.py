@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 from .base import BaseToolkit, ToolType
 from .new_answer import NewAnswerToolkit
+from .post_evaluation import PostEvaluationToolkit
 from .vote import VoteToolkit
 
 __all__ = [
@@ -14,7 +15,9 @@ __all__ = [
     "ToolType",
     "NewAnswerToolkit",
     "VoteToolkit",
+    "PostEvaluationToolkit",
     "get_workflow_tools",
+    "get_post_evaluation_tools",
 ]
 
 
@@ -55,3 +58,26 @@ def get_workflow_tools(
     tools.extend(vote_toolkit.get_tools(config))
 
     return tools
+
+
+def get_post_evaluation_tools(
+    template_overrides: Optional[Dict] = None,
+    api_format: str = "chat_completions",
+) -> List[Dict]:
+    """
+    Get post-evaluation tool definitions (submit and restart_orchestration).
+
+    Args:
+        template_overrides: Optional template overrides
+        api_format: API format to use (chat_completions, claude, response)
+
+    Returns:
+        List of tool definitions [submit, restart_orchestration]
+    """
+    config = {
+        "api_format": api_format,
+        "enable_post_evaluation_tools": True,
+    }
+
+    post_eval_toolkit = PostEvaluationToolkit(template_overrides=template_overrides)
+    return post_eval_toolkit.get_tools(config)

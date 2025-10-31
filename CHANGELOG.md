@@ -7,16 +7,201 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
-**v0.1.2 (October 2025)** - Intelligent Planning Mode & Model Updates
-Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
+**v0.1.5 (October 2025)** - Memory System
+Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
 
-**v0.1.1 (October 2025)** - Custom Tools, Voting Controls & Documentation
-Custom Python function tools, voting sensitivity controls, interactive config builder, and comprehensive Sphinx documentation.
+**v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
+Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
 
-**v0.1.0 (October 2025)** - PyPI Package & Documentation
-Official PyPI release with enhanced documentation and installation via `pip install massgen`.
+**v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
+Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
 
 ---
+
+## [0.1.5] - 2025-10-29
+
+### Added
+- **Memory System**: Complete long-term memory implementation with semantic retrieval
+  - New `massgen/memory/` module with comprehensive memory management
+  - **PersistentMemory** via mem0 integration for semantic fact storage and retrieval
+  - **ConversationMemory** for short-term verbatim message tracking
+  - **Automatic Context Compression** when approaching token limits
+  - **Memory Sharing for Multi-Turn Conversations** with turn-aware filtering to prevent temporal leakage
+  - **Session Management** for memory isolation and continuation across runs
+  - **Qdrant Vector Database Integration** for efficient semantic search (server and local modes)
+  - **Context Monitoring** with real-time token usage tracking
+  - Fact extraction prompts with customizable LLM and embedding providers
+  - Supports OpenAI, Anthropic, Groq, and other mem0-compatible providers
+
+- **Memory Configuration Support**: New YAML configuration options
+  - Memory enable/disable toggle at global and per-agent levels
+  - Configurable compression thresholds (trigger_threshold, target_ratio)
+  - Retrieval settings (limit, exclude_recent for smart retrieval)
+  - Session naming for continuation and cross-session memory
+  - LLM and embedding provider configuration for mem0
+  - Qdrant connection settings (server/local mode, host, port, path)
+
+### Changed
+- **Chat Agent Enhancement**: Memory integration for agent workflows
+  - Memory recording after agent responses (conversation and persistent)
+  - Memory retrieval on restart/reset for context restoration
+  - Integration with compression and context monitoring modules
+
+- **Orchestrator Enhancement**: Memory coordination for multi-agent workflows
+  - Memory initialization and management across agent lifecycles
+  - Memory cleanup on orchestrator shutdown
+
+### Documentations, Configurations and Resources
+
+- **Memory Documentation**: Comprehensive memory system user guide
+  - New `docs/source/user_guide/memory.rst`
+  - Complete usage guide with quick start, configuration reference, and examples
+  - Design decisions documentation explaining architecture choices
+  - Troubleshooting guide for common memory issues
+  - Monitoring and debugging instructions with log examples
+  - API reference for PersistentMemory, ConversationMemory, and ContextMonitor
+
+- **Configuration Examples**: 5 new memory-focused YAML configurations
+  - `gpt5mini_gemini_context_window_management.yaml`: Multi-agent with context compression
+  - `gpt5mini_gemini_research_to_implementation.yaml`: Research to implementation workflow
+  - `gpt5mini_high_reasoning_gemini.yaml`: High reasoning agents with memory
+  - `gpt5mini_gemini_baseline_research_to_implementation.yaml`: Baseline research workflow
+  - `single_agent_compression_test.yaml`: Testing compression behavior
+
+- **Infrastructure and Testing**:
+  - Memory test suite with 4 test files in `massgen/tests/memory/`
+  - Additional memory tests: `test_agent_memory.py`, `test_conversation_memory.py`, `test_orchestrator_memory.py`, `test_persistent_memory.py`
+
+### Technical Details
+- **Major Focus**: Long-term memory system with semantic retrieval and memory sharing for multi-turn conversations
+- **Contributors**: @ncrispino @qidanrui @kitrakrev @sonichi @Henry-811 and the MassGen team
+
+## [0.1.4] - 2025-10-27
+
+### Added
+- **Multimodal Generation Tools**: Comprehensive generation capabilities via OpenAI APIs
+  - New `text_to_image_generation` tool for generating images from text prompts using DALL-E models
+  - New `text_to_video_generation` tool for generating videos from text prompts
+  - New `text_to_speech_continue_generation` tool for text-to-speech with continuation support
+  - New `text_to_speech_transcription_generation` tool for audio transcription and generation
+  - New `text_to_file_generation` tool for generating documents (PDF, DOCX, XLSX, PPTX)
+  - New `image_to_image_generation` tool for image-to-image transformations
+  - Implemented in `massgen/tool/_multimodal_tools/` with 6 new modules
+
+- **Binary File Protection System**: Enhanced security for file operations
+  - New binary file blocking in `PathPermissionManager` preventing text tools from reading binary files
+  - Added `BINARY_FILE_EXTENSIONS` set covering images, videos, audio, archives, executables, and Office documents
+  - New `_validate_binary_file_access()` method with intelligent tool suggestions
+  - Prevents context pollution by blocking Read, read_text_file, and read_file tools from binary files
+  - Comprehensive test suite in `test_binary_file_blocking.py`
+
+- **Crawl4AI Web Scraping Integration**: Advanced web content extraction tool
+  - New `crawl4ai_tool` for intelligent web scraping with LLM-powered extraction
+  - Implemented in `massgen/tool/_web_tools/crawl4ai_tool.py`
+
+### Changed
+- **Multimodal File Size Limits**: Enhanced validation and automatic handling
+  - Automatic image resizing for files exceeding size limits
+  - Comprehensive size limit test suite in `test_multimodal_size_limits.py`
+  - Enhanced validation in understand_audio and understand_video tools
+
+### Documentations, Configurations and Resources
+
+- **PyPI Package Documentation**: Standalone README for PyPI distribution
+  - New `README_PYPI.md` with comprehensive package documentation
+  - Improved package metadata and installation instructions
+
+- **Release Management Documentation**: Comprehensive release workflow guide
+  - New `docs/dev_notes/release_checklist.md` with step-by-step release procedures
+  - Detailed checklist for testing, documentation, and deployment
+
+- **Binary File Protection Documentation**: Enhanced protected paths user guide
+  - Updated `docs/source/user_guide/protected_paths.rst` with binary file protection section
+  - Documents 40+ protected binary file types and specialized tool suggestions
+
+- **Configuration Examples**: 9 new YAML configuration files
+  - **Generation Tools**: 8 multimodal generation configurations
+    - `text_to_image_generation_single.yaml` and `text_to_image_generation_multi.yaml`
+    - `text_to_video_generation_single.yaml` and `text_to_video_generation_multi.yaml`
+    - `text_to_speech_generation_single.yaml` and `text_to_speech_generation_multi.yaml`
+    - `text_to_file_generation_single.yaml` and `text_to_file_generation_multi.yaml`
+  - **Web Scraping**: `crawl4ai_example.yaml` for Crawl4AI integration
+
+### Technical Details
+- **Major Focus**: Multimodal generation tools, binary file protection system, web scraping integration
+- **Contributors**: @qidanrui @ncrispino @sonichi @Henry-811 and the MassGen team
+
+## [0.1.3] - 2025-10-24
+
+### Added
+- **Post-Evaluation Workflow Tools**: Submit and restart capabilities for winning agents
+  - New `PostEvaluationToolkit` class in `massgen/tool/workflow_toolkits/post_evaluation.py`
+  - `submit` tool for confirming final answers
+  - `restart_orchestration` tool for restarting with improvements and feedback
+  - Post-evaluation phase where winning agent evaluates its own answer
+  - Support for all API formats (Claude, Response API, Chat Completions)
+  - Configuration parameter `enable_post_evaluation_tools` for opt-in/out
+
+- **Custom Multimodal Understanding Tools**: Active tools for analyzing workspace files using OpenAI's GPT-4.1 API
+  - New `understand_image` tool for analyzing images (PNG, JPEG, JPG) with detailed metadata extraction
+  - New `understand_audio` tool for transcribing and analyzing audio files (WAV, MP3, FLAC, OGG)
+  - New `understand_video` tool for extracting frames and analyzing video content (MP4, AVI, MOV, WEBM)
+  - New `understand_file` tool for processing documents (PDF, DOCX, XLSX, PPTX) with text and metadata extraction
+  - Works with any backend (uses OpenAI for analysis)
+  - Returns structured JSON with comprehensive metadata
+
+- **Docker Sudo Mode**: Enhanced Docker execution with privileged command support
+  - New `use_sudo` parameter for Docker execution
+  - Sudo mode for commands requiring elevated privileges
+  - Enhanced security instructions and documentation
+  - Test coverage in `test_code_execution.py`
+
+### Changed
+- **Interactive Config Builder Enhancement**: Improved workflow and provider handling
+  - Better flow from automatic setup to config builder
+  - Auto-detection of environment variables
+  - Improved provider-specific configuration handling
+  - Integrated multimodal tools selection in config wizard
+
+### Fixed
+- **System Message Warning**: Resolved deprecated system message configuration warning
+  - Fixed system message handling in `agent_config.py`
+  - Updated chat agent to properly handle system messages
+  - Removed deprecated warning messages
+
+- **Config Builder Issues**: Multiple configuration builder improvements
+  - Fixed config display errors
+  - Improved config saving across different provider types
+  - Better error handling for missing configurations
+
+### Documentations, Configurations and Resources
+
+- **Multimodal Tools Documentation**: Comprehensive documentation for new multimodal tools
+  - `docs/source/user_guide/multimodal.rst`: Updated with custom tools section
+  - `massgen/tool/docs/multimodal_tools.md`: Complete 779-line technical documentation
+
+- **Docker Sudo Mode Documentation**: Enhanced Docker execution documentation
+  - `docs/source/user_guide/code_execution.rst`: Added 98 lines documenting sudo mode
+  - `massgen/docker/README.md`: Updated with sudo mode instructions
+
+- **Configuration Examples**: New example configurations
+  - `configs/tools/multimodal_tools/understand_image.yaml`: Image analysis configuration
+  - `configs/tools/multimodal_tools/understand_audio.yaml`: Audio transcription configuration
+  - `configs/tools/multimodal_tools/understand_video.yaml`: Video analysis configuration
+  - `configs/tools/multimodal_tools/understand_file.yaml`: Document processing configuration
+
+- **Example Resources**: New test resources for v0.1.3 features
+  - `massgen/configs/resources/v0.1.3-example/multimodality.jpg`: Image example
+  - `massgen/configs/resources/v0.1.3-example/Sherlock_Holmes.mp3`: Audio example
+  - `massgen/configs/resources/v0.1.3-example/oppenheimer_trailer_1920.mp4`: Video example
+  - `massgen/configs/resources/v0.1.3-example/TUMIX.pdf`: PDF document example
+
+- **Case Studies**: New case study demonstrating v0.1.3 features
+  - `docs/source/examples/case_studies/multimodal-case-study-video-analysis.md`: Meta-level demonstration of multimodal video understanding with agents analyzing their own case study videos
+
+### Technical Details
+- **Major Focus**: Post-evaluation workflow tools, custom multimodal understanding tools, Docker sudo mode
+- **Contributors**: @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.2] - 2025-10-22
 
@@ -50,7 +235,7 @@ Official PyPI release with enhanced documentation and installation via `pip inst
 ### Documentations, Configurations and Resources
 
 - **Intelligent Planning Mode Case Study**: Complete feature documentation
-  - `docs/case_studies/INTELLIGENT_PLANNING_MODE.md`: Comprehensive guide for automatic planning mode
+  - `docs/source/examples/case_studies/INTELLIGENT_PLANNING_MODE.md`: Comprehensive guide for automatic planning mode
   - Demonstrates automatic irreversibility detection
   - Shows read/write operation classification
   - Includes examples for Discord, filesystem, and Twitter operations
@@ -130,7 +315,7 @@ Official PyPI release with enhanced documentation and installation via `pip inst
 ### Documentations, Configurations and Resources
 
 - **Case Study: Universal Code Execution via MCP**: Comprehensive v0.0.31 feature documentation
-  - `docs/case_studies/universal-code-execution-mcp.md`
+  - `docs/source/examples/case_studies/universal-code-execution-mcp.md`
   - Demonstrates pytest test creation and execution across backends
   - Shows command validation, security layers, and result interpretation
 

@@ -21,6 +21,7 @@ TECHNICAL SOLUTION:
 
 import asyncio
 import json
+import logging
 import os
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
@@ -36,6 +37,18 @@ from ..logger_config import (
 from .base import FilesystemSupport, StreamChunk
 from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, ToolExecutionConfig
 from .gemini_utils import CoordinationResponse, PostEvaluationResponse
+
+# Suppress Gemini SDK logger warning about non-text parts in response
+# Using custom filter per https://github.com/googleapis/python-genai/issues/850
+class NoFunctionCallWarning(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "there are non-text parts in the response:" in message:
+            return False
+        return True
+
+
+logging.getLogger("google_genai.types").addFilter(NoFunctionCallWarning())
 
 # MCP integration imports
 try:
@@ -202,6 +215,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
             # Detect coordination mode
             is_coordination = self.formatter.has_coordination_tools(tools)
             is_post_evaluation = self.formatter.has_post_evaluation_tools(tools)
+
             valid_agent_ids = None
 
             if is_coordination:
@@ -220,6 +234,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
             # For coordination requests, modify the prompt to use structured output
             if is_coordination:
                 full_content = self.formatter.build_structured_output_prompt(full_content, valid_agent_ids)
+            elif is_post_evaluation:
+                # For post-evaluation, modify prompt to use structured output
+                full_content = self.formatter.build_post_evaluation_prompt(full_content)
 
             # Create Gemini client
             client = genai.Client(api_key=self.api_key)

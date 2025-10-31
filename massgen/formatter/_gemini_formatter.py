@@ -121,6 +121,21 @@ class GeminiFormatter(FormatterBase):
 
         return "vote" in tool_names and "new_answer" in tool_names
 
+    def has_post_evaluation_tools(self, tools: List[Dict[str, Any]]) -> bool:
+        """Detect if tools contain submit/restart_orchestration post-evaluation tools."""
+        if not tools:
+            return False
+
+        tool_names = set()
+        for tool in tools:
+            if tool.get("type") == "function":
+                if "function" in tool:
+                    tool_names.add(tool["function"].get("name", ""))
+                elif "name" in tool:
+                    tool_names.add(tool.get("name", ""))
+
+        return "submit" in tool_names and "restart_orchestration" in tool_names
+
     def build_structured_output_prompt(self, base_content: str, valid_agent_ids: Optional[List[str]] = None) -> str:
         """Build prompt that encourages structured output for coordination."""
         agent_list = ""
@@ -147,6 +162,33 @@ If you want to provide a NEW ANSWER:
   "answer_data": {{
     "action": "new_answer",
     "content": "Your complete improved answer here"
+  }}
+}}
+
+Make your decision and include the JSON at the very end of your response."""
+
+    def build_post_evaluation_prompt(self, base_content: str) -> str:
+        """Build prompt that encourages structured output for post-evaluation."""
+        return f"""{base_content}
+
+IMPORTANT: You must respond with a structured JSON decision at the end of your response.
+
+If you want to SUBMIT the answer (it's complete and satisfactory):
+{{
+  "action_type": "submit",
+  "submit_data": {{
+    "action": "submit",
+    "confirmed": true
+  }}
+}}
+
+If you want to RESTART with improvements:
+{{
+  "action_type": "restart",
+  "restart_data": {{
+    "action": "restart",
+    "reason": "Clear explanation of why the answer is insufficient",
+    "instructions": "Detailed, actionable guidance for the next attempt"
   }}
 }}
 
@@ -238,6 +280,7 @@ Make your decision and include the JSON at the very end of your response."""
         """Convert structured response to tool call format."""
         action_type = structured_response.get("action_type")
 
+        # Coordination tools
         if action_type == "vote":
             vote_data = structured_response.get("vote_data", {})
             return [
@@ -264,6 +307,36 @@ Make your decision and include the JSON at the very end of your response."""
                             "content": answer_data.get("content", ""),
                         },
                     ),
+                },
+            ]
+
+        # Post-evaluation tools
+        elif action_type == "submit":
+            submit_data = structured_response.get("submit_data", {})
+            return [
+                {
+                    "id": f"submit_{abs(hash(str(submit_data))) % 10000 + 1}",
+                    "type": "function",
+                    "function": {
+                        "name": "submit",
+                        "arguments": {"confirmed": submit_data.get("confirmed", True)},
+                    },
+                },
+            ]
+
+        elif action_type == "restart":
+            restart_data = structured_response.get("restart_data", {})
+            return [
+                {
+                    "id": f"restart_{abs(hash(str(restart_data))) % 10000 + 1}",
+                    "type": "function",
+                    "function": {
+                        "name": "restart_orchestration",
+                        "arguments": {
+                            "reason": restart_data.get("reason", ""),
+                            "instructions": restart_data.get("instructions", ""),
+                        },
+                    },
                 },
             ]
 

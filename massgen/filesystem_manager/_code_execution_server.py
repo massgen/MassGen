@@ -62,7 +62,7 @@ def _validate_path_access(path: Path, allowed_paths: List[Path]) -> None:
     raise ValueError(f"Path not in allowed directories: {path}")
 
 
-def _sanitize_command(command: str) -> None:
+def _sanitize_command(command: str, enable_sudo: bool = False) -> None:
     """
     Sanitize the command to prevent dangerous operations.
 
@@ -71,6 +71,7 @@ def _sanitize_command(command: str) -> None:
 
     Args:
         command: The command to sanitize
+        enable_sudo: Whether sudo is enabled (in Docker mode with sudo variant)
 
     Raises:
         ValueError: If dangerous command is detected
@@ -82,12 +83,19 @@ def _sanitize_command(command: str) -> None:
         (r"\bdd\b", "Use of 'dd' command is not allowed"),
         (r">\s*/dev/sd[a-z][1-9]?", "Overwriting disk blocks directly is not allowed"),
         (r":\(\)\{\s*:\|\:&\s*\};:", "Fork bombs are not allowed"),
-        # Additional safety patterns
-        (r"\bsudo\b", "Use of 'sudo' is not allowed"),
-        (r"\bsu\b", "Use of 'su' is not allowed"),
-        (r"\bchown\b", "Use of 'chown' is not allowed"),
-        (r"\bchmod\b", "Use of 'chmod' is not allowed"),
     ]
+
+    # Only check these patterns if sudo is NOT enabled
+    # When sudo is enabled (Docker mode with sudo variant), these are safe
+    if not enable_sudo:
+        dangerous_patterns.extend(
+            [
+                (r"\bsudo\b", "Use of 'sudo' is not allowed"),
+                (r"\bsu\b", "Use of 'su' is not allowed"),
+                (r"\bchown\b", "Use of 'chown' is not allowed"),
+                (r"\bchmod\b", "Use of 'chmod' is not allowed"),
+            ],
+        )
 
     for pattern, message in dangerous_patterns:
         if re.search(pattern, command):
@@ -202,6 +210,12 @@ async def create_server() -> fastmcp.FastMCP:
         default=None,
         help="Agent ID (required for Docker mode to identify container)",
     )
+    parser.add_argument(
+        "--enable-sudo",
+        action="store_true",
+        default=False,
+        help="Enable sudo in Docker containers (disables sudo command sanitization checks)",
+    )
     args = parser.parse_args()
 
     # Create the FastMCP server
@@ -215,6 +229,7 @@ async def create_server() -> fastmcp.FastMCP:
     mcp.blocked_commands = args.blocked_commands  # Blacklist patterns
     mcp.execution_mode = args.execution_mode
     mcp.agent_id = args.agent_id
+    mcp.enable_sudo = args.enable_sudo
 
     # Initialize Docker client if Docker mode
     mcp.docker_client = None
@@ -294,7 +309,7 @@ async def create_server() -> fastmcp.FastMCP:
         try:
             # Basic command sanitization (dangerous patterns)
             try:
-                _sanitize_command(command)
+                _sanitize_command(command, enable_sudo=mcp.enable_sudo)
             except ValueError as e:
                 return {
                     "success": False,
