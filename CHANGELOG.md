@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Recent Releases
 
 **v0.1.6 (November 2025)** - Framework Interoperability & Backend Refactoring
-External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
+External agent framework integration as tools (AG2, LangGraph), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
 
 **v0.1.5 (October 2025)** - Memory System
 Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
@@ -22,12 +22,9 @@ Comprehensive generation tools for images, videos, audio, and documents with Ope
 
 ### Added
 - **Framework Interoperability**: External agent framework integration as MassGen custom tools
-  - New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
+  - New `massgen/tool/_extraframework_agents/` module with framework integrations
   - **AG2 (AutoGen) Lesson Planner Tool**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning
   - **LangGraph Lesson Planner Tool**: LangGraph graph-based workflows integrated as tool
-  - **AgentScope Lesson Planner Tool**: AgentScope agent system wrapped for lesson creation
-  - **OpenAI Assistants Lesson Planner Tool**: OpenAI Assistants API integrated as tool
-  - **SmoLAgent Lesson Planner Tool**: HuggingFace SmoLAgent integration for lesson planning
   - Enables MassGen agents to delegate tasks to specialized external frameworks
   - Each framework runs autonomously and returns results to MassGen orchestrator
 
@@ -68,12 +65,9 @@ Comprehensive generation tools for images, videos, audio, and documents with Ope
 
 ### Documentations, Configurations and Resources
 
-- **Framework Interoperability Examples**: 8 new configuration files demonstrating external framework integration
-  - **AG2 Examples**: `ag2_lesson_planner_example.yaml`, `ag2_and_langgraph_lesson_planner.yaml`, `ag2_and_openai_assistant_lesson_planner.yaml`
+- **Framework Interoperability Examples**: New configuration files demonstrating external framework integration
+  - **AG2 Examples**: `ag2_lesson_planner_example.yaml`, `ag2_and_langgraph_lesson_planner.yaml`
   - **LangGraph Examples**: `langgraph_lesson_planner_example.yaml`
-  - **AgentScope Examples**: `agentscope_lesson_planner_example.yaml`
-  - **OpenAI Assistants Examples**: `openai_assistant_lesson_planner_example.yaml`
-  - **SmoLAgent Examples**: `smolagent_lesson_planner_example.yaml`
   - **Multi-Framework Examples**: `two_models_with_tools_example.yaml`
 
 ### Technical Details

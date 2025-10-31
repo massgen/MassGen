@@ -233,15 +233,11 @@ Most configurations use environment variables for API keys:so
 **Configuration Files:**
 - `ag2_lesson_planner_example.yaml` - AG2 (AutoGen) nested chat as custom tool
 - `langgraph_lesson_planner_example.yaml` - LangGraph workflows integrated as tools
-- `agentscope_lesson_planner_example.yaml` - AgentScope agent system integration
-- `openai_assistant_lesson_planner_example.yaml` - OpenAI Assistants as tools
-- `smolagent_lesson_planner_example.yaml` - HuggingFace SmoLAgent integration
 - `ag2_and_langgraph_lesson_planner.yaml` - Multi-framework collaboration (AG2 + LangGraph)
-- `ag2_and_openai_assistant_lesson_planner.yaml` - AG2 + OpenAI Assistants combination
 - `two_models_with_tools_example.yaml` - Multiple models with custom tools
 
 **Key Features:**
-- **Framework Interoperability**: Use agents from external frameworks (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent) as MassGen tools
+- **Framework Interoperability**: Use agents from external frameworks (AG2, LangGraph) as MassGen tools
 - **Configuration Validator**: Pre-flight YAML validation with detailed error messages
 - **Unified Tool Execution**: ToolExecutionConfig dataclass for consistent tool handling
 - **Gemini Simplification**: Major backend cleanup reducing codebase by 1,598 lines
@@ -250,27 +246,15 @@ Most configurations use environment variables for API keys:so
 ```bash
 # Use AG2 agents for lesson planning
 # Requirements: pip install pyautogen, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+massgen --config massgen/configs/tools/custom_tools/interop/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
 # Use LangGraph workflows as tools
 # Requirements: pip install langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+massgen --config massgen/configs/tools/custom_tools/interop/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
-# Use AgentScope multi-agent framework as tools
-# Requirements: pip install agentscope, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-
-# Use OpenAI Assistants API as tools
-# Requirements: pip install openai, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/openai_assistant_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-
-# Use SmolAgent (HuggingFace) as tools
-# Requirements: pip install smolagents, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/smolagent_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-
-# Combine multiple frameworks
+# Combine AG2 + LangGraph for multi-framework collaboration
 # Requirements: pip install pyautogen langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
+massgen --config massgen/configs/tools/custom_tools/interop/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
 ```
 
 ### v0.1.5
