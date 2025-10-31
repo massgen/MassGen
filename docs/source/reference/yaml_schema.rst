@@ -7,6 +7,10 @@ Complete YAML configuration schema for MassGen.
 
    For a complete overview of supported models and capabilities, see :doc:`supported_models`.
 
+.. tip::
+
+   **Validate your configs!** MassGen includes a built-in validator that checks for errors before running. Use ``massgen --validate config.yaml`` to verify your configuration. See :doc:`../user_guide/validating_configs` for details.
+
 Configuration Hierarchy
 -----------------------
 

@@ -2512,6 +2512,27 @@ async def main(args):
             if args.debug:
                 logger.debug(f"Resolved config path: {resolved_path}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
+
+            # Automatic config validation (unless --skip-validation flag is set)
+            if not args.skip_validation:
+                from .config_validator import ConfigValidator
+
+                validator = ConfigValidator()
+                validation_result = validator.validate_config(config)
+
+                # Show errors if any
+                if validation_result.has_errors():
+                    print(validation_result.format_errors(), file=sys.stderr)
+                    print(f"\n{BRIGHT_RED}❌ Config validation failed. Fix errors above or use --skip-validation to bypass.{RESET}\n")
+                    sys.exit(1)
+
+                # Show warnings (non-blocking unless --strict-validation)
+                if validation_result.has_warnings():
+                    print(validation_result.format_warnings())
+                    if args.strict_validation:
+                        print(f"\n{BRIGHT_RED}❌ Config validation failed in strict mode (warnings treated as errors).{RESET}\n")
+                        sys.exit(1)
+                    print()  # Extra newline for readability
         else:
             model = args.model
             if args.backend:
@@ -2825,6 +2846,33 @@ Environment Variables:
         action="store_true",
         help="Include example configurations in schema display",
     )
+    parser.add_argument(
+        "--validate",
+        type=str,
+        metavar="CONFIG_FILE",
+        help="Validate a configuration file without running it",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as errors during validation (use with --validate)",
+    )
+    parser.add_argument(
+        "--json",
+        dest="json_output",
+        action="store_true",
+        help="Output validation results in JSON format (use with --validate)",
+    )
+    parser.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skip automatic config validation when loading config files",
+    )
+    parser.add_argument(
+        "--strict-validation",
+        action="store_true",
+        help="Treat config warnings as errors and abort execution",
+    )
 
     # Timeout options
     timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
@@ -2836,14 +2884,26 @@ Environment Variables:
 
     args = parser.parse_args()
 
-    # Always setup logging (will save INFO to file, console output depends on debug flag)
-    setup_logging(debug=args.debug)
+    # Handle special commands first (before logging setup to avoid creating log dirs)
+    if args.validate:
+        from .config_validator import ConfigValidator
 
-    if args.debug:
-        logger.info("Debug mode enabled")
-        logger.debug(f"Command line arguments: {vars(args)}")
+        validator = ConfigValidator()
+        result = validator.validate_config_file(args.validate)
 
-    # Handle special commands first
+        # Output results
+        if args.json_output:
+            # JSON output for machine parsing
+            print(json.dumps(result.to_dict(), indent=2))
+        else:
+            # Human-readable output
+            print(result.format_all())
+
+        # Exit with appropriate code
+        if not result.is_valid() or (args.strict and result.has_warnings()):
+            sys.exit(1)
+        sys.exit(0)
+
     if args.list_examples:
         show_available_examples()
         return
@@ -2857,6 +2917,13 @@ Environment Variables:
 
         show_schema(backend=args.schema_backend, show_examples=args.with_examples)
         return
+
+    # Setup logging for all other commands (actual execution, setup, init, etc.)
+    setup_logging(debug=args.debug)
+
+    if args.debug:
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
 
     # Launch interactive API key setup if requested
     if args.setup:
