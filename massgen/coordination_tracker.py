@@ -40,12 +40,14 @@ class EventType(str, Enum):
     AGENT_ERROR = "agent_error"
     AGENT_TIMEOUT = "agent_timeout"
     AGENT_CANCELLED = "agent_cancelled"
+    UPDATE_INJECTED = "update_injected"
 
 
 ACTION_TO_EVENT = {
     ActionType.ERROR: EventType.AGENT_ERROR,
     ActionType.TIMEOUT: EventType.AGENT_TIMEOUT,
     ActionType.CANCELLED: EventType.AGENT_CANCELLED,
+    ActionType.UPDATE_INJECTED: EventType.UPDATE_INJECTED,
 }
 
 

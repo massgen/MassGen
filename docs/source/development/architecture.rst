@@ -90,12 +90,18 @@ The coordination process follows these steps:
 2. **Answer Observation**: Agents can see recent answers from other agents
 3. **Decision Making**: Each agent chooses to either:
 
-   - Provide a new/refined answer
-   - Vote for an existing answer they think is best
+   - Provide a new/refined answer (``new_answer`` tool)
+   - Vote for an existing answer they think is best (``vote`` tool)
 
-4. **Consensus Detection**: Coordination continues until all agents have voted
-5. **Winner Selection**: The agent with the most votes is selected
-6. **Final Presentation**: The winning agent delivers the final answer
+4. **Dynamic Updates**: When an agent provides ``new_answer``:
+
+   - Other agents receive update injection mid-work
+   - Agents continue with preserved context (inject-and-continue)
+   - All existing votes are cleared (new answer invalidates votes)
+
+5. **Consensus Detection**: Coordination continues until all agents have voted
+6. **Winner Selection**: The agent with the most votes is selected
+7. **Final Presentation**: The winning agent delivers the final answer
 
 **Key Features:**
 
@@ -103,6 +109,51 @@ The coordination process follows these steps:
 * **Iterative Refinement**: Agents can refine their answers after seeing others' work
 * **Workspace Sharing**: When agents answer, their workspace is snapshotted for others to review
 * **Tie Resolution**: Deterministic tie-breaking based on answer order
+
+Inject-and-Continue (Preempt-Not-Restart)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When an agent provides a ``new_answer`` while other agents are working, MassGen uses an **inject-and-continue** approach instead of restarting agents from scratch.
+
+**Traditional Approach (Restart):**
+
+.. code-block:: text
+
+   Agent A: Working on solution... [deep in analysis]
+   Agent B: Provides new_answer
+            ↓
+   Agent A: KILL stream → Clear context → Restart from zero
+            ❌ Lost all partial work and thinking
+
+**MassGen Approach (Inject-and-Continue):**
+
+.. code-block:: text
+
+   Agent A: Working on solution... [deep in analysis]
+   Agent B: Provides new_answer
+            ↓
+   Agent A: Receive UPDATE → Inject new context → Continue working
+            ✅ Preserved all partial work and thinking
+            ✅ Can now build on Agent B's answer
+
+**Benefits:**
+
+1. **Context Preservation**: Agents keep their full thinking history
+2. **Efficiency**: No wasted computation regenerating ideas
+3. **Better Collaboration**: Agents can synthesize multiple perspectives
+4. **Natural Building**: Agents reference and improve each other's work
+
+**Update Injection**:
+
+Updates are injected at **safe points** during agent execution:
+
+* Between iteration loops (after completing a response)
+* When agent checks for new context
+* NOT mid-stream (would break agent reasoning)
+
+**Race Condition**: If an agent is deep in its first response when a new answer arrives, it won't see the injection until completing that response. By then, it may already have full context from the orchestrator's normal flow. This is acceptable - the agent still gets all answers, just via different mechanism (full context on next spawn vs. injection mid-work).
+
+Implementation: ``massgen/orchestrator.py:_inject_update_and_continue()``
 
 Answer Labeling
 ~~~~~~~~~~~~~~~
