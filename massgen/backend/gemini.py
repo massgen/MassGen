@@ -38,6 +38,7 @@ from .base import FilesystemSupport, StreamChunk
 from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, ToolExecutionConfig
 from .gemini_utils import CoordinationResponse, PostEvaluationResponse
 
+
 # Suppress Gemini SDK logger warning about non-text parts in response
 # Using custom filter per https://github.com/googleapis/python-genai/issues/850
 class NoFunctionCallWarning(logging.Filter):
