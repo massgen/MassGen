@@ -113,7 +113,7 @@ Recent Releases
 
 **v0.1.6 (October 2025)** - Framework Interoperability & Backend Refactoring
 
-External agent framework integration as tools (AG2, LangGraph), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
+External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
 
 **v0.1.5 (October 2025)** - Memory System
 

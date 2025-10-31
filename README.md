@@ -144,7 +144,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 **🎉 Released: October 31, 2025**
 
 **What's New in v0.1.6:**
-- **🔗 Framework Interoperability** - Use agents from AG2 and LangGraph as tools
+- **🔗 Framework Interoperability** - Use agents from AG2, LangGraph, AgentScope, OpenAI Assistants, and SmoLAgent as tools
 - **✅ Configuration Validator** - Pre-flight YAML validation with detailed error messages and suggestions
 - **🔧 Unified Tool Execution** - Streamlined backend architecture with consistent tool handling
 - **⚡ Gemini Backend Simplification** - Major cleanup reducing codebase by 1,598 lines
@@ -163,15 +163,27 @@ pip install --upgrade massgen
 
 # Use AG2 (AutoGen) agents as tools for lesson planning
 # Requirements: pip install pyautogen, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/interop/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
 # Use LangGraph workflows as tools
 # Requirements: pip install langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/interop/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+massgen --config massgen/configs/tools/custom_tools/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
-# Combine AG2 + LangGraph for multi-framework collaboration
+# Use AgentScope multi-agent framework as tools
+# Requirements: pip install agentscope, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+
+# Use OpenAI Assistants API as tools
+# Requirements: pip install openai, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/openai_assistant_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+
+# Use SmolAgent (HuggingFace) as tools
+# Requirements: pip install smolagents, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/smolagent_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+
+# Combine multiple frameworks - AG2 + LangGraph collaboration
 # Requirements: pip install pyautogen langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/interop/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
+massgen --config massgen/configs/tools/custom_tools/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
 
 # Validate your configuration before running
 python -m massgen.config_validator your_config.yaml
@@ -1025,8 +1037,11 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 #### Framework Interoperability
 - **AG2 (AutoGen) Integration**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning
 - **LangGraph Integration**: Graph-based workflows integrated as tools for structured task execution
+- **AgentScope Integration**: AgentScope agent system wrapped for collaborative task handling
+- **OpenAI Assistants Integration**: OpenAI Assistants API integrated as tools for specialized workflows
+- **SmoLAgent Integration**: HuggingFace SmoLAgent wrapped for flexible agent orchestration
 - **Cross-Framework Collaboration**: MassGen orchestrates agents from multiple frameworks seamlessly
-- **Tool Module**: New `massgen/tool/_extraframework_agents/` module with framework integrations
+- **Tool Module**: New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
 
 #### Configuration Validator
 - **ConfigValidator Class**: Comprehensive YAML validation in `massgen/config_validator.py`
@@ -1058,7 +1073,11 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 #### Configuration Files
 - `ag2_lesson_planner_example.yaml` - AG2 nested chat as custom tool
 - `langgraph_lesson_planner_example.yaml` - LangGraph workflows integrated
-- `ag2_and_langgraph_lesson_planner.yaml` - Multi-framework collaboration (AG2 + LangGraph)
+- `agentscope_lesson_planner_example.yaml` - AgentScope agent integration
+- `openai_assistant_lesson_planner_example.yaml` - OpenAI Assistants as tools
+- `smolagent_lesson_planner_example.yaml` - SmoLAgent integration
+- `ag2_and_langgraph_lesson_planner.yaml` - Multi-framework collaboration
+- `ag2_and_openai_assistant_lesson_planner.yaml` - AG2 + OpenAI Assistants combo
 - `two_models_with_tools_example.yaml` - Multiple models with custom tools
 
 ### Previous Achievements (v0.0.3 - v0.1.5)
