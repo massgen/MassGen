@@ -12,8 +12,8 @@
 agents:
   - id: "agent_a"
     backend:
-      type: "gemini"
-      model: "gemini-2.5-pro"
+      type: "openai"
+      model: "gpt-4o"
       cwd: "workspace1"
 
       # Custom GitHub issue analyzer tool

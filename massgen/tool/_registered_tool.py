@@ -32,6 +32,9 @@ class RegisteredToolEntry:
     preset_params: dict[str, Any] = field(default_factory=dict)
     """Pre-configured parameters hidden from schema."""
 
+    context_param_names: set[str] = field(default_factory=set)
+    """Parameter names to inject from execution context at runtime."""
+
     extension_model: Optional[Type[BaseModel]] = None
     """Optional model for extending the base schema."""
 

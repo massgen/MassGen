@@ -20,11 +20,12 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from openai import AsyncOpenAI
 
 from ..logger_config import log_stream_chunk
+from .base import StreamChunk
 from .chat_completions import ChatCompletionsBackend
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ class GrokBackend(ChatCompletionsBackend):
         tools: List[Dict[str, Any]],
         client,
         **kwargs,
-    ):
+    ) -> AsyncGenerator[StreamChunk, None]:
         """Override to add Grok-specific search parameters before API call."""
         # Build API params using parent method
         all_params = {**self.config, **kwargs}

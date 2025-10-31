@@ -254,6 +254,7 @@ Documentation Sections
       * :doc:`user_guide/file_operations`
       * :doc:`user_guide/multi_turn_mode`
       * :doc:`user_guide/ag2_integration`
+      * :doc:`user_guide/general_interoperability`
 
    .. grid-item::
 
@@ -306,6 +307,7 @@ Documentation Sections
    user_guide/orchestration_restart
    user_guide/multimodal
    user_guide/ag2_integration
+   user_guide/general_interoperability
    user_guide/logging
 
 .. toctree::
