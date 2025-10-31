@@ -3,6 +3,7 @@
 #
 # Usage:
 #   massgen --config massgen/configs/tools/custom_tools/smolagent_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/smolagent_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 #
 # Description:
 #   This configuration uses SmolAgent (HuggingFace's lightweight agent framework) to create comprehensive
@@ -44,5 +45,5 @@ agents:
       they'd like.
 
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true

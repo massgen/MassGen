@@ -3,6 +3,7 @@
 #
 # Usage:
 #   massgen --config massgen/configs/tools/custom_tools/openai_assistant_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/openai_assistant_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 #
 # Description:
 #   This configuration uses OpenAI's Assistants API to create comprehensive lesson plans.
@@ -11,8 +12,6 @@
 #   2. Design engaging lesson activities with proper timing
 #   3. Review the plan for age-appropriateness and effectiveness
 #   4. Format the final lesson plan in a structured format
-#
-#   The assistant handles all steps internally through its advanced instruction-following capabilities.
 #
 # Requirements:
 #   - pip install openai
@@ -46,5 +45,5 @@ agents:
       they'd like.
 
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true

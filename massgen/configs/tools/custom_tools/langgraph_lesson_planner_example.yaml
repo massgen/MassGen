@@ -3,6 +3,7 @@
 #
 # Usage:
 #   massgen --config massgen/configs/tools/custom_tools/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 #
 # Description:
 #   This configuration uses LangGraph to create comprehensive lesson plans through a state graph
@@ -11,8 +12,6 @@
 #   - Planner Node: Creates detailed lesson plans
 #   - Reviewer Node: Reviews and improves the plan
 #   - Formatter Node: Formats the final output
-#
-#   The tool provides streaming progress updates as it moves through each node.
 #
 # Requirements:
 #   - pip install langgraph langchain-openai langchain-core
@@ -41,8 +40,6 @@ agents:
       2. Design engaging lesson activities with proper timing
       3. Review the plan for age-appropriateness and effectiveness
       4. Format the final lesson plan in a structured format
-
-      The tool provides streaming progress updates as it moves through each node of the graph.
 
       After receiving the lesson plan, present it clearly to the user and offer to make any adjustments
       they'd like.

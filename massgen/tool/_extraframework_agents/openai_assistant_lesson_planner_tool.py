@@ -6,10 +6,11 @@ This tool demonstrates interoperability by wrapping OpenAI's Assistants API as a
 
 import asyncio
 import os
-from typing import Any, Dict, List
+from typing import Any, AsyncGenerator, Dict, List
 
 from openai import AsyncOpenAI
 
+from massgen.tool import context_params
 from massgen.tool._result import ExecutionResult, TextContent
 
 
@@ -117,9 +118,10 @@ Ensure the lesson plan is practical, engaging, and aligned with fourth grade sta
     return lesson_plan
 
 
+@context_params("prompt")
 async def openai_assistant_lesson_planner(
-    messages: List[Dict[str, Any]],
-) -> ExecutionResult:
+    prompt: List[Dict[str, Any]],
+) -> AsyncGenerator[ExecutionResult, None]:
     """
     MassGen custom tool wrapper for OpenAI Assistant lesson planner.
 
@@ -127,7 +129,7 @@ async def openai_assistant_lesson_planner(
     error handling, and wraps the core agent logic in ExecutionResult.
 
     Args:
-        messages: Complete message list from orchestrator (auto-injected via execution_context)
+        prompt: processed message list from orchestrator (auto-injected via execution_context)
 
     Returns:
         ExecutionResult containing the formatted lesson plan or error message
@@ -136,27 +138,28 @@ async def openai_assistant_lesson_planner(
     api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
-        return ExecutionResult(
+        yield ExecutionResult(
             output_blocks=[
                 TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable."),
             ],
         )
+        return
 
     try:
-        # Call the core agent function with complete messages
+        # Call the core agent function with processed messages
         lesson_plan = await run_openai_assistant_lesson_planner_agent(
-            messages=messages,
+            messages=prompt,
             api_key=api_key,
         )
 
-        return ExecutionResult(
+        yield ExecutionResult(
             output_blocks=[
                 TextContent(data=f"OpenAI Assistant Lesson Planner Result:\n\n{lesson_plan}"),
             ],
         )
 
     except Exception as e:
-        return ExecutionResult(
+        yield ExecutionResult(
             output_blocks=[
                 TextContent(data=f"Error creating lesson plan: {str(e)}"),
             ],

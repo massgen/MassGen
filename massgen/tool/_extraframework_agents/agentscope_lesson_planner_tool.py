@@ -6,7 +6,7 @@ Compatible with AgentScope 1.0.6+
 """
 
 import os
-from typing import Any, Dict, List
+from typing import Any, AsyncGenerator, Dict, List
 
 import agentscope
 from agentscope.agent import AgentBase
@@ -15,6 +15,7 @@ from agentscope.memory import InMemoryMemory
 from agentscope.message import Msg
 from agentscope.model import OpenAIChatModel
 
+from massgen.tool import context_params
 from massgen.tool._result import ExecutionResult, TextContent
 
 
@@ -251,9 +252,10 @@ Provide an improved version of the lesson plan incorporating your feedback.""",
     return lesson_plan
 
 
+@context_params("prompt")
 async def agentscope_lesson_planner(
-    messages: List[Dict[str, Any]],
-) -> ExecutionResult:
+    prompt: List[Dict[str, Any]],
+) -> AsyncGenerator[ExecutionResult, None]:
     """
     MassGen custom tool wrapper for AgentScope lesson planner.
 
@@ -261,7 +263,7 @@ async def agentscope_lesson_planner(
     error handling, and wraps the core agent logic in ExecutionResult.
 
     Args:
-        messages: Complete message list from orchestrator (auto-injected via execution_context)
+        prompt: processed message list from orchestrator (auto-injected via execution_context)
 
     Returns:
         ExecutionResult containing the formatted lesson plan or error message
@@ -270,20 +272,21 @@ async def agentscope_lesson_planner(
     api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
-        return ExecutionResult(
+        yield ExecutionResult(
             output_blocks=[
                 TextContent(data="Error: OPENAI_API_KEY not found. Please set the environment variable."),
             ],
         )
+        return
 
     try:
-        # Call the core agent function with complete messages
+        # Call the core agent function with processed messages
         lesson_plan = await run_agentscope_lesson_planner_agent(
-            messages=messages,
+            messages=prompt,
             api_key=api_key,
         )
 
-        return ExecutionResult(
+        yield ExecutionResult(
             output_blocks=[
                 TextContent(data=f"AgentScope Lesson Planner Result:\n\n{lesson_plan}"),
             ],
@@ -293,7 +296,7 @@ async def agentscope_lesson_planner(
         import traceback
 
         error_details = traceback.format_exc()
-        return ExecutionResult(
+        yield ExecutionResult(
             output_blocks=[
                 TextContent(data=f"Error creating lesson plan: {str(e)}\n\nDetails:\n{error_details}"),
             ],
