@@ -161,7 +161,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Use AG2 (AutoGen) agents as tools for lesson planning
+# Use AG2 agents as tools for lesson planning (supports streaming)
 # Requirements: pip install pyautogen, OPENAI_API_KEY must be set
 massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 
@@ -1035,13 +1035,14 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 **🎉 Released: October 31, 2025**
 
 #### Framework Interoperability
-- **AG2 (AutoGen) Integration**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning
+- **AG2 Integration**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning (supports streaming)
 - **LangGraph Integration**: Graph-based workflows integrated as tools for structured task execution
 - **AgentScope Integration**: AgentScope agent system wrapped for collaborative task handling
 - **OpenAI Assistants Integration**: OpenAI Assistants API integrated as tools for specialized workflows
 - **SmoLAgent Integration**: HuggingFace SmoLAgent wrapped for flexible agent orchestration
 - **Cross-Framework Collaboration**: MassGen orchestrates agents from multiple frameworks seamlessly
 - **Tool Module**: New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
+- **Streaming Support**: Only AG2 currently supports streaming; other frameworks return complete results
 
 #### Configuration Validator
 - **ConfigValidator Class**: Comprehensive YAML validation in `massgen/config_validator.py`

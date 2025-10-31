@@ -231,7 +231,7 @@ Most configurations use environment variables for API keys:so
 **New Features:** Framework Interoperability & Backend Refactoring
 
 **Configuration Files:**
-- `ag2_lesson_planner_example.yaml` - AG2 (AutoGen) nested chat as custom tool
+- `ag2_lesson_planner_example.yaml` - AG2 nested chat as custom tool (supports streaming)
 - `langgraph_lesson_planner_example.yaml` - LangGraph workflows integrated as tools
 - `agentscope_lesson_planner_example.yaml` - AgentScope agent system integration
 - `openai_assistant_lesson_planner_example.yaml` - OpenAI Assistants as tools
@@ -242,13 +242,14 @@ Most configurations use environment variables for API keys:so
 
 **Key Features:**
 - **Framework Interoperability**: Use agents from external frameworks (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent) as MassGen tools
+- **Streaming Support**: AG2 supports streaming; other frameworks return complete results
 - **Configuration Validator**: Pre-flight YAML validation with detailed error messages
 - **Unified Tool Execution**: ToolExecutionConfig dataclass for consistent tool handling
 - **Gemini Simplification**: Major backend cleanup reducing codebase by 1,598 lines
 
 **Try It:**
 ```bash
-# Use AG2 agents for lesson planning
+# Use AG2 agents for lesson planning (supports streaming)
 # Requirements: pip install pyautogen, OPENAI_API_KEY must be set
 massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
 

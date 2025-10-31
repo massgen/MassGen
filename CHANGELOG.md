@@ -23,13 +23,14 @@ Comprehensive generation tools for images, videos, audio, and documents with Ope
 ### Added
 - **Framework Interoperability**: External agent framework integration as MassGen custom tools
   - New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
-  - **AG2 (AutoGen) Lesson Planner Tool**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning
+  - **AG2 Lesson Planner Tool**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning (supports streaming)
   - **LangGraph Lesson Planner Tool**: LangGraph graph-based workflows integrated as tool
   - **AgentScope Lesson Planner Tool**: AgentScope agent system wrapped for lesson creation
   - **OpenAI Assistants Lesson Planner Tool**: OpenAI Assistants API integrated as tool
   - **SmoLAgent Lesson Planner Tool**: HuggingFace SmoLAgent integration for lesson planning
   - Enables MassGen agents to delegate tasks to specialized external frameworks
   - Each framework runs autonomously and returns results to MassGen orchestrator
+  - Note: Only AG2 currently supports streaming; other frameworks return complete results
 
 - **Configuration Validator**: Comprehensive YAML configuration validation system
   - New `ConfigValidator` class in `massgen/config_validator.py` for pre-flight validation
