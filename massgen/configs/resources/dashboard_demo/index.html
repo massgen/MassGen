@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MassGen Dashboard — Real-time Multi-Agent Coordination</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="app.js" defer></script>
+</head>
+<body data-theme="dark">
+    <!-- Skip to content for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <header class="dashboard-header" role="banner" aria-label="MassGen Dashboard Header">
+        <div class="branding">
+            <span class="brand-icon" aria-hidden="true">⚡️</span>
+            <h1 class="logo-text">MassGen</h1>
+        </div>
+        <nav class="main-nav" aria-label="Main Navigation">
+            <ul class="nav-list">
+                <li><a href="#agents-grid-section" class="nav-link" aria-label="View Agents Status">Agents</a></li>
+                <li><a href="#timeline-section" class="nav-link" aria-label="View Coordination Timeline">Timeline</a></li>
+                <li><a href="#comparison-panel-section" class="nav-link" aria-label="Compare Agent Outputs">Compare</a></li>
+            </ul>
+            <button id="theme-toggle" class="theme-toggle" aria-label="Toggle Dark/Light Theme" title="Toggle theme">
+                <span class="icon"></span>
+            </button>
+        </nav>
+        <button class="mobile-nav-toggle" aria-controls="main-nav" aria-expanded="false" aria-label="Toggle navigation menu">
+            <span class="menu-icon"></span>
+            <span class="menu-icon"></span>
+            <span class="menu-icon"></span>
+        </button>
+    </header>
+
+    <main class="dashboard-main" id="main-content" role="main" aria-label="MassGen Dashboard Main Content">
+        <!-- 2. Agent cards grid with status indicators -->
+        <section id="agents-grid-section" class="panel agents-grid-section" aria-labelledby="agents-grid-heading">
+            <div class="panel-header">
+                <h2 id="agents-grid-heading" class="section-heading">Live Agents</h2>
+                <span id="agent-status-live" class="live-status" aria-live="polite">Initializing...</span>
+            </div>
+            <div class="agent-cards-container" aria-label="Agent status grid">
+                <!-- Agent cards will be dynamically generated here -->
+            </div>
+        </section>
+
+        <!-- 3. Interactive timeline visualization -->
+        <section id="timeline-section" class="panel timeline-section" aria-labelledby="timeline-heading">
+            <div class="panel-header">
+                <h2 id="timeline-heading" class="section-heading">Coordination Timeline</h2>
+                <div class="timeline-controls" role="group" aria-label="Timeline controls">
+                    <button id="timelinePlay" class="control-btn" aria-label="Play timeline">▶</button>
+                    <button id="timelinePause" class="control-btn" aria-label="Pause timeline">❚❚</button>
+                    <span id="timelineDuration" class="timeline-duration" aria-label="Timeline current duration">0s</span>
+                </div>
+            </div>
+            <div class="timeline-wrap" aria-label="Interactive timeline visualization" role="img">
+                <svg id="timelineSvg" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-label="Event timeline" focusable="false"></svg>
+                <div id="timelineScrubber" class="timeline-scrubber" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="60" aria-valuenow="0" aria-label="Timeline scrubber. Use left/right arrow keys to scrub through the timeline."></div>
+            </div>
+        </section>
+
+        <!-- 4. Comparison panel for voting -->
+        <section id="comparison-panel-section" class="panel comparison-panel-section" aria-labelledby="comparison-heading">
+            <div class="panel-header">
+                <h2 id="comparison-heading" class="section-heading">Agent Output Comparison</h2>
+                <p class="panel-subtitle" aria-hidden="true">Vote for the best coordination output</p>
+            </div>
+            <div class="comparison-container" aria-label="Agent outputs for comparison">
+                <!-- Comparison outputs will be dynamically populated here -->
+            </div>
+            <div class="voting-controls">
+                <button class="vote-button" aria-label="Submit Vote">Submit Vote</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Agent Details -->
+    <div id="overlay" class="overlay" aria-hidden="true"></div>
+    <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-hidden="true">
+        <h3 id="modal-title"></h3>
+        <p id="modal-description"></p>
+        <button class="modal-close-button" aria-label="Close dialog">&times;</button>
+    </div>
+</body>
+</html>
