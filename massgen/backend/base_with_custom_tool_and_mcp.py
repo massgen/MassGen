@@ -49,9 +49,9 @@ class ExecutionContext(BaseModel):
     current_stage: Optional[CoordinationStage] = None
 
     # These will be computed after initialization
-    system_message: Optional[str] = None
-    user_message: Optional[str] = None
-    prompt: Optional[Any] = None
+    system_messages: Optional[List[Dict[str, Any]]] = None
+    user_messages: Optional[List[Dict[str, Any]]] = None
+    prompt: Optional[List[Dict[str, Any]]] = None
 
     def __init__(
         self,
@@ -75,47 +75,47 @@ class ExecutionContext(BaseModel):
     def _process_messages(self) -> None:
         """Process messages to extract commonly used fields."""
         if self.messages:
-            if len(self.messages) > 2:
-                raise ValueError("ExecutionContext currently supports up to 2 messages (system and user).")
+            self.system_messages = []
+            self.user_messages = []
 
             for msg in self.messages:
                 role = msg.get("role")
 
-                # Process system message
-                if role == "system" and self.system_message is None:
-                    content = msg.get("content", "")
-                    # Remove agent_system_message prefix if present
-                    # Todo: change orchestrator not to preprend agent system message
-                    if self.agent_system_message and isinstance(content, str):
-                        if content.startswith(self.agent_system_message):
-                            # Remove the prefix and any following whitespace/newlines
-                            remaining = content[len(self.agent_system_message) :].lstrip("\n ")
-                            msg["content"] = remaining
-                            self.system_message = remaining
-                        else:
-                            self.system_message = content
-                    else:
-                        self.system_message = content
+                if role == "system":
+                    self.system_messages.append(msg)
 
-                # Process user message
-                elif role == "user" and self.user_message is None:
-                    self.user_message = msg.get("content")
-
-                # Break early if we've found both
-                if self.system_message is not None and self.user_message is not None:
-                    break
+                if role == "user":
+                    self.user_messages.append(msg)
 
             if self.current_stage == CoordinationStage.INITIAL_ANSWER:
-                self.prompt = self.user_message + "\n" + self.exec_instruction()
-            else:
-                self.prompt = self.messages
+                self.prompt = [self.exec_instruction()] + self.user_messages
+            elif self.current_stage == CoordinationStage.ENFORCEMENT:
+                self.prompt = self.user_messages
+            elif self.current_stage == CoordinationStage.PRESENTATION:
+                if len(self.system_messages) > 1:
+                    raise ValueError("Execution Context expects only one system message during PRESENTATION stage")
+                system_message = self._filter_system_message(self.system_messages[0])
+                self.prompt = [system_message] + self.user_messages
+
+    # Todo: Temporary solution. We should change orchestrator not to preprend agent system message
+    def _filter_system_message(self, sys_msg):
+        """Filter out agent system message prefix from system message content."""
+        content = sys_msg.get("content", "")
+        # Remove agent_system_message prefix if present
+        if self.agent_system_message and isinstance(content, str):
+            if content.startswith(self.agent_system_message):
+                # Remove the prefix and any following whitespace/newlines
+                remaining = content[len(self.agent_system_message) :].lstrip("\n ")
+                sys_msg["content"] = remaining
+
+        return sys_msg
 
     @staticmethod
-    def exec_instruction() -> str:
-        return """You MUST digest existing answers, combine their strengths,
-         and do additional work to address their weaknesses,
-         then generate a better answer to address the ORIGINAL MESSAGE.
-         """
+    def exec_instruction() -> dict:
+        instruction = (
+            "You MUST digest existing answers, combine their strengths, " "and do additional work to address their weaknesses, " "then generate a better answer to address the ORIGINAL MESSAGE."
+        )
+        return {"role": "system", "content": instruction}
 
 
 # MCP integration imports
