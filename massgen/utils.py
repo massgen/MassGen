@@ -8,6 +8,7 @@ class ActionType(Enum):
     NEW_ANSWER = "answer"
     VOTE = "vote"
     VOTE_IGNORED = "vote_ignored"  # Vote was cast but ignored due to restart
+    UPDATE_INJECTED = "update_injected"  # Agent received update and continued working (preempt-not-restart)
     ERROR = "error"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
