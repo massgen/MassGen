@@ -1,49 +1,108 @@
-# MassGen v0.1.6 Roadmap
+# MassGen v0.1.7 Roadmap
 
 ## Overview
 
-Version 0.1.6 focuses on backend code refactoring for improved maintainability and developer experience.
+Version 0.1.7 focuses on agent task planning and rate limiting for improved multi-step coordination and API management.
 
-- **Backend Code Refactoring** (Required): 🔧 Major code refactoring for improved maintainability and developer experience
+- **Agent Task Planning System** (Required): 📋 Enable agents to organize complex multi-step work with task plans and dependency tracking
+- **Gemini Rate Limiting System** (Required): ⚡ Multi-dimensional rate limiting to prevent API spam and manage costs
 
 ## Key Technical Priorities
 
-1. **Backend Code Refactoring**: Major backend code improvements for better architecture and maintainability
-   **Use Case**: Improved developer experience and easier future enhancements
+1. **Agent Task Planning System**: Complex multi-step workflows requiring task decomposition, dependency management, and coordinated execution
+   **Use Case**: Multi-agent coordination for large projects with interdependent tasks
+
+2. **Gemini Rate Limiting System**: Prevent API quota violations and manage costs while ensuring smooth operation
+   **Use Case**: Enterprise deployments requiring cost control and API compliance
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Backend Code Refactoring (REQUIRED)
+### 🎯 Milestone 1: Agent Task Planning System (REQUIRED)
 
-**Goal**: Major backend code refactoring for improved maintainability and architecture
+**Goal**: Enable agents to organize complex multi-step work with task plans and dependency tracking
 
-**Owner**: @praneeth999 (ram2561)
+**Owner**: @ncrispino (nickcrispino)
 
-**PR**: [#362](https://github.com/Leezekun/MassGen/pull/362)
+**PR**: [#385](https://github.com/Leezekun/MassGen/pull/385) (Draft)
 
-#### 1.1 Code Architecture Improvements
-- [ ] Refactor backend code for better organization
-- [ ] Improve code modularity and separation of concerns
-- [ ] Enhance code readability and maintainability
-- [ ] Standardize coding patterns across modules
+#### 1.1 MCP Planning Tools
+- [ ] Implement 8 MCP planning tools for task management
+- [ ] Create task plan creation and update tools
+- [ ] Build dependency tracking system
+- [ ] Add task status monitoring and updates
+- [ ] Support for task prioritization
 
-#### 1.2 Developer Experience
-- [ ] Simplify backend extension points
-- [ ] Improve API clarity and consistency
-- [ ] Better error handling and debugging support
-- [ ] Enhanced code documentation
+#### 1.2 Task Plan Data Structures
+- [ ] Design task plan schema with dependencies
+- [ ] Implement task status tracking (pending, in_progress, completed)
+- [ ] Create dependency graph validation
+- [ ] Add task metadata and context storage
+- [ ] Maximum 100 tasks per plan safety limit
 
-#### 1.3 Testing and Validation
-- [ ] Ensure no functionality regressions
-- [ ] Validate all existing tests pass
-- [ ] Add tests for refactored components
-- [ ] Performance validation
+#### 1.3 Configuration and Integration
+- [ ] Add `enable_agent_task_planning` configuration flag
+- [ ] Integrate with existing agent workflows
+- [ ] Support for multi-agent task coordination
+- [ ] Automatic task status updates during execution
+- [ ] Error handling and recovery mechanisms
+
+#### 1.4 Testing and Validation
+- [ ] Comprehensive test coverage (1,009+ lines of tests)
+- [ ] Validate dependency resolution
+- [ ] Test concurrent task execution
+- [ ] Performance benchmarks for large task plans
+- [ ] Documentation and examples
 
 **Success Criteria**:
-- ✅ Backend code successfully refactored
-- ✅ No functionality regressions
-- ✅ Improved code maintainability
-- ✅ Better developer experience
+- ✅ Task planning tools enable multi-step workflows with dependencies
+- ✅ Agents can create, update, and track complex task plans
+- ✅ Dependency management works correctly
+- ✅ Configuration is well-documented and easy to use
+
+---
+
+### 🎯 Milestone 2: Gemini Rate Limiting System (REQUIRED)
+
+**Goal**: Multi-dimensional rate limiting for Gemini models to prevent API spam and manage costs
+
+**Owner**: @AbhimanyuAryan (TBD on Discord)
+
+**PR**: [#383](https://github.com/Leezekun/MassGen/pull/383) (Draft)
+
+#### 2.1 Rate Limiting Implementation
+- [ ] Multi-dimensional rate limiting (RPM, TPM, RPD)
+- [ ] Model-specific limits: Flash (9 RPM), Pro (2 RPM)
+- [ ] Sliding window tracking for precise rate management
+- [ ] Configurable limits via external YAML configuration
+- [ ] Mandatory cooldown periods after agent startup
+
+#### 2.2 Configuration System
+- [ ] External YAML configuration for centralized limit control
+- [ ] Optional `--rate-limit` CLI flag to enable/disable
+- [ ] `enable_rate_limit` configuration parameter
+- [ ] Model-specific rate limit profiles
+- [ ] Dynamic rate limit adjustments
+
+#### 2.3 Rate Tracking and Enforcement
+- [ ] Sliding window tracking for RPM, TPM, RPD
+- [ ] Request queuing when limits approached
+- [ ] Automatic cooldown enforcement
+- [ ] Rate limit violation detection and handling
+- [ ] Logging and monitoring for rate limit events
+
+#### 2.4 Testing and Validation
+- [ ] Test rate limiting accuracy
+- [ ] Validate model-specific limits
+- [ ] Stress testing with high request volumes
+- [ ] Configuration validation
+- [ ] Documentation and usage examples
+
+**Success Criteria**:
+- ✅ Rate limiting prevents API quota violations
+- ✅ Model-specific limits work correctly
+- ✅ Configuration is flexible and easy to use
+- ✅ Minimal impact on performance
+- ✅ Clear monitoring and debugging capabilities
 
 ---
 
@@ -51,49 +110,61 @@ Version 0.1.6 focuses on backend code refactoring for improved maintainability a
 
 ### Functional Requirements
 
-**Backend Code Refactoring:**
-- [ ] Backend code successfully refactored
-- [ ] Code organization and modularity improved
-- [ ] No functionality regressions
-- [ ] All tests passing
-- [ ] Enhanced developer experience
+**Agent Task Planning:**
+- [ ] Task planning tools fully functional
+- [ ] Dependency tracking works correctly
+- [ ] Multi-agent coordination supported
+- [ ] Configuration flag enables/disables feature
+- [ ] Maximum task limit enforced (100 tasks)
+
+**Gemini Rate Limiting:**
+- [ ] Multi-dimensional rate limiting active
+- [ ] Model-specific limits enforced
+- [ ] YAML configuration working
+- [ ] CLI flag enables/disables feature
+- [ ] Cooldown periods enforced
 
 ### Performance Requirements
-- [ ] Refactored code maintains or improves performance
+- [ ] Task planning has minimal overhead
+- [ ] Rate limiting doesn't significantly impact latency
 - [ ] Overall system remains responsive
+- [ ] Efficient tracking and monitoring
 
 ### Quality Requirements
-- [ ] All existing tests pass after refactoring
-- [ ] Performance benchmarks maintained or improved
-- [ ] Comprehensive documentation for refactored components
+- [ ] All tests passing for both features
+- [ ] Comprehensive documentation
+- [ ] Configuration examples provided
+- [ ] Error handling is robust
+- [ ] User-facing messages are clear
 
 ---
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **Existing Infrastructure**: Backend architecture, agent system, orchestrator
+- **Task Planning**: Existing MCP infrastructure, agent system, orchestrator
+- **Rate Limiting**: Gemini backend, configuration system, CLI infrastructure
 
 ### Risks & Mitigations
-1. **Refactoring Regressions**: *Mitigation*: Comprehensive test suite, incremental changes, thorough code review process
-2. **Performance Degradation**: *Mitigation*: Performance benchmarks, profiling, optimization strategies
-3. **Breaking Changes**: *Mitigation*: Careful API design, backward compatibility considerations, migration guides
+1. **Task Plan Complexity**: *Mitigation*: Limit to 100 tasks, comprehensive validation, clear error messages
+2. **Rate Limit Accuracy**: *Mitigation*: Sliding window tracking, extensive testing, configurable safety margins
+3. **Performance Impact**: *Mitigation*: Efficient tracking algorithms, minimal overhead design, performance benchmarks
+4. **User Adoption**: *Mitigation*: Clear documentation, optional features with sensible defaults, usage examples
 
 ---
 
-## Future Enhancements (Post-v0.1.6)
-
-### v0.1.7 Plans
-- **Agent Framework Interoperability**: Enable agents from AG2, LangGraph, and other frameworks to work together seamlessly
+## Future Enhancements (Post-v0.1.7)
 
 ### v0.1.8 Plans
 - **DSPy Integration**: Automated prompt optimization for domain-specific tasks
+
+### v0.1.9 Plans
 - **Computer Use Agent**: Automated UI testing and browser automation
 
 ### Long-term Vision
-- **Visual Workflow Designer**: No-code multi-agent workflow creation
-- **Enterprise Features**: RBAC, audit logs, multi-user collaboration
-- **Advanced Orchestration Patterns**: Task decomposition, parallel coordination
+- **Advanced Task Planning**: Hierarchical task decomposition, parallel execution, automatic task generation
+- **Universal Rate Limiting**: Rate limiting for all backends (OpenAI, Claude, etc.)
+- **Cost Analytics**: Detailed cost tracking and budget management across all APIs
 
 ---
 
@@ -101,9 +172,10 @@ Version 0.1.6 focuses on backend code refactoring for improved maintainability a
 
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
-| Phase 1 | Backend Refactoring | Code organization, maintainability, developer experience | @praneeth999 | **REQUIRED** |
+| Phase 1 | Agent Task Planning | MCP tools, dependency tracking, configuration | @ncrispino | **REQUIRED** |
+| Phase 2 | Gemini Rate Limiting | Multi-dimensional limits, YAML config, CLI flag | @AbhimanyuAryan | **REQUIRED** |
 
-**Target Release**: November 1, 2025 (Friday @ 9am PT)
+**Target Release**: November 3, 2025 (Monday @ 9am PT)
 
 ---
 
@@ -111,21 +183,35 @@ Version 0.1.6 focuses on backend code refactoring for improved maintainability a
 
 ### For Contributors
 
-**Required Work:**
-1. Complete backend code refactoring (PR #362)
-2. Ensure no functionality regressions
-3. Add comprehensive tests for refactored components
-4. Validate performance benchmarks
-5. Create documentation for architectural changes
-6. Update developer guides and examples
+**Phase 1 - Agent Task Planning:**
+1. Complete MCP planning tools implementation (PR #385)
+2. Add comprehensive tests for task planning
+3. Validate dependency tracking
+4. Create documentation and examples
+5. Test multi-agent coordination scenarios
+
+**Phase 2 - Gemini Rate Limiting:**
+1. Complete rate limiting implementation (PR #383)
+2. Add comprehensive tests for rate tracking
+3. Validate model-specific limits
+4. Create YAML configuration examples
+5. Document CLI usage and configuration
 
 ### For Users
 
-- v0.1.6 brings improved code organization and maintainability
-- Better developer experience for contributing and extending MassGen
-- Enhanced backend architecture for future features
-- Cleaner codebase with improved readability
-- No user-facing feature changes, but sets foundation for future enhancements
+- v0.1.7 brings two major capabilities:
+
+  **Agent Task Planning:**
+  - Break down complex projects into manageable tasks
+  - Track dependencies between tasks
+  - Monitor progress across multi-agent workflows
+  - Enable/disable via `enable_agent_task_planning` config flag
+
+  **Gemini Rate Limiting:**
+  - Prevent API quota violations automatically
+  - Manage costs with configurable limits
+  - Model-specific rate management (Flash vs Pro)
+  - Enable/disable via `--rate-limit` CLI flag
 
 ---
 
@@ -137,12 +223,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Pull request process
 - Documentation guidelines
 
-**Contact Track Owner:**
-- Backend Refactoring: @praneeth999 on Discord (ram2561)
+**Contact Track Owners:**
+- Agent Task Planning: @ncrispino on Discord (nickcrispino)
+- Rate Limiting System: @AbhimanyuAryan on Discord (TBD)
 
 ---
 
-*This roadmap reflects v0.1.6 priorities focusing on backend code refactoring. This feature is required for this release.*
+*This roadmap reflects v0.1.7 priorities focusing on agent task planning and rate limiting. Both features are required for this release.*
 
-**Last Updated:** October 29, 2025
+**Last Updated:** November 1, 2025
 **Maintained By:** MassGen Team

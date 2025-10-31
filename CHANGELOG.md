@@ -7,16 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.6 (November 2025)** - Framework Interoperability & Backend Refactoring
+External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
+
 **v0.1.5 (October 2025)** - Memory System
 Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
 
 **v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
 Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
 
-**v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
-Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
-
 ---
+
+## [0.1.6] - 2025-10-31
+
+### Added
+- **Framework Interoperability**: External agent framework integration as MassGen custom tools
+  - New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
+  - **AG2 (AutoGen) Lesson Planner Tool**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning
+  - **LangGraph Lesson Planner Tool**: LangGraph graph-based workflows integrated as tool
+  - **AgentScope Lesson Planner Tool**: AgentScope agent system wrapped for lesson creation
+  - **OpenAI Assistants Lesson Planner Tool**: OpenAI Assistants API integrated as tool
+  - **SmoLAgent Lesson Planner Tool**: HuggingFace SmoLAgent integration for lesson planning
+  - Enables MassGen agents to delegate tasks to specialized external frameworks
+  - Each framework runs autonomously and returns results to MassGen orchestrator
+
+- **Configuration Validator**: Comprehensive YAML configuration validation system
+  - New `ConfigValidator` class in `massgen/config_validator.py` for pre-flight validation
+  - Memory configuration validation with detailed error messages
+  - Pre-commit hook integration for automatic config validation
+  - Comprehensive test suite in `massgen/tests/test_config_validator.py`
+  - Validates agent configurations, backend parameters, tool settings, and memory options
+  - Provides actionable error messages with suggestions for common mistakes
+
+### Changed
+- **Backend Architecture Refactoring**: Unified tool execution with ToolExecutionConfig
+  - New `ToolExecutionConfig` dataclass in `base_with_custom_tool_and_mcp.py` for standardized tool handling
+  - Refactored `ResponseBackend` with unified tool execution flow
+  - Refactored `ChatCompletionsBackend` with unified tool execution flow
+  - Refactored `ClaudeBackend` with unified tool execution methods
+  - Eliminates duplicate code paths between custom tools and MCP tools
+  - Consistent error handling and status reporting across all tool types
+  - Improved maintainability and extensibility for future tool systems
+
+- **Gemini Backend Simplification**: Major architectural cleanup and consolidation
+  - Removed `gemini_mcp_manager.py` module
+  - Removed `gemini_trackers.py` module
+  - Refactored `gemini.py` to use manual tool execution via base class
+  - Streamlined tool handling and cleanup logic
+  - Removed continuation logic and duplicate code
+  - Updated `_gemini_formatter.py` for simplified tool conversion
+  - Net reduction of 1,598 lines through consolidation
+  - Improved maintainability and performance
+
+- **Custom Tool System Enhancement**: Improved tool management and execution
+  - Enhanced `ToolManager` with category management capabilities
+  - Improved tool registration and validation system
+  - Enhanced tool result handling and error reporting
+  - Better support for async tool execution
+  - Improved tool schema generation for LLM consumption
+
+### Documentations, Configurations and Resources
+
+- **Framework Interoperability Examples**: 8 new configuration files demonstrating external framework integration
+  - **AG2 Examples**: `ag2_lesson_planner_example.yaml`, `ag2_and_langgraph_lesson_planner.yaml`, `ag2_and_openai_assistant_lesson_planner.yaml`
+  - **LangGraph Examples**: `langgraph_lesson_planner_example.yaml`
+  - **AgentScope Examples**: `agentscope_lesson_planner_example.yaml`
+  - **OpenAI Assistants Examples**: `openai_assistant_lesson_planner_example.yaml`
+  - **SmoLAgent Examples**: `smolagent_lesson_planner_example.yaml`
+  - **Multi-Framework Examples**: `two_models_with_tools_example.yaml`
+
+### Technical Details
+- **Major Focus**: Framework interoperability for external agent integration, unified tool execution architecture, Gemini backend simplification, and configuration validation system
+- **Contributors**: @Eric-Shang @praneeth999 @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.5] - 2025-10-29
 
