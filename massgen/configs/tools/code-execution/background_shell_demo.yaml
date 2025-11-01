@@ -1,9 +1,9 @@
 # Background Shell Execution Demo
 # Demonstrates running commands in background with parallel execution and monitoring
-# Run with: uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel: test sorting algorithms (bubble, quick, merge) on arrays of size 1000. Compare their execution times."
+# Run with: uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel in the background: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
 
 agents:
-  - id: "parallel_executor"
+  - id: "agent_a"
     backend:
       type: "openai"
       model: "gpt-5-mini"
@@ -12,7 +12,7 @@ agents:
       # command_line_execution_mode: "local"
       command_line_execution_mode: "docker"
 
-  - id: "sequential_executor"
+  - id: "agent_b"
     backend:
       type: "gemini"
       model: "gemini-2.5-flash"
