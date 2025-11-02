@@ -89,9 +89,7 @@ class QuestionParaphraser:
             validate_semantics: Whether to validate semantic equivalence
         """
         if dspy is None:
-            raise ImportError(
-                "DSPy is not installed. Install with: pip install 'dspy>=2.5.0'",
-            )
+            raise ImportError("DSPy is not installed.")
 
         self.lm = lm
         self.num_variants = num_variants
