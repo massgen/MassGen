@@ -170,7 +170,7 @@ We want this to be a community document:
    - **Release Features**: Production-ready capabilities (19 completed)
    - **In Development**: Active development with PRs/testing (5 case studies)
    - **Planned**: Future roadmap items (7 in backlog)
-   
+
 2. **Check Status Icons**:
    - ✅ **Ready**: Complete with documentation and session logs
    - ✅ **Completed**: Executed successfully, documentation in progress
@@ -178,7 +178,7 @@ We want this to be a community document:
    - 🧪 **In Testing**: Active testing and iteration
    - ⏸️ **Blocked**: Waiting on external dependencies
    - 📋 **Planned**: In backlog, not yet started
-   
+
 3. **Watch Videos**: Click video links (🎥) to see live demonstrations
 
 4. **Read Documentation**: Click "📄 Case Study" links for detailed technical documentation
@@ -236,12 +236,12 @@ We welcome community contributions! To create your own case study:
 
 1. **Submit GitHub Issue**: Use the `case study` label
    - Template: https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/case-study-template.md
-   
+
 2. **Planning Phase**:
    - Define prompt and expected behavior
    - Create config file
    - Explain connection to self-improvement goals
-   
+
 3. **Run MassGen**: Save session logs and outputs
 
 4. **Record Demo**: Use OBS Studio or similar tools
@@ -278,7 +278,7 @@ This summary covers case studies from **MassGen v0.0.3** (initial release) throu
 - **Status**: ✅ Completed October 25, 2025
 - **Duration**: 12 minutes, 25 seconds
 - **Session**: `log_20251025_222849`
-- **Agents**: GPT-5 (architecture), Claude 3.5 Haiku (technical), Gemini 2.5 Flash (visual) 
+- **Agents**: GPT-5 (architecture), Claude 3.5 Haiku (technical), Gemini 2.5 Flash (visual)
 - **Outcome**: Gemini won with unanimous 3/3 votes, 97KB production-ready code
 - **Key Achievement**: Zero bugs, zero post-processing, professional dashboard in <15 minutes
 - **Draft PR**: https://github.com/Leezekun/MassGen/pull/375
