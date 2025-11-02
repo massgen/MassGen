@@ -16,6 +16,8 @@ agents:
     backend:
       type: "openai"
       model: "gpt-5-nano"
+      # enable_web_search: true
+      # enable_code_interpreter: true
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
   - id: "cerebras"
@@ -23,7 +25,7 @@ agents:
       type: "chatcompletion"
       model: "gpt-oss-120b"
       base_url: "https://api.cerebras.ai/v1"
-      enable_web_search: true
+      #enable_web_search: true
     # system_message: "You are a helpful AI assistant with web search capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
 orchestrator:
