@@ -24,15 +24,15 @@ def validate_python_file(filepath):
         functions = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
         classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
 
-        print(f"✅ Syntax valid")
+        print("✅ Syntax valid")
         print(f"   Functions: {len(functions)}")
         print(f"   Classes: {len(classes)}")
 
         # Check for main function
         if "computer_use" in functions:
-            print(f"✅ Main function 'computer_use' found")
+            print("✅ Main function 'computer_use' found")
         else:
-            print(f"❌ Main function 'computer_use' not found")
+            print("❌ Main function 'computer_use' not found")
             return False
 
         # Check for key functions
@@ -130,10 +130,10 @@ def main():
 
     examples_path = Path(__file__).parent / "examples" / "computer_use_examples.py"
     if examples_path.exists():
-        print(f"✅ computer_use_examples.py exists")
+        print("✅ computer_use_examples.py exists")
         success = validate_python_file(examples_path) and success
     else:
-        print(f"❌ computer_use_examples.py not found")
+        print("❌ computer_use_examples.py not found")
         success = False
 
     # Summary

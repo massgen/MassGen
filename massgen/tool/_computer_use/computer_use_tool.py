@@ -76,7 +76,7 @@ def get_screenshot_docker(container: Any, display: str = ":99") -> bytes:
     import io
 
     # Use scrot to capture screenshot
-    result = container.exec_run(f"scrot -o /tmp/screenshot.png", environment={"DISPLAY": display})
+    result = container.exec_run("scrot -o /tmp/screenshot.png", environment={"DISPLAY": display})
 
     if result.exit_code != 0:
         raise ActionExecutionError(f"Failed to capture screenshot: {result.output.decode()}")

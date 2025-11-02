@@ -158,7 +158,7 @@ async def browser_automation(
             await browser.close()
 
             result_data["success"] = True
-            logger.info(f"Browser automation completed successfully")
+            logger.info("Browser automation completed successfully")
 
     except Exception as e:
         logger.error(f"Browser automation failed: {e}")
