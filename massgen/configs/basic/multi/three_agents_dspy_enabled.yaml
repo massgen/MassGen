@@ -1,0 +1,49 @@
+# MassGen Three Agent Configuration with DSPy Paraphrasing Enabled
+# This configuration demonstrates how to enable DSPy question paraphrasing for multi-agent coordination.
+# Each agent receives a paraphrased version of the original question to encourage diverse perspectives and more comprehensive answers through varied interpretations.
+# Usage: massgen --config massgen/configs/basic/multi/three_agents_dspy_enabled.yaml "Explain the differences between transformer architecture and recurrent neural networks"
+
+agents:
+  - id: "gemini2.5flash"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      enable_web_search: true
+      # enable_code_execution: true
+    # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+
+  - id: "gpt5nano"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+    # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+
+  - id: "cerebras"
+    backend:
+      type: "chatcompletion"
+      model: "gpt-oss-120b"
+      base_url: "https://api.cerebras.ai/v1"
+      enable_web_search: true
+    # system_message: "You are a helpful AI assistant with web search capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  # DSPy Question Paraphrasing Configuration
+  # Generates semantically similar but differently worded versions of questions
+  # to help agents explore the problem space from varied angles
+  dspy:
+    enabled: true
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      temperature: 0.7
+    num_variants: 3
+    strategy: "balanced"
+    use_chain_of_thought: true
+    cache_enabled: true
+    semantic_threshold: 0.85
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
