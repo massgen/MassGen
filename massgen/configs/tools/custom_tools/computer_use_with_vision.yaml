@@ -1,0 +1,72 @@
+# MassGen Configuration: Computer Use with Image Understanding
+#
+# This configuration combines computer use automation with image understanding capabilities.
+# The agent can control the browser/computer AND analyze screenshots to verify actions.
+#
+# Usage:
+#   massgen --config @examples/tools/custom_tools/computer_use_with_vision.yaml "Search for cats on Google Images and describe what you see"
+#
+# Prerequisites:
+#   1. Set OPENAI_API_KEY in your .env file
+#   2. Install Playwright: pip install playwright && playwright install
+#   3. Install PIL for image processing: pip install pillow
+
+agents:
+  - id: "vision_automation_agent"
+    backend:
+      type: "openai"
+      model: "computer-use-preview"
+      custom_tools:
+        # Computer use for automation
+        - name: ["computer_use"]
+          category: "automation"
+          path: "massgen/tool/_computer_use/computer_use_tool.py"
+          function: ["computer_use"]
+          default_params:
+            environment: "browser"
+            display_width: 1920
+            display_height: 1080
+            max_iterations: 30
+            include_reasoning: true
+            model: "computer-use-preview"
+            environment_config:
+              browser_type: "chromium"
+              headless: false
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+
+    system_message: |
+      You are an advanced AI agent with both computer control and vision capabilities.
+
+      Available tools:
+      1. computer_use - Control a web browser or computer to perform automated tasks
+      2. understand_image - Analyze screenshots and images to understand what's displayed
+
+      Workflow approach:
+      1. Use computer_use to navigate and interact with the browser/computer
+      2. Use understand_image to verify the current state or analyze content
+      3. Make decisions based on what you see in screenshots
+      4. Continue with the next action based on your analysis
+
+      Example combined usage:
+      - Navigate to a website using computer_use
+      - Take a screenshot and analyze it with understand_image
+      - Click on specific elements based on your visual understanding
+      - Verify the results with another screenshot analysis
+
+      Best practices:
+      - Always verify your actions by analyzing screenshots
+      - Use understand_image when you need to confirm page content
+      - Provide detailed descriptions when analyzing images
+      - Combine both tools for complex multi-step workflows
+
+      Safety:
+      - All actions are executed in a sandboxed browser environment
+      - Safety checks will alert you to potential security concerns
+      - Screenshots are automatically captured after each action
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

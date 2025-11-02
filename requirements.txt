@@ -20,6 +20,12 @@ aiohttp>=3.8.0
 websockets>=11.0.0
 pydub>=0.25.1
 
+# Computer Use Tool (Optional)
+# Uncomment the dependencies you need:
+# playwright>=1.40.0  # For browser automation
+# docker>=7.0.0  # For Docker container automation
+# pillow>=10.0.0  # For image processing and optimization
+
 # Documentation dependencies
 sphinx>=7.0.0
 sphinx-rtd-theme>=2.0.0

@@ -1,0 +1,81 @@
+# MassGen Configuration: Gemini Computer Use with Docker
+#
+# This configuration uses Google's Gemini 2.5 Computer Use Preview model
+# with Docker for OS-level automation tasks.
+#
+# Note: The gemini_computer_use tool calls the Gemini API directly (similar to 
+# how computer_use calls OpenAI directly), so it bypasses MassGen's normal tool flow.
+#
+# Usage:
+#   massgen --config gemini_computer_use_docker_example.yaml
+#
+# Prerequisites:
+#   1. Set GEMINI_API_KEY in your .env file
+#   2. Docker installed and running
+#   3. Run setup script: scripts/setup_docker_cua.sh
+#   4. Install Google GenAI SDK: pip install google-genai
+
+agents:
+  - id: "gemini_docker_agent"
+    backend:
+      type: "openai"  # Use a simple backend since tool calls API directly
+      model: "gpt-4.1"  # Orchestration model (not used for automation)
+      custom_tools:
+        - name: ["gemini_computer_use"]
+          category: "automation"
+          path: "massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py"
+          function: ["gemini_computer_use"]
+          description: >
+            Automate OS-level tasks using Google's Gemini 2.5 Computer Use model with Docker.
+            This tool directly calls the Gemini API with the Computer Use tool configured
+            for desktop environment control.
+            
+            The Gemini model can control a virtual desktop environment to:
+            - Launch and interact with applications
+            - Manipulate files and folders
+            - Execute system commands
+            - Perform complex multi-step workflows
+            
+            Use this for OS-level automation tasks that require desktop interaction.
+          default_params:
+            environment: "docker"
+            display_width: 1440
+            display_height: 900
+            max_iterations: 30
+            include_thoughts: true
+            environment_config:
+              docker_image: "ghcr.io/anthropics/anthropic-quickstarts:computer-use-demo-latest"
+              container_name: "gemini-computer-use-container"
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+
+    system_message: |
+      You are an AI assistant with access to Google's Gemini 2.5 Computer Use capabilities
+      through a Docker-based desktop environment.
+      
+      You have the gemini_computer_use tool which allows you to automate OS-level tasks.
+      This tool internally uses Gemini 2.5 Computer Use model to autonomously control
+      a virtual desktop environment running in Docker.
+      
+      When users ask you to:
+      - Create, edit, or manipulate files
+      - Launch applications or use desktop software
+      - Perform system administration tasks
+      - Automate complex workflows requiring multiple applications
+      - Test software in a sandboxed environment
+      
+      Use the gemini_computer_use tool with a clear task description.
+      
+      Example usage:
+      - gemini_computer_use("Create a text file named hello.txt with content 'Hello World'")
+      - gemini_computer_use("Open a text editor and write a Python script that prints numbers 1-10")
+      - gemini_computer_use("Take a screenshot of the desktop")
+      
+      The tool will autonomously complete the task in the Docker environment and return results.
+      
+      Note: This uses a containerized desktop environment for safe, isolated execution.
+
+display:
+  type: "rich_terminal"

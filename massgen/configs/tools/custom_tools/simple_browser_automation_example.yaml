@@ -1,0 +1,48 @@
+# Simple Browser Automation Example with gpt-4.1
+# This config demonstrates browser automation without requiring OpenAI's computer-use-preview model
+#
+# Usage:
+#   massgen --config simple_browser_automation_example.yaml
+#
+# Prerequisites:
+#   1. Set OPENAI_API_KEY in your .env file
+#   2. Install Playwright: pip install playwright
+#   3. Install browsers: playwright install
+
+agents:
+  - id: "browser_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4.1"
+      temperature: 0.3
+      custom_tools:
+        - name: ["browser_automation"]
+          category: "automation"
+          path: "massgen/tool/_browser_automation/browser_automation_tool.py"
+          function: ["browser_automation"]
+          description: >
+            Perform browser automation tasks. Can navigate to URLs, click elements, type text,
+            extract information, and take screenshots.
+            
+            Parameters:
+            - task: Description of what you're doing (required)
+            - url: URL to navigate to (required for 'navigate' action)
+            - action: Action to perform - "navigate", "click", "type", "extract", or "screenshot" (required)
+            - selector: CSS selector for element (required for click/type/extract actions)
+            - text: Text to type (required for 'type' action)
+            - headless: Run browser invisibly (default: false)
+            - screenshot: Take screenshot after action (default: true)
+            
+            Examples:
+            - Navigate: {"task": "Open Google", "url": "https://google.com", "action": "navigate"}
+            - Click: {"task": "Click search button", "action": "click", "selector": "button[type='submit']"}
+            - Type: {"task": "Enter search term", "action": "type", "selector": "input[name='q']", "text": "hello"}
+            - Extract: {"task": "Get headings", "action": "extract", "selector": "h1, h2"}
+          
+          # Default parameters (can be overridden)
+          default_params:
+            headless: false
+            screenshot: true
+
+display:
+  type: "rich_terminal"

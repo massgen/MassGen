@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """Tool module for MassGen framework."""
 
+from ._browser_automation import browser_automation, simple_browser_automation
 from ._code_executors import run_python_script, run_shell_script
+from ._computer_use import computer_use
+from ._gemini_computer_use import gemini_computer_use
 from ._file_handlers import append_file_content, read_file_content, save_file_content
 from ._manager import ToolManager
 from ._result import ExecutionResult
@@ -24,6 +27,10 @@ __all__ = [
     "read_file_content",
     "save_file_content",
     "append_file_content",
+    "computer_use",
+    "gemini_computer_use",
+    "browser_automation",
+    "simple_browser_automation",
     "dashscope_generate_image",
     "dashscope_generate_audio",
     "dashscope_analyze_image",

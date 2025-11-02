@@ -1,0 +1,74 @@
+# MassGen Configuration: Gemini Computer Use
+#
+# This configuration uses Google's Gemini 2.5 Computer Use Preview model
+# for browser automation tasks.
+#
+# Note: The gemini_computer_use tool calls the Gemini API directly (similar to 
+# how computer_use calls OpenAI directly), so it bypasses MassGen's normal tool flow.
+#
+# Usage:
+#   massgen --config gemini_computer_use_example.yaml
+#
+# Prerequisites:
+#   1. Set GOOGLE_API_KEY in your .env file
+#   2. Install Playwright: pip install playwright
+#   3. Install browsers: playwright install
+#   4. Install Google GenAI SDK: pip install google-genai
+
+agents:
+  - id: "gemini_automation_agent"
+    backend:
+      type: "openai"  # Use a simple backend since tool calls API directly
+      model: "gpt-4.1"  # Orchestration model (not used for automation)
+      custom_tools:
+        - name: ["gemini_computer_use"]
+          category: "automation"
+          path: "massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py"
+          function: ["gemini_computer_use"]
+          description: >
+            Automate browser tasks using Google's Gemini 2.5 Computer Use model.
+            This tool directly calls the Gemini API with the Computer Use tool configured.
+            
+            The Gemini model autonomously controls the browser to complete tasks.
+            Supports clicking, typing, scrolling, navigation, and more.
+            
+            Use this for complex browser automation tasks that require multiple steps.
+          default_params:
+            environment: "browser"
+            display_width: 1440
+            display_height: 900
+            max_iterations: 25
+            include_thoughts: true
+            environment_config:
+              headless: true
+              browser_type: "chromium"
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+
+    system_message: |
+      You are an AI assistant with access to Google's Gemini 2.5 Computer Use capabilities.
+      
+      You have the gemini_computer_use tool which allows you to automate browser tasks.
+      This tool internally uses Gemini 2.5 Computer Use model to autonomously control
+      a web browser.
+      
+      When users ask you to:
+      - Browse websites or search for information
+      - Fill out forms or interact with web pages
+      - Research products or compare options
+      - Extract data from multiple pages
+      - Navigate complex websites
+      
+      Use the gemini_computer_use tool with a clear task description.
+      
+      Example usage:
+      - gemini_computer_use("Search for Python documentation on Google")
+      - gemini_computer_use("Go to Wikipedia and find information about AI")
+      - gemini_computer_use("Compare prices of smart fridges on shopping sites")
+      
+      The tool will autonomously complete the task and return the results.
+
+display:
+  type: "rich_terminal"
