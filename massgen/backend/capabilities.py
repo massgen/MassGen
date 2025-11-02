@@ -422,15 +422,15 @@ def validate_backend_config(backend_type: str, config: Dict) -> List[str]:
         if "mcp" not in caps.supported_capabilities:
             errors.append(f"{backend_type} does not support MCP")
 
-    # Check for Claude Code-specific parameters on non-Claude Code backends
-    if backend_type != "claude_code" and "append_system_prompt" in config:
+    # Check for deprecated system prompt parameters (standardized across all backends)
+    if "append_system_prompt" in config:
         errors.append(
-            f"'append_system_prompt' is only supported by claude_code backend. " f"For {backend_type}, use 'system_message' at the agent level (outside backend block) instead.",
+            "'append_system_prompt' in backend config is not supported. Use 'system_message' at the agent level (outside backend block) instead.",
         )
 
-    if backend_type != "claude_code" and "system_prompt" in config:
+    if "system_prompt" in config:
         errors.append(
-            f"'system_prompt' in backend config is only supported by claude_code. " f"For {backend_type}, use 'system_message' at the agent level (outside backend block) instead.",
+            "'system_prompt' in backend config is not supported. Use 'system_message' at the agent level (outside backend block) instead.",
         )
 
     return errors

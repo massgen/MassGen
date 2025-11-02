@@ -1067,6 +1067,8 @@ class ClaudeCodeBackend(LLMBackend):
             "allowed_tools",
             "permission_mode",
             "custom_tools",  # Handled separately via SDK MCP server conversion
+            # Note: system_prompt is NOT excluded - it's needed for internal workflow prompt injection
+            # Validation prevents it from being set in YAML backend config
         }
 
         # Get cwd from filesystem manager (always available since we require it in __init__)
