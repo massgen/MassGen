@@ -123,15 +123,22 @@ Make sure you actually call `vote` or `new_answer` (in tool call format).
     # USER MESSAGE TEMPLATES
     # =============================================================================
 
-    def format_original_message(self, task: str) -> str:
+    def format_original_message(self, task: str, paraphrase: Optional[str] = None) -> str:
         """Format the original message section."""
         if "format_original_message" in self._template_overrides:
             override = self._template_overrides["format_original_message"]
             if callable(override):
-                return override(task)
-            return str(override).format(task=task)
+                try:
+                    return override(task, paraphrase=paraphrase)
+                except TypeError:
+                    return override(task)
+            return str(override).format(task=task, paraphrase=paraphrase)
 
-        return f"<ORIGINAL MESSAGE> {task} <END OF ORIGINAL MESSAGE>"
+        original_block = f"<ORIGINAL MESSAGE> {task} <END OF ORIGINAL MESSAGE>"
+        if paraphrase:
+            paraphrase_block = f"<PARAPHRASED MESSAGE> {paraphrase} <END OF PARAPHRASED MESSAGE>"
+            return f"{original_block}\n{paraphrase_block}"
+        return original_block
 
     def format_conversation_history(self, conversation_history: List[Dict[str, str]]) -> str:
         """Format conversation history for agent context."""
@@ -617,36 +624,40 @@ Please address these specific issues in your coordination and final answer.
     # COMPLETE MESSAGE BUILDERS
     # =============================================================================
 
-    def build_case1_user_message(self, task: str) -> str:
+    def build_case1_user_message(self, task: str, paraphrase: Optional[str] = None) -> str:
         """Build Case 1 user message (no summaries exist)."""
-        return f"""{self.format_original_message(task)}
+        return f"""{self.format_original_message(task, paraphrase)}
 
 {self.format_current_answers_empty()}"""
 
-    def build_case2_user_message(self, task: str, agent_summaries: Dict[str, str]) -> str:
+    def build_case2_user_message(self, task: str, agent_summaries: Dict[str, str], paraphrase: Optional[str] = None) -> str:
         """Build Case 2 user message (summaries exist)."""
-        return f"""{self.format_original_message(task)}
+        return f"""{self.format_original_message(task, paraphrase)}
 
 {self.format_current_answers_with_summaries(agent_summaries)}"""
 
-    def build_evaluation_message(self, task: str, agent_answers: Optional[Dict[str, str]] = None) -> str:
+    def build_evaluation_message(self, task: str, agent_answers: Optional[Dict[str, str]] = None, paraphrase: Optional[str] = None) -> str:
         """Build evaluation user message for any case."""
         if agent_answers:
-            return self.build_case2_user_message(task, agent_answers)
+            return self.build_case2_user_message(task, agent_answers, paraphrase)
         else:
-            return self.build_case1_user_message(task)
+            return self.build_case1_user_message(task, paraphrase)
 
     def build_coordination_context(
         self,
         current_task: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
         agent_answers: Optional[Dict[str, str]] = None,
+        paraphrase: Optional[str] = None,
     ) -> str:
         """Build coordination context including conversation history and current state."""
         if "build_coordination_context" in self._template_overrides:
             override = self._template_overrides["build_coordination_context"]
             if callable(override):
-                return override(current_task, conversation_history, agent_answers)
+                try:
+                    return override(current_task, conversation_history, agent_answers, paraphrase)
+                except TypeError:
+                    return override(current_task, conversation_history, agent_answers)
             return str(override)
 
         context_parts = []
@@ -659,7 +670,7 @@ Please address these specific issues in your coordination and final answer.
                 context_parts.append("")  # Empty line for spacing
 
         # Add current task
-        context_parts.append(self.format_original_message(current_task))
+        context_parts.append(self.format_original_message(current_task, paraphrase))
         context_parts.append("")  # Empty line for spacing
 
         # Add agent answers
@@ -680,6 +691,7 @@ Please address these specific issues in your coordination and final answer.
         agent_summaries: Optional[Dict[str, str]] = None,
         valid_agent_ids: Optional[List[str]] = None,
         base_system_message: Optional[str] = None,
+        paraphrase: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Build complete initial conversation for MassGen evaluation."""
         # Use agent's custom system message if provided, otherwise use default evaluation message
@@ -690,7 +702,7 @@ Please address these specific issues in your coordination and final answer.
 
         return {
             "system_message": system_message,
-            "user_message": self.build_evaluation_message(task, agent_summaries),
+            "user_message": self.build_evaluation_message(task, agent_summaries, paraphrase),
             "tools": self.get_standard_tools(valid_agent_ids),
         }
 
@@ -701,6 +713,7 @@ Please address these specific issues in your coordination and final answer.
         agent_summaries: Optional[Dict[str, str]] = None,
         valid_agent_ids: Optional[List[str]] = None,
         base_system_message: Optional[str] = None,
+        paraphrase: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Build complete conversation with conversation history context for MassGen evaluation."""
         # Use agent's custom system message if provided, otherwise use default context-aware message
@@ -711,7 +724,7 @@ Please address these specific issues in your coordination and final answer.
 
         return {
             "system_message": system_message,
-            "user_message": self.build_coordination_context(current_task, conversation_history, agent_summaries),
+            "user_message": self.build_coordination_context(current_task, conversation_history, agent_summaries, paraphrase),
             "tools": self.get_standard_tools(valid_agent_ids),
         }
 
