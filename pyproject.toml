@@ -59,6 +59,7 @@ dependencies = [
     "pypdf2>=3.0.1",
     "mem0ai>=1.0.0",
     "reportlab>=4.0.0",
+    "dspy>=2.4.0",
 ]
 
 [project.optional-dependencies]
