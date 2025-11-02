@@ -1435,24 +1435,6 @@ Your answer:"""
 
         return {"role": "user", "content": "\n".join(update_parts)}
 
-    async def _sync_temp_workspace_for_agent(self, agent_id: str) -> None:
-        """Ensure agent's temp workspace has latest snapshots from all agents.
-
-        Args:
-            agent_id: The agent whose workspace needs syncing
-        """
-        agent = self.agents.get(agent_id)
-
-        # Only sync if agent has filesystem enabled
-        if not agent or not agent.backend.filesystem_manager:
-            logger.info(f"[Orchestrator] Agent {agent_id} has no filesystem - skipping workspace sync")
-            return
-
-        # Temp workspace is already synced via save_snapshot mechanism
-        # When agents save answers, their workspace files are copied to temp_workspaces
-        # This agent's filesystem_manager already has access to those files
-        logger.info(f"[Orchestrator] Temp workspace ready for {agent_id}")
-
     async def _inject_update_and_continue(
         self,
         agent_id: str,
@@ -1506,9 +1488,6 @@ Your answer:"""
                     logger.info(f"[Orchestrator] Saved update message to {update_message_file}")
             except Exception as e:
                 logger.warning(f"[Orchestrator] Failed to save update message for {agent_id}: {e}")
-
-        # Sync temp workspace if applicable
-        await self._sync_temp_workspace_for_agent(agent_id)
 
         # Track the update injection in coordination tracker
         answer_providers = ", ".join(sorted(new_answers.keys()))
@@ -1599,7 +1578,7 @@ Your answer:"""
         normalized_content = content
 
         # Replace all agent workspace paths with canonical '/workspace/'
-        for agent_id, agent in self.agents.items():
+        for _, agent in self.agents.items():
             if not agent.backend.filesystem_manager:
                 continue
 
@@ -2744,7 +2723,7 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
         )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
-        for aid, state in self.agent_states.items():
+        for aid, _ in self.agent_states.items():
             if aid != selected_agent_id:
                 self.coordination_tracker.change_status(aid, AgentStatus.COMPLETED)
 

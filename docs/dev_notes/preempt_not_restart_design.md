@@ -108,9 +108,6 @@ async def _inject_update_and_continue(
     update_message = self._build_update_message(agent_id, answers)
     conversation_messages.append(update_message)
 
-    # Sync temp workspace if applicable
-    await self._sync_temp_workspace_for_agent(agent_id)
-
     # Clear restart_pending so we don't re-inject
     self.agent_states[agent_id].restart_pending = False
 
@@ -178,31 +175,7 @@ async def _build_update_message(self, agent_id: str, answers: Dict[str, str]) ->
     return {"role": "user", "content": "\n".join(update_parts)}
 ```
 
-### 4. Workspace Sync (Conditional)
-
-**New method 3**: `_sync_temp_workspace_for_agent(agent_id)`
-
-```python
-async def _sync_temp_workspace_for_agent(self, agent_id: str) -> None:
-    """Ensure agent's temp workspace has latest snapshots from all agents."""
-    agent = self.agents.get(agent_id)
-
-    # Only sync if agent has filesystem enabled
-    if not agent or not agent.backend.filesystem_manager:
-        logger.info(f"[Orchestrator] Agent {agent_id} has no filesystem - skipping workspace sync")
-        return
-
-    # Temp workspace is already synced via save_snapshot mechanism
-    # When agents save answers, their workspace files are copied to temp_workspaces
-    # This agent's filesystem_manager already has access to those files
-    logger.info(f"[Orchestrator] Temp workspace ready for {agent_id}")
-```
-
-**Important**: Workspace updates are **conditional**:
-- If `agent.backend.filesystem_manager is None` → No workspace features → Don't mention in prompt
-- If filesystem enabled → Include workspace update info in prompt
-
-### 5. Loop Control Changes
+### 4. Loop Control Changes
 
 **Key change**: Use `continue` instead of `return`
 
@@ -245,14 +218,9 @@ Agent A: "I see Agent B's index.html. I'll add CSS animations to enhance it..."
    - **Conditionally** include workspace info (only if filesystem enabled)
    - Return user message dict
 
-2. **Create `_sync_temp_workspace_for_agent(agent_id)` method**
-   - Check if agent has filesystem
-   - Log sync status (actual sync already handled by existing code)
-
-3. **Create `_inject_update_and_continue(agent_id, answers, conversation_messages)` method**
+2. **Create `_inject_update_and_continue(agent_id, answers, conversation_messages)` method**
    - Build update message
    - Append to conversation_messages
-   - Sync workspace if needed
    - Clear restart_pending flag
    - Return True (continue) or False (restart fallback)
 
@@ -419,7 +387,6 @@ All 9 restart_pending locations will call the same helper function to avoid code
 
 1. `_inject_update_and_continue()` - Main orchestrator
 2. `_build_update_message()` - Message formatter (workspace-aware)
-3. `_sync_temp_workspace_for_agent()` - Workspace sync (conditional)
 
 ### Workspace Conditional Logic
 
