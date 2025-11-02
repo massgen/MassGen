@@ -6,13 +6,12 @@ This tool implements the Computer Using Agent (CUA) loop that allows the model t
 or browser environment by sending actions (click, type, scroll, etc.) and receiving screenshots.
 """
 
-import asyncio
 import base64
 import json
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -23,6 +22,7 @@ from massgen.tool._result import ExecutionResult, TextContent
 # Optional dependencies with graceful fallback
 try:
     from playwright.sync_api import sync_playwright
+
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
@@ -30,6 +30,7 @@ except ImportError:
 
 try:
     import docker
+
     DOCKER_AVAILABLE = True
 except ImportError:
     DOCKER_AVAILABLE = False
@@ -39,19 +40,13 @@ except ImportError:
 class ComputerUseError(Exception):
     """Base exception for computer use tool errors."""
 
-    pass
-
 
 class EnvironmentNotSupportedError(ComputerUseError):
     """Raised when an environment is not supported."""
 
-    pass
-
 
 class ActionExecutionError(ComputerUseError):
     """Raised when an action fails to execute."""
-
-    pass
 
 
 def get_screenshot_browser(page: Any) -> bytes:
@@ -432,7 +427,7 @@ def run_computer_use_loop(
                         "display_width": display_width,
                         "display_height": display_height,
                         "environment": environment_type,
-                    }
+                    },
                 ],
                 input=[computer_call_output],
                 truncation="auto",
@@ -586,7 +581,7 @@ async def computer_use(
                         {
                             "type": "input_image",
                             "image_url": f"data:image/png;base64,{screenshot_base64}",
-                        }
+                        },
                     )
                     logger.info(f"Added initial screenshot: {screenshot_path}")
 
@@ -693,7 +688,7 @@ async def computer_use(
                         "display_width": display_width,
                         "display_height": display_height,
                         "environment": environment,
-                    }
+                    },
                 ],
                 input=[{"role": "user", "content": input_content}],
                 reasoning=reasoning_config if reasoning_config else None,

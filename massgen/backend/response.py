@@ -18,7 +18,10 @@ import httpx
 import openai
 from openai import AsyncOpenAI
 
-from ..api_params_handler import OpenAIOperatorAPIParamsHandler, ResponseAPIParamsHandler
+from ..api_params_handler import (
+    OpenAIOperatorAPIParamsHandler,
+    ResponseAPIParamsHandler,
+)
 from ..formatter import ResponseFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType, TextStreamChunk

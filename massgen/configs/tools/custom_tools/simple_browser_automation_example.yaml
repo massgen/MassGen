@@ -23,7 +23,7 @@ agents:
           description: >
             Perform browser automation tasks. Can navigate to URLs, click elements, type text,
             extract information, and take screenshots.
-            
+
             Parameters:
             - task: Description of what you're doing (required)
             - url: URL to navigate to (required for 'navigate' action)
@@ -32,13 +32,13 @@ agents:
             - text: Text to type (required for 'type' action)
             - headless: Run browser invisibly (default: false)
             - screenshot: Take screenshot after action (default: true)
-            
+
             Examples:
             - Navigate: {"task": "Open Google", "url": "https://google.com", "action": "navigate"}
             - Click: {"task": "Click search button", "action": "click", "selector": "button[type='submit']"}
             - Type: {"task": "Enter search term", "action": "type", "selector": "input[name='q']", "text": "hello"}
             - Extract: {"task": "Get headings", "action": "extract", "selector": "h1, h2"}
-          
+
           # Default parameters (can be overridden)
           default_params:
             headless: false

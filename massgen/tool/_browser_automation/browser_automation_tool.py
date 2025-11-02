@@ -6,16 +6,16 @@ This tool provides basic browser automation without requiring OpenAI's hosted co
 It works with gpt-4.1, gpt-4o, Gemini, and other models.
 """
 
-import asyncio
 import base64
 import json
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from massgen.logger_config import logger
 from massgen.tool._result import ExecutionResult, TextContent
 
 try:
     from playwright.async_api import async_playwright
+
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False

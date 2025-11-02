@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Simple validation script to check computer_use_tool.py syntax and structure.
 """
