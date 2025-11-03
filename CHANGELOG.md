@@ -7,9 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
-**v0.1.5 (Upcoming)** - Agent Task Planning
-Agents can now create and manage task plans with dependencies, enabling organized multi-step workflows and coordinated parallel execution.
-
 **v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
 Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
 
@@ -20,57 +17,6 @@ Post-evaluation workflow with submit/restart capabilities, custom multimodal und
 Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
 
 ---
-
-## [Unreleased] - v0.1.5
-
-### Added
-- **Agent Task Planning System** (Phase 1 of 3 - complete)
-  - New task planning data structures (`Task` and `TaskPlan` dataclasses)
-  - Full MCP server implementation with 8 planning tools:
-    - `create_task_plan()` - Create task plans with dependency support
-    - `add_task()` - Add tasks dynamically during execution
-    - `update_task_status()` - Track progress and automatically detect newly ready tasks
-    - `edit_task()` - Update task descriptions
-    - `get_task_plan()` - View complete task plan with statistics
-    - `delete_task()` - Remove tasks no longer needed
-    - `get_ready_tasks()` - Identify tasks ready to start
-    - `get_blocked_tasks()` - See tasks waiting on dependencies
-  - Comprehensive dependency management:
-    - Support for index-based and ID-based dependency references
-    - Circular dependency detection and validation
-    - Automatic task unblocking when dependencies complete
-  - Orchestrator integration:
-    - Automatic MCP server injection for each agent
-    - Per-agent isolated task plan storage
-    - Task plan serialization for resumability
-  - Configuration options:
-    - `enable_agent_task_planning` flag in coordination config
-    - `max_tasks_per_plan` limit (default: 10)
-    - Interactive config builder prompts
-  - System message guidance:
-    - Comprehensive planning tool documentation
-    - Usage examples and best practices
-    - Automatically appended when planning enabled
-  - Full test suite:
-    - 40 unit tests (>80% coverage)
-    - 9 integration tests covering complex workflows
-    - Tests for parallel execution, diamond dependencies, and dynamic task addition
-
-### Documentation
-- New user guide: `docs/source/user_guide/agent_task_planning.rst`
-  - Complete feature overview and configuration guide
-  - Usage examples for linear, parallel, and dynamic workflows
-  - Best practices and troubleshooting
-- New API reference: `docs/source/api/planning_tools.rst`
-  - Full API documentation for all 8 MCP tools
-  - Data structure reference
-  - Error handling guide
-
-### Technical Details
-- Location: `massgen/tools/` (new module)
-  - `planning_dataclasses.py` - Core data structures
-  - `_planning_mcp_server.py` - MCP server implementation
-- Test coverage: `massgen/tests/test_planning_tools.py`, `massgen/tests/test_planning_integration.py`
 
 ## [0.1.4] - 2025-10-27
 
