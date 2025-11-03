@@ -49,6 +49,7 @@ Long-term memory with semantic retrieval via mem0, automatic context compression
 - **Documentation Updates**: New user guides and design documentation
   - New `docs/source/user_guide/agent_task_planning.rst`: Task planning guide with usage patterns and API reference
   - Updated `docs/source/user_guide/code_execution.rst`: Added 122 lines for background shell usage
+  - New `docs/dev_notes/agent_planning_coordination_design.md`: Comprehensive design document for agent planning and coordination system
   - New `docs/dev_notes/preempt_not_restart_design.md`: 456-line design document with preemption algorithms
   - Updated `docs/source/development/architecture.rst`: Added 61 lines for preemption coordination architecture
 
