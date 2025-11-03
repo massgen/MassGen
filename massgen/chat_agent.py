@@ -14,6 +14,8 @@ from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .backend.base import LLMBackend, StreamChunk
+from .logger_config import logger
+from .memory import ConversationMemory, PersistentMemoryBase
 from .stream_chunk import ChunkType
 from .utils import CoordinationStage
 
@@ -26,9 +28,18 @@ class ChatAgent(ABC):
     providing a unified way to interact with any type of agent system.
     """
 
-    def __init__(self, session_id: Optional[str] = None):
+    def __init__(
+        self,
+        session_id: Optional[str] = None,
+        conversation_memory: Optional[ConversationMemory] = None,
+        persistent_memory: Optional[PersistentMemoryBase] = None,
+    ):
         self.session_id = session_id or f"chat_session_{uuid.uuid4().hex[:8]}"
         self.conversation_history: List[Dict[str, Any]] = []
+
+        # Memory components
+        self.conversation_memory = conversation_memory
+        self.persistent_memory = persistent_memory
 
     @abstractmethod
     async def chat(
@@ -132,6 +143,9 @@ class SingleAgent(ChatAgent):
         agent_id: Optional[str] = None,
         system_message: Optional[str] = None,
         session_id: Optional[str] = None,
+        conversation_memory: Optional[ConversationMemory] = None,
+        persistent_memory: Optional[PersistentMemoryBase] = None,
+        context_monitor: Optional[Any] = None,
     ):
         """
         Initialize single agent.
@@ -141,11 +155,43 @@ class SingleAgent(ChatAgent):
             agent_id: Optional agent identifier
             system_message: Optional system message for the agent
             session_id: Optional session identifier
+            conversation_memory: Optional conversation memory instance
+            persistent_memory: Optional persistent memory instance
+            context_monitor: Optional context window monitor for tracking token usage
         """
-        super().__init__(session_id)
+        super().__init__(session_id, conversation_memory, persistent_memory)
         self.backend = backend
         self.agent_id = agent_id or f"agent_{uuid.uuid4().hex[:8]}"
         self.system_message = system_message
+        self.context_monitor = context_monitor
+        self._turn_number = 0
+
+        # Track orchestrator turn number (for turn-aware memory)
+        self._orchestrator_turn = None
+
+        # Track if compression has occurred (for smart retrieval)
+        self._compression_has_occurred = False
+
+        # Retrieval configuration (defaults, can be overridden from config)
+        self._retrieval_limit = 5  # Number of memory facts to retrieve from mem0
+        self._retrieval_exclude_recent = True  # Don't retrieve before compression (avoid duplicates)
+
+        # Track previous winning agents for shared memory retrieval
+        # Format: [{"agent_id": "agent_b", "turn": 1}, {"agent_id": "agent_a", "turn": 2}]
+        self._previous_winners = []
+
+        # Create context compressor if monitor and conversation_memory exist
+        self.context_compressor = None
+        if self.context_monitor and self.conversation_memory:
+            from .memory._compression import ContextCompressor
+            from .token_manager.token_manager import TokenCostCalculator
+
+            self.context_compressor = ContextCompressor(
+                token_calculator=TokenCostCalculator(),
+                conversation_memory=self.conversation_memory,
+                persistent_memory=self.persistent_memory,
+            )
+            logger.info(f"🗜️  Context compressor created for {self.agent_id}")
 
         # Add system message to history if provided
         if self.system_message:
@@ -174,6 +220,11 @@ class SingleAgent(ChatAgent):
         assistant_response = ""
         tool_calls = []
         complete_message = None
+        messages_to_record = []
+
+        # Accumulate all chunks for complete memory recording
+        reasoning_chunks = []  # Accumulate reasoning content
+        reasoning_summaries = []  # Accumulate reasoning summaries
 
         try:
             async for chunk in backend_stream:
@@ -184,6 +235,16 @@ class SingleAgent(ChatAgent):
                 elif chunk_type == "tool_calls":
                     chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
                     tool_calls.extend(chunk_tool_calls)
+                    yield chunk
+                elif chunk_type == "reasoning":
+                    # Accumulate reasoning chunks for memory
+                    if hasattr(chunk, "content") and chunk.content:
+                        reasoning_chunks.append(chunk.content)
+                    yield chunk
+                elif chunk_type == "reasoning_summary":
+                    # Accumulate reasoning summaries
+                    if hasattr(chunk, "content") and chunk.content:
+                        reasoning_summaries.append(chunk.content)
                     yield chunk
                 elif chunk_type == "complete_message":
                     # Backend provided the complete message structure
@@ -207,24 +268,161 @@ class SingleAgent(ChatAgent):
                                 yield StreamChunk(type="tool_calls", tool_calls=response_tool_calls)
                     # Complete response is for internal use - don't yield it
                 elif chunk_type == "done":
-                    # Add complete response to history
+                    # Debug: Log what we have before assembling
+                    logger.debug(
+                        f"🔍 [done] complete_message type: {type(complete_message)}, has_output: {isinstance(complete_message, dict) and 'output' in complete_message if complete_message else False}",
+                    )
+                    logger.debug(f"🔍 [done] assistant_response length: {len(assistant_response)}, reasoning: {len(reasoning_chunks)}, summaries: {len(reasoning_summaries)}")
+
+                    # Assemble complete memory from all accumulated chunks
+                    messages_to_record = []
+
+                    # 1. Add reasoning if present (full context for memory)
+                    if reasoning_chunks:
+                        combined_reasoning = "\n".join(reasoning_chunks)
+                        messages_to_record.append(
+                            {
+                                "role": "assistant",
+                                "content": f"[Reasoning]\n{combined_reasoning}",
+                            },
+                        )
+
+                    # 2. Add reasoning summaries if present
+                    if reasoning_summaries:
+                        combined_summary = "\n".join(reasoning_summaries)
+                        messages_to_record.append(
+                            {
+                                "role": "assistant",
+                                "content": f"[Reasoning Summary]\n{combined_summary}",
+                            },
+                        )
+
+                    # 3. Add final text response (MCP tools not included - they're implementation details)
                     if complete_message:
                         # For Responses API: complete_message is the response object with 'output' array
-                        # Each item in output should be added to conversation history individually
                         if isinstance(complete_message, dict) and "output" in complete_message:
+                            # Store raw output for orchestrator (needs full format)
                             self.conversation_history.extend(complete_message["output"])
+
+                            # Debug: Log what's in the output array
+                            logger.debug(f"🔍 [done] complete_message['output'] has {len(complete_message['output'])} items")
+                            for i, item in enumerate(complete_message["output"][:3]):  # Show first 3
+                                item_type = item.get("type") if isinstance(item, dict) else type(item).__name__
+                                logger.debug(f"   [{i}] type={item_type}")
+
+                            # Extract text from output items
+                            for output_item in complete_message["output"]:
+                                if not isinstance(output_item, dict):
+                                    continue
+
+                                output_type = output_item.get("type")
+
+                                # Skip function_call (workflow tools - not conversation content)
+                                if output_type == "function_call":
+                                    continue
+
+                                # Extract text content from various formats
+                                if output_type == "output_text":
+                                    # Responses API format
+                                    text_content = output_item.get("text", "")
+                                elif output_type == "message":
+                                    # Standard message format
+                                    text_content = output_item.get("content", "")
+                                elif output_type == "reasoning":
+                                    # Reasoning chunks are already captured above, skip duplicate
+                                    continue
+                                else:
+                                    # Unknown type - try to get content/text
+                                    text_content = output_item.get("content") or output_item.get("text", "")
+                                    logger.debug(f"   ⚠️  Unknown output type '{output_type}', extracted: {bool(text_content)}")
+
+                                if text_content:
+                                    logger.debug(f"   ✅ Extracted text ({len(text_content)} chars) from type={output_type}")
+                                    messages_to_record.append(
+                                        {
+                                            "role": "assistant",
+                                            "content": text_content,
+                                        },
+                                    )
+                                else:
+                                    logger.debug(f"   ⚠️  No text content found in type={output_type}")
                         else:
                             # Fallback if it's already in message format
                             self.conversation_history.append(complete_message)
-                    elif assistant_response.strip() or tool_calls:
-                        # Fallback for legacy backends
+                            if isinstance(complete_message, dict) and complete_message.get("content"):
+                                messages_to_record.append(complete_message)
+                    elif assistant_response.strip():
+                        # Fallback for legacy backends - use accumulated text
                         message_data = {
                             "role": "assistant",
                             "content": assistant_response.strip(),
                         }
-                        if tool_calls:
-                            message_data["tool_calls"] = tool_calls
                         self.conversation_history.append(message_data)
+                        messages_to_record.append(message_data)
+
+                    # Record to memories
+                    logger.debug(f"📋 [done chunk] messages_to_record has {len(messages_to_record)} message(s)")
+
+                    if messages_to_record:
+                        logger.debug(f"✅ Will record {len(messages_to_record)} message(s) to memory")
+                        # Add to conversation memory (use formatted messages, not raw output)
+                        if self.conversation_memory:
+                            try:
+                                await self.conversation_memory.add(messages_to_record)
+                                logger.debug(f"📝 Added {len(messages_to_record)} message(s) to conversation memory")
+                            except Exception as e:
+                                # Log but don't fail if memory add fails
+                                logger.warning(f"⚠️  Failed to add response to conversation memory: {e}")
+                        # Record to persistent memory with turn metadata
+                        if self.persistent_memory:
+                            try:
+                                # Include turn number in metadata for temporal filtering
+                                logger.debug(f"📝 Recording {len(messages_to_record)} messages to persistent memory (turn {self._orchestrator_turn})")
+                                await self.persistent_memory.record(
+                                    messages_to_record,
+                                    metadata={"turn": self._orchestrator_turn} if self._orchestrator_turn else None,
+                                )
+                                logger.debug("✅ Successfully recorded to persistent memory")
+                            except NotImplementedError:
+                                # Memory backend doesn't support record
+                                logger.warning("⚠️  Persistent memory doesn't support record()")
+                            except Exception as e:
+                                # Log but don't fail if memory record fails
+                                logger.warning(f"⚠️  Failed to record to persistent memory: {e}")
+                    else:
+                        logger.warning("⚠️  [done chunk] messages_to_record is EMPTY - nothing to record!")
+
+                    # Log context usage after response (if monitor enabled)
+                    if self.context_monitor:
+                        # Use conversation history for accurate token count
+                        current_history = self.conversation_history if not self.conversation_memory else await self.conversation_memory.get_messages()
+                        usage_info = self.context_monitor.log_context_usage(current_history, turn_number=self._turn_number)
+
+                        # Compress if needed
+                        if self.context_compressor and usage_info.get("should_compress"):
+                            logger.info(
+                                f"🔄 Attempting compression for {self.agent_id} " f"({usage_info['current_tokens']:,} → {usage_info['target_tokens']:,} tokens)",
+                            )
+                            compression_stats = await self.context_compressor.compress_if_needed(
+                                messages=current_history,
+                                current_tokens=usage_info["current_tokens"],
+                                target_tokens=usage_info["target_tokens"],
+                                should_compress=True,
+                            )
+
+                            # Update conversation_history if compression occurred
+                            if compression_stats and self.conversation_memory:
+                                # Reload from conversation memory (it was updated by compressor)
+                                self.conversation_history = await self.conversation_memory.get_messages()
+                                # Mark that compression has occurred
+                                self._compression_has_occurred = True
+                                logger.info(
+                                    f"✅ Conversation history updated after compression: " f"{len(self.conversation_history)} messages",
+                                )
+                        elif usage_info.get("should_compress") and not self.context_compressor:
+                            logger.warning(
+                                f"⚠️  Should compress but compressor not available " f"(monitor={self.context_monitor is not None}, " f"conv_mem={self.conversation_memory is not None})",
+                            )
                     yield chunk
                 else:
                     yield chunk
@@ -242,12 +440,28 @@ class SingleAgent(ChatAgent):
         reset_chat: bool = False,
         clear_history: bool = False,
         current_stage: CoordinationStage = None,
+        orchestrator_turn: Optional[int] = None,
+        previous_winners: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
-        # print("Agent: ", self.agent_id)
-        # for message in messages:
-        #     print(f"Message: {message}\n")
-        # print("Messages End. \n")
-        """Process messages through single backend with tool support."""
+        """
+        Process messages through single backend with tool support.
+
+        Args:
+            orchestrator_turn: Current orchestrator turn number (for turn-aware memory)
+            previous_winners: List of previous winning agents with turns
+                             Format: [{"agent_id": "agent_b", "turn": 1}, ...]
+        """
+        # Update orchestrator turn if provided
+        if orchestrator_turn is not None:
+            logger.debug(f"🔍 [chat] Setting orchestrator_turn={orchestrator_turn} for {self.agent_id}")
+            self._orchestrator_turn = orchestrator_turn
+
+        # Update previous winners if provided
+        if previous_winners is not None:
+            logger.debug(f"🔍 [chat] Setting previous_winners={previous_winners} for {self.agent_id}")
+            self._previous_winners = previous_winners
+        else:
+            logger.debug(f"🔍 [chat] No previous_winners provided to {self.agent_id} (current: {self._previous_winners})")
         if clear_history:
             # Clear history but keep system message if it exists
             system_messages = [msg for msg in self.conversation_history if msg.get("role") == "system"]
@@ -255,27 +469,120 @@ class SingleAgent(ChatAgent):
             # Clear backend history while maintaining session
             if self.backend.is_stateful():
                 await self.backend.clear_history()
+            # Clear conversation memory if available
+            if self.conversation_memory:
+                await self.conversation_memory.clear()
 
         if reset_chat:
+            # Skip pre-restart recording - messages are already recorded via done chunks
+            # Pre-restart would duplicate content and include orchestrator system prompts (noise)
+            # The conversation_memory contains:
+            # 1. User messages - will be in new conversation after reset
+            # 2. Agent responses - already recorded to persistent_memory via done chunks
+            # 3. System messages - orchestrator prompts, don't want in long-term memory
+            logger.debug(f"🔄 Resetting chat for {self.agent_id} (skipping pre-restart recording - already captured via done chunks)")
+
             # Reset conversation history to the provided messages
             self.conversation_history = messages.copy()
             # Reset backend state completely
             if self.backend.is_stateful():
                 await self.backend.reset_state()
+            # Reset conversation memory
+            if self.conversation_memory:
+                await self.conversation_memory.clear()
+                await self.conversation_memory.add(messages)
             backend_messages = self.conversation_history.copy()
         else:
             # Regular conversation - append new messages to agent's history
             self.conversation_history.extend(messages)
-            # Handle stateful vs stateless backends differently
-            if self.backend.is_stateful():
-                # Stateful: only send new messages, backend maintains context
-                backend_messages = messages.copy()
-            else:
-                # Stateless: send full conversation history
-                backend_messages = self.conversation_history.copy()
+            # Add to conversation memory
+            if self.conversation_memory:
+                try:
+                    await self.conversation_memory.add(messages)
+                except Exception as e:
+                    # Log but don't fail if memory add fails
+                    logger.warning(f"Failed to add messages to conversation memory: {e}")
+            backend_messages = self.conversation_history.copy()
+
+        # Retrieve relevant persistent memories if available
+        # ALWAYS retrieve on reset_chat (to restore recent context after restart)
+        # Otherwise, only retrieve if compression has occurred (to avoid duplicating recent context)
+        memory_context = ""
+        should_retrieve = self.persistent_memory and (reset_chat or self._compression_has_occurred or not self._retrieval_exclude_recent)  # Always retrieve on reset to restore context
+
+        if should_retrieve:
+            try:
+                # Log retrieval reason and scope
+                if reset_chat:
+                    logger.info(
+                        f"🔄 Retrieving memories after reset for {self.agent_id} " f"(restoring recent context + {len(self._previous_winners) if self._previous_winners else 0} winner(s))...",
+                    )
+                elif self._previous_winners:
+                    logger.info(
+                        f"🔍 Retrieving memories for {self.agent_id} + {len(self._previous_winners)} previous winner(s) " f"(limit={self._retrieval_limit}/agent)...",
+                    )
+                    logger.debug(f"   Previous winners: {self._previous_winners}")
+                else:
+                    logger.info(
+                        f"🔍 Retrieving memories for {self.agent_id} " f"(limit={self._retrieval_limit}, compressed={self._compression_has_occurred})...",
+                    )
+
+                memory_context = await self.persistent_memory.retrieve(
+                    messages,
+                    limit=self._retrieval_limit,
+                    previous_winners=self._previous_winners if self._previous_winners else None,
+                )
+
+                if memory_context:
+                    memory_lines = memory_context.strip().split("\n")
+                    logger.info(
+                        f"💭 Retrieved {len(memory_lines)} memory fact(s) from mem0",
+                    )
+                    # Show preview at INFO level (truncate to first 300 chars for readability)
+                    preview = memory_context[:300] + "..." if len(memory_context) > 300 else memory_context
+                    logger.info(f"   📝 Preview:\n{preview}")
+                else:
+                    logger.info("   ℹ️  No relevant memories found")
+            except NotImplementedError:
+                logger.debug("   Persistent memory doesn't support retrieval")
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to retrieve from persistent memory: {e}")
+        elif self.persistent_memory and self._retrieval_exclude_recent:
+            logger.debug(
+                f"⏭️  Skipping retrieval for {self.agent_id} " f"(no compression yet, all context in conversation_memory)",
+            )
+
+        # Handle stateful vs stateless backends differently
+        if self.backend.is_stateful():
+            # Stateful: only send new messages, backend maintains context
+            backend_messages = messages.copy()
+            # Inject memory context before user messages if available
+            if memory_context:
+                memory_msg = {
+                    "role": "system",
+                    "content": f"Relevant memories:\n{memory_context}",
+                }
+                backend_messages.insert(0, memory_msg)
+        else:
+            # Stateless: send full conversation history
+            backend_messages = self.conversation_history.copy()
+            # Inject memory context after system message but before conversation
+            if memory_context:
+                memory_msg = {
+                    "role": "system",
+                    "content": f"Relevant memories:\n{memory_context}",
+                }
+                # Insert after existing system messages
+                system_count = sum(1 for msg in backend_messages if msg.get("role") == "system")
+                backend_messages.insert(system_count, memory_msg)
 
         if current_stage:
             self.backend.set_stage(current_stage)
+
+        # Log context usage before processing (if monitor enabled)
+        self._turn_number += 1
+        if self.context_monitor:
+            self.context_monitor.log_context_usage(backend_messages, turn_number=self._turn_number)
 
         # Create backend stream and process it
         backend_stream = self.backend.stream_with_tools(
@@ -310,6 +617,10 @@ class SingleAgent(ChatAgent):
         # Reset stateful backend if needed
         if self.backend.is_stateful():
             await self.backend.reset_state()
+
+        # Clear conversation memory (not persistent memory)
+        if self.conversation_memory:
+            await self.conversation_memory.clear()
 
         # Re-add system message if it exists
         if self.system_message:
@@ -356,6 +667,9 @@ class ConfigurableAgent(SingleAgent):
         config,  # AgentConfig - avoid circular import
         backend: LLMBackend,
         session_id: Optional[str] = None,
+        conversation_memory: Optional[ConversationMemory] = None,
+        persistent_memory: Optional[PersistentMemoryBase] = None,
+        context_monitor: Optional[Any] = None,
     ):
         """
         Initialize configurable agent.
@@ -364,6 +678,9 @@ class ConfigurableAgent(SingleAgent):
             config: AgentConfig with all settings
             backend: LLM backend
             session_id: Optional session identifier
+            conversation_memory: Optional conversation memory instance
+            persistent_memory: Optional persistent memory instance
+            context_monitor: Optional context window monitor for tracking token usage
         """
         # Extract system message without triggering deprecation warning
         system_message = None
@@ -375,6 +692,9 @@ class ConfigurableAgent(SingleAgent):
             agent_id=config.agent_id,
             system_message=system_message,
             session_id=session_id,
+            conversation_memory=conversation_memory,
+            persistent_memory=persistent_memory,
+            context_monitor=context_monitor,
         )
         self.config = config
 

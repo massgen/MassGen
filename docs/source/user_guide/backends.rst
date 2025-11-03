@@ -440,7 +440,7 @@ AG2 Backend
            executor: "local"
            work_dir: "coding"
 
-See :doc:`ag2_integration` for detailed AG2 configuration.
+See :doc:`general_interoperability` for detailed AG2 configuration.
 
 LM Studio Backend
 ~~~~~~~~~~~~~~~~~

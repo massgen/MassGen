@@ -488,14 +488,61 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None, config_path: Optional[str] = None) -> Dict[str, ConfigurableAgent]:
-    """Create agents from configuration."""
+def create_agents_from_config(
+    config: Dict[str, Any],
+    orchestrator_config: Optional[Dict[str, Any]] = None,
+    config_path: Optional[str] = None,
+    memory_session_id: Optional[str] = None,
+) -> Dict[str, ConfigurableAgent]:
+    """Create agents from configuration.
+
+    Args:
+        memory_session_id: Optional session ID to use for memory isolation.
+                          If provided, overrides session_name from YAML config.
+    """
     agents = {}
 
     agent_entries = [config["agent"]] if "agent" in config else config.get("agents", None)
 
     if not agent_entries:
         raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
+
+    # Create shared Qdrant client for all agents (avoids concurrent access errors)
+    # ONE client can be used by multiple mem0 instances safely
+    shared_qdrant_client = None
+    global_memory_config = config.get("memory", {})
+    if global_memory_config.get("enabled", False) and global_memory_config.get("persistent_memory", {}).get("enabled", False):
+        try:
+            from qdrant_client import QdrantClient
+
+            pm_config = global_memory_config.get("persistent_memory", {})
+
+            # Support both server mode and file-based mode
+            qdrant_config = pm_config.get("qdrant", {})
+            mode = qdrant_config.get("mode", "local")  # "local" or "server"
+
+            if mode == "server":
+                # Server mode (RECOMMENDED for multi-agent)
+                host = qdrant_config.get("host", "localhost")
+                port = qdrant_config.get("port", 6333)
+                shared_qdrant_client = QdrantClient(host=host, port=port)
+                logger.info(f"🗄️  Shared Qdrant client created (server mode: {host}:{port})")
+            else:
+                # Local file-based mode (single agent only)
+                # WARNING: Does NOT support concurrent access by multiple agents
+                qdrant_path = pm_config.get("path", ".massgen/qdrant")
+                shared_qdrant_client = QdrantClient(path=qdrant_path)
+                logger.info(f"🗄️  Shared Qdrant client created (local mode: {qdrant_path})")
+                if len(agent_entries) > 1:
+                    logger.warning(
+                        "⚠️  Multi-agent setup detected with local Qdrant mode. "
+                        "This may cause concurrent access errors. "
+                        "Consider using server mode: set memory.persistent_memory.qdrant.mode='server'",
+                    )
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to create shared Qdrant client: {e}")
+            logger.warning("   Persistent memory will be disabled for all agents")
+            logger.warning("   For multi-agent setup, start Qdrant server: docker-compose -f docker-compose.qdrant.yml up -d")
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
@@ -579,7 +626,201 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
 
         # Timeout configuration will be applied to orchestrator instead of individual agents
 
-        agent = ConfigurableAgent(config=agent_config, backend=backend)
+        # Merge global and per-agent memory configuration
+        global_memory_config = config.get("memory", {})
+        agent_memory_config = agent_data.get("memory", {})
+
+        # Deep merge: agent config overrides global config
+        def merge_configs(global_cfg, agent_cfg):
+            """Recursively merge agent config into global config."""
+            merged = global_cfg.copy()
+            for key, value in agent_cfg.items():
+                if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
+                    merged[key] = merge_configs(merged[key], value)
+                else:
+                    merged[key] = value
+            return merged
+
+        memory_config = merge_configs(global_memory_config, agent_memory_config)
+
+        # Create context monitor if memory config is enabled
+        context_monitor = None
+        if memory_config.get("enabled", False):
+            from .memory._context_monitor import ContextWindowMonitor
+
+            compression_config = memory_config.get("compression", {})
+            trigger_threshold = compression_config.get("trigger_threshold", 0.75)
+            target_ratio = compression_config.get("target_ratio", 0.40)
+
+            # Get model name from backend config
+            model_name = backend_config.get("model", "unknown")
+
+            # Normalize provider name for monitor
+            provider_map = {
+                "openai": "openai",
+                "anthropic": "anthropic",
+                "claude": "anthropic",
+                "google": "google",
+                "gemini": "google",
+            }
+            provider = provider_map.get(backend_type_lower, backend_type_lower)
+
+            context_monitor = ContextWindowMonitor(
+                model_name=model_name,
+                provider=provider,
+                trigger_threshold=trigger_threshold,
+                target_ratio=target_ratio,
+                enabled=True,
+            )
+            logger.info(
+                f"📊 Context monitor created for {agent_config.agent_id}: " f"{context_monitor.context_window:,} tokens, " f"trigger={trigger_threshold*100:.0f}%, target={target_ratio*100:.0f}%",
+            )
+
+        # Create per-agent memory objects if memory is enabled
+        conversation_memory = None
+        persistent_memory = None
+
+        if memory_config.get("enabled", False):
+            from .memory import ConversationMemory
+
+            # Create conversation memory for this agent
+            if memory_config.get("conversation_memory", {}).get("enabled", True):
+                conversation_memory = ConversationMemory()
+                logger.info(f"💾 Conversation memory created for {agent_config.agent_id}")
+
+            # Create persistent memory for this agent (if enabled)
+            if memory_config.get("persistent_memory", {}).get("enabled", False):
+                from .memory import PersistentMemory
+
+                pm_config = memory_config.get("persistent_memory", {})
+
+                # Get persistent memory configuration
+                agent_name = pm_config.get("agent_name", agent_config.agent_id)
+
+                # Use unified session: memory_session_id (from CLI) > YAML session_name > None
+                session_name = memory_session_id or pm_config.get("session_name")
+
+                on_disk = pm_config.get("on_disk", True)
+                qdrant_path = pm_config.get("path", ".massgen/qdrant")  # Project dir, not /tmp
+
+                try:
+                    # Configure LLM for memory operations (fact extraction)
+                    # RECOMMENDED: Use mem0's native LLMs (no adapter overhead, no async complexity)
+                    llm_cfg = pm_config.get("llm", {})
+
+                    if not llm_cfg:
+                        # Default: gpt-4.1-nano-2025-04-14 (mem0's default, fast and cheap for memory ops)
+                        llm_cfg = {
+                            "provider": "openai",
+                            "model": "gpt-4.1-nano-2025-04-14",
+                        }
+
+                    # Add API key if not specified
+                    if "api_key" not in llm_cfg:
+                        llm_provider = llm_cfg.get("provider", "openai")
+                        if llm_provider == "openai":
+                            llm_cfg["api_key"] = os.getenv("OPENAI_API_KEY")
+                        elif llm_provider == "anthropic":
+                            llm_cfg["api_key"] = os.getenv("ANTHROPIC_API_KEY")
+                        elif llm_provider == "groq":
+                            llm_cfg["api_key"] = os.getenv("GROQ_API_KEY")
+                        # Add more providers as needed
+
+                    # Configure embedding for persistent memory
+                    # RECOMMENDED: Use mem0's native embedders (no adapter overhead)
+                    embedding_cfg = pm_config.get("embedding", {})
+
+                    if not embedding_cfg:
+                        # Default: OpenAI text-embedding-3-small
+                        embedding_cfg = {
+                            "provider": "openai",
+                            "model": "text-embedding-3-small",
+                        }
+
+                    # Add API key if not specified
+                    if "api_key" not in embedding_cfg:
+                        emb_provider = embedding_cfg.get("provider", "openai")
+                        if emb_provider == "openai":
+                            api_key = os.getenv("OPENAI_API_KEY")
+                            if not api_key:
+                                logger.warning("⚠️  OPENAI_API_KEY not found in environment - embedding will fail!")
+                            else:
+                                logger.debug(f"✅ Using OPENAI_API_KEY from environment (key starts with: {api_key[:7]}...)")
+                            embedding_cfg["api_key"] = api_key
+                        elif emb_provider == "together":
+                            embedding_cfg["api_key"] = os.getenv("TOGETHER_API_KEY")
+                        elif emb_provider == "azure_openai":
+                            embedding_cfg["api_key"] = os.getenv("AZURE_OPENAI_API_KEY")
+                        # Add more providers as needed
+
+                    # Use shared Qdrant client if available
+                    if shared_qdrant_client:
+                        persistent_memory = PersistentMemory(
+                            agent_name=agent_name,
+                            session_name=session_name,
+                            llm_config=llm_cfg,  # Use native mem0 LLM
+                            embedding_config=embedding_cfg,  # Use native mem0 embedder
+                            qdrant_client=shared_qdrant_client,  # Share ONE client from server
+                            on_disk=on_disk,
+                        )
+                        logger.info(
+                            f"💾 Persistent memory created for {agent_config.agent_id} "
+                            f"(agent_name={agent_name}, session={session_name or 'cross-session'}, "
+                            f"llm={llm_cfg.get('provider')}/{llm_cfg.get('model')}, "
+                            f"embedder={embedding_cfg.get('provider')}/{embedding_cfg.get('model')}, shared_qdrant=True)",
+                        )
+                    else:
+                        # Fallback: create individual vector store (for backward compatibility)
+                        # WARNING: File-based Qdrant doesn't support concurrent access
+                        from mem0.vector_stores.configs import VectorStoreConfig
+
+                        vector_store_config = VectorStoreConfig(
+                            config={
+                                "on_disk": on_disk,
+                                "path": qdrant_path,
+                            },
+                        )
+
+                        persistent_memory = PersistentMemory(
+                            agent_name=agent_name,
+                            session_name=session_name,
+                            llm_config=llm_cfg,  # Use native mem0 LLM
+                            embedding_config=embedding_cfg,  # Use native mem0 embedder
+                            vector_store_config=vector_store_config,
+                            on_disk=on_disk,
+                        )
+                        logger.info(
+                            f"💾 Persistent memory created for {agent_config.agent_id} "
+                            f"(agent_name={agent_name}, session={session_name or 'cross-session'}, "
+                            f"llm={llm_cfg.get('provider')}/{llm_cfg.get('model')}, "
+                            f"embedder={embedding_cfg.get('provider')}/{embedding_cfg.get('model')}, path={qdrant_path})",
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"⚠️  Failed to create persistent memory for {agent_config.agent_id}: {e}",
+                    )
+                    persistent_memory = None
+
+        # Create agent
+        agent = ConfigurableAgent(
+            config=agent_config,
+            backend=backend,
+            conversation_memory=conversation_memory,
+            persistent_memory=persistent_memory,
+            context_monitor=context_monitor,
+        )
+
+        # Configure retrieval settings from YAML (if memory is enabled)
+        if memory_config.get("enabled", False):
+            retrieval_config = memory_config.get("retrieval", {})
+            agent._retrieval_limit = retrieval_config.get("limit", 5)
+            agent._retrieval_exclude_recent = retrieval_config.get("exclude_recent", True)
+
+            if retrieval_config:  # Only log if custom config provided
+                logger.info(
+                    f"🔧 Retrieval configured for {agent_config.agent_id}: " f"limit={agent._retrieval_limit}, exclude_recent={agent._retrieval_exclude_recent}",
+                )
+
         agents[agent.config.agent_id] = agent
 
     return agents
@@ -696,21 +937,25 @@ def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
             backend_config["cwd"] = str(massgen_dir / "workspaces" / user_cwd)
 
 
-def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> List[Dict[str, Any]]:
+def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Load previous turns from session storage.
+    Load previous turns and winning agents history from session storage.
 
     Returns:
-        List of previous turn metadata dicts
+        tuple: (previous_turns, winning_agents_history)
+            - previous_turns: List of previous turn metadata dicts
+            - winning_agents_history: List of winning agents for memory sharing
+                                     Format: [{"agent_id": "agent_b", "turn": 1}, ...]
     """
     session_id = session_info.get("session_id")
     if not session_id:
-        return []
+        return [], []
 
     session_dir = Path(session_storage) / session_id
     if not session_dir.exists():
-        return []
+        return [], []
 
+    # Load previous turns
     previous_turns = []
     turn_num = 1
 
@@ -735,7 +980,17 @@ def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> L
 
         turn_num += 1
 
-    return previous_turns
+    # Load winning agents history for memory sharing across turns
+    winning_agents_history = []
+    winning_agents_file = session_dir / "winning_agents_history.json"
+    if winning_agents_file.exists():
+        try:
+            winning_agents_history = json.loads(winning_agents_file.read_text(encoding="utf-8"))
+            logger.info(f"📚 Loaded {len(winning_agents_history)} winning agent(s) from session storage: {winning_agents_history}")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to load winning agents history: {e}")
+
+    return previous_turns, winning_agents_history
 
 
 async def handle_session_persistence(
@@ -794,6 +1049,16 @@ async def handle_session_persistence(
     }
     metadata_file = turn_dir / "metadata.json"
     metadata_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+    # Save winning agents history for memory sharing across turns
+    # This allows the orchestrator to restore winner tracking when recreated
+    if final_result.get("winning_agents_history"):
+        winning_agents_file = session_dir / "winning_agents_history.json"
+        winning_agents_file.write_text(
+            json.dumps(final_result["winning_agents_history"], indent=2),
+            encoding="utf-8",
+        )
+        logger.info(f"📚 Saved {len(final_result['winning_agents_history'])} winning agent(s) to session storage")
 
     # Create/update session summary for easy viewing
     session_summary_file = session_dir / "SESSION_SUMMARY.txt"
@@ -898,8 +1163,8 @@ async def run_question_with_history(
             max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
         )
 
-    # Load previous turns from session storage for multi-turn conversations
-    previous_turns = load_previous_turns(session_info, session_storage)
+    # Load previous turns and winning agents history from session storage for multi-turn conversations
+    previous_turns, winning_agents_history = load_previous_turns(session_info, session_storage)
 
     orchestrator = Orchestrator(
         agents=agents,
@@ -907,6 +1172,7 @@ async def run_question_with_history(
         snapshot_storage=snapshot_storage,
         agent_temporary_workspace=agent_temporary_workspace,
         previous_turns=previous_turns,
+        winning_agents_history=winning_agents_history,  # Restore for memory sharing
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(
@@ -1891,6 +2157,7 @@ async def run_interactive_mode(
     original_config: Dict[str, Any] = None,
     orchestrator_cfg: Dict[str, Any] = None,
     config_path: Optional[str] = None,
+    memory_session_id: Optional[str] = None,
     **kwargs,
 ):
     """Run MassGen in interactive mode with conversation history."""
@@ -1979,8 +2246,13 @@ async def run_interactive_mode(
     if original_config and orchestrator_cfg:
         config_modified = prompt_for_context_paths(original_config, orchestrator_cfg)
         if config_modified:
-            # Recreate agents with updated context paths
-            agents = create_agents_from_config(original_config, orchestrator_cfg, config_path=config_path)
+            # Recreate agents with updated context paths (use same session)
+            agents = create_agents_from_config(
+                original_config,
+                orchestrator_cfg,
+                config_path=config_path,
+                memory_session_id=memory_session_id,
+            )
             print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
             print()
 
@@ -1990,7 +2262,8 @@ async def run_interactive_mode(
     conversation_history = []
 
     # Session management for multi-turn filesystem support
-    session_id = None
+    # Use memory_session_id (unified with memory system) if provided, otherwise create later
+    session_id = memory_session_id
     current_turn = 0
     session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")
 
@@ -2037,8 +2310,13 @@ async def run_interactive_mode(
                                 new_turn_config = {"path": str(latest_turn_workspace.resolve()), "permission": "read"}
                                 backend_config["context_paths"] = existing_context_paths + [new_turn_config]
 
-                        # Recreate agents from modified config
-                        agents = create_agents_from_config(modified_config, orchestrator_cfg, config_path=config_path)
+                        # Recreate agents from modified config (use same session)
+                        agents = create_agents_from_config(
+                            modified_config,
+                            orchestrator_cfg,
+                            config_path=config_path,
+                            memory_session_id=session_id,
+                        )
                         logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
 
                 question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
@@ -2242,6 +2520,27 @@ async def main(args):
             if args.debug:
                 logger.debug(f"Resolved config path: {resolved_path}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
+
+            # Automatic config validation (unless --skip-validation flag is set)
+            if not args.skip_validation:
+                from .config_validator import ConfigValidator
+
+                validator = ConfigValidator()
+                validation_result = validator.validate_config(config)
+
+                # Show errors if any
+                if validation_result.has_errors():
+                    print(validation_result.format_errors(), file=sys.stderr)
+                    print(f"\n{BRIGHT_RED}❌ Config validation failed. Fix errors above or use --skip-validation to bypass.{RESET}\n")
+                    sys.exit(1)
+
+                # Show warnings (non-blocking unless --strict-validation)
+                if validation_result.has_warnings():
+                    print(validation_result.format_warnings())
+                    if args.strict_validation:
+                        print(f"\n{BRIGHT_RED}❌ Config validation failed in strict mode (warnings treated as errors).{RESET}\n")
+                        sys.exit(1)
+                    print()  # Extra newline for readability
         else:
             model = args.model
             if args.backend:
@@ -2330,7 +2629,28 @@ async def main(args):
                     '  agent_temporary_workspace: "your_temp_dir"  # Directory for temporary agent workspaces',
                 )
 
-        agents = create_agents_from_config(config, orchestrator_cfg, config_path=str(resolved_path) if resolved_path else None)
+        # Create unified session ID for memory system (before creating agents)
+        # This ensures memory is isolated per session and unifies orchestrator + memory sessions
+        memory_session_id = None
+        if args.question:
+            # Single question mode: Create temp session per run
+            from datetime import datetime
+
+            memory_session_id = f"temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            logger.info(f"📝 Created temp session for single-question mode: {memory_session_id}")
+        else:
+            # Interactive mode: Create session now (will be reused by orchestrator)
+            from datetime import datetime
+
+            memory_session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            logger.info(f"📝 Created session for interactive mode: {memory_session_id}")
+
+        agents = create_agents_from_config(
+            config,
+            orchestrator_cfg,
+            config_path=str(resolved_path) if resolved_path else None,
+            memory_session_id=memory_session_id,
+        )
 
         if not agents:
             raise ConfigurationError("No agents configured")
@@ -2366,9 +2686,17 @@ async def main(args):
                 #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
                 #     print(f"{response}", flush=True)
             else:
-                # Pass the config path to interactive mode
+                # Pass the config path and session_id to interactive mode
                 config_file_path = str(resolved_path) if args.config and resolved_path else None
-                await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, config_path=config_file_path, **kwargs)
+                await run_interactive_mode(
+                    agents,
+                    ui_config,
+                    original_config=config,
+                    orchestrator_cfg=orchestrator_cfg,
+                    config_path=config_file_path,
+                    memory_session_id=memory_session_id,
+                    **kwargs,
+                )
         finally:
             # Cleanup all agents' filesystem managers (including Docker containers)
             for agent_id, agent in agents.items():
@@ -2526,6 +2854,33 @@ Environment Variables:
         action="store_true",
         help="Include example configurations in schema display",
     )
+    parser.add_argument(
+        "--validate",
+        type=str,
+        metavar="CONFIG_FILE",
+        help="Validate a configuration file without running it",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as errors during validation (use with --validate)",
+    )
+    parser.add_argument(
+        "--json",
+        dest="json_output",
+        action="store_true",
+        help="Output validation results in JSON format (use with --validate)",
+    )
+    parser.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skip automatic config validation when loading config files",
+    )
+    parser.add_argument(
+        "--strict-validation",
+        action="store_true",
+        help="Treat config warnings as errors and abort execution",
+    )
 
     # Timeout options
     timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
@@ -2537,14 +2892,26 @@ Environment Variables:
 
     args = parser.parse_args()
 
-    # Always setup logging (will save INFO to file, console output depends on debug flag)
-    setup_logging(debug=args.debug)
+    # Handle special commands first (before logging setup to avoid creating log dirs)
+    if args.validate:
+        from .config_validator import ConfigValidator
 
-    if args.debug:
-        logger.info("Debug mode enabled")
-        logger.debug(f"Command line arguments: {vars(args)}")
+        validator = ConfigValidator()
+        result = validator.validate_config_file(args.validate)
 
-    # Handle special commands first
+        # Output results
+        if args.json_output:
+            # JSON output for machine parsing
+            print(json.dumps(result.to_dict(), indent=2))
+        else:
+            # Human-readable output
+            print(result.format_all())
+
+        # Exit with appropriate code
+        if not result.is_valid() or (args.strict and result.has_warnings()):
+            sys.exit(1)
+        sys.exit(0)
+
     if args.list_examples:
         show_available_examples()
         return
@@ -2558,6 +2925,13 @@ Environment Variables:
 
         show_schema(backend=args.schema_backend, show_examples=args.with_examples)
         return
+
+    # Setup logging for all other commands (actual execution, setup, init, etc.)
+    setup_logging(debug=args.debug)
+
+    if args.debug:
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
 
     # Launch interactive API key setup if requested
     if args.setup:

@@ -59,7 +59,7 @@ agents:
       - Consider screen resolution (1280x800)
 
 ui:
-  display_type: "detailed"
+  display_type: "rich_terminal"
   logging_enabled: true
   show_screenshots: true
   show_reasoning: true

@@ -227,7 +227,101 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.4 - Latest
+### v0.1.6 - Latest
+**New Features:** Framework Interoperability & Backend Refactoring
+
+**Configuration Files:**
+- `ag2_lesson_planner_example.yaml` - AG2 nested chat as custom tool (supports streaming)
+- `langgraph_lesson_planner_example.yaml` - LangGraph workflows integrated as tools
+- `agentscope_lesson_planner_example.yaml` - AgentScope agent system integration
+- `openai_assistant_lesson_planner_example.yaml` - OpenAI Assistants as tools
+- `smolagent_lesson_planner_example.yaml` - HuggingFace SmoLAgent integration
+- `ag2_and_langgraph_lesson_planner.yaml` - Multi-framework collaboration (AG2 + LangGraph)
+- `ag2_and_openai_assistant_lesson_planner.yaml` - AG2 + OpenAI Assistants combination
+- `two_models_with_tools_example.yaml` - Multiple models with custom tools
+
+**Key Features:**
+- **Framework Interoperability**: Use agents from external frameworks (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent) as MassGen tools
+- **Streaming Support**: AG2 supports streaming; other frameworks return complete results
+- **Configuration Validator**: Pre-flight YAML validation with detailed error messages
+- **Unified Tool Execution**: ToolExecutionConfig dataclass for consistent tool handling
+- **Gemini Simplification**: Major backend cleanup reducing codebase by 1,598 lines
+
+**Try It:**
+```bash
+# Use AG2 agents for lesson planning (supports streaming)
+# Requirements: pip install pyautogen, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+
+# Use LangGraph workflows as tools
+# Requirements: pip install langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+
+# Use AgentScope multi-agent framework as tools
+# Requirements: pip install agentscope, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+
+# Use OpenAI Assistants API as tools
+# Requirements: pip install openai, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/openai_assistant_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+
+# Use SmolAgent (HuggingFace) as tools
+# Requirements: pip install smolagents, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/smolagent_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+
+# Combine multiple frameworks
+# Requirements: pip install pyautogen langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
+massgen --config massgen/configs/tools/custom_tools/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
+```
+
+### v0.1.5
+**New Features:** Memory System with Semantic Retrieval
+
+**Configuration Files:**
+- `gpt5mini_gemini_context_window_management.yaml` - Multi-agent with automatic context compression
+- `gpt5mini_gemini_research_to_implementation.yaml` - Research-to-implementation workflow (featured in case study)
+- `gpt5mini_high_reasoning_gemini.yaml` - High reasoning agents with memory integration
+- `gpt5mini_gemini_baseline_research_to_implementation.yaml` - Baseline research workflow
+- `single_agent_compression_test.yaml` - Testing context compression behavior
+
+**Key Features:**
+- **Long-Term Memory**: Semantic storage via mem0 with vector database integration
+- **Context Compression**: Automatic compression when approaching token limits
+- **Cross-Agent Sharing**: Agents learn from each other's experiences
+- **Session Management**: Memory persistence across conversations
+
+**Try it:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# Multi-agent collaboration with context compression
+massgen --config @examples/memory/gpt5mini_gemini_context_window_management \
+  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+
+# Research-to-implementation workflow with memory persistence
+# Prerequisites: Start Qdrant and crawl4ai Docker containers
+docker run -d -p 6333:6333 -p 6334:6334 \
+  -v $(pwd)/.massgen/qdrant_storage:/qdrant/storage:z qdrant/qdrant
+docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+
+# Session 1 - Research phase:
+massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation \
+  "Use crawl4ai to research the latest multi-agent AI papers and techniques from 2025. Focus on: coordination mechanisms, voting strategies, tool-use patterns, and architectural innovations."
+
+# Session 2 - Implementation analysis (continue in same session):
+# "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
+```
+
+→ See [Multi-Turn Persistent Memory Case Study](../../docs/source/examples/case_studies/multi-turn-persistent-memory.md) for detailed analysis
+
+```bash
+# Test automatic context compression
+massgen --config @examples/memory/single_agent_compression_test \
+  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+```
+
+### v0.1.4
 **New Features:** Multimodal Generation Tools, Binary File Protection, Crawl4AI Integration
 
 **Configuration Files:**
@@ -237,12 +331,6 @@ Most configurations use environment variables for API keys:so
 - `text_to_file_generation_single.yaml` / `text_to_file_generation_multi.yaml` - Document generation
 - `crawl4ai_example.yaml` - Web scraping configuration
 
-**Documentation:**
-- `README_PYPI.md` - Standalone PyPI package documentation
-- `docs/dev_notes/release_checklist.md` - Release workflow guide
-- `docs/source/user_guide/protected_paths.rst` - Binary file protection documentation
-- `.github/workflows/docs-automation.yml` - Documentation CI/CD automation
-
 **Key Features:**
 - **Generation Tools**: Create images, videos, audio, and documents using OpenAI APIs
 - **Binary File Protection**: Automatic blocking prevents text tools from reading 40+ binary file types
@@ -251,9 +339,6 @@ Most configurations use environment variables for API keys:so
 
 **Try it:**
 ```bash
-# Install or upgrade
-pip install --upgrade massgen
-
 # Generate an image from text
 massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_image_generation_single \
   "Please generate an image of a cat in space."

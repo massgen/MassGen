@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.4
+**Current Version:** v0.1.6
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** October 27, 2025
+**Last Updated:** November 1, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -22,8 +22,8 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
 | Memory Module | [@qidanrui](https://github.com/qidanrui) [@ncrispino](https://github.com/ncrispino) | danrui2020, nickcrispino |
-| Final Agent Submit/Restart | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
-| Coding Agent Enhancements | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
+| Agent Task Planning | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
+| Rate Limiting System | [@AbhimanyuAryan](https://github.com/AbhimanyuAryan) | TBD |
 | DSPy Integration | [@praneeth999](https://github.com/praneeth999) | ram2561 |
 | Web UI | [@voidcenter](https://github.com/voidcenter) | justin_zhang |
 
@@ -34,81 +34,71 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.5** | 10/30/25 | Memory implementation | @ncrispino @qidanrui | Short and long-term memory implementation for agents |
-| | | Backend Code Refactoring | @praneeth999 | Improved code organization and maintainability |
-| **v0.1.6** | 11/01/25 | General Interoperability | @qidanrui | Enable MassGen to orchestrate agents from multiple frameworks seamlessly |
-| **v0.1.7** | 11/04/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| | | Add Computer Use Agent to Custom Tools | @qidanrui | Automated UI testing and browser automation |
+| **v0.1.7** | 11/03/25 | Agent Task Planning System | @ncrispino | Complex multi-step workflows with dependency management |
+| | | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
+| **v0.1.8** | 11/06/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
+| **v0.1.9** | 11/08/25 | Computer Use Agent | @qidanrui | Automated UI testing and browser automation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.5 - Memory Implementation & Backend Refactoring
+## 📋 v0.1.7 - Agent Task Planning & Rate Limiting
 
 ### Features
 
-**1. Handle Context Limit Overflow** (@ncrispino, @qidanrui)
-- Issue: [#347](https://github.com/Leezekun/MassGen/issues/347)
-- Implement strategies to handle when context passes context limit
-- Automatic context management and truncation
-- **Use Case**: Enable agents to work on long-running tasks without hitting context limits
+**1. Agent Task Planning System** (@ncrispino)
+- PR: [#385](https://github.com/Leezekun/MassGen/pull/385) (Draft)
+- Enable agents to organize complex multi-step work with task plans
+- 8 new MCP planning tools for task management and dependency tracking
+- Automatic task status tracking and progress monitoring
+- Configurable via `enable_agent_task_planning` flag
+- Maximum 100 tasks per plan for safety
+- **Use Case**: Complex multi-step workflows requiring task decomposition, dependency management, and coordinated execution across multiple agents
 
-**2. Persistent Memory Across Restarts** (@ncrispino, @qidanrui)
-- Issue: [#348](https://github.com/Leezekun/MassGen/issues/348)
-- Ensure memory persists across system restarts
-- Short and long-term memory implementation for agents
-- **Use Case**: Maintain continuity in agent reasoning and learning across sessions
-
-**3. Backend Code Refactoring** (@ncrispino)
-- PR: [#362](https://github.com/Leezekun/MassGen/pull/362)
-- Major backend code refactoring for improved maintainability
-- Enhanced code organization and architectural improvements
-- **Use Case**: Improved developer experience and easier future enhancements
+**2. Gemini Rate Limiting System** (@AbhimanyuAryan)
+- PR: [#383](https://github.com/Leezekun/MassGen/pull/383) (Draft)
+- Multi-dimensional rate limiting for Gemini models (RPM, TPM, RPD)
+- Model-specific limits: Flash (9 RPM), Pro (2 RPM)
+- Sliding window tracking for precise rate management
+- External YAML configuration for centralized limit control
+- Optional `--rate-limit` CLI flag to enable/disable
+- Mandatory cooldown after agent startup to prevent API bursts
+- **Use Case**: Prevent API spam and manage costs while ensuring smooth operation within Gemini's rate limits
 
 ### Success Criteria
-- ✅ Agents handle context limit overflow gracefully
-- ✅ Memory persists reliably across restarts
-- ✅ Backend refactoring merged with improved code structure
+- ✅ Task planning tools enable multi-step workflows with dependencies
+- ✅ Rate limiting prevents API quota violations and manages costs
+- ✅ Both features are configurable and well-documented
 
 ---
 
-## 📋 v0.1.6 - Interoperability & Memory
-
-### Features
-
-**1. Agent Framework Interoperability** (@qidanrui)
-- Issue: [#374](https://github.com/Leezekun/MassGen/issues/374)
-- PR: [#341](https://github.com/Leezekun/MassGen/pull/341) (Draft)
-- Agent-as-tool wrapper system for cross-framework collaboration
-- Enable agents from AG2, LangGraph, and other frameworks to work together
-- Unified interface for framework-agnostic collaboration
-- **Use Case**: Complex research workflows requiring specialized agent roles from proven frameworks, enabling MassGen to orchestrate agents from any source without rewriting them
-
-### Success Criteria
-- ✅ Agents from different frameworks (AG2, LangGraph) can be wrapped as tools
-- ✅ Cross-framework agent collaboration works seamlessly
-
----
-
-## 📋 v0.1.7 - Intelligent Optimization & Advanced Voting
+## 📋 v0.1.8 - Intelligent Optimization
 
 ### Features
 
 **1. DSPy Integration** (@praneeth999)
+- Issue: [#316](https://github.com/Leezekun/MassGen/issues/316)
 - Automated system prompt optimization for case studies
 - Question rephrasing for increased diversity and clarity
-- Issue: [#316](https://github.com/Leezekun/MassGen/issues/316)
 - **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
 
-**2. Add Computer Use Agent to Custom Tools** (@qidanrui)
+### Success Criteria
+- ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
+
+---
+
+## 📋 v0.1.9 - Computer Use Agent
+
+### Features
+
+**1. Computer Use Agent Integration** (@qidanrui)
 - Issue: [#358](https://github.com/Leezekun/MassGen/issues/358)
 - Computer use agent integration with custom tools system
 - Enable agents to interact with computer interfaces
 - **Use Case**: Automated UI testing, browser automation, and desktop application interaction
 
 ### Success Criteria
-- ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
 - ✅ Computer use agent successfully integrated with custom tools
 
 ---
@@ -135,7 +125,7 @@ These features are being actively developed on **separate parallel tracks** and 
 ### Track: Memory Module (@qidanrui, @ncrispino, danrui2020, nickcrispino)
 - Issues: [#347](https://github.com/Leezekun/MassGen/issues/347), [#348](https://github.com/Leezekun/MassGen/issues/348)
 - Short and long-term memory implementation with persistence
-- **Target:** v0.1.5 (Context management & persistence)
+- **Status:** ✅ Completed in v0.1.5
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
@@ -217,5 +207,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 27, 2025
+**Last Updated:** November 1, 2025
 **Maintained By:** MassGen Team
