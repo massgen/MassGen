@@ -41,6 +41,7 @@ from .logger_config import (
     log_orchestrator_agent_message,
     log_stream_chunk,
     log_tool_call,
+    set_log_attempt,
 )
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
@@ -274,7 +275,7 @@ class Orchestrator(ChatAgent):
         """
         from pathlib import Path as PathlibPath
 
-        import massgen.tools._planning_mcp_server as planning_module
+        import massgen.mcp_tools.planning._planning_mcp_server as planning_module
 
         script_path = PathlibPath(planning_module.__file__).resolve()
 
@@ -776,8 +777,6 @@ Your answer:"""
 
         # Set log attempt for directory organization (only if restart feature is enabled)
         if self.config.coordination_config.max_orchestration_restarts > 0:
-            from massgen.logger_config import set_log_attempt
-
             set_log_attempt(self.current_attempt + 1)
 
         # Track active coordination state for cleanup

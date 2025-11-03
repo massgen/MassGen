@@ -1552,7 +1552,7 @@ This phase provides the core planning infrastructure that broadcasts and delegat
    - Task plan serialization ready (in dataclasses)
 5. ✅ Add configuration options
    - `enable_agent_task_planning` flag in CoordinationConfig
-   - `max_tasks_per_plan` configuration (default: 100)
+   - `max_tasks_per_plan` configuration (default: 10)
    - Config builder interactive prompts
 6. ✅ Update message templates (`massgen/message_templates.py`)
    - Added task planning guidance to system messages via `get_planning_guidance()`

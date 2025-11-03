@@ -7,7 +7,7 @@ Tests complete workflows with task plans, dependencies, and status transitions.
 
 import pytest
 
-from massgen.tools.planning_dataclasses import TaskPlan
+from massgen.mcp_tools.planning.planning_dataclasses import TaskPlan
 
 
 class TestPlanningWorkflows:
@@ -294,7 +294,9 @@ class TestPlanningWorkflows:
 
     def test_mixed_dependency_format_workflow(self):
         """Test workflow using mixed dependency reference formats."""
-        from massgen.tools._planning_mcp_server import _resolve_dependency_references
+        from massgen.mcp_tools.planning._planning_mcp_server import (
+            _resolve_dependency_references,
+        )
 
         # Simulate create_task_plan with mixed format
         task_specs = [

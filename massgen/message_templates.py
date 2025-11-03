@@ -133,76 +133,90 @@ Make sure you actually call `vote` or `new_answer` (in tool call format).
 
 # Task Planning and Management
 
-You have access to task planning tools to organize complex work:
+You have access to task planning tools to organize complex work.
+
+**IMPORTANT WORKFLOW - Plan Before Executing:**
+
+When working on multi-step tasks:
+1. **Think first** - Understand the requirements (some initial research/analysis is fine)
+2. **Create your task plan EARLY** - Use `create_task_plan()` BEFORE executing file operations or major actions
+3. **Execute tasks** - Work through your plan systematically
+4. **Update as you go** - Use `add_task()` to capture new requirements you discover
+
+**DO NOT:**
+- ❌ Jump straight into creating files without planning first
+- ❌ Start executing complex work without a clear task breakdown
+- ❌ Ignore the planning tools for multi-step work
+
+**DO:**
+- ✅ Create a task plan early, even if it's just 3-4 high-level tasks
+- ✅ Refine your plan as you learn more (tasks can be added/edited/deleted)
+- ✅ Brief initial analysis is OK before planning (e.g., reading docs, checking existing code)
 
 **When to create a task plan:**
-- Multi-step tasks with dependencies
+- Multi-step tasks with dependencies (most common)
 - Multiple files or components to create
 - Complex features requiring coordination
-- Work that can be parallelized
-- Long-running projects with clear milestones
+- Work that needs to be tracked or broken down
+- Any task where you'd benefit from a checklist
+
+**Skip task planning ONLY for:**
+- Trivial single-step tasks
+- Simple questions/analysis with no execution
+- Quick one-off operations
 
 **Tools available:**
 - `create_task_plan(tasks)` - Create a plan with tasks and dependencies
 - `get_ready_tasks()` - Get tasks ready to start (dependencies satisfied)
 - `get_blocked_tasks()` - See what's waiting on dependencies
-- `update_task_status(task_id, status)` - Mark progress (pending/in_progress/completed/blocked)
+- `update_task_status(task_id, status)` - Mark progress (pending/in_progress/completed)
 - `add_task(description, depends_on)` - Add new tasks as you discover them
 - `get_task_plan()` - View your complete task plan
 - `edit_task(task_id, description)` - Update task descriptions
 - `delete_task(task_id)` - Remove tasks no longer needed
 
-**Best practices:**
-1. **Break down complex work** into manageable tasks (3-10 tasks is typical)
-2. **Model dependencies explicitly** when creating your plan
-3. **Use named task IDs** for clarity (e.g., "research_oauth", "impl_endpoints")
-4. **Check ready tasks** regularly to identify parallel work opportunities
-5. **Update status immediately** as you complete tasks
-6. **Reflect on your plan** - add tasks as you discover new requirements
-
-**Example:**
+**Recommended workflow:**
 ```python
-# Create initial plan
+# 1. Create plan FIRST (before major execution)
 plan = create_task_plan([
     {"id": "research", "description": "Research OAuth providers"},
     {"id": "design", "description": "Design auth flow", "depends_on": ["research"]},
     {"id": "implement", "description": "Implement endpoints", "depends_on": ["design"]}
 ])
 
-# Work on first task
+# 2. Work through tasks systematically
 update_task_status("research", "in_progress")
 # ... do research work ...
 update_task_status("research", "completed")
 
-# Check what's ready next
+# 3. Add tasks as you discover new requirements
+add_task("Write integration tests", depends_on=["implement"])
+
+# 4. Continue working
 ready = get_ready_tasks()  # ["design"]
 update_task_status("design", "in_progress")
 ```
 
 **Dependency formats:**
-You can specify dependencies by index (0-based) or by task ID:
 ```python
-# By index
+# By index (0-based)
 create_task_plan([
     "Task 1",
     {"description": "Task 2", "depends_on": [0]}  # Depends on Task 1
 ])
 
-# By ID
+# By ID (recommended for clarity)
 create_task_plan([
     {"id": "auth", "description": "Setup auth"},
     {"id": "api", "description": "Build API", "depends_on": ["auth"]}
 ])
 ```
 
-**When to use task planning:**
-Use task planning for multi-step or complex work. Simple single-step tasks don't need formal planning.
-
 **IMPORTANT - Including Task Plan in Your Answer:**
-If you created a task plan, include a summary at the end of your `new_answer` showing each task with:
-1. Task name
+If you created a task plan, include a summary at the end of your `new_answer` showing:
+1. Each task name
 2. Completion status (✓ or ✗)
-3. Brief description of how you completed it
+3. Brief description of what you did
 
 Example format:
 ```
@@ -210,11 +224,12 @@ Example format:
 
 ---
 **Task Execution Summary:**
-✓ Research OAuth providers - Analyzed OAuth 2.0 spec and compared Google, GitHub, Auth0 providers
-✓ Design auth flow - Created flow diagram with PKCE, token refresh, and session management
-✓ Implement endpoints - Built /auth/login, /auth/callback, /auth/refresh with JWT tokens
+✓ Research OAuth providers - Analyzed OAuth 2.0 spec and compared providers
+✓ Design auth flow - Created flow diagram with PKCE and token refresh
+✓ Implement endpoints - Built /auth/login, /auth/callback, /auth/refresh
+✓ Write tests - Added integration tests for auth flow
 
-Status: 3/3 tasks completed
+Status: 4/4 tasks completed
 ```
 
 This helps other agents understand your approach and makes voting more specific."""

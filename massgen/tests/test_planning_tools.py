@@ -10,7 +10,7 @@ from datetime import datetime
 
 import pytest
 
-from massgen.tools.planning_dataclasses import Task, TaskPlan
+from massgen.mcp_tools.planning.planning_dataclasses import Task, TaskPlan
 
 
 class TestTask:
@@ -528,7 +528,9 @@ class TestMCPServerIntegration:
 
     def test_create_task_plan_simple(self):
         """Test creating a simple task plan via MCP."""
-        from massgen.tools._planning_mcp_server import _resolve_dependency_references
+        from massgen.mcp_tools.planning._planning_mcp_server import (
+            _resolve_dependency_references,
+        )
 
         # Test simple task list
         tasks = ["Task 1", "Task 2", "Task 3"]
@@ -543,7 +545,9 @@ class TestMCPServerIntegration:
 
     def test_resolve_dependency_references_index_based(self):
         """Test resolving index-based dependency references."""
-        from massgen.tools._planning_mcp_server import _resolve_dependency_references
+        from massgen.mcp_tools.planning._planning_mcp_server import (
+            _resolve_dependency_references,
+        )
 
         tasks = [
             "Task 1",
@@ -565,7 +569,9 @@ class TestMCPServerIntegration:
 
     def test_resolve_dependency_references_mixed(self):
         """Test resolving mixed dependency references (index and ID)."""
-        from massgen.tools._planning_mcp_server import _resolve_dependency_references
+        from massgen.mcp_tools.planning._planning_mcp_server import (
+            _resolve_dependency_references,
+        )
 
         tasks = [
             {"id": "research", "description": "Research task"},
@@ -585,7 +591,9 @@ class TestMCPServerIntegration:
 
     def test_resolve_dependency_references_invalid_index(self):
         """Test that invalid index raises error."""
-        from massgen.tools._planning_mcp_server import _resolve_dependency_references
+        from massgen.mcp_tools.planning._planning_mcp_server import (
+            _resolve_dependency_references,
+        )
 
         tasks = [
             "Task 1",
@@ -597,7 +605,9 @@ class TestMCPServerIntegration:
 
     def test_resolve_dependency_references_forward_reference(self):
         """Test that forward index reference raises error."""
-        from massgen.tools._planning_mcp_server import _resolve_dependency_references
+        from massgen.mcp_tools.planning._planning_mcp_server import (
+            _resolve_dependency_references,
+        )
 
         tasks = [
             {"description": "Task 1", "depends_on": [1]},

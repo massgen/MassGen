@@ -895,7 +895,7 @@ async def run_question_with_history(
             ),
             max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
             enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
-            max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 100),
+            max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
         )
 
     # Load previous turns from session storage for multi-turn conversations
@@ -934,7 +934,7 @@ async def run_question_with_history(
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
                 enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
-                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 100),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
@@ -1079,7 +1079,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
                 enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
-                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 100),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
         # Get orchestrator parameters from config
@@ -1121,7 +1121,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 ),
                 max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
                 enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
-                max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 100),
+                max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
             )
 
         orchestrator = Orchestrator(

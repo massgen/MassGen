@@ -52,7 +52,7 @@ class CoordinationConfig:
     )
     max_orchestration_restarts: int = 0
     enable_agent_task_planning: bool = False
-    max_tasks_per_plan: int = 100
+    max_tasks_per_plan: int = 10
 
 
 @dataclass

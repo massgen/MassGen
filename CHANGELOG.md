@@ -45,7 +45,7 @@ Automatic irreversibility analysis for MCP tools, selective tool blocking, Claud
     - Task plan serialization for resumability
   - Configuration options:
     - `enable_agent_task_planning` flag in coordination config
-    - `max_tasks_per_plan` limit (default: 100)
+    - `max_tasks_per_plan` limit (default: 10)
     - Interactive config builder prompts
   - System message guidance:
     - Comprehensive planning tool documentation
