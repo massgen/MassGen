@@ -231,7 +231,7 @@ Most configurations use environment variables for API keys:so
 **New Features:** Agent Task Planning & Background Execution
 
 **Configuration Files:**
-- `simple_task_planning.yaml` - Task planning with dependency management
+- `example_task_todo.yaml` - Task planning with dependency management
 - `background_shell_demo.yaml` - Background command execution demo
 
 **Key Features:**
@@ -245,7 +245,7 @@ Most configurations use environment variables for API keys:so
 pip install --upgrade massgen
 
 # Agent task planning for complex multi-step projects
-massgen --config @examples/configs/tools/planning/simple_task_planning.yaml "Create a REST API with authentication, database, and tests"
+massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
 
 # Background shell execution for parallel long-running commands
 uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."

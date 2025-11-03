@@ -160,7 +160,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 pip install --upgrade massgen
 
 # Agent task planning for complex multi-step projects
-massgen --config @examples/configs/tools/planning/simple_task_planning.yaml "Create a REST API with authentication, database, and tests"
+massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
 
 # Background shell execution for parallel long-running commands
 uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
@@ -1032,7 +1032,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Orchestrator Logic**: Improved handling of agent interruptions without full restart
 
 #### Configuration Files
-- `simple_task_planning.yaml` - Task planning with dependency management
+- `example_task_todo.yaml` - Task planning with dependency management
 - `background_shell_demo.yaml` - Background command execution demo
 
 ### Previous Achievements (v0.0.3 - v0.1.6)

@@ -54,7 +54,7 @@ Long-term memory with semantic retrieval via mem0, automatic context compression
   - Updated `docs/source/development/architecture.rst`: Added 61 lines for preemption coordination architecture
 
 - **Configuration Examples**: New YAML configurations demonstrating v0.1.7 features
-  - `simple_task_planning.yaml`: Task planning configuration
+  - `example_task_todo.yaml`: Task planning configuration
   - `background_shell_demo.yaml`: Background shell execution demonstration
 
 ### Technical Details

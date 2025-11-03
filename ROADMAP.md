@@ -34,6 +34,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
 | **v0.1.8** | 11/05/25 | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
+| | | Session Restart | @ncrispino | Resume previous conversations from log files |
 | **v0.1.9** | 11/07/25 | Add computer use | @franklinnwren | Visual perception and automated computer interaction |
 | | | Case study summary | @franklinnwren | Comprehensive case study documentation |
 | **v0.1.10** | 11/10/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
@@ -42,7 +43,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.8 - Rate Management
+## 📋 v0.1.8 - Rate Management & Session Continuity
 
 ### Features
 
@@ -56,9 +57,20 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Mandatory cooldown after agent startup to prevent API bursts
 - **Use Case**: Prevent API spam and manage costs while ensuring smooth operation within Gemini's rate limits
 
+**2. Be able to restart existing sessions** (@ncrispino)
+- Issue: [#412](https://github.com/massgen/MassGen/issues/412) (Open)
+- Resume previous MassGen conversations by loading existing log files
+- New CLI parameter: `massgen --continue [LOG_DIR]` to initiate fresh conversation with prior dialogue history
+- System treats resumed session as "Nth turn in a multi-turn conversation" based on log history
+- Default to using same configuration as original session
+- Support for specifying different configuration if needed
+- Optional: Continue most recent conversation without specifying log directory
+- **Use Case**: Resume previous development sessions after closing, mirroring user experience with other LLM tools
+
 ### Success Criteria
 - ✅ Rate limiting prevents API quota violations and manages costs
-- ✅ Feature is configurable and well-documented
+- ✅ Session restart allows seamless continuation of previous conversations
+- ✅ Features are configurable and well-documented
 
 ---
 
