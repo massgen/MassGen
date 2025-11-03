@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.6
+**Current Version:** v0.1.7
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** November 1, 2025
+**Last Updated:** November 3, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -22,7 +22,6 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
 | Memory Module | [@qidanrui](https://github.com/qidanrui) [@ncrispino](https://github.com/ncrispino) | danrui2020, nickcrispino |
-| Agent Task Planning | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Rate Limiting System | [@AbhimanyuAryan](https://github.com/AbhimanyuAryan) | TBD |
 | DSPy Integration | [@praneeth999](https://github.com/praneeth999) | ram2561 |
 | Web UI | [@voidcenter](https://github.com/voidcenter) | justin_zhang |
@@ -34,29 +33,20 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.7** | 11/03/25 | Agent Task Planning System | @ncrispino | Complex multi-step workflows with dependency management |
-| | | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
-| **v0.1.8** | 11/06/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
-| **v0.1.9** | 11/08/25 | Computer Use Agent | @qidanrui | Automated UI testing and browser automation |
+| **v0.1.8** | 11/05/25 | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
+| **v0.1.9** | 11/07/25 | Add computer use | @franklinnwren | Visual perception and automated computer interaction |
+| | | Case study summary | @franklinnwren | Comprehensive case study documentation |
+| **v0.1.10** | 11/10/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.7 - Agent Task Planning & Rate Limiting
+## 📋 v0.1.8 - Rate Management
 
 ### Features
 
-**1. Agent Task Planning System** (@ncrispino)
-- PR: [#385](https://github.com/Leezekun/MassGen/pull/385) (Draft)
-- Enable agents to organize complex multi-step work with task plans
-- 8 new MCP planning tools for task management and dependency tracking
-- Automatic task status tracking and progress monitoring
-- Configurable via `enable_agent_task_planning` flag
-- Maximum 100 tasks per plan for safety
-- **Use Case**: Complex multi-step workflows requiring task decomposition, dependency management, and coordinated execution across multiple agents
-
-**2. Gemini Rate Limiting System** (@AbhimanyuAryan)
+**1. Gemini Rate Limiting System** (@AbhimanyuAryan)
 - PR: [#383](https://github.com/Leezekun/MassGen/pull/383) (Draft)
 - Multi-dimensional rate limiting for Gemini models (RPM, TPM, RPD)
 - Model-specific limits: Flash (9 RPM), Pro (2 RPM)
@@ -67,24 +57,8 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **Use Case**: Prevent API spam and manage costs while ensuring smooth operation within Gemini's rate limits
 
 ### Success Criteria
-- ✅ Task planning tools enable multi-step workflows with dependencies
 - ✅ Rate limiting prevents API quota violations and manages costs
-- ✅ Both features are configurable and well-documented
-
----
-
-## 📋 v0.1.8 - Intelligent Optimization
-
-### Features
-
-**1. DSPy Integration** (@praneeth999)
-- Issue: [#316](https://github.com/Leezekun/MassGen/issues/316)
-- Automated system prompt optimization for case studies
-- Question rephrasing for increased diversity and clarity
-- **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
-
-### Success Criteria
-- ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
+- ✅ Feature is configurable and well-documented
 
 ---
 
@@ -92,14 +66,44 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ### Features
 
-**1. Computer Use Agent Integration** (@qidanrui)
-- Issue: [#358](https://github.com/Leezekun/MassGen/issues/358)
-- Computer use agent integration with custom tools system
-- Enable agents to interact with computer interfaces
-- **Use Case**: Automated UI testing, browser automation, and desktop application interaction
+**1. Add computer use** (@franklinnwren)
+- PR: [#402](https://github.com/massgen/MassGen/pull/402) (Draft)
+- Custom computer use agent tool with Gemini API integration
+- Visual perception capabilities through screenshot processing
+- Dedicated tool module: `massgen/tool/_computer_using/computer_using_tool.py`
+- Configuration support for multiple model types
+- Integration with image understanding tools for screen content interpretation
+- **Use Case**: Visual perception and automated computer interaction, enabling agents to interpret screen content and execute automated tasks
+
+**2. Case study summary** (@franklinnwren)
+- PR: [#401](https://github.com/massgen/MassGen/pull/401) (Open)
+- Case study summary documentation
+- Comprehensive case study guide for MassGen features
+- **Use Case**: Provide case study documentation demonstrating MassGen capabilities across different features
 
 ### Success Criteria
-- ✅ Computer use agent successfully integrated with custom tools
+- ✅ Computer use agent successfully integrated with Gemini API
+- ✅ Screenshot processing and visual perception working
+- ✅ Configuration examples provided for multiple models
+- ✅ Case study documentation completed and published
+
+---
+
+## 📋 v0.1.10 - Intelligent Optimization
+
+### Features
+
+**1. DSPy Integration** (@praneeth999)
+- Branch: `mcp_refactor` (In Progress)
+- Automated system prompt optimization for case studies
+- Question rephrasing for increased diversity and clarity
+- QuestionParaphraser module for multi-agent coordination
+- **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
+
+### Success Criteria
+- ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
+- ✅ Question paraphrasing increases diversity and clarity
+- ✅ Feature is well-documented with examples
 
 ---
 
@@ -126,6 +130,10 @@ These features are being actively developed on **separate parallel tracks** and 
 - Issues: [#347](https://github.com/Leezekun/MassGen/issues/347), [#348](https://github.com/Leezekun/MassGen/issues/348)
 - Short and long-term memory implementation with persistence
 - **Status:** ✅ Completed in v0.1.5
+
+### Track: Agent Task Planning (@ncrispino, nickcrispino)
+- Agent task planning with dependency tracking
+- **Status:** ✅ Completed in v0.1.7
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
@@ -207,5 +215,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** November 1, 2025
+**Last Updated:** November 3, 2025
 **Maintained By:** MassGen Team

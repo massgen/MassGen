@@ -7,16 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
-**v0.1.6 (November 2025)** - Framework Interoperability & Backend Refactoring
+**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
+Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
+
+**v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
 External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
 
-**v0.1.5 (October 2025)** - Memory System
+**v0.1.5 (October 29, 2025)** - Memory System
 Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
 
-**v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
-Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
-
 ---
+
+## [0.1.7] - 2025-11-03
+
+### Added
+- **Agent Task Planning System**: MCP-based task management with dependency tracking
+  - New `massgen/mcp_tools/planning/` module with dedicated planning server (`_planning_mcp_server.py`)
+  - Task dataclasses with dependency validation and status management (`planning_dataclasses.py`)
+  - Support for task states (pending/in_progress/completed/blocked) with automatic transitions based on dependencies
+  - Orchestrator integration for plan-aware coordination
+  - Test suite in `test_planning_integration.py` and `test_planning_tools.py`
+
+- **Background Shell Execution**: Long-running command support with persistent sessions
+  - New `BackgroundShell` class in `massgen/filesystem_manager/background_shell.py`
+  - Shell lifecycle management with output streaming and real-time monitoring
+  - Automatic timeout handling for long-running processes
+  - Enhanced code execution server with background execution capabilities
+  - Test coverage in `test_background_shell.py`
+
+- **Preemption Coordination**: Multi-agent coordination with interruption support
+  - Agents can preempt ongoing coordination to submit better answers without full restart
+  - Enhanced coordination tracker with preemption event logging
+  - Improved orchestrator logic to preserve partial progress during preemption
+
+### Fixed
+- **System Message Handling**: Resolved system message extraction in Claude Code backend for background shell execution
+- **Case Study Documentation**: Fixed broken links and outdated examples in older case studies
+
+### Documentations, Configurations and Resources
+
+- **Documentation Updates**: New user guides and design documentation
+  - New `docs/source/user_guide/agent_task_planning.rst`: Task planning guide with usage patterns and API reference
+  - Updated `docs/source/user_guide/code_execution.rst`: Added 122 lines for background shell usage
+  - New `docs/dev_notes/preempt_not_restart_design.md`: 456-line design document with preemption algorithms
+  - Updated `docs/source/development/architecture.rst`: Added 61 lines for preemption coordination architecture
+
+- **Configuration Examples**: New YAML configurations demonstrating v0.1.7 features
+  - `simple_task_planning.yaml`: Task planning configuration
+  - `background_shell_demo.yaml`: Background shell execution demonstration
+
+### Technical Details
+- **Major Focus**: Agent task planning with dependencies, background command execution, preemption-based coordination
+- **Contributors**: @ncrispino @Henry-811 and the MassGen team
 
 ## [0.1.6] - 2025-10-31
 
