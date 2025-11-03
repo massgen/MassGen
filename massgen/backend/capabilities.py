@@ -422,4 +422,15 @@ def validate_backend_config(backend_type: str, config: Dict) -> List[str]:
         if "mcp" not in caps.supported_capabilities:
             errors.append(f"{backend_type} does not support MCP")
 
+    # Check for deprecated system prompt parameters (standardized across all backends)
+    if "append_system_prompt" in config:
+        errors.append(
+            "'append_system_prompt' in backend config is not supported. Use 'system_message' at the agent level (outside backend block) instead.",
+        )
+
+    if "system_prompt" in config:
+        errors.append(
+            "'system_prompt' in backend config is not supported. Use 'system_message' at the agent level (outside backend block) instead.",
+        )
+
     return errors

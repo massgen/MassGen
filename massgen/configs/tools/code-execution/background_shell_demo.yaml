@@ -1,0 +1,37 @@
+# Background Shell Execution Demo
+# Demonstrates running commands in background with parallel execution and monitoring
+# Run with: uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "low"  # Fast responses for debugging
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+      # command_line_execution_mode: "local"
+      command_line_execution_mode: "docker"
+
+  - id: "agent_b"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
+      # command_line_execution_mode: "local"
+      command_line_execution_mode: "docker"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 300
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
