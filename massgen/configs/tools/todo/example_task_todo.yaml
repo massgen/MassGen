@@ -1,0 +1,27 @@
+ # Monitor progress through task completion
+ #
+ # Run with:
+ #   massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
+
+ agents:
+  - id: "agent_a"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace1"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace2"
+
+ orchestrator:
+    snapshot_storage: "snapshots"
+    agent_temporary_workspace: "temp_workspaces"
+    coordination:
+      enable_agent_task_planning: true
+
+ ui:
+   display_type: "rich_terminal"
+   logging_enabled: true
