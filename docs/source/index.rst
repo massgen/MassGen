@@ -111,17 +111,17 @@ Key Features
 Recent Releases
 ---------------
 
-**v0.1.6 (October 2025)** - Framework Interoperability & Backend Refactoring
+**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
+
+Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
+
+**v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
 
 External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
 
-**v0.1.5 (October 2025)** - Memory System
+**v0.1.5 (October 29, 2025)** - Memory System
 
 Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
-
-**v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
-
-Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
 
 Quick Start
 -----------
