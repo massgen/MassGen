@@ -41,6 +41,7 @@ from .logger_config import (
     log_orchestrator_agent_message,
     log_stream_chunk,
     log_tool_call,
+    set_log_attempt,
 )
 from .memory import ConversationMemory, PersistentMemoryBase
 from .message_templates import MessageTemplates
@@ -227,6 +228,97 @@ class Orchestrator(ChatAgent):
                 )
                 # Update MCP config with agent_id for Docker mode (must be after setup_orchestration_paths)
                 agent.backend.filesystem_manager.update_backend_mcp_config(agent.backend.config)
+
+        # Inject planning tools if enabled
+        logger.info(f"[Orchestrator] Checking planning config: coordination_config exists={hasattr(self.config, 'coordination_config')}")
+        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_agent_task_planning"):
+            logger.info(f"[Orchestrator] enable_agent_task_planning={self.config.coordination_config.enable_agent_task_planning}")
+            if self.config.coordination_config.enable_agent_task_planning:
+                logger.info(f"[Orchestrator] Injecting planning tools for {len(self.agents)} agents")
+                self._inject_planning_tools_for_all_agents()
+                logger.info("[Orchestrator] Planning tools injection complete")
+        else:
+            logger.info("[Orchestrator] Planning config not found or disabled")
+
+    def _inject_planning_tools_for_all_agents(self) -> None:
+        """
+        Inject planning MCP tools into all agents.
+
+        This method adds the planning MCP server to each agent's backend
+        configuration, enabling them to create and manage task plans.
+        """
+        for agent_id, agent in self.agents.items():
+            self._inject_planning_tools_for_agent(agent_id, agent)
+
+    def _inject_planning_tools_for_agent(self, agent_id: str, agent: Any) -> None:
+        """
+        Inject planning MCP tools into a specific agent.
+
+        Args:
+            agent_id: ID of the agent
+            agent: Agent instance
+        """
+        logger.info(f"[Orchestrator] Injecting planning tools for agent: {agent_id}")
+
+        # Create planning MCP config
+        planning_mcp_config = self._create_planning_mcp_config(agent_id)
+        logger.info(f"[Orchestrator] Created planning MCP config: {planning_mcp_config['name']}")
+
+        # Get existing mcp_servers configuration
+        mcp_servers = agent.backend.config.get("mcp_servers", [])
+        logger.info(f"[Orchestrator] Existing MCP servers for {agent_id}: {type(mcp_servers)} with {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} entries")
+
+        # Handle both list format and dict format (Claude Code)
+        if isinstance(mcp_servers, dict):
+            # Claude Code dict format
+            logger.info("[Orchestrator] Using dict format for MCP servers")
+            mcp_servers[f"planning_{agent_id}"] = planning_mcp_config
+        else:
+            # Standard list format
+            logger.info("[Orchestrator] Using list format for MCP servers")
+            if not isinstance(mcp_servers, list):
+                mcp_servers = []
+            mcp_servers.append(planning_mcp_config)
+
+        # Update backend config
+        agent.backend.config["mcp_servers"] = mcp_servers
+        logger.info(f"[Orchestrator] Updated MCP servers for {agent_id}, now has {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} servers")
+
+    def _create_planning_mcp_config(self, agent_id: str) -> Dict[str, Any]:
+        """
+        Create MCP server configuration for planning tools.
+
+        Args:
+            agent_id: ID of the agent
+
+        Returns:
+            MCP server configuration dictionary
+        """
+        from pathlib import Path as PathlibPath
+
+        import massgen.mcp_tools.planning._planning_mcp_server as planning_module
+
+        script_path = PathlibPath(planning_module.__file__).resolve()
+
+        config = {
+            "name": f"planning_{agent_id}",
+            "type": "stdio",
+            "command": "fastmcp",
+            "args": [
+                "run",
+                f"{script_path}:create_server",
+                "--",
+                "--agent-id",
+                agent_id,
+                "--orchestrator-id",
+                self.orchestrator_id,
+            ],
+            "env": {
+                "FASTMCP_SHOW_CLI_BANNER": "false",
+            },
+        }
+
+        return config
 
     @staticmethod
     def _get_chunk_type_value(chunk) -> str:
@@ -811,10 +903,9 @@ Your answer:"""
             },
         )
 
-        # Set log attempt for directory organization
-        from massgen.logger_config import set_log_attempt
-
-        set_log_attempt(self.current_attempt + 1)
+        # Set log attempt for directory organization (only if restart feature is enabled)
+        if self.config.coordination_config.max_orchestration_restarts > 0:
+            set_log_attempt(self.current_attempt + 1)
 
         # Track active coordination state for cleanup
         self._active_streams = {}
@@ -2096,8 +2187,14 @@ Your answer:"""
 
             # Build proper conversation messages with system + user messages
             max_attempts = 3
+            # Add planning guidance if enabled
+            system_message = conversation["system_message"]
+            if self.config.coordination_config.enable_agent_task_planning:
+                planning_guidance = self.message_templates.get_planning_guidance()
+                system_message = system_message + planning_guidance
+
             conversation_messages = [
-                {"role": "system", "content": conversation["system_message"]},
+                {"role": "system", "content": system_message},
                 {"role": "user", "content": conversation["user_message"]},
             ]
 

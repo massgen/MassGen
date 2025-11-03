@@ -1159,6 +1159,8 @@ async def run_question_with_history(
                 "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
             ),
             max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+            enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
+            max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
         )
 
     # Load previous turns and winning agents history from session storage for multi-turn conversations
@@ -1197,6 +1199,8 @@ async def run_question_with_history(
                     """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
+                enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
@@ -1265,8 +1269,8 @@ async def run_question_with_history(
         base_dir = get_log_session_dir_base()
         root_final_dir = base_dir / "final"
 
-        # Copy if the attempt's final directory exists
-        if attempt_final_dir.exists():
+        # Only copy if source and destination are different (i.e., we're using attempt tracking)
+        if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
             # Remove root final dir if it already exists
             if root_final_dir.exists():
                 shutil.rmtree(root_final_dir)
@@ -1340,6 +1344,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                     """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
+                enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
         # Get orchestrator parameters from config
@@ -1380,6 +1386,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                     "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
                 ),
                 max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+                enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
             )
 
         orchestrator = Orchestrator(
@@ -1452,8 +1460,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             base_dir = get_log_session_dir_base()
             root_final_dir = base_dir / "final"
 
-            # Copy if the attempt's final directory exists
-            if attempt_final_dir.exists():
+            # Only copy if source and destination are different (i.e., we're using attempt tracking)
+            if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
                 # Remove root final dir if it already exists
                 if root_final_dir.exists():
                     shutil.rmtree(root_final_dir)
