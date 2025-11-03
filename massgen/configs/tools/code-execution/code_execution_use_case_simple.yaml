@@ -1,7 +1,7 @@
 # Simple Code Execution Use Case: Add a Real Test Case
 #
 # Run with:
-# uv run python -m massgen.cli --config massgen/configs/examples/code_execution_use_case_simple.yaml "Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing."
+# uv run massgen --config massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml "Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing."
 
 agents:
   - id: "agent_a"
