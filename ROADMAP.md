@@ -22,7 +22,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
 | Memory Module | [@qidanrui](https://github.com/qidanrui) [@ncrispino](https://github.com/ncrispino) | danrui2020, nickcrispino |
-| Rate Limiting System | [@AbhimanyuAryan](https://github.com/AbhimanyuAryan) | TBD |
+| Rate Limiting System | [@AbhimanyuAryan](https://github.com/AbhimanyuAryan) | abhimanyuaryan |
 | DSPy Integration | [@praneeth999](https://github.com/praneeth999) | ram2561 |
 | Web UI | [@voidcenter](https://github.com/voidcenter) | justin_zhang |
 
