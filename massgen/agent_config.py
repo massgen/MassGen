@@ -39,6 +39,11 @@ class CoordinationConfig:
                                    post-evaluation determines the answer is insufficient.
                                    For example, max_orchestration_restarts=2 allows 3 total attempts
                                    (initial + 2 restarts). Default is 0 (no restarts).
+        enable_agent_task_planning: If True, agents receive task planning MCP tools for managing
+                                    their own task lists with dependencies. This enables agents
+                                    to break down complex work, track progress, and coordinate
+                                    based on dependencies.
+        max_tasks_per_plan: Maximum number of tasks allowed in an agent's task plan.
     """
 
     enable_planning_mode: bool = False
@@ -46,6 +51,8 @@ class CoordinationConfig:
         "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools."
     )
     max_orchestration_restarts: int = 0
+    enable_agent_task_planning: bool = False
+    max_tasks_per_plan: int = 10
 
 
 @dataclass

@@ -612,17 +612,11 @@ def create_agents_from_config(
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
 
-        # Route system_message to backend-specific system prompt parameter
+        # System message handling: all backends use system_message at agent level
         system_msg = agent_data.get("system_message")
         if system_msg:
-            if backend_type_lower == "claude_code":
-                # For Claude Code, use append_system_prompt to preserve Claude Code capabilities
-                agent_config.backend_params["append_system_prompt"] = system_msg
-            else:
-                # For other backends, fall back to deprecated custom_system_instruction
-                # TODO: Add backend-specific routing for other backends
-                # Set private attribute directly to avoid deprecation warning
-                agent_config._custom_system_instruction = system_msg
+            # Set on AgentConfig (ConfigurableAgent will extract it)
+            agent_config._custom_system_instruction = system_msg
 
         # Timeout configuration will be applied to orchestrator instead of individual agents
 
@@ -1159,6 +1153,8 @@ async def run_question_with_history(
                 "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
             ),
             max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+            enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
+            max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
         )
 
     # Load previous turns and winning agents history from session storage for multi-turn conversations
@@ -1197,6 +1193,8 @@ async def run_question_with_history(
                     """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
+                enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
@@ -1265,8 +1263,8 @@ async def run_question_with_history(
         base_dir = get_log_session_dir_base()
         root_final_dir = base_dir / "final"
 
-        # Copy if the attempt's final directory exists
-        if attempt_final_dir.exists():
+        # Only copy if source and destination are different (i.e., we're using attempt tracking)
+        if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
             # Remove root final dir if it already exists
             if root_final_dir.exists():
                 shutil.rmtree(root_final_dir)
@@ -1340,6 +1338,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                     """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
+                enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
         # Get orchestrator parameters from config
@@ -1380,6 +1380,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                     "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
                 ),
                 max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+                enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
             )
 
         orchestrator = Orchestrator(
@@ -1452,8 +1454,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             base_dir = get_log_session_dir_base()
             root_final_dir = base_dir / "final"
 
-            # Copy if the attempt's final directory exists
-            if attempt_final_dir.exists():
+            # Only copy if source and destination are different (i.e., we're using attempt tracking)
+            if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
                 # Remove root final dir if it already exists
                 if root_final_dir.exists():
                     shutil.rmtree(root_final_dir)

@@ -61,7 +61,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.6 Features](#-latest-features-v016)
+- [v0.1.7 Features](#-latest-features-v017)
 </details>
 
 <details open>
@@ -106,15 +106,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.6](#recent-achievements-v016)
-  - [v0.0.3 - v0.1.5](#previous-achievements-v003---v015)
+  - [v0.1.7](#recent-achievements-v017)
+  - [v0.0.3 - v0.1.6](#previous-achievements-v003---v016)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.7 Roadmap](#v017-roadmap)
+- [v0.1.8 Roadmap](#v018-roadmap)
 </details>
 
 <details open>
@@ -139,54 +139,32 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.6)
+## 🆕 Latest Features (v0.1.7)
 
-**🎉 Released: October 31, 2025**
+**🎉 Released: November 3, 2025**
 
-**What's New in v0.1.6:**
-- **🔗 Framework Interoperability** - Use agents from AG2, LangGraph, AgentScope, OpenAI Assistants, and SmoLAgent as tools
-- **✅ Configuration Validator** - Pre-flight YAML validation with detailed error messages and suggestions
-- **🔧 Unified Tool Execution** - Streamlined backend architecture with consistent tool handling
-- **⚡ Gemini Backend Simplification** - Major cleanup reducing codebase by 1,598 lines
+**What's New in v0.1.7:**
+- **📋 Agent Task Planning** - Organize complex multi-step workflows with dependency tracking
+- **🔄 Background Shell Execution** - Run long-running commands with persistent sessions and real-time monitoring
+- **⚡ Preemption Coordination** - Interrupt ongoing coordination without restarting to preserve progress
 
 **Key Improvements:**
-- External agent frameworks work as MassGen custom tools
-- Comprehensive config validation with pre-commit hooks
-- ToolExecutionConfig dataclass for standardized tool handling across backends
-- Simplified Gemini backend with improved maintainability
-- Enhanced ToolManager with category management
+- MCP-based planning tools with automatic task status management
+- Persistent shell sessions that survive across agent interactions
+- Agents can submit better answers mid-coordination without losing partial progress
+- Task dependencies with automatic validation and blocking
+- Output streaming for background commands with timeout handling
 
-**Try v0.1.6 Features:**
+**Try v0.1.7 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Use AG2 agents as tools for lesson planning (supports streaming)
-# Requirements: pip install pyautogen, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/ag2_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+# Agent task planning for complex multi-step projects
+massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
 
-# Use LangGraph workflows as tools
-# Requirements: pip install langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-
-# Use AgentScope multi-agent framework as tools
-# Requirements: pip install agentscope, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-
-# Use OpenAI Assistants API as tools
-# Requirements: pip install openai, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/openai_assistant_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-
-# Use SmolAgent (HuggingFace) as tools
-# Requirements: pip install smolagents, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/smolagent_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
-
-# Combine multiple frameworks - AG2 + LangGraph collaboration
-# Requirements: pip install pyautogen langgraph langchain-openai langchain-core, OPENAI_API_KEY must be set
-massgen --config massgen/configs/tools/custom_tools/ag2_and_langgraph_lesson_planner.yaml "Create a lesson plan for photosynthesis"
-
-# Validate your configuration before running
-python -m massgen.config_validator your_config.yaml
+# Background shell execution for parallel long-running commands
+uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1030,58 +1008,43 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.6)
+### Recent Achievements (v0.1.7)
 
-**🎉 Released: October 31, 2025**
+**🎉 Released: November 3, 2025**
 
-#### Framework Interoperability
-- **AG2 Integration**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning (supports streaming)
-- **LangGraph Integration**: Graph-based workflows integrated as tools for structured task execution
-- **AgentScope Integration**: AgentScope agent system wrapped for collaborative task handling
-- **OpenAI Assistants Integration**: OpenAI Assistants API integrated as tools for specialized workflows
-- **SmoLAgent Integration**: HuggingFace SmoLAgent wrapped for flexible agent orchestration
-- **Cross-Framework Collaboration**: MassGen orchestrates agents from multiple frameworks seamlessly
-- **Tool Module**: New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
-- **Streaming Support**: Only AG2 currently supports streaming; other frameworks return complete results
+#### Agent Task Planning System
+- **Planning MCP Server**: Dedicated server for task lifecycle management with dependency tracking
+- **Task Dataclasses**: Complete task and plan structures with validation
+- **Status Management**: Automatic transitions between task states (pending/in_progress/completed/blocked)
+- **Dependency Validation**: Tasks automatically blocked until dependencies complete
+- **Orchestrator Integration**: Plan-aware coordination for multi-agent workflows
 
-#### Configuration Validator
-- **ConfigValidator Class**: Comprehensive YAML validation in `massgen/config_validator.py`
-- **Memory Validation**: Detailed validation for memory configuration parameters
-- **Pre-commit Integration**: Automatic configuration validation before commits
-- **Error Messaging**: Actionable error messages with suggestions for common mistakes
-- **Test Coverage**: Comprehensive test suite in `massgen/tests/test_config_validator.py`
+#### Background Shell Execution
+- **BackgroundShell Class**: Async command execution with persistent sessions
+- **Shell Lifecycle Management**: Start, monitor, and terminate long-running processes
+- **Output Streaming**: Real-time monitoring of command output
+- **Timeout Handling**: Automatic timeout management for long-running operations
+- **Code Execution Server**: Enhanced server with background execution capabilities
 
-#### Backend Architecture Refactoring
-- **ToolExecutionConfig**: Unified tool execution with new dataclass in `base_with_custom_tool_and_mcp.py`
-- **ResponseBackend Refactoring**: Unified tool execution flow eliminating duplicate code paths
-- **ChatCompletionsBackend Refactoring**: Consistent tool handling across Chat Completions providers
-- **ClaudeBackend Refactoring**: Unified tool execution methods for Claude backend
-- **Consistent Error Handling**: Standardized status reporting across all tool types
-
-#### Gemini Backend Simplification
-- **Module Removal**: Removed `gemini_mcp_manager.py` and `gemini_trackers.py` modules
-- **Code Consolidation**: Refactored to use manual tool execution via base class
-- **Streamlined Logic**: Removed continuation logic and duplicate code
-- **Codebase Reduction**: Net reduction of 1,598 lines through consolidation
-- **Formatter Updates**: Updated `_gemini_formatter.py` for simplified tool conversion
-
-#### Custom Tool System Enhancement
-- **ToolManager Improvements**: Enhanced category management capabilities
-- **Registration System**: Improved tool registration and validation
-- **Result Handling**: Enhanced error reporting and async execution support
-- **Schema Generation**: Improved tool schema generation for LLM consumption
+#### Preemption Coordination
+- **Interruption Support**: Agents can preempt coordination to submit better answers
+- **Progress Preservation**: Partial progress maintained during preemption
+- **Coordination Tracker**: Enhanced logging of preemption events
+- **Orchestrator Logic**: Improved handling of agent interruptions without full restart
 
 #### Configuration Files
-- `ag2_lesson_planner_example.yaml` - AG2 nested chat as custom tool
-- `langgraph_lesson_planner_example.yaml` - LangGraph workflows integrated
-- `agentscope_lesson_planner_example.yaml` - AgentScope agent integration
-- `openai_assistant_lesson_planner_example.yaml` - OpenAI Assistants as tools
-- `smolagent_lesson_planner_example.yaml` - SmoLAgent integration
-- `ag2_and_langgraph_lesson_planner.yaml` - Multi-framework collaboration
-- `ag2_and_openai_assistant_lesson_planner.yaml` - AG2 + OpenAI Assistants combo
-- `two_models_with_tools_example.yaml` - Multiple models with custom tools
+- `example_task_todo.yaml` - Task planning with dependency management
+- `background_shell_demo.yaml` - Background command execution demo
 
-### Previous Achievements (v0.0.3 - v0.1.5)
+### Previous Achievements (v0.0.3 - v0.1.6)
+
+✅ **Framework Interoperability (v0.1.6)**: AG2 nested chat, LangGraph workflows, AgentScope agents, OpenAI Assistants, and SmoLAgent integrated as custom tools with cross-framework collaboration and streaming support for AG2
+
+✅ **Configuration Validator (v0.1.6)**: Comprehensive YAML validation with ConfigValidator class, pre-commit integration, and detailed error messages with actionable suggestions
+
+✅ **Unified Tool Execution (v0.1.6)**: ToolExecutionConfig dataclass standardizing tool handling across ResponseBackend, ChatCompletionsBackend, and ClaudeBackend with consistent error reporting
+
+✅ **Gemini Backend Simplification (v0.1.6)**: Removed gemini_mcp_manager and gemini_trackers modules, consolidated code reducing codebase by 1,598 lines
 
 ✅ **Memory System (v0.1.5)**: Long-term semantic memory via mem0 integration with fact extraction and retrieval across sessions, short-term conversational memory for active context, automatic context compression when approaching token limits, cross-agent memory sharing with turn-aware filtering, session management for memory isolation and continuation, Qdrant vector database integration for semantic search
 
@@ -1203,22 +1166,20 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.7 Roadmap
+### v0.1.8 Roadmap
 
-Version 0.1.7 focuses on agent task planning and rate limiting for improved coordination and cost management:
+Version 0.1.8 focuses on rate management for improved API cost control:
 
 #### Planned Features
-- **Agent Task Planning System**: Enable agents to organize complex multi-step work with task plans, dependency tracking, and progress monitoring via 8 new MCP planning tools
 - **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs with model-specific limits and configurable thresholds
 
 Key technical approach:
-- **Task Planning**: MCP-based planning tools with dependency graphs, status tracking, and maximum 100 tasks per plan safety limit
 - **Rate Limiting**: Sliding window tracking, external YAML configuration, optional CLI flag, mandatory cooldown periods after startup
-- **Configuration**: Both features are optional and configurable via flags (`enable_agent_task_planning`, `--rate-limit`)
+- **Configuration**: Optional and configurable via `--rate-limit` flag
 
-**Target Release**: November 3, 2025 (Monday @ 9am PT)
+**Target Release**: November 5, 2025 (Wednesday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.7 roadmap](ROADMAP_v0.1.7.md).
+For detailed milestones and technical specifications, see the [full v0.1.8 roadmap](ROADMAP_v0.1.8.md).
 
 ---
 

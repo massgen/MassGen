@@ -41,6 +41,7 @@ from .logger_config import (
     log_orchestrator_agent_message,
     log_stream_chunk,
     log_tool_call,
+    set_log_attempt,
 )
 from .memory import ConversationMemory, PersistentMemoryBase
 from .message_templates import MessageTemplates
@@ -227,6 +228,97 @@ class Orchestrator(ChatAgent):
                 )
                 # Update MCP config with agent_id for Docker mode (must be after setup_orchestration_paths)
                 agent.backend.filesystem_manager.update_backend_mcp_config(agent.backend.config)
+
+        # Inject planning tools if enabled
+        logger.info(f"[Orchestrator] Checking planning config: coordination_config exists={hasattr(self.config, 'coordination_config')}")
+        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_agent_task_planning"):
+            logger.info(f"[Orchestrator] enable_agent_task_planning={self.config.coordination_config.enable_agent_task_planning}")
+            if self.config.coordination_config.enable_agent_task_planning:
+                logger.info(f"[Orchestrator] Injecting planning tools for {len(self.agents)} agents")
+                self._inject_planning_tools_for_all_agents()
+                logger.info("[Orchestrator] Planning tools injection complete")
+        else:
+            logger.info("[Orchestrator] Planning config not found or disabled")
+
+    def _inject_planning_tools_for_all_agents(self) -> None:
+        """
+        Inject planning MCP tools into all agents.
+
+        This method adds the planning MCP server to each agent's backend
+        configuration, enabling them to create and manage task plans.
+        """
+        for agent_id, agent in self.agents.items():
+            self._inject_planning_tools_for_agent(agent_id, agent)
+
+    def _inject_planning_tools_for_agent(self, agent_id: str, agent: Any) -> None:
+        """
+        Inject planning MCP tools into a specific agent.
+
+        Args:
+            agent_id: ID of the agent
+            agent: Agent instance
+        """
+        logger.info(f"[Orchestrator] Injecting planning tools for agent: {agent_id}")
+
+        # Create planning MCP config
+        planning_mcp_config = self._create_planning_mcp_config(agent_id)
+        logger.info(f"[Orchestrator] Created planning MCP config: {planning_mcp_config['name']}")
+
+        # Get existing mcp_servers configuration
+        mcp_servers = agent.backend.config.get("mcp_servers", [])
+        logger.info(f"[Orchestrator] Existing MCP servers for {agent_id}: {type(mcp_servers)} with {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} entries")
+
+        # Handle both list format and dict format (Claude Code)
+        if isinstance(mcp_servers, dict):
+            # Claude Code dict format
+            logger.info("[Orchestrator] Using dict format for MCP servers")
+            mcp_servers[f"planning_{agent_id}"] = planning_mcp_config
+        else:
+            # Standard list format
+            logger.info("[Orchestrator] Using list format for MCP servers")
+            if not isinstance(mcp_servers, list):
+                mcp_servers = []
+            mcp_servers.append(planning_mcp_config)
+
+        # Update backend config
+        agent.backend.config["mcp_servers"] = mcp_servers
+        logger.info(f"[Orchestrator] Updated MCP servers for {agent_id}, now has {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} servers")
+
+    def _create_planning_mcp_config(self, agent_id: str) -> Dict[str, Any]:
+        """
+        Create MCP server configuration for planning tools.
+
+        Args:
+            agent_id: ID of the agent
+
+        Returns:
+            MCP server configuration dictionary
+        """
+        from pathlib import Path as PathlibPath
+
+        import massgen.mcp_tools.planning._planning_mcp_server as planning_module
+
+        script_path = PathlibPath(planning_module.__file__).resolve()
+
+        config = {
+            "name": f"planning_{agent_id}",
+            "type": "stdio",
+            "command": "fastmcp",
+            "args": [
+                "run",
+                f"{script_path}:create_server",
+                "--",
+                "--agent-id",
+                agent_id,
+                "--orchestrator-id",
+                self.orchestrator_id,
+            ],
+            "env": {
+                "FASTMCP_SHOW_CLI_BANNER": "false",
+            },
+        }
+
+        return config
 
     @staticmethod
     def _get_chunk_type_value(chunk) -> str:
@@ -811,10 +903,9 @@ Your answer:"""
             },
         )
 
-        # Set log attempt for directory organization
-        from massgen.logger_config import set_log_attempt
-
-        set_log_attempt(self.current_attempt + 1)
+        # Set log attempt for directory organization (only if restart feature is enabled)
+        if self.config.coordination_config.max_orchestration_restarts > 0:
+            set_log_attempt(self.current_attempt + 1)
 
         # Track active coordination state for cleanup
         self._active_streams = {}
@@ -1468,22 +1559,25 @@ Your answer:"""
         restart_pending = self.agent_states[agent_id].restart_pending
         return restart_pending
 
-    async def _save_partial_work_on_restart(self, agent_id: str) -> None:
+    async def _save_partial_work_on_restart(self, agent_id: str) -> Optional[str]:
         """
         Save partial work snapshot when agent is restarting due to new answers from others.
         This ensures that any work done before the restart is preserved and shared with other agents.
 
         Args:
             agent_id: ID of the agent being restarted
+
+        Returns:
+            The timestamp of the saved snapshot, or None if no snapshot was saved
         """
         agent = self.agents.get(agent_id)
         if not agent or not agent.backend.filesystem_manager:
-            return
+            return None
 
         logger.info(f"[Orchestrator._save_partial_work_on_restart] Saving partial work for {agent_id} before restart")
 
         # Save the partial work snapshot with context
-        await self._save_agent_snapshot(
+        timestamp = await self._save_agent_snapshot(
             agent_id,
             answer_content=None,  # No complete answer yet
             context_data=self.get_last_context(agent_id),
@@ -1491,6 +1585,157 @@ Your answer:"""
         )
 
         agent.backend.filesystem_manager.log_current_state("after saving partial work on restart")
+        return timestamp
+
+    def _build_update_message(self, agent_id: str, answers: Dict[str, str]) -> Dict[str, str]:
+        """Build update message to inject when new answers arrive.
+
+        Args:
+            agent_id: The agent receiving the update
+            answers: Dict mapping agent_id to their answer content
+
+        Returns:
+            Dict with role="user" and formatted update content
+        """
+        # Get normalized answers for this agent
+        normalized_answers = self._normalize_workspace_paths_in_answers(
+            answers,
+            viewing_agent_id=agent_id,
+        )
+
+        # Create anonymous mapping (same logic as CURRENT ANSWERS)
+        agent_mapping = {}
+        for i, real_id in enumerate(sorted(answers.keys()), 1):
+            agent_mapping[real_id] = f"agent{i}"
+
+        # Format answers
+        answers_section = []
+        for real_id, answer in normalized_answers.items():
+            anon_id = agent_mapping[real_id]
+            answers_section.append(f"<{anon_id}> {answer} </{anon_id}>")
+
+        answers_text = "\n".join(answers_section)
+
+        # Check if this agent has workspace/filesystem enabled
+        agent = self.agents.get(agent_id)
+        has_workspace = agent and agent.backend.filesystem_manager is not None
+
+        # Build update content (conditionally include workspace info)
+        update_parts = [
+            "UPDATE: While you were working, new answers were provided.",
+            "",
+            "<NEW ANSWERS>",
+            answers_text,
+            "</NEW ANSWERS>",
+            "",
+        ]
+
+        # Only mention workspace if agent has filesystem access
+        if has_workspace:
+            # Build list of which agents provided the new answers (with their anonymous IDs)
+            agent_workspace_list = []
+            for real_id in sorted(answers.keys()):
+                anon_id = agent_mapping[real_id]
+                # Get the temp workspace path for this agent
+                temp_ws_base = agent.backend.filesystem_manager.agent_temporary_workspace
+                agent_workspace_path = f"{temp_ws_base}/{real_id}/"
+                agent_workspace_list.append(f"  - {anon_id}'s work: {agent_workspace_path}")
+
+            workspace_details = "\n".join(agent_workspace_list)
+
+            update_parts.extend(
+                [
+                    "WORKSPACE UPDATE:",
+                    "- Your workspace files are preserved",
+                    f"- New workspace snapshots available from {len(answers)} agent(s):",
+                    workspace_details,
+                    "",
+                ],
+            )
+
+        update_parts.extend(
+            [
+                "You can now:",
+                "1. Continue your current approach if you think it's better or different",
+                "2. Build upon or refine the new answers",
+                "3. Vote for an existing answer if you agree with it",
+                "",
+                "Proceed with your decision (continue working, vote, or provide new_answer).",
+            ],
+        )
+
+        return {"role": "user", "content": "\n".join(update_parts)}
+
+    async def _inject_update_and_continue(
+        self,
+        agent_id: str,
+        answers: Dict[str, str],
+        conversation_messages: List[Dict],
+    ) -> bool:
+        """Inject update message and prepare agent to continue.
+
+        Args:
+            agent_id: The agent receiving the update
+            answers: Dict of answers the agent had when it started (for comparison)
+            conversation_messages: The conversation history to append the update to
+
+        Returns:
+            bool: True if injection succeeded and agent can continue, False if should restart
+        """
+        # Get CURRENT answers from agent_states
+        current_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
+
+        # Filter to only NEW answers (ones that didn't exist when this agent started)
+        new_answers = {aid: ans for aid, ans in current_answers.items() if aid not in answers}
+
+        logger.info(f"[Orchestrator] Agent {agent_id} started with {len(answers)} answer(s), now has {len(current_answers)} answer(s)")
+        logger.info(f"[Orchestrator] NEW answers since agent started: {list(new_answers.keys())}")
+
+        # If no new answers, skip injection - agent already has all context
+        if not new_answers:
+            logger.info(f"[Orchestrator] No new answers to inject for {agent_id}, skipping update")
+            # Clear both restart flags since agent already has full context
+            if hasattr(self.coordination_tracker, "pending_agent_restarts"):
+                self.coordination_tracker.pending_agent_restarts[agent_id] = False
+            self.agent_states[agent_id].restart_pending = False
+            return False  # Don't continue, let normal flow handle this
+
+        logger.info(f"[Orchestrator] Injecting update for {agent_id}")
+
+        # Save any partial work before injecting update
+        snapshot_timestamp = await self._save_partial_work_on_restart(agent_id)
+
+        # Build and inject update message with ONLY the new answers
+        update_message = self._build_update_message(agent_id, new_answers)
+        conversation_messages.append(update_message)
+
+        # Save the update message to disk for observability
+        if snapshot_timestamp:
+            try:
+                log_session_dir = get_log_session_dir()
+                if log_session_dir:
+                    update_message_file = log_session_dir / agent_id / snapshot_timestamp / "update_message.txt"
+                    update_message_file.write_text(json.dumps(update_message, indent=2, default=str))
+                    logger.info(f"[Orchestrator] Saved update message to {update_message_file}")
+            except Exception as e:
+                logger.warning(f"[Orchestrator] Failed to save update message for {agent_id}: {e}")
+
+        # Track the update injection in coordination tracker
+        answer_providers = ", ".join(sorted(new_answers.keys()))
+        self.coordination_tracker.track_agent_action(
+            agent_id,
+            ActionType.UPDATE_INJECTED,
+            f"Received update with {len(new_answers)} NEW answer(s) from: {answer_providers}",
+        )
+
+        # Clear the coordination tracker's pending restart flag (injection satisfies the need for update)
+        if hasattr(self.coordination_tracker, "pending_agent_restarts"):
+            self.coordination_tracker.pending_agent_restarts[agent_id] = False
+
+        # Clear restart_pending so we don't re-inject
+        self.agent_states[agent_id].restart_pending = False
+
+        return True  # Injection successful, continue
 
     def _normalize_workspace_paths_in_answers(self, answers: Dict[str, str], viewing_agent_id: Optional[str] = None) -> Dict[str, str]:
         """Normalize absolute workspace paths in agent answers to accessible temporary workspace paths.
@@ -1564,7 +1809,7 @@ Your answer:"""
         normalized_content = content
 
         # Replace all agent workspace paths with canonical '/workspace/'
-        for agent_id, agent in self.agents.items():
+        for _, agent in self.agents.items():
             if not agent.backend.filesystem_manager:
                 continue
 
@@ -1781,12 +2026,12 @@ Your answer:"""
         self.agent_states[agent_id].is_killed = False
         self.agent_states[agent_id].timeout_reason = None
 
-        # Clear restart pending flag at the beginning of agent execution
-        if self.agent_states[agent_id].restart_pending:
-            # Track restart_pending transition (True → False) - restart processed
-            self.coordination_tracker.complete_agent_restart(agent_id)
-
-        self.agent_states[agent_id].restart_pending = False
+        # Note: Do NOT clear restart_pending here - let the injection logic inside the iteration
+        # loop handle it (see line ~1969). This ensures agents receive updates via injection
+        # instead of restarting from scratch, even if they haven't started streaming yet.
+        # The injection logic will:
+        # - Inject new answers if they exist (and continue working)
+        # - Clear the flag if no new answers exist (agent already has full context)
 
         # Copy all agents' snapshots to temp workspace for context sharing
         await self._copy_all_snapshots_to_temp_workspace(agent_id)
@@ -1942,8 +2187,14 @@ Your answer:"""
 
             # Build proper conversation messages with system + user messages
             max_attempts = 3
+            # Add planning guidance if enabled
+            system_message = conversation["system_message"]
+            if self.config.coordination_config.enable_agent_task_planning:
+                planning_guidance = self.message_templates.get_planning_guidance()
+                system_message = system_message + planning_guidance
+
             conversation_messages = [
-                {"role": "system", "content": conversation["system_message"]},
+                {"role": "system", "content": system_message},
                 {"role": "user", "content": conversation["user_message"]},
             ]
 
@@ -1962,16 +2213,18 @@ Your answer:"""
                 logger.info(f"[Orchestrator] Agent {agent_id} attempt {attempt + 1}/{max_attempts}")
 
                 if self._check_restart_pending(agent_id):
-                    logger.info(f"[Orchestrator] Agent {agent_id} restarting due to restart_pending flag")
-                    # Save any partial work before restarting
-                    await self._save_partial_work_on_restart(agent_id)
-                    # yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
-                    yield (
-                        "content",
-                        f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                    logger.info(f"[Orchestrator] Agent {agent_id} has restart_pending flag")
+                    # Inject update and continue instead of restarting
+                    should_continue = await self._inject_update_and_continue(
+                        agent_id,
+                        answers,
+                        conversation_messages,
                     )
-                    yield ("done", None)
-                    return
+                    if should_continue:
+                        # Has new answers, inject update and continue
+                        yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                        continue  # Agent continues working with update
+                    # else: No new answers (already has all context), just clear flag and proceed normally
 
                 # Stream agent response with workflow tools
                 # TODO: Need to still log this redo enforcement msg in the context.txt, and this & others in the coordination tracker.
@@ -2130,13 +2383,15 @@ Your answer:"""
                 if len(vote_calls) > 1:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
-                            await self._save_partial_work_on_restart(agent_id)
-                            yield (
-                                "content",
-                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                            should_continue = await self._inject_update_and_continue(
+                                agent_id,
+                                answers,
+                                conversation_messages,
                             )
-                            yield ("done", None)
-                            return
+                            if should_continue:
+                                yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                                continue  # Agent continues working with update
+                            # else: No new answers, proceed with normal error handling
                         error_msg = f"Multiple vote calls not allowed. Made {len(vote_calls)} calls but must make exactly 1. Call vote tool once with chosen agent."
                         yield ("content", f"❌ {error_msg}")
 
@@ -2161,13 +2416,15 @@ Your answer:"""
                 if len(vote_calls) > 0 and len(new_answer_calls) > 0:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
-                            await self._save_partial_work_on_restart(agent_id)
-                            yield (
-                                "content",
-                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                            should_continue = await self._inject_update_and_continue(
+                                agent_id,
+                                answers,
+                                conversation_messages,
                             )
-                            yield ("done", None)
-                            return
+                            if should_continue:
+                                yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                                continue  # Agent continues working with update
+                            # else: No new answers, proceed with normal error handling
                         error_msg = "Cannot use both 'vote' and 'new_answer' in same response. Choose one: vote for existing answer OR provide new answer."
                         yield ("content", f"❌ {error_msg}")
 
@@ -2193,13 +2450,15 @@ Your answer:"""
                             logger.info(f"[Orchestrator] Agent {agent_id} voting from options: {list(answers.keys()) if answers else 'No answers available'}")
                             # Check if agent should restart - votes invalid during restart
                             if self._check_restart_pending(agent_id):
-                                await self._save_partial_work_on_restart(agent_id)
-                                yield (
-                                    "content",
-                                    f"🔄 [{agent_id}] Vote invalid - restarting due to new answers",
+                                should_continue = await self._inject_update_and_continue(
+                                    agent_id,
+                                    answers,
+                                    conversation_messages,
                                 )
-                                yield ("done", None)
-                                return
+                                if should_continue:
+                                    yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                                    continue  # Agent continues working with update
+                                # else: No new answers, proceed with normal error handling
 
                             workflow_tool_found = True
                             # Vote for existing answer (requires existing answers)
@@ -2207,13 +2466,15 @@ Your answer:"""
                                 # Invalid - can't vote when no answers exist
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
-                                        await self._save_partial_work_on_restart(agent_id)
-                                        yield (
-                                            "content",
-                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                        should_continue = await self._inject_update_and_continue(
+                                            agent_id,
+                                            answers,
+                                            conversation_messages,
                                         )
-                                        yield ("done", None)
-                                        return
+                                        if should_continue:
+                                            yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                                            continue  # Agent continues working with update
+                                        # else: No new answers, proceed with normal error handling
                                     error_msg = "Cannot vote when no answers exist. Use new_answer tool."
                                     yield ("content", f"❌ {error_msg}")
                                     # Create proper tool error message for retry
@@ -2241,13 +2502,15 @@ Your answer:"""
                             if voted_agent not in answers:
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
-                                        await self._save_partial_work_on_restart(agent_id)
-                                        yield (
-                                            "content",
-                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                        should_continue = await self._inject_update_and_continue(
+                                            agent_id,
+                                            answers,
+                                            conversation_messages,
                                         )
-                                        yield ("done", None)
-                                        return
+                                        if should_continue:
+                                            yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                                            continue  # Agent continues working with update
+                                        # else: No new answers, proceed with normal error handling
                                     # Create reverse mapping for error message
                                     reverse_mapping = {real_id: f"agent{i}" for i, real_id in enumerate(sorted(answers.keys()), 1)}
                                     valid_anon_agents = [reverse_mapping[real_id] for real_id in answers.keys()]
@@ -2297,13 +2560,15 @@ Your answer:"""
                             if not can_answer:
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
-                                        await self._save_partial_work_on_restart(agent_id)
-                                        yield (
-                                            "content",
-                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                        should_continue = await self._inject_update_and_continue(
+                                            agent_id,
+                                            answers,
+                                            conversation_messages,
                                         )
-                                        yield ("done", None)
-                                        return
+                                        if should_continue:
+                                            yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                                            continue  # Agent continues working with update
+                                        # else: No new answers, proceed with normal error handling
                                     yield ("content", f"❌ {count_error}")
                                     # Create proper tool error message for retry
                                     enforcement_msg = self._create_tool_error_messages(agent, [tool_call], count_error)
@@ -2321,13 +2586,15 @@ Your answer:"""
                             if not is_novel:
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
-                                        await self._save_partial_work_on_restart(agent_id)
-                                        yield (
-                                            "content",
-                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                        should_continue = await self._inject_update_and_continue(
+                                            agent_id,
+                                            answers,
+                                            conversation_messages,
                                         )
-                                        yield ("done", None)
-                                        return
+                                        if should_continue:
+                                            yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                                            continue  # Agent continues working with update
+                                        # else: No new answers, proceed with normal error handling
                                     yield ("content", f"❌ {novelty_error}")
                                     # Create proper tool error message for retry
                                     enforcement_msg = self._create_tool_error_messages(agent, [tool_call], novelty_error)
@@ -2349,13 +2616,18 @@ Your answer:"""
                                 if normalized_new_content.strip() == normalized_existing_content.strip():
                                     if attempt < max_attempts - 1:
                                         if self._check_restart_pending(agent_id):
-                                            await self._save_partial_work_on_restart(agent_id)
-                                            yield (
-                                                "content",
-                                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                                            should_continue = await self._inject_update_and_continue(
+                                                agent_id,
+                                                answers,
+                                                conversation_messages,
                                             )
-                                            yield ("done", None)
-                                            return
+                                            if should_continue:
+                                                yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                                                continue  # Agent continues working with update
+                                            else:
+                                                yield ("content", f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n")
+                                                yield ("done", None)
+                                                return
                                         error_msg = f"Answer already provided by {existing_agent_id}. Provide different answer or vote for existing one."
                                         yield ("content", f"❌ {error_msg}")
                                         # Create proper tool error message for retry
@@ -2396,13 +2668,15 @@ Your answer:"""
                 # Case 3: Non-workflow response, need enforcement (only if no workflow tool was found)
                 if not workflow_tool_found:
                     if self._check_restart_pending(agent_id):
-                        await self._save_partial_work_on_restart(agent_id)
-                        yield (
-                            "content",
-                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
+                        should_continue = await self._inject_update_and_continue(
+                            agent_id,
+                            answers,
+                            conversation_messages,
                         )
-                        yield ("done", None)
-                        return
+                        if should_continue:
+                            yield ("content", f"📨 [{agent_id}] receiving update with new answers\n")
+                            continue  # Agent continues working with update
+                        # else: No new answers, proceed with normal error handling
                     if attempt < max_attempts - 1:
                         yield ("content", "🔄 needs to use workflow tools...\n")
                         # Reset to default enforcement message for this case
@@ -2731,7 +3005,7 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
         )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
-        for aid, state in self.agent_states.items():
+        for aid, _ in self.agent_states.items():
             if aid != selected_agent_id:
                 self.coordination_tracker.change_status(aid, AgentStatus.COMPLETED)
 

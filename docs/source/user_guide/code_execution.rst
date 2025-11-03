@@ -674,6 +674,121 @@ Manual Container Management
    # Clean up all stopped containers
    docker container prune -f
 
+Background Shell Execution
+---------------------------
+
+**NEW:** MassGen supports running commands in the background without blocking, enabling parallel execution and long-running processes.
+
+What is Background Execution?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Background execution allows agents to:
+
+* Start long-running processes (training, servers, simulations)
+* Run multiple experiments in parallel
+* Monitor processes without blocking
+* Continue working while tasks execute
+
+**Available Tools:**
+
+When ``enable_mcp_command_line: true`` is set, agents automatically get these tools:
+
+* ``start_background_shell(command, work_dir)`` - Start command in background, returns shell_id
+* ``get_background_shell_output(shell_id)`` - Retrieve stdout/stderr from background process
+* ``get_background_shell_status(shell_id)`` - Check if running/stopped/failed
+* ``kill_background_shell(shell_id)`` - Terminate a background process
+* ``list_background_shells()`` - List all active background processes
+
+Example: Parallel Experiments
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+   agent:
+     backend:
+       type: "openai"
+       model: "gpt-5-mini"
+       cwd: "workspace"
+       enable_mcp_command_line: true
+     system_message: |
+       You can run multiple experiments in parallel using background shell tools.
+       Use start_background_shell() to launch tasks, then monitor with
+       list_background_shells() and collect results when complete.
+
+**Agent workflow:**
+
+.. code-block:: python
+
+   # Start 3 experiments in parallel
+   exp1 = start_background_shell("python experiment_a.py")
+   exp2 = start_background_shell("python experiment_b.py")
+   exp3 = start_background_shell("python experiment_c.py")
+
+   # Monitor until all complete
+   while True:
+       shells = list_background_shells()
+       running = [s for s in shells["shells"] if s["status"] == "running"]
+       if len(running) == 0:
+           break
+
+   # Collect results
+   result1 = get_background_shell_output(exp1["shell_id"])
+   result2 = get_background_shell_output(exp2["shell_id"])
+   result3 = get_background_shell_output(exp3["shell_id"])
+
+Example: Server Management
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   # Start web server in background
+   server = start_background_shell("uvicorn app:main --port 8000")
+
+   # Server runs while agent does other work...
+
+   # Run integration tests
+   test_result = execute_command("pytest tests/integration/")
+
+   # Cleanup: stop server
+   kill_background_shell(server["shell_id"])
+
+Example: Long-Running Tasks with Monitoring
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   # Start training job
+   training = start_background_shell("python train.py --epochs 100")
+
+   # Monitor progress periodically
+   while True:
+       status = get_background_shell_status(training["shell_id"])
+
+       if status["status"] != "running":
+           break
+
+       # Check progress from output
+       output = get_background_shell_output(training["shell_id"])
+       # Look for "Epoch X/100" in output...
+
+   # Training complete
+   final_output = get_background_shell_output(training["shell_id"])
+
+Key Features
+~~~~~~~~~~~~
+
+* **Non-blocking:** Continue work while processes run
+* **Parallel execution:** Run multiple tasks simultaneously (default limit: 10 concurrent)
+* **Memory-safe:** Ring buffer captures last 10,000 lines (prevents OOM on infinite output)
+* **Auto-cleanup:** All background processes killed on MassGen exit
+* **Thread-safe:** Safe for concurrent access from multiple agents
+* **Same security:** Background shells use same sanitization as foreground ``execute_command``
+
+Demo Configuration
+~~~~~~~~~~~~~~~~~~
+
+See ``massgen/configs/tools/code-execution/background_shell_demo.yaml`` for a complete example showing parallel vs sequential execution strategies.
+
 Best Practices
 --------------
 
@@ -684,11 +799,14 @@ Best Practices
 5. **Monitor container logs** for debugging
 6. **Test in local mode first** for faster iteration
 7. **Use command filtering** to restrict dangerous operations
+8. **Use background shells for parallel tasks** - Run multiple experiments concurrently
+9. **Monitor background processes** - Use ``get_background_shell_status()`` to check progress
+10. **Cleanup background shells** - Kill when done or let auto-cleanup handle it
 
 Configuration Examples
 ----------------------
 
-See ``massgen/configs/debug/code_execution/`` for example configurations:
+See ``massgen/configs/tools/code-execution/`` for example configurations:
 
 * ``basic_command_execution.yaml`` - Minimal code execution setup
 * ``code_execution_use_case_simple.yaml`` - Simple use case example
@@ -698,6 +816,7 @@ See ``massgen/configs/debug/code_execution/`` for example configurations:
 * ``docker_with_resource_limits.yaml`` - Memory/CPU limits with network
 * ``docker_multi_agent.yaml`` - Multi-agent with Docker isolation
 * ``docker_verification.yaml`` - Verify Docker isolation works
+* ``background_shell_demo.yaml`` - **NEW:** Parallel execution with background shells
 
 Next Steps
 ----------
@@ -713,5 +832,6 @@ References
 * `Docker Documentation <https://docs.docker.com/>`_
 * `Docker Python SDK <https://docker-py.readthedocs.io/>`_
 * Design Document: ``docs/dev_notes/CODE_EXECUTION_DESIGN.md``
+* **NEW:** Background Execution Design: ``docs/dev_notes/background_shell_execution_design.md``
 * Docker README: ``massgen/docker/README.md``
 * Build Script: ``massgen/docker/build.sh``

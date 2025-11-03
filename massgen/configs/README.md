@@ -227,7 +227,31 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.6 - Latest
+### v0.1.7 - Latest
+**New Features:** Agent Task Planning & Background Execution
+
+**Configuration Files:**
+- `example_task_todo.yaml` - Task planning with dependency management
+- `background_shell_demo.yaml` - Background command execution demo
+
+**Key Features:**
+- **Agent Task Planning**: MCP-based planning tools with task dependencies and status tracking
+- **Background Shell Execution**: Persistent shell sessions for long-running commands
+- **Preemption Coordination**: Interrupt coordination without full restart
+
+**Try It:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# Agent task planning for complex multi-step projects
+massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
+
+# Background shell execution for parallel long-running commands
+uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
+```
+
+### v0.1.6
 **New Features:** Framework Interoperability & Backend Refactoring
 
 **Configuration Files:**

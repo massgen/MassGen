@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Simple tests for orchestrator's get_final_presentation method shape and imports.
 """
 
 import os
 import sys
+
 import pytest
 
 # Ensure project root is on sys.path
@@ -20,8 +22,9 @@ def test_orchestrator_import():
 
 
 def test_get_final_presentation_method():
-    from massgen.orchestrator import Orchestrator
     import inspect
+
+    from massgen.orchestrator import Orchestrator
 
     assert hasattr(Orchestrator, "get_final_presentation")
     sig = inspect.signature(Orchestrator.get_final_presentation)
