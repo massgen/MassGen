@@ -121,6 +121,22 @@ def set_log_attempt(attempt: int) -> None:
     _LOG_SESSION_DIR = None  # Force recreation with new attempt subdirectory
 
 
+def set_log_base_session_dir(log_dir: str) -> None:
+    """Set the base log session directory to an existing directory.
+
+    Used when continuing a session to reuse the original log directory
+    instead of creating a new timestamped one.
+
+    Args:
+        log_dir: Path to existing log directory (e.g., "log_20251101_151837")
+    """
+    global _LOG_BASE_SESSION_DIR, _LOG_SESSION_DIR
+    log_base_dir = Path(".massgen") / "massgen_logs"
+    _LOG_BASE_SESSION_DIR = log_base_dir / log_dir
+    _LOG_BASE_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    _LOG_SESSION_DIR = None  # Force recreation with new base
+
+
 def get_log_session_dir_base() -> Path:
     """Get the base log session directory without attempt subdirectory.
 

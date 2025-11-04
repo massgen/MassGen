@@ -41,6 +41,8 @@ agents:
 memory:
   # Enable/disable persistent memory (default: true)
   enabled: true
+  # # Debug mode
+  # debug: true
 
   # Memory configuration
   conversation_memory:
@@ -136,6 +138,10 @@ orchestrator:
   # Agent workspace for any file operations
   agent_temporary_workspace: "memory_test_workspaces"
   snapshot_storage: "memory_test_snapshots"
+
+  voting_sensitivity: balanced
+  max_new_answers_per_agent: 5
+  # answer_novelty_requirement: balanced
 
   # Additional context paths
   context_paths:

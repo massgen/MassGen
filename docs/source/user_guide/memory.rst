@@ -457,8 +457,10 @@ Session Management
 
 **Automatic sessions**:
 
-- **Interactive mode**: ``session_20251028_143000`` (shared across all turns)
-- **Single question**: ``temp_20251028_143000`` (isolated per run)
+All sessions are automatically created and tracked in the registry:
+
+- **Interactive mode**: ``session_20251028_143000`` (shared across all turns in that session)
+- **Single question**: ``session_20251028_143001`` (each run gets its own tracked session)
 
 **Custom sessions**:
 
@@ -540,7 +542,7 @@ Example output:
 - Build on previous agents' knowledge without re-analysis
 - Maintain context for long-running research projects
 
-**Note**: Only non-temporary sessions (not starting with ``temp_``) are tracked in the registry
+**Note**: All sessions (both interactive and single-question modes) are tracked in the registry and can be continued later
 
 Compression Settings
 ^^^^^^^^^^^^^^^^^^^^
