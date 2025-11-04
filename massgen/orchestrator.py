@@ -881,6 +881,27 @@ Your answer:"""
             )
             return {"has_irreversible": True, "blocked_tools": set()}
 
+    async def _continuous_status_updates(self):
+        """Background task to continuously update status.json during coordination.
+
+        This task runs every 2 seconds to provide real-time status monitoring
+        for automation tools and LLM agents.
+        """
+        try:
+            while True:
+                await asyncio.sleep(2)  # Update every 2 seconds
+                log_session_dir = get_log_session_dir()
+                if log_session_dir:
+                    try:
+                        self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
+                    except Exception as e:
+                        logger.debug(f"Failed to update status file in background: {e}")
+        except asyncio.CancelledError:
+            # Task was cancelled, this is expected behavior
+            pass
+        except Exception as e:
+            logger.warning(f"Background status update task encountered error: {e}")
+
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute coordination with orchestrator-level timeout protection.
 
@@ -990,6 +1011,9 @@ Your answer:"""
             source=self.orchestrator_id,
         )
 
+        # Start background status update task for real-time monitoring
+        status_update_task = asyncio.create_task(self._continuous_status_updates())
+
         votes = {}  # Track votes: voter_id -> {"agent_id": voted_for, "reason": reason}
 
         # Initialize all agents with has_voted = False and set restart flags
@@ -1033,6 +1057,13 @@ Your answer:"""
             "Final agent selected",
             {"selected_agent": self._selected_agent, "votes": votes},
         )
+
+        # Cancel background status update task
+        status_update_task.cancel()
+        try:
+            await status_update_task
+        except asyncio.CancelledError:
+            pass  # Expected
 
         # Present final answer
         async for chunk in self._present_final_answer():
@@ -1163,6 +1194,10 @@ Your answer:"""
                                 result_data,
                                 snapshot_timestamp=answer_timestamp,
                             )
+                            # Update status file for real-time monitoring
+                            log_session_dir = get_log_session_dir()
+                            if log_session_dir:
+                                self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
                             restart_triggered_id = agent_id  # Last agent to provide new answer
                             reset_signal = True
                             log_stream_chunk(
@@ -1228,6 +1263,10 @@ Your answer:"""
                                     result_data,
                                     snapshot_timestamp=vote_timestamp,
                                 )
+                                # Update status file for real-time monitoring
+                                log_session_dir = get_log_session_dir()
+                                if log_session_dir:
+                                    self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
 
                                 # Track new vote event
                                 voted_for = result_data.get("agent_id", "<unknown>")
@@ -3010,6 +3049,10 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
                 self.coordination_tracker.change_status(aid, AgentStatus.COMPLETED)
 
         self.coordination_tracker.set_final_agent(selected_agent_id, voting_summary, all_answers)
+        # Update status file for real-time monitoring
+        log_session_dir = get_log_session_dir()
+        if log_session_dir:
+            self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
 
         # Add workspace context information to system message if workspace was restored
         if agent.backend.filesystem_manager and temp_workspace_path:
