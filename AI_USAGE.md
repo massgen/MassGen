@@ -44,49 +44,81 @@ QUESTION: Create a simple HTML page about Bob Dylan
 cat .massgen/massgen_logs/log_20251103_143022_123456/status.json
 ```
 
+**📚 Complete status.json documentation:** `docs/source/reference/status_file.rst`
+
 **status.json structure:**
 ```json
 {
   "meta": {
     "elapsed_seconds": 45.3,
-    "question": "Create a simple HTML page about Bob Dylan"
+    "question": "Create a simple HTML page about Bob Dylan",
+    "log_dir": ".massgen/massgen_logs/log_20251103_143022_123456"
   },
   "coordination": {
     "phase": "enforcement",
     "completion_percentage": 65,
-    "active_agent": "agent_b"
+    "active_agent": "agent_b",
+    "is_final_presentation": false
   },
   "agents": {
     "agent_a": {
       "status": "voted",
       "answer_count": 1,
+      "latest_answer_label": "agent1.1",
+      "vote_cast": {
+        "voted_for_agent": "agent_b",
+        "voted_for_label": "agent2.1",
+        "reason_preview": "Better solution..."
+      },
+      "times_restarted": 1,
+      "last_activity": 1730678850.123,
       "error": null
     },
     "agent_b": {
       "status": "streaming",
-      "answer_count": 0,
+      "answer_count": 1,
+      "latest_answer_label": "agent2.1",
+      "vote_cast": null,
+      "times_restarted": 0,
+      "last_activity": 1730678900.456,
       "error": null
     }
   },
   "results": {
-    "votes": {"agent1.1": 1},
-    "winner": null
+    "votes": {"agent1.1": 0, "agent2.1": 1},
+    "winner": null,
+    "final_answer_preview": null
   }
 }
 ```
 
 **Monitor by checking:**
 - `completion_percentage` (0-100) to track progress
+- `results.winner` to know when complete (`null` = still running)
 - `agents[].error` for any agent errors
-- `results.winner` to know when complete (will be `null` until done)
+- `coordination.phase` to see current phase
 
-**Agent status values:**
-- `waiting` - Not started
-- `streaming` - Actively working
-- `answered` - Provided answer
+**Coordination Phases:**
+- `initial_answer` - Agents providing their answers
+- `enforcement` - Agents voting on best answer
+- `presentation` - Winner presenting final coordinated answer
+
+**Agent Status Values:**
+- `waiting` - Not started yet
+- `streaming` - Actively working (thinking, reasoning, using tools)
+- `answered` - Provided answer, waiting to vote
 - `voted` - Cast vote
-- `error` - Failed
-- `completed` - Done
+- `restarting` - Restarting to review new answers from others
+- `error` - Encountered an error
+- `timeout` - Exceeded timeout limit
+- `completed` - Finished all work
+
+**Key Field Explanations:**
+- `times_restarted` - How many times agent restarted to incorporate others' work (MassGen's adaptive coordination)
+- `latest_answer_label` - Format: `agent1.1`, `agent2.1` (used in voting to identify which answer was chosen)
+- `is_final_presentation` - `true` when winner is presenting final answer
+
+**📚 For complete field-by-field documentation:** See `docs/source/reference/status_file.rst`
 
 ### Step 3: Check Exit Code
 

@@ -743,8 +743,7 @@ class CoordinationTracker:
                     "answer_count": len(answers),
                     "latest_answer_label": latest_answer_label,
                     "vote_cast": agent_vote,
-                    "restart_count": self.agent_rounds.get(agent_id, 0),
-                    "current_round": self.agent_rounds.get(agent_id, 0),
+                    "times_restarted": self.agent_rounds.get(agent_id, 0),
                     "last_activity": last_activity,
                     "error": error,
                 }
@@ -779,13 +778,9 @@ class CoordinationTracker:
                 },
                 "coordination": {
                     "phase": phase,
-                    "current_iteration": self.current_iteration,
-                    "max_iteration": 3,  # Default, could be made configurable
-                    "current_attempt": 1,  # Would need to be tracked if restart mechanism used
-                    "max_attempts": 3,  # Default, could be made configurable
                     "active_agent": active_agent,
                     "completion_percentage": completion_pct,
-                    "is_final_round": self.is_final_round,
+                    "is_final_presentation": self.is_final_round,
                 },
                 "agents": agent_statuses,
                 "results": {

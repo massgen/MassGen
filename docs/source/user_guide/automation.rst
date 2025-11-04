@@ -377,20 +377,23 @@ Once you ensure unique workspace names, parallel execution is safe and efficient
    for result in results:
        print(f"{result['config']}: {result['status']} in {result['duration']}s")
 
-Status File Reference
-=====================
+Status File Overview
+====================
 
 The ``status.json`` file is updated every 2 seconds during coordination.
+
+.. note::
+   **For complete status.json reference with all fields documented:** See :doc:`../reference/status_file`
 
 File Location
 -------------
 
 .. code-block:: text
 
-   .massgen/massgen_logs/log_YYYYMMDD_HHMMSS/status.json
+   .massgen/massgen_logs/log_YYYYMMDD_HHMMSS_ffffff/status.json
 
-Structure
----------
+Quick Reference
+---------------
 
 .. code-block:: json
 
