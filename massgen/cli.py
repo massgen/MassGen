@@ -1302,8 +1302,27 @@ async def run_question_with_history(
     return (normalized_response or response_content, session_id_to_use, updated_turn)
 
 
-async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs) -> str:
-    """Run MassGen with a single question."""
+async def run_single_question(
+    question: str,
+    agents: Dict[str, SingleAgent],
+    ui_config: Dict[str, Any],
+    session_id: Optional[str] = None,
+    session_storage: str = "sessions",
+    **kwargs,
+) -> str:
+    """Run MassGen with a single question.
+
+    Args:
+        question: The question to ask
+        agents: Dictionary of agents
+        ui_config: UI configuration
+        session_id: Optional session ID for persistence
+        session_storage: Directory for session storage
+        **kwargs: Additional arguments
+
+    Returns:
+        The final response text
+    """
     # Check if we should use orchestrator for single agents (default: False for backward compatibility)
     use_orchestrator_for_single = ui_config.get("use_orchestrator_for_single_agent", True)
 
@@ -1476,6 +1495,24 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 logger.info(f"Copied final results from {attempt_final_dir} to {root_final_dir}")
         except Exception as e:
             logger.warning(f"Failed to copy final results to root: {e}")
+
+        # Handle session persistence for single-question runs
+        if session_id and session_storage:
+            try:
+                session_info = {
+                    "session_id": session_id,
+                    "current_turn": 0,  # First turn
+                    "session_storage": session_storage,
+                }
+                await handle_session_persistence(
+                    orchestrator,
+                    question,
+                    session_info,
+                    session_storage,
+                )
+                logger.info(f"Saved session data for single-question run: {session_id}")
+            except Exception as e:
+                logger.warning(f"Failed to save session persistence: {e}")
 
         return final_response
 
@@ -2265,14 +2302,28 @@ async def run_interactive_mode(
 
     print_help_messages()
 
-    # Maintain conversation history
-    conversation_history = []
-
     # Session management for multi-turn filesystem support
     # Use memory_session_id (unified with memory system) if provided, otherwise create later
     session_id = memory_session_id
     current_turn = 0
     session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")
+
+    # Restore session state if loading an existing session (or start fresh)
+    conversation_history = []
+    if memory_session_id:
+        from massgen.session import restore_session
+
+        session_state = restore_session(memory_session_id, session_storage)
+        if session_state:
+            conversation_history = session_state.conversation_history
+            current_turn = session_state.current_turn
+            # CRITICAL: Use the actual path where session was found, not the relocated path
+            # This ensures all turns stay in the same directory
+            session_storage = session_state.session_storage_path
+            print(
+                f"📚 Restored session with {current_turn} previous turn(s) " f"({len(conversation_history)} messages) from {session_storage}",
+                flush=True,
+            )
 
     try:
         while True:
@@ -2507,27 +2558,24 @@ async def main(args):
             # No question and no config - wizard will be triggered in cli_main()
             return
 
+    # Session config was already loaded in cli_main() if --session-id or --continue was used
+    # Try to use config from session if it was set
+    if args.session_id and not args.config and not args.model and not args.backend:
+        from massgen.session import SessionRegistry
+
+        registry = SessionRegistry()
+        session_metadata = registry.get_session(args.session_id)
+        if session_metadata:
+            session_config_path = session_metadata.get("config_path")
+            if session_config_path:
+                args.config = session_config_path
+                print(f"   Using config from session: {Path(session_config_path).name}", flush=True)
+
     # Validate arguments (only if we didn't auto-set config above)
     if not args.backend:
         if not args.model and not args.config:
             print("❌ Configuration error: Either --config, --model, or --backend must be specified", flush=True)
             sys.exit(1)
-
-    # Validate session_id if provided
-    if args.session_id:
-        from massgen.memory import SessionRegistry
-
-        registry = SessionRegistry()
-        if not registry.session_exists(args.session_id):
-            print(f"❌ Session error: Session '{args.session_id}' not found in registry", flush=True)
-            print("Run 'massgen --list-sessions' to see available sessions", flush=True)
-            sys.exit(1)
-        else:
-            session_metadata = registry.get_session(args.session_id)
-            if args.debug:
-                logger.info(f"Loading session: {args.session_id}")
-                logger.debug(f"Session metadata: {json.dumps(session_metadata, indent=2)}")
-            print(f"📚 Loading memory from session: {args.session_id}", flush=True)
 
     # Track config path for error messages
     resolved_path = None
@@ -2645,22 +2693,18 @@ async def main(args):
             # Use session_id from YAML config
             memory_session_id = config["session_id"]
             logger.info(f"📚 Using session from config: {memory_session_id}")
-        elif args.question:
-            # Single question mode: Create temp session per run
-            from datetime import datetime
-
-            memory_session_id = f"temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            logger.info(f"📝 Created temp session for single-question mode: {memory_session_id}")
         else:
-            # Interactive mode: Create session now (will be reused by orchestrator)
+            # Generate new session for both interactive and single-question modes
             from datetime import datetime
 
             memory_session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            logger.info(f"📝 Created session for interactive mode: {memory_session_id}")
+            mode = "single-question" if args.question else "interactive"
+            logger.info(f"📝 Created session for {mode} mode: {memory_session_id}")
 
-        # Register session with SessionRegistry (for persistent tracking)
-        if memory_session_id and not memory_session_id.startswith("temp_"):
-            from massgen.memory import SessionRegistry
+        # Register ALL sessions with SessionRegistry (for persistent tracking)
+        if memory_session_id:
+            from massgen.logger_config import get_log_session_dir_base
+            from massgen.session import SessionRegistry
 
             registry = SessionRegistry()
             # Determine model for metadata
@@ -2670,13 +2714,18 @@ async def main(args):
             elif "agents" in config and config["agents"]:
                 model_name = config["agents"][0].get("backend", {}).get("model")
 
+            # Get current log directory to save with session
+            log_dir = get_log_session_dir_base()
+            log_dir_name = log_dir.name  # e.g., "log_20251101_151837"
+
             registry.register_session(
                 session_id=memory_session_id,
                 config_path=str(resolved_path) if resolved_path else None,
                 model=model_name,
+                log_directory=log_dir_name,  # Save log directory for reuse
             )
             if args.debug:
-                logger.debug(f"Registered session in registry: {memory_session_id}")
+                logger.debug(f"Registered session in registry: {memory_session_id} (log: {log_dir_name})")
 
         agents = create_agents_from_config(
             config,
@@ -2715,7 +2764,16 @@ async def main(args):
         # Run mode based on whether question was provided
         try:
             if args.question:
-                await run_single_question(args.question, agents, ui_config, **kwargs)
+                # Get session storage path
+                session_storage_path = orchestrator_cfg.get("session_storage", "sessions")
+                await run_single_question(
+                    args.question,
+                    agents,
+                    ui_config,
+                    session_id=memory_session_id,
+                    session_storage=session_storage_path,
+                    **kwargs,
+                )
                 # if response:
                 #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
                 #     print(f"{response}", flush=True)
@@ -2733,9 +2791,9 @@ async def main(args):
                     **kwargs,
                 )
         finally:
-            # Mark session as completed (if not a temp session)
-            if memory_session_id and not memory_session_id.startswith("temp_"):
-                from massgen.memory import SessionRegistry
+            # Mark ALL sessions as completed
+            if memory_session_id:
+                from massgen.session import SessionRegistry
 
                 registry = SessionRegistry()
                 registry.complete_session(memory_session_id)
@@ -2907,6 +2965,12 @@ Environment Variables:
         help="Load memory from a previous session by ID (e.g., chat_session_a1b2c3d4)",
     )
     session_group.add_argument(
+        "--continue",
+        action="store_true",
+        dest="continue_session",
+        help="Continue the most recent session (shortcut for loading last session)",
+    )
+    session_group.add_argument(
         "--list-sessions",
         action="store_true",
         help="List all available memory sessions with their metadata",
@@ -2922,6 +2986,37 @@ Environment Variables:
 
     args = parser.parse_args()
 
+    # Handle --continue flag BEFORE setup_logging so we can reuse log directory
+    if args.continue_session:
+        from massgen.session import SessionRegistry
+
+        registry = SessionRegistry()
+        recent_session = registry.get_most_recent_session()
+        if not recent_session:
+            print("❌ No sessions found to continue")
+            print("Run 'massgen --list-sessions' to see available sessions")
+            sys.exit(1)
+        args.session_id = recent_session["session_id"]
+        print(f"🔄 Continuing most recent session: {args.session_id}")
+
+    # Restore log directory from session if loading existing session
+    if args.session_id:
+        from massgen.logger_config import set_log_base_session_dir
+        from massgen.session import SessionRegistry
+
+        registry = SessionRegistry()
+        if not registry.session_exists(args.session_id):
+            print(f"❌ Session error: Session '{args.session_id}' not found in registry")
+            print("Run 'massgen --list-sessions' to see available sessions")
+            sys.exit(1)
+
+        session_metadata = registry.get_session(args.session_id)
+        log_directory = session_metadata.get("log_directory")
+        if log_directory:
+            # Reuse the original log directory for this session
+            set_log_base_session_dir(log_directory)
+            print(f"📚 Loading session: {args.session_id} (log: {log_directory})")
+
     # Always setup logging (will save INFO to file, console output depends on debug flag)
     setup_logging(debug=args.debug)
 
@@ -2931,7 +3026,7 @@ Environment Variables:
 
     # Handle special commands first
     if args.list_sessions:
-        from massgen.memory import SessionRegistry, format_session_list
+        from massgen.session import SessionRegistry, format_session_list
 
         registry = SessionRegistry()
         sessions = registry.list_sessions(limit=20)

@@ -14,8 +14,8 @@ The memory system is designed to be:
 from ._base import MemoryBase, PersistentMemoryBase
 from ._compression import CompressionStats, ContextCompressor
 from ._conversation import ConversationMemory
+from ._filesystem_cache import FileMemoryCache
 from ._persistent import PersistentMemory
-from ._session_registry import SessionRegistry, format_session_list
 
 __all__ = [
     "MemoryBase",
@@ -24,6 +24,5 @@ __all__ = [
     "PersistentMemory",
     "ContextCompressor",
     "CompressionStats",
-    "SessionRegistry",
-    "format_session_list",
+    "FileMemoryCache",
 ]
