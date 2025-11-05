@@ -586,14 +586,26 @@ When using MassGen to run MassGen (meta-coordination), currently only local code
    **IMPORTANT:** When using automation mode for autonomous experiments, agents can potentially execute many API calls without human oversight. This can result in unexpected costs.
 
 **Best Practices:**
+The configs you have MassGen run itself should include cost control measures:
 
-- Set explicit timeout limits in configs:
+- Set explicit timeout limits in configs to prevent indefinite hangs:
 
   .. code-block:: yaml
 
      timeout_settings:
-       orchestrator_timeout_seconds: 300  # 5 minutes max
-       agent_timeout_seconds: 180         # 3 minutes per agent
+       orchestrator_timeout_seconds: 1800  # 30 minutes max (recommended for meta-coordination)
+       agent_timeout_seconds: 600          # 10 minutes per agent
+
+  **Note**: Meta-coordination typically takes 10-30 minutes. Regular tasks: 2-10 minutes.
+
+- Limit answers per agent for better progress tracking:
+
+  .. code-block:: yaml
+
+     orchestrator:
+       max_new_answers_per_agent: 2  # Helps track progress more accurately
+
+  Setting this helps estimate completion percentage more reliably. Without it, agents can provide unlimited answers, making progress tracking less predictable.
 
 - Monitor costs via your API provider dashboards
 - Use less expensive models for automated experimentation:
@@ -615,5 +627,5 @@ Next Steps
 - **Read** :doc:`../reference/cli` for all CLI options
 - **See** :doc:`../reference/status_file` for complete status.json documentation
 - **See** :doc:`../reference/yaml_schema` for configuration details
-- **Check** :doc:`../examples/multi_agent` for working examples
+- **Check** :doc:`../examples/basic_examples` for working examples
 - **Review** ``massgen/filesystem_manager/background_shell.py`` source code

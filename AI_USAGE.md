@@ -215,6 +215,8 @@ uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml \
 
 **Use for**: Self-improvement, hyperparameter tuning, bug fixing, automated testing.
 
+**Timing**: Running MassGen may take some time to run (typically 10-30 minutes). Monitor `status.json` - if `completion_percentage` increases, it's working, not hanging.
+
 **Limitation**: Local execution only. Docker requires:
 - API credential passing to nested instances
 - Automatic dependency installation (e.g., reinstalling MassGen)
@@ -246,9 +248,14 @@ After completion, these files are available:
 - **Cause:** Config file error
 - **Fix:** Verify config file path exists and is valid YAML
 
-### Issue: Process runs forever
-- **Cause:** No timeout set
-- **Fix:** Kill the background process after reasonable timeout (e.g., 5 minutes for simple tasks)
+### Issue: Process seems to hang
+- **Important:** MassGen coordination takes time - this is normal!
+- **Typical:** 2-10 minutes, **Meta-coordination:** 10-30 minutes
+- **How to check if stuck:** Read `status.json` - if `completion_percentage` increases, it's working
+- **Only stuck if:** NO progress for >5 minutes
+- **Recommendations for future configs:**
+  - Set `orchestrator_timeout_seconds: 1800` (30 min max)
+  - Set `max_new_answers_per_agent: 2` (helps track progress accurately)
 
 ## Summary Checklist
 

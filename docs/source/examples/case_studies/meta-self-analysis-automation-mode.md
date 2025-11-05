@@ -25,6 +25,7 @@ To guide future versions of MassGen, we encourage **anyone** to submit an issue 
     - [New Config](#new-config)
     - [Command](#command)
   - [🤖 Agents](#agents)
+  - [🎥 Demo](#demo)
 - [📊 EVALUATION & ANALYSIS](#evaluation--analysis)
   - [Results](#results)
     - [The Collaborative Process](#the-collaborative-process)
@@ -66,6 +67,7 @@ Prior to v0.1.8, running MassGen produced verbose terminal output with ANSI esca
 ### Baseline Command
 
 ```bash
+# Needs to be passed existing logs and cannot watch MassGen as it executes
 uv run massgen \
   --config @examples/tools/todo/example_task_todo.yaml \
   "Read through the attached MassGen code and docs. Then, read the logs and suggest any improvements to help MassGen perform better along any dimension (quality, speed, cost, creativity, etc.) and write small code snippets suggesting how to start."
@@ -85,15 +87,6 @@ Without structured output, agents attempting meta-analysis would face:
 - No automatic workspace isolation for parallel runs
 - Agents running multiple experiments interfere with each other
 - Cannot safely run nested MassGen (parent and child share workspaces)
-
-**Example Failure Scenario:**
-```python
-# Agent tries to run MassGen and parse output
-result = subprocess.run(["massgen", "--config", "..."], capture_output=True)
-output = result.stdout.decode()
-# Output long and difficult to output and hard to parse for agents.
-# Only one MassGen experiment meant to be run at a time.
-```
 
 ### Success Criteria
 
@@ -121,7 +114,6 @@ To enable meta-analysis, MassGen v0.1.8 needs to implement:
    - Voting results
    - Elapsed time
 4. **Predictable Output Paths**:
-   - Final answer: `{log_dir}/final/{winner}/answer.txt`
    - Status: `{log_dir}/status.json`
    - Full logs: `{log_dir}/massgen.log`
 5. **Automatic Workspace Isolation**: Each run gets unique workspace directory and log dir specified with more time granularity to prevent collisions.
@@ -147,23 +139,28 @@ To enable meta-analysis, MassGen v0.1.8 needs to implement:
 MassGen v0.1.8 introduces **Automation Mode** for agent-parseable execution:
 
 **`--automation` Flag:**
-- Suppresses verbose terminal output (no ANSI codes, no progress bars)
-- Emits ~10 clean lines instead of 250-3,000+
-- First line always: `LOG_DIR: <absolute_path>`
-- Subsequent lines: Key coordination events only
+- Suppresses rich terminal UI (no progress bars, no dynamic updates)
+- Emits ~10-20 lines instead of 250-3,000+
+- Shows header, question, warnings, and final results
+- Silent during coordination (monitor via status.json)
 
 **Example v0.1.8 Output:**
 ```
-LOG_DIR: /path/to/.massgen/massgen_logs/log_20251105_062604_250281
-Starting coordination with 2 agents...
-Phase: planning (10%)
-Phase: generation (50%)
-Phase: voting (75%)
-Phase: presentation (100%)
-Winner: agent_a
-Final answer: /path/to/.massgen/massgen_logs/log_20251105_062604_250281/final/agent_a/answer.txt
-Elapsed: 712.34 seconds
-Exit code: 0
+🤖 Multi-Agent Mode
+Agents: agent_a, agent_b
+Question: Create a website about Bob Dylan
+
+============================================================
+QUESTION: Create a website about Bob Dylan
+[Coordination in progress - monitor status.json for real-time updates]
+09:48:43 | WARNING  | [FilesystemManager.save_snapshot] Source path ... is empty, skipping snapshot
+09:48:44 | WARNING  | [FilesystemManager.save_snapshot] Source path ... is empty, skipping snapshot
+
+WINNER: agent_b
+DURATION: 1011.3s
+ANSWER_PREVIEW: Following a comprehensive analysis of MassGen's performance...
+
+COMPLETED: 2 agents, 1011.3s total
 ```
 
 **Real-Time `status.json` File:**
@@ -174,8 +171,8 @@ Exit code: 0
 ```json
 {
   "meta": {
-    "session_id": "log_20251105_062604_250281",
-    "log_dir": ".massgen/massgen_logs/log_20251105_062604_250281",
+    "session_id": "log_20251105_074751_835636",
+    "log_dir": ".massgen/massgen_logs/log_20251105_074751_835636",
     "question": "...",
     "start_time": 1762317773.189,
     "elapsed_seconds": 712.337
@@ -189,22 +186,22 @@ Exit code: 0
   "agents": {
     "agent_a": {
       "status": "voted",
-      "answer_count": 7,
-      "latest_answer_label": "agent1.7",
-      "times_restarted": 9
+      "answer_count": 5,
+      "latest_answer_label": "agent1.5",
+      "times_restarted": 5
     },
     "agent_b": {
       "status": "voted",
-      "answer_count": 6,
-      "latest_answer_label": "agent2.6",
-      "times_restarted": 6
+      "answer_count": 5,
+      "latest_answer_label": "agent2.5",
+      "times_restarted": 7
     }
   },
   "results": {
-    "winner": "agent_a",
+    "winner": "agent_b",
     "votes": {
-      "agent1.7": 2,
-      "agent1.3": 1
+      "agent2.5": 2,
+      "agent1.1": 2
     }
   }
 }
@@ -223,18 +220,18 @@ Exit code: 0
 - 4: User interrupted (Ctrl+C)
 
 **Benefits:**
-- **10-20 lines** instead of 250-3,000+
-- **No ANSI escape codes** (pure text)
-- **Predictable format** (always starts with LOG_DIR)
-- **Asynchronous monitoring** (poll status.json)
+- **10-20 lines** instead of 250-3,000+ (plus warnings)
+- **Minimal output** during coordination (agents work silently)
+- **Predictable format** (header → QUESTION → monitoring message → WINNER/DURATION → COMPLETED)
+- **Asynchronous monitoring** (poll status.json for real-time progress)
 - **Parallel execution safe** (workspace isolation)
 - **Programmatic access** (exit codes + structured paths)
 
 ### New Config
 
-Configuration file: [`massgen/configs/meta/massgen_suggests_to_improve_massgen.yaml`](../../../massgen/configs/meta/massgen_suggests_to_improve_massgen.yaml)
+Configuration file: [`massgen/configs/meta/massgen_suggests_to_improve_massgen.yaml`](https://github.com/massgen/MassGen/tree/main/massgen/configs/meta/massgen_suggests_to_improve_massgen.yaml)
 
-Key features for meta-analysis (ensure code execution is active and provide information to each agent about MassGen's automation mode):
+Example section of config for meta-analysis (ensure code execution is active and provide information to each agent about MassGen's automation mode):
 
 ```yaml
 agents:
@@ -270,12 +267,11 @@ uv run massgen --automation \
 **What Happens:**
 1. **Code Exploration**: Agents read MassGen source code and documentation
 2. **Nested Execution**: Agents run `uv run massgen --automation --config [config] "[question]"`
-3. **Parse LOG_DIR**: Agents extract log directory from first line of output
-4. **Monitor Progress**: Agents poll `{log_dir}/status.json` as frequently as they need
-5. **Wait for Completion**: Agents check `completion_percentage` until it reaches 100
-6. **Extract Results**: Agents read `{log_dir}/final/{winner}/answer.txt`
-7. **Analyze Logs**: Agents parse `status.json` and `massgen.log` for patterns
-8. **Generate Recommendations**: Agents produce prioritized improvements with code snippets
+3. **Monitor Progress**: Agents poll `{log_dir}/status.json` as frequently as they need
+4. **Wait for Completion**: Agents check `completion_percentage` until it reaches 100
+5. **Extract Results**: Agents read `{log_dir}/final/{winner}/answer.txt`
+6. **Analyze Logs**: Agents parse `status.json` and `massgen.log` for patterns
+7. **Generate Recommendations**: Agents produce prioritized improvements with code snippets
 
 <h2 id="agents">🤖 Agents</h2>
 
@@ -284,21 +280,29 @@ uv run massgen --automation \
   - Read access: docs/, massgen/
   - MCP tools: filesystem, command_line, planning
   - Workspace: workspace1
-  - Final answers: 7 (agent1.1 through agent1.7)
-  - Vote: Self-voted for agent1.7 (comprehensive final answer)
+  - Final answers: 5 (agent1.1 through agent1.5)
+  - Vote: Self-voted for agent1.1 (comprehensive final answer)
 
 - **Agent B (agent_b)**: `gemini-2.5-pro` (Gemini backend)
   - Command-line execution: local mode
   - Read access: docs/, massgen/
   - MCP tools: filesystem, command_line, planning
   - Workspace: workspace2
-  - Final answers: 6 (agent2.1 through agent2.6)
-  - Vote: Voted for agent_a (agent1.5) - recognized comprehensive analysis
+  - Final answers: 5 (agent2.1 through agent2.5)
+  - Vote: Voted for agent_a (agent1.1) - recognized comprehensive analysis
 
-**Session Logs:** `.massgen/massgen_logs/log_20251105_062604_250281/`
+**Session Logs:** `.massgen/massgen_logs/log_20251105_074751_835636/`
 
-**Duration:** ~13 minutes (794 seconds)
-**Winner:** agent_a (agent1.7) with 2 votes
+**Duration:** ~17 minutes (1011 seconds)
+**Winner:** agent_b (agent2.5) with 2 votes
+
+<h2 id="demo">🎥 Demo</h2>
+
+Watch the v0.1.8 Automation Mode Meta-Analysis demonstration:
+
+[![MassGen v0.1.8 Meta-Analysis Demo](https://img.youtube.com/vi/W60TT7NwJSk/0.jpg)](https://youtu.be/W60TT7NwJSk?si=31hbiVuqLoJN_8PA)
+
+In this demo, MassGen agents autonomously analyze MassGen itself by running nested experiments, monitoring execution through `status.json`, and generating telemetry and artifact writer snippets for future use.
 
 ---
 
@@ -317,323 +321,300 @@ Both agents successfully leveraged the new **automation mode** to perform meta-a
   uv run massgen --automation --config @examples/tools/todo/example_task_todo.yaml \
     "Create a simple HTML page about Bob Dylan"
   ```
-- **Parsed LOG_DIR** from first line of output:
-  `.massgen/massgen_logs/log_20251105_063715_843301`
 - **Monitored status.json** to track nested execution progress
 - **Read final results** from structured log directory
-- Analyzed orchestration behavior and identified opportunities for improvement
-- Identified 6 high-level findings from log analysis
-- Generated 7 progressive answers through iterative refinement
-- Final answer included prioritized improvements with starter code
+- Analyzed orchestration behavior and identified lack of observability
+- Generated 5 progressive answers through iterative refinement
+- Focused on experimental validation and code analysis
 
-**Agent B (gemini-2.5-pro)** - Analysis-Oriented:
+**Agent B (gemini-2.5-pro)** - Solutions:
 - Also ran nested MassGen experiments using automation mode
 - Successfully parsed structured output
-- Analyzed logs and identified similar patterns
-- Generated 2 comprehensive answers
-- Voted for Agent A's thorough analysis
+- Identified two key gaps: observability and file I/O efficiency
+- **Created example modules for improvement**: `telemetry.py`, `artifact_writer.py`, `integration_guide.md`
+- Generated 5 comprehensive answers with complete, tested code
+- Voted for Agent A's agent1.1 answer initially
 
 **Validation: Automation Mode Works!**
-
-✅ **Structured Output**: Both agents received clean ~10-line output (vs 2000+)
-✅ **LOG_DIR Extraction**: Agents successfully parsed first line to find log directory
-✅ **Status Monitoring**: Agents polled status.json to track progress
-✅ **Result Extraction**: Agents read final answers from predictable paths
-✅ **Nested Execution**: Parent MassGen run successfully spawned child runs
-✅ **Workspace Isolation**: No conflicts between parent/child workspaces
-✅ **Exit Codes**: Agents detected completion through exit code 0
 
 ### The Voting Pattern
 
 **Final Votes:**
-- **agent1.5**: 1 vote (Agent B voted for this comprehensive answer)
-- **agent1.6**: 1 vote (Agent A self-vote during refinement)
-- **agent1.7**: 2 votes (final winner)
+- **agent2.5**: 2 votes (Agent B self-vote + tie with agent1.1)
 
-**Winner:** agent_a (agent1.7)
+**Winner:** agent_b (agent2.5)
 
-Agent A's comprehensive analysis included:
-- 6 key findings from log analysis
-- Prioritized recommendations by ROI and effort
-- Copy-paste ready starter code for each improvement
-- Measurable A/B experiments with success metrics
-- Deep understanding of MassGen's architecture
+Agent B's winning solution included:
+- Two core gaps identified: lack of observability and inefficient file I/O
+- Three modules with complete implementations
+- Integration guide for immediate adoption
+- Enhanced status.json schema with telemetry fields
+- Focus on actionable, tested code over theoretical recommendations
 
 **Voting Statistics:**
-- Total restarts: 15 (Agent A: 9, Agent B: 6)
-- Agent A's iterative refinement produced progressively better answers
-- Both agents agreed on comprehensive analysis quality
+- Total votes: 6 votes across 4 different answers
+- Total restarts: 12 (Agent A: 5, Agent B: 7)
+- Both agents recognized the value of complete, tested implementations
 
 ### The Final Answer
 
-Agent A's winning analysis identified **7 priority improvements** for future MassGen versions, focusing on orchestration reliability and deterministic execution:
+Agent B's winning analysis focused on creating modules for immediate integration, addressing two core gaps identified through experimental analysis:
 
-**Key Discovery:** The nested experiment revealed that agents produced artifacts but the orchestrator did not transition to a finalization state—`status.json` showed `completion_percentage` stuck around 50%, `is_final_presentation=false`, and `winner=null`. Some agents were stuck in "restarting" state with no clear resolution path.
+**Key Findings from Nested Experiment:**
 
-**Why This Matters:**
-- Without deterministic consolidation/finalization, runs remain in intermediate states
-- Confuses users and downstream consumers
-- Increases cost and wall time due to unnecessary restarts
-- Makes automation brittle (no reliable final artifact location)
+The agents ran `uv run massgen --automation --config @examples/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"` and discovered:
+
+1. **Lack of Observability**: No mechanism to track model costs, token usage, or latency
+2. **Inefficient File I/O**: Redundant file writes creating noise and overhead
+
+**Agent B created two complete artifacts:**
 
 ---
 
-**1. Add Explicit Consolidation/Finalization Stage** (Highest Priority)
-- **Finding**: Orchestrator does not deterministically transition to finalization after all agents complete or timeout
-- **Impact**: Runs get stuck in intermediate states, making automation unreliable
-- **Solution**: Add explicit finalization that triggers when all agents finish OR global timeout reached
+**1. Telemetry Module (`telemetry.py`)** - Cost & Performance Visibility
+
+Provides robust, per-call telemetry for all LLM interactions:
 
 ```python
-import os
-import json
-from pathlib import Path
-
-def atomic_write_json(obj: dict, path: str):
-    """Atomically write JSON to avoid partial reads."""
-    os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-    tmp = path + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(obj, f, indent=2)
-    os.replace(tmp, path)
-
-def consolidate_results(log_dir: Path, agents_data: dict) -> dict:
-    """Collect all artifacts and finalize orchestration."""
-    final_output_dir = log_dir / "final_output"
-    final_output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Collect artifacts from each agent
-    manifest = {}
-    for agent_id, data in agents_data.items():
-        if data.get('artifacts'):
-            agent_dir = final_output_dir / agent_id
-            agent_dir.mkdir(exist_ok=True)
-            # Copy artifacts
-            manifest[agent_id] = {
-                'artifacts': data['artifacts'],
-                'votes': data.get('votes', 0)
-            }
-
-    # Select winner deterministically
-    winner = choose_winner(agents_data)
-
-    # Update status.json with finalization
-    status = {
-        'coordination': {'is_final_presentation': True, 'completion_percentage': 100},
-        'results': {'winner': winner, 'manifest': manifest}
-    }
-    atomic_write_json(status, log_dir / 'status.json')
-
-    return {'winner': winner, 'manifest': manifest}
-```
-
-**2. Deterministic Winner Selection + Explainability**
-- **Finding**: Winner selection logic unclear or non-deterministic
-- **Impact**: Unpredictable outcomes, hard to debug
-- **Solution**: Use deterministic tie-breaker with documented reasoning
-
-```python
-def choose_winner(agents_data: dict) -> str:
-    """Select winner using deterministic tie-breakers."""
-    candidates = []
-
-    for agent_id, data in agents_data.items():
-        vote_count = data.get('votes', 0)
-        estimated_cost = data.get('estimated_cost', float('inf'))
-        completion_time = data.get('completion_time', float('inf'))
-
-        candidates.append({
-            'agent_id': agent_id,
-            'vote_count': vote_count,
-            'estimated_cost': estimated_cost,
-            'completion_time': completion_time
-        })
-
-    # Sort by: most votes > lowest cost > fastest completion > agent_id
-    candidates.sort(
-        key=lambda c: (-c['vote_count'], c['estimated_cost'], c['completion_time'], c['agent_id'])
-    )
-
-    winner = candidates[0]['agent_id']
-    reason = f"votes={candidates[0]['vote_count']}, cost={candidates[0]['estimated_cost']:.4f}"
-
-    return {'winner': winner, 'reason': reason}
-```
-
-**3. Per-Agent Timeouts and Restart Limits**
-- **Finding**: No per-agent timeouts observed; stuck agents can stall entire run
-- **Impact**: One problematic agent blocks all progress
-- **Solution**: Wrap agent execution with timeouts and max restart limits
-
-```python
-import asyncio
-
-async def run_agent_with_timeout(agent_fn, args, timeout_s=120, max_restarts=2):
-    """Run agent with timeout and restart limits."""
-    for attempt in range(max_restarts + 1):
-        try:
-            result = await asyncio.wait_for(agent_fn(*args), timeout=timeout_s)
-            return {'status': 'success', 'result': result, 'attempts': attempt + 1}
-        except asyncio.TimeoutError:
-            if attempt < max_restarts:
-                print(f"Agent timeout (attempt {attempt + 1}/{max_restarts}), restarting...")
-                continue
-            return {'status': 'timeout', 'attempts': attempt + 1}
-        except Exception as e:
-            return {'status': 'error', 'error': str(e), 'attempts': attempt + 1}
-```
-
-**4. Track Tokens/Calls/Estimated Cost Per-Agent**
-- **Finding**: No cost tracking in status.json
-- **Impact**: Cannot make cost-aware decisions or optimize budget
-- **Solution**: Wrap LLM client to track tokens and costs
-
-```python
-class CostTrackingWrapper:
-    """Wrap LLM client to track token usage and costs."""
-
-    def __init__(self, client, price_per_1k_tokens=0.0012):
-        self.client = client
-        self.price_per_1k = price_per_1k_tokens
-        self.total_tokens = 0
-        self.call_count = 0
-
-    async def complete(self, *args, **kwargs):
-        response = await self.client.complete(*args, **kwargs)
-        tokens = response.get('usage', {}).get('total_tokens', 0)
-        self.total_tokens += tokens
-        self.call_count += 1
-        return response
-
-    def estimated_cost(self):
-        return (self.total_tokens / 1000) * self.price_per_1k
-
-    def get_stats(self):
-        return {
-            'total_tokens': self.total_tokens,
-            'call_count': self.call_count,
-            'estimated_cost': self.estimated_cost()
-        }
-```
-
-**5. Tiered-Model / Planner-Finisher Strategy**
-- **Finding**: All agents use same model regardless of task complexity
-- **Impact**: Overpaying for simple subtasks
-- **Solution**: Use cheap models for planning, strong models for synthesis
-
-```yaml
-agents:
-  - id: agent_a
-    backend:
-      model_profile:
-        planning: "gpt-4o-mini"      # Cheap for planning
-        synthesis: "gpt-5-mini"       # Strong for final output
-        default: "gpt-4o-mini"
-```
-
-**6. Watchdog + Idle Detection**
-- **Finding**: No mechanism to detect stalled orchestration
-- **Impact**: Runs can hang indefinitely with no progress
-- **Solution**: Background watchdog monitors `status.json` updates
-
-```python
+# telemetry.py
 import time
-from pathlib import Path
+import logging
+from functools import wraps
+from collections import defaultdict
+from typing import Dict, Any
 
-def watchdog(status_file: Path, idle_threshold_s=60, check_interval_s=10):
-    """Monitor status.json and trigger consolidation if idle."""
-    last_update = time.time()
+logger = logging.getLogger(__name__)
 
-    while True:
-        time.sleep(check_interval_s)
+MODEL_PRICING = {
+    "gpt-4o-mini": {"prompt": 0.15 / 1_000_000, "completion": 0.60 / 1_000_000},
+    "gemini-2.5-pro": {"prompt": 3.50 / 1_000_000, "completion": 10.50 / 1_000_000},
+    "default": {"prompt": 1.00 / 1_000_000, "completion": 3.00 / 1_000_000},
+}
 
-        if status_file.exists():
-            status = json.load(open(status_file))
-            current_update = status['meta'].get('last_updated', 0)
+class RunTelemetry:
+    """Aggregates telemetry data for a single MassGen run."""
 
-            # Check if stuck
-            if time.time() - current_update > idle_threshold_s:
-                print(f"Watchdog: No updates for {idle_threshold_s}s, triggering consolidation")
-                return 'trigger_consolidation'
+    def __init__(self):
+        self.by_model = defaultdict(lambda: {
+            "tokens": 0, "cost": 0.0, "latency": 0.0, "calls": 0
+        })
+        self.by_agent = defaultdict(lambda: {
+            "tokens": 0, "cost": 0.0, "latency": 0.0, "calls": 0
+        })
+        self.total_calls = 0
 
-            last_update = current_update
+    def record(self, model_name: str, agent_id: str, tokens: int, cost: float, latency: float):
+        """Records a single model call event."""
+        self.by_model[model_name]["tokens"] += tokens
+        self.by_model[model_name]["cost"] += cost
+        self.by_model[model_name]["latency"] += latency
+        self.by_model[model_name]["calls"] += 1
+
+        self.by_agent[agent_id]["tokens"] += tokens
+        self.by_agent[agent_id]["cost"] += cost
+        self.by_agent[agent_id]["latency"] += latency
+        self.by_agent[agent_id]["calls"] += 1
+
+        self.total_calls += 1
+
+    def summary(self) -> Dict[str, Any]:
+        """Returns serializable summary of all collected telemetry."""
+        return {
+            "total_calls": self.total_calls,
+            "by_model": dict(self.by_model),
+            "by_agent": dict(self.by_agent),
+        }
+
+def with_telemetry(telemetry_instance: RunTelemetry, agent_id: str):
+    """Decorator to wrap model client calls and record telemetry."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(model_client, *args, **kwargs):
+            model_name = getattr(model_client, 'name', 'unknown_model')
+            t0 = time.time()
+
+            response = func(model_client, *args, **kwargs)
+
+            latency = time.time() - t0
+
+            usage = response.get("usage", {})
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            total_tokens = prompt_tokens + completion_tokens
+
+            pricing = MODEL_PRICING.get(model_name, MODEL_PRICING["default"])
+            cost = (prompt_tokens * pricing["prompt"]) + (completion_tokens * pricing["completion"])
+
+            telemetry_instance.record(model_name, agent_id, total_tokens, cost, latency)
+
+            logger.info(
+                f"Model Telemetry: agent={agent_id} model={model_name} "
+                f"tokens={total_tokens} latency={latency:.2f}s cost=${cost:.6f}"
+            )
+
+            return response
+        return wrapper
+    return decorator
 ```
 
-**7. Developer UX: Dry-Run & Deterministic Mocks**
-- **Finding**: No way to test orchestration logic without live API calls
-- **Impact**: Slow development cycle, hard to reproduce bugs
-- **Solution**: Add `--dry-run` with mock agents
+**Benefits:**
+- Track total cost per run
+- Identify expensive operations by model/agent
+- Measure latency bottlenecks
+- Enable cost-aware decision making
+
+---
+
+**2. Artifact Writer Module (`artifact_writer.py`)** - Efficient File Operations
+
+Prevents redundant writes and ensures atomic file operations:
 
 ```python
-def make_dry_agent(agent_id: str, deterministic_answer: str):
-    """Create mock agent for testing orchestration."""
-    async def mock_agent(*args, **kwargs):
-        await asyncio.sleep(0.1)  # Simulate work
-        return {
-            'agent_id': agent_id,
-            'answer': deterministic_answer,
-            'tokens': 100,
-            'cost': 0.0001
+# artifact_writer.py
+import logging
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+def write_artifact(path: Path, content: str, require_non_empty: bool = False) -> bool:
+    """
+    Writes content to file atomically and avoids writing if unchanged.
+
+    Args:
+        path: Target file path
+        content: Content to write
+        require_non_empty: Skip write if content is empty
+
+    Returns:
+        True if file was written, False if skipped
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Skip empty writes if required
+    if require_non_empty and not content.strip():
+        logger.warning(f"Skipping write to {path}: content is empty")
+        return False
+
+    # Skip if content unchanged
+    if path.exists():
+        try:
+            if path.read_text(encoding='utf-8') == content:
+                logger.info(f"Skipping write to {path}: content unchanged")
+                return False
+        except Exception as e:
+            logger.error(f"Could not read existing file {path}: {e}")
+
+    # Atomic write
+    try:
+        tmp_path = path.with_suffix(path.suffix + '.tmp')
+        tmp_path.write_text(content, encoding='utf-8')
+        tmp_path.replace(path)
+        logger.info(f"Successfully wrote artifact to {path}")
+        return True
+    except IOError as e:
+        logger.error(f"Failed to write artifact to {path}: {e}")
+        return False
+```
+
+**Benefits:**
+- Reduces unnecessary I/O
+- Prevents file corruption (atomic writes)
+- Cleaner logs (skips unchanged writes)
+- Smaller snapshots
+
+---
+
+**Integration Guide (`integration_guide.md`)**
+
+Complete step-by-step instructions for adopting both modules:
+
+**Telemetry Integration:**
+```python
+# In orchestrator.py
+from .telemetry import RunTelemetry
+
+class Orchestrator:
+    def __init__(self, ...):
+        self.telemetry = RunTelemetry()
+
+    def _update_status(self):
+        status_data = {
+            # ... other fields
+            "telemetry": self.telemetry.summary()
         }
-    return mock_agent
+        # write to status.json
+```
+
+**Artifact Writer Integration:**
+```python
+# In filesystem tools
+from .artifact_writer import write_artifact
+from pathlib import Path
+
+def mcp__filesystem__write_file(path_str: str, content: str):
+    was_written = write_artifact(
+        path=Path(path_str),
+        content=content,
+        require_non_empty=True
+    )
+    return {"success": was_written}
 ```
 
 ---
 
-**Validation Plan:**
+**Enhanced `status.json` with Telemetry**
 
-Agent A created starter code in `scripts/orchestrator_snippets.py` and proposed these validation tests:
+With telemetry integrated, `status.json` gains real-time cost/performance visibility:
 
-1. **Functional Correctness** - Run automation command and verify:
-   - `status.json`: `is_final_presentation == true`
-   - `status.json`: `winner != null` and `winner_reason` exists
-   - `.massgen/.../final_output` exists with consolidated artifacts
-   - `completion_percentage == 100`
+```json
+{
+  "meta": {"session_id": "log_20251105_081530", "elapsed_seconds": 45.3},
+  "telemetry": {
+    "total_calls": 24,
+    "by_model": {
+      "gpt-4o-mini": {"tokens": 15230, "cost": 0.00345, "latency": 45.8, "calls": 18},
+      "gemini-2.5-pro": {"tokens": 8100, "cost": 0.04150, "latency": 22.3, "calls": 6}
+    },
+    "by_agent": {
+      "agent_a": {"tokens": 11800, "cost": 0.02350, "calls": 12},
+      "agent_b": {"tokens": 11530, "cost": 0.02145, "calls": 12}
+    }
+  }
+}
+```
 
-2. **Reliability Checks** - Introduce mock hung agent and confirm:
-   - Orchestrator times out that agent
-   - Still consolidates remaining outputs
-   - Final status shows which agents failed/succeeded
+**Use Cases:**
+- Set cost budgets per run
+- Compare model performance
+- Identify optimization opportunities
+- Debug slow operations
 
-3. **Cost & Speed Comparison** - Record these metrics per-run:
-   - `elapsed_seconds` (wall time)
-   - `total_tokens` and `estimated_cost` per agent
-   - `number of restarts` (sum across agents)
-   - Expectation: Fewer unnecessary restarts, predictable timeouts
-
-4. **Dry-Run Testing** - Run with `--dry-run` flag:
-   - Deterministic artifacts produced
-   - Consolidation/winner-selection logic runs without live LLMs
-   - Fast iteration for orchestration debugging
+---
 
 **Implementation Priority:**
-1. Atomic write + consolidation (prevents stuck states)
-2. Deterministic winner selection (predictability)
-3. Per-agent timeouts (reliability)
-4. Cost tracking (visibility)
-5. Watchdog (robustness)
-6. Dry-run mode (developer UX)
+1. **Telemetry module** (High impact, low effort)
+2. **Artifact writer** (Quick win, reduces I/O noise)
+3. **Integration** (Follow provided guide)
+4. **Validation** (Run experiments, compare metrics)
 
 <h2 id="conclusion">🎯 Conclusion</h2>
 
 This case study demonstrates that **MassGen v0.1.8's automation mode successfully enables meta-analysis**. Key achievements:
 
-✅ **Automation Mode Works**: Clean ~10-line output vs 250-3,000+ unparseable lines
+✅ **Automation Mode Works**: Clean ~10-line output vs verbose terminal output
 
 ✅ **Nested Execution**: Agents successfully ran MassGen from within MassGen
 
 ✅ **Structured Monitoring**: Agents polled status.json for real-time progress
 
-✅ **Result Extraction**: Agents parsed LOG_DIR and read final answers from predictable paths
-
 ✅ **Workspace Isolation**: No conflicts between parent and child runs
 
 ✅ **Exit Codes**: Meaningful exit codes enabled success/failure detection
 
-✅ **Discovered Real Issues**: Agents identified actual orchestration bug (stuck in intermediate state)
+✅ **Deliverables**: Agent B created complete, tested modules ready for integration
 
-✅ **Actionable Recommendations**: Generated 7 prioritized improvements with working starter code
-
-✅ **Validation Plan**: Proposed concrete test cases to verify fixes
+✅ **Actionable Improvements**: Telemetry and artifact writer modules solve real problems
 
 **Impact of Automation Mode:**
 
@@ -647,26 +628,23 @@ The `--automation` flag transforms MassGen from a human-interactive tool to an *
 - Workspace collisions
 
 **After v0.1.8 (automation mode):**
-- ~10 clean lines
-- Structured LOG_DIR + status.json
-- Real-time monitoring via polling
+- ~10-20 lines (header + warnings + results)
+- Structured output (QUESTION → WINNER → DURATION → COMPLETED)
+- Real-time monitoring via status.json polling
 - Nested experiments work reliably
 - Automatic workspace isolation
 
-**Real-World Impact:**
+**What Agents Delivered:**
 
-This meta-analysis discovered a **real bug** in MassGen's orchestration: runs can get stuck in intermediate states without deterministic finalization. The agents:
-1. Ran a nested experiment
-2. Observed `completion_percentage` stuck at 50%
-3. Identified root cause (no consolidation stage)
-4. Proposed concrete fix with starter code
-5. Created validation test plan
-
-This demonstrates the power of automation mode for **autonomous debugging and continuous improvement**.
+Instead of just identifying problems, agents created solutions:
+1. **telemetry.py** - Complete module with RunTelemetry class and decorator
+2. **artifact_writer.py** - Atomic, idempotent file writing
+3. **integration_guide.md** - Step-by-step adoption instructions
+4. **Enhanced status.json** - Schema with telemetry fields
 
 **Broader Implications:**
 
-This case study validates a powerful development pattern: **AI systems analyzing themselves**. By providing:
+This case study validates a powerful development pattern: **AI systems improving themselves**. By providing:
 1. Clean structured output (`--automation`)
 2. Real-time status monitoring (`status.json`)
 3. Predictable result paths (`final/{winner}/answer.txt`)
@@ -676,29 +654,27 @@ We enable agents to:
 - Run controlled experiments on complex systems
 - Monitor long-running asynchronous processes
 - Extract and analyze structured results
-- **Discover real bugs** through empirical testing
-- Propose data-driven improvements with working code
-- Validate fixes through reproducible test cases
+- **Generate code** for improvements
+- Provide integration guides and validation plans
 
 **Future Applications:**
 
-Automation mode unlocks many new use cases beyond meta-analysis:
+Automation mode unlocks many new use cases:
 - **CI/CD Integration**: Run MassGen in automated pipelines
 - **Batch Processing**: Process multiple questions in parallel
 - **Monitoring & Alerting**: Track completion and success rates
-- **Agent-to-Agent**: One agent delegates to MassGen, waits for results
+- **Agent-to-Agent Delegation**: One agent delegates to MassGen, waits for results
 - **Research & Benchmarking**: Systematically evaluate MassGen on test suites
-- **Autonomous Debugging**: Agents find and fix bugs through experimentation
+- **Self-Improvement**: Continuous meta-analysis to identify optimizations
 
 **Next Steps:**
 
-The 7 recommendations from agents will guide future development:
-1. Implement consolidation/finalization stage (Priority 1 - fixes stuck state bug)
-2. Add deterministic winner selection with explainability
-3. Implement per-agent timeouts and restart limits
-4. Add cost tracking to status.json
-5. Create dry-run mode for faster development
-6. Add watchdog for idle detection
+The modules created by agents will be integrated in future versions:
+1. Add `telemetry.py` to MassGen core
+2. Integrate `artifact_writer.py` into filesystem operations
+3. Update `status.json` schema to include telemetry
+4. Validate cost tracking across multiple runs
+5. Document telemetry API for users
 
 ---
 
@@ -707,12 +683,14 @@ The 7 recommendations from agents will guide future development:
 - ✅ **Planning Phase**: Complete
 - ✅ **Features Implemented**: Complete (v0.1.8 automation mode)
 - ✅ **Testing**: Complete (November 5, 2025)
+- ✅ **Modules Created**: telemetry.py, artifact_writer.py, integration_guide.md
 - ✅ **Case Study Documentation**: Complete
 - 🎯 **Next Steps**:
-  - Implement agent recommendations (consolidation, deterministic winner, timeouts)
-  - Run follow-up meta-analysis using v0.1.8+ to validate improvements
-  - Integrate automation mode into CI/CD workflows
+  - Integrate telemetry module into MassGen core
+  - Integrate artifact writer into filesystem operations
+  - Add telemetry fields to status.json schema
+  - Run validation experiments with cost tracking
 
 **Version:** v0.1.8
 **Date:** November 5, 2025
-**Session ID:** log_20251105_062604_250281
+**Session ID:** log_20251105_074751_835636
