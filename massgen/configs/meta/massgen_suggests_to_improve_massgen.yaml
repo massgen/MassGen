@@ -5,7 +5,7 @@
 # monitor their progress, and report results.
 #
 # Run with:
-#   uv run massgen --config @examples/configs/meta/massgen_suggests_to_improve_massgen.yaml "Read through the attached MassGen code and docs. Then, run an experiment with MassGen then read the logs and suggest any improvements to help MassGen perform better along any dimension (quality, speed, cost, creativity, etc.)."
+#   uv run massgen --config @examples/configs/meta/massgen_suggests_to_improve_massgen.yaml "Read through the attached MassGen code and docs. Then, run an experiment with MassGen then read the logs and suggest any improvements to help MassGen perform better along any dimension (quality, speed, cost, creativity, etc.) and write small code snippets suggesting how to start."
 # Later: Fix DIRECTLY then run again to improve.
 
 agents:
@@ -72,6 +72,10 @@ agents:
 orchestrator:
   snapshot_storage: "snapshots_meta"
   agent_temporary_workspace: "temp_workspaces_meta"
+
+  voting_sensitivity: balanced
+  # max_new_answers_per_agent: 5
+  # answer_novelty_requirement: balanced
 
   # Add context path so agent understands MassGen structure
   context_paths:

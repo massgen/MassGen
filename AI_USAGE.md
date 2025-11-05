@@ -315,5 +315,4 @@ agents:
 ## Full Documentation
 
 - **Complete guide**: `docs/source/user_guide/automation.rst`
-- **Quick commands**: `AUTOMATION_COMMANDS.md`
 - **README section**: Search "Automation & LLM Integration" in `README.md`

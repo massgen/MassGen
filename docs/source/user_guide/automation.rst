@@ -11,13 +11,16 @@ This guide shows how to automate MassGen coordination using LLM agents and progr
 Overview
 ========
 
-MassGen provides **automation mode** designed specifically for LLM agents and background execution:
+MassGen provides **automation mode** (introduced in v0.1.8) designed specifically for LLM agents and background execution:
 
 - ✅ **Silent output** (~10 lines instead of 250-3,000+)
 - ✅ **Real-time status tracking** via ``status.json`` (updated every 2 seconds)
 - ✅ **Meaningful exit codes** (success, timeout, error, interrupted)
 - ✅ **Structured result files** (machine-readable JSON and text)
 - ✅ **Parallel execution** support (isolated log directories)
+
+.. seealso::
+   **Real-World Example:** See the :doc:`../examples/case_studies/meta-self-analysis-automation-mode` case study demonstrating MassGen agents using automation mode to analyze MassGen itself and propose performance improvements.
 
 Quick Start
 ===========
@@ -276,11 +279,7 @@ When you use ``--automation`` flag, MassGen automatically:
 
    ✅ **Snapshot storage** - Per-agent subdirectories
 
-   ✅ **MCP servers** - Process-based (stdio), no port conflicts
-
-   ✅ **Docker containers** - Per-agent naming
-
-   ✅ **Process memory** - OS-level isolation
+   *Note on use of Docker for code execution: Per-agent container naming is implemented but Docker execution for parallel instances has not been tested; this will be for a future version.*
 
 **No manual configuration needed!** Just use the same config multiple times:
 
@@ -400,19 +399,17 @@ Quick Reference
    {
      "meta": {
        "last_updated": 1730678901.234,
-       "session_id": "log_20251103_120000",
-       "log_dir": "/path/to/massgen_logs/log_20251103_120000",
+       "session_id": "log_20251103_143022_123456",
+       "log_dir": ".massgen/massgen_logs/log_20251103_143022_123456",
        "question": "Your question here",
        "start_time": 1730678800.000,
        "elapsed_seconds": 101.234
      },
      "coordination": {
        "phase": "enforcement",
-       "current_iteration": 2,
-       "max_iteration": 3,
        "active_agent": "agent_b",
        "completion_percentage": 65,
-       "is_final_round": false
+       "is_final_presentation": false
      },
      "agents": {
        "agent_a": {
@@ -424,8 +421,7 @@ Quick Reference
            "voted_for_label": "agent1.1",
            "reason_preview": "Strong JSON structure..."
          },
-         "restart_count": 1,
-         "current_round": 2,
+         "times_restarted": 1,
          "last_activity": 1730678850.123,
          "error": null
        },
@@ -434,8 +430,7 @@ Quick Reference
          "answer_count": 0,
          "latest_answer_label": null,
          "vote_cast": null,
-         "restart_count": 1,
-         "current_round": 2,
+         "times_restarted": 1,
          "last_activity": 1730678900.456,
          "error": {
            "type": "timeout",
@@ -535,6 +530,9 @@ Meta-Coordination: MassGen Running MassGen
 
 MassGen can autonomously run and monitor itself, enabling self-improvement and automated experimentation.
 
+.. tip::
+   **Case Study:** The v0.1.8 release includes a complete :doc:`../examples/case_studies/meta-self-analysis-automation-mode` demonstrating meta-coordination in action. Agents successfully ran nested MassGen experiments, analyzed execution logs, and proposed 6 prioritized performance improvements with starter code.
+
 Available Meta Configs
 -----------------------
 
@@ -551,6 +549,8 @@ Available Meta Configs
 
    uv run massgen --config @examples/configs/meta/massgen_suggests_to_improve_massgen.yaml \
        "Run an experiment with MassGen then read the logs and suggest any improvements to help MassGen perform better along any dimension (quality, speed, cost, creativity, etc.)."
+
+This configuration was used in the v0.1.8 case study where agents analyzed MassGen's architecture, ran controlled experiments, and identified optimization opportunities.
 
 Example Configuration
 ---------------------

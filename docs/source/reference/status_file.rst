@@ -500,63 +500,6 @@ status.json evolves through these states during coordination:
      }
    }
 
-Field Explanations
-==================
-
-Why ``times_restarted``?
-------------------------
-
-MassGen uses **adaptive coordination**: when one agent provides a new answer, other agents can restart to incorporate that new information. This creates a dynamic, collaborative process rather than rigid rounds.
-
-``times_restarted`` tracks how many times an agent has restarted to review others' work. Higher values indicate more collaborative iteration.
-
-Why ``answer_count``?
----------------------
-
-Typically 0 or 1, but could be higher if an agent provides multiple answers during coordination (rare but possible in complex scenarios).
-
-Why ``completion_percentage``?
--------------------------------
-
-Provides a rough progress estimate based on:
-- Number of answers submitted (each agent typically provides 1)
-- Number of votes cast (each agent casts 1 vote)
-
-Formula: ``(total_answers + total_votes) / (num_agents * 2) * 100``
-
-Not perfectly accurate (agents can restart, provide multiple answers), but useful for monitoring.
-
-Why ``latest_answer_label``?
------------------------------
-
-Answer labels follow the format: ``agent{N}.{version}``
-
-Examples:
-- ``agent1.1`` - Agent 1's first answer
-- ``agent2.1`` - Agent 2's first answer
-- ``agent1.2`` - Agent 1's second answer (after restart)
-
-These labels are used in voting to track which specific answer an agent voted for.
-
-Null vs. Missing Fields
-========================
-
-- Fields can be ``null`` to indicate "not available yet"
-- ``null`` values are intentional and should be checked
-- Missing fields indicate the feature is not applicable
-
-**Examples:**
-
-.. code-block:: json
-
-   {
-     "active_agent": null,           // No agent currently active (intentional)
-     "winner": null,                 // Winner not determined yet
-     "vote_cast": null,              // Agent hasn't voted yet
-     "error": null,                  // No error occurred (all good!)
-     "final_answer_preview": null    // Answer not available yet
-   }
-
 See Also
 ========
 
