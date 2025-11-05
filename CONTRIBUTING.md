@@ -95,9 +95,85 @@ To add support for a new model provider:
 2. Inherit from the base backend class in `massgen/backend/base.py`
 3. Implement the required methods for message processing and completion parsing
 4. Add the model mapping in `massgen/utils.py`
-5. Update configuration templates in `massgen/configs/`
-6. Add tests in `massgen/tests/`
-7. Update documentation
+5. **Add backend capabilities to `massgen/backend/capabilities.py`** - Required for config validation
+6. Update configuration templates in `massgen/configs/`
+7. Add tests in `massgen/tests/`
+8. **Update the config validator** - See [Updating the Config Validator](#updating-the-config-validator) below
+9. Update documentation
+
+### Updating the Config Validator
+
+**⚠️ IMPORTANT**: Whenever you add new configuration options, backends, or change the config schema, you MUST update the config validator.
+
+The config validator (`massgen/config_validator.py`) ensures users get helpful error messages when they make configuration mistakes. When you add a new feature:
+
+**1. Add to Backend Capabilities** (for new backends)
+```python
+# In massgen/backend/capabilities.py
+BACKEND_CAPABILITIES = {
+    # ...
+    "your_backend": BackendCapabilities(
+        backend_type="your_backend",
+        provider_name="Your Backend Name",
+        supported_capabilities={"mcp", "web_search", ...},
+        builtin_tools=[...],
+        filesystem_support="mcp",
+        models=["model-1", "model-2"],
+        default_model="model-1",
+        env_var="YOUR_API_KEY",
+        notes="Description of your backend",
+    ),
+}
+```
+
+**2. Update Validator Enums** (for new config options)
+```python
+# In massgen/config_validator.py
+# If adding new valid values for existing fields:
+VALID_PERMISSION_MODES = {"default", "acceptEdits", "bypassPermissions", "plan"}
+VALID_DISPLAY_TYPES = {"rich_terminal", "simple"}
+```
+
+**3. Add Validation Logic** (for new config fields)
+```python
+# In massgen/config_validator.py
+# Add validation in the appropriate _validate_* method
+def _validate_your_feature(self, config, result):
+    if "your_field" in config:
+        # Validate type
+        # Validate values
+        # Add helpful error messages
+```
+
+**4. Add Tests for Common Mistakes**
+```python
+# In massgen/tests/test_config_validator.py
+def test_invalid_your_feature(self):
+    """Test invalid your_feature value."""
+    config = {
+        "your_field": "invalid_value",
+        # ...
+    }
+    validator = ConfigValidator()
+    result = validator.validate_config(config)
+    assert not result.is_valid()
+    assert any("your helpful error message" in error.message for error in result.errors)
+```
+
+**5. Test Validation**
+```bash
+# Validate all example configs still pass
+uv run python scripts/validate_all_configs.py
+
+# Run validator tests
+uv run pytest massgen/tests/test_config_validator.py -v
+```
+
+**Why This Matters:**
+- Users get clear, actionable error messages instead of cryptic failures
+- Prevents common configuration mistakes
+- Makes the framework more accessible to new users
+- Pre-commit hooks automatically validate configs in `massgen/configs/`
 
 ## 🔒 API Stability & Versioning
 
@@ -269,7 +345,7 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 
 ## 🔧 Development Workflow
 
-> **Important**: Our next version is v0.1.6. If you want to contribute, please contribute to the `dev/v0.1.6` branch.
+> **Important**: Our next version is v0.1.8. If you want to contribute, please contribute to the `dev/v0.1.8` branch (or `main` if dev/v0.1.8 doesn't exist yet).
 
 ### 1. Create Feature Branch
 
@@ -277,8 +353,8 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 # Fetch latest changes from upstream
 git fetch upstream
 
-# Create feature branch from dev/v0.1.6
-git checkout -b feature/your-feature-name upstream/dev/v0.1.6
+# Create feature branch from dev/v0.1.8 (or main if dev branch doesn't exist yet)
+git checkout -b feature/your-feature-name upstream/dev/v0.1.8
 ```
 
 ### 2. Make Your Changes
@@ -375,7 +451,7 @@ git push origin feature/your-feature-name
 ```
 
 Then create a pull request on GitHub:
-- Base branch: `dev/v0.1.6`
+- Base branch: `dev/v0.1.8` (or `main` if dev branch doesn't exist yet)
 - Compare branch: `feature/your-feature-name`
 - Add clear description of changes
 - Link any related issues
@@ -481,7 +557,7 @@ Have a significant feature idea not covered by existing tracks?
 - [ ] Tests pass locally
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow convention
-- [ ] PR targets `dev/v0.1.6` branch
+- [ ] PR targets `dev/v0.1.8` branch (or `main` if dev branch doesn't exist yet)
 
 ### PR Description Should Include
 
@@ -568,15 +644,20 @@ Every feature needs documentation! Here's how to decide where and what to write.
    - Location: `docs/source/quickstart/configuration.rst`
    - What to include: YAML examples, parameter descriptions
 
-3. ✅ **API Reference** - If feature changes Python API
+3. ✅ **Config Validator** - **REQUIRED if feature changes config schema**
+   - Location: `massgen/config_validator.py` and `massgen/backend/capabilities.py`
+   - What to include: Validation logic, error messages, tests
+   - **See**: [Updating the Config Validator](#updating-the-config-validator) section above
+
+4. ✅ **API Reference** - If feature changes Python API
    - Location: `docs/source/api/`
    - What to include: Docstrings, function signatures, examples
 
-4. ✅ **CHANGELOG.md** - What changed in this version
+5. ✅ **CHANGELOG.md** - What changed in this version
    - Location: Root directory
    - What to include: Brief description under "Added", "Changed", or "Fixed"
 
-5. ✅ **Examples** - **REQUIRED for every feature**
+6. ✅ **Examples** - **REQUIRED for every feature**
    - Location: `docs/source/examples/basic_examples.rst` or feature-specific example files
    - What to include: Runnable code showing feature in action
    - **Note**: Examples are ALWAYS required, even if you write a case study. Case studies showcase real-world usage; examples show basic functionality.
@@ -657,6 +738,7 @@ Every feature needs documentation! Here's how to decide where and what to write.
 |--------------|-------------|----------|-----------|
 | **User Guide** | Every feature | `docs/source/user_guide/` | ✅ Yes |
 | **Config Docs** | Config changes | `docs/source/quickstart/configuration.rst` | ✅ Yes |
+| **Config Validator** | Config schema changes | `massgen/config_validator.py` | ✅ Yes (if config changes) |
 | **API Docs** | API changes | `docs/source/api/` | ✅ Yes |
 | **CHANGELOG** | Every PR | `CHANGELOG.md` | ✅ Yes |
 | **Examples** | **Every feature** | `docs/source/examples/` | ✅ **ALWAYS** |

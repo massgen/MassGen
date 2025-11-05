@@ -617,17 +617,11 @@ def create_agents_from_config(
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
 
-        # Route system_message to backend-specific system prompt parameter
+        # System message handling: all backends use system_message at agent level
         system_msg = agent_data.get("system_message")
         if system_msg:
-            if backend_type_lower == "claude_code":
-                # For Claude Code, use append_system_prompt to preserve Claude Code capabilities
-                agent_config.backend_params["append_system_prompt"] = system_msg
-            else:
-                # For other backends, fall back to deprecated custom_system_instruction
-                # TODO: Add backend-specific routing for other backends
-                # Set private attribute directly to avoid deprecation warning
-                agent_config._custom_system_instruction = system_msg
+            # Set on AgentConfig (ConfigurableAgent will extract it)
+            agent_config._custom_system_instruction = system_msg
 
         # Timeout configuration will be applied to orchestrator instead of individual agents
 
@@ -1234,6 +1228,8 @@ async def run_question_with_history(
                 "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
             ),
             max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+            enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
+            max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
         )
 
     # Load previous turns and winning agents history from session storage for multi-turn conversations
@@ -1273,6 +1269,8 @@ async def run_question_with_history(
                     """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
+                enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
@@ -1341,8 +1339,8 @@ async def run_question_with_history(
         base_dir = get_log_session_dir_base()
         root_final_dir = base_dir / "final"
 
-        # Copy if the attempt's final directory exists
-        if attempt_final_dir.exists():
+        # Only copy if source and destination are different (i.e., we're using attempt tracking)
+        if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
             # Remove root final dir if it already exists
             if root_final_dir.exists():
                 shutil.rmtree(root_final_dir)
@@ -1416,6 +1414,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                     """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
+                enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
         # Get orchestrator parameters from config
@@ -1456,6 +1456,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                     "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
                 ),
                 max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+                enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
             )
 
         orchestrator = Orchestrator(
@@ -1529,8 +1531,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             base_dir = get_log_session_dir_base()
             root_final_dir = base_dir / "final"
 
-            # Copy if the attempt's final directory exists
-            if attempt_final_dir.exists():
+            # Only copy if source and destination are different (i.e., we're using attempt tracking)
+            if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
                 # Remove root final dir if it already exists
                 if root_final_dir.exists():
                     shutil.rmtree(root_final_dir)
@@ -2589,6 +2591,27 @@ async def main(args):
             if args.debug:
                 logger.debug(f"Resolved config path: {resolved_path}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
+
+            # Automatic config validation (unless --skip-validation flag is set)
+            if not args.skip_validation:
+                from .config_validator import ConfigValidator
+
+                validator = ConfigValidator()
+                validation_result = validator.validate_config(config)
+
+                # Show errors if any
+                if validation_result.has_errors():
+                    print(validation_result.format_errors(), file=sys.stderr)
+                    print(f"\n{BRIGHT_RED}❌ Config validation failed. Fix errors above or use --skip-validation to bypass.{RESET}\n")
+                    sys.exit(1)
+
+                # Show warnings (non-blocking unless --strict-validation)
+                if validation_result.has_warnings():
+                    print(validation_result.format_warnings())
+                    if args.strict_validation:
+                        print(f"\n{BRIGHT_RED}❌ Config validation failed in strict mode (warnings treated as errors).{RESET}\n")
+                        sys.exit(1)
+                    print()  # Extra newline for readability
         else:
             model = args.model
             if args.backend:
@@ -2910,6 +2933,33 @@ Environment Variables:
         action="store_true",
         help="Include example configurations in schema display",
     )
+    parser.add_argument(
+        "--validate",
+        type=str,
+        metavar="CONFIG_FILE",
+        help="Validate a configuration file without running it",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as errors during validation (use with --validate)",
+    )
+    parser.add_argument(
+        "--json",
+        dest="json_output",
+        action="store_true",
+        help="Output validation results in JSON format (use with --validate)",
+    )
+    parser.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skip automatic config validation when loading config files",
+    )
+    parser.add_argument(
+        "--strict-validation",
+        action="store_true",
+        help="Treat config warnings as errors and abort execution",
+    )
 
     # Timeout options
     timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
@@ -2921,14 +2971,26 @@ Environment Variables:
 
     args = parser.parse_args()
 
-    # Always setup logging (will save INFO to file, console output depends on debug flag)
-    setup_logging(debug=args.debug)
+    # Handle special commands first (before logging setup to avoid creating log dirs)
+    if args.validate:
+        from .config_validator import ConfigValidator
 
-    if args.debug:
-        logger.info("Debug mode enabled")
-        logger.debug(f"Command line arguments: {vars(args)}")
+        validator = ConfigValidator()
+        result = validator.validate_config_file(args.validate)
 
-    # Handle special commands first
+        # Output results
+        if args.json_output:
+            # JSON output for machine parsing
+            print(json.dumps(result.to_dict(), indent=2))
+        else:
+            # Human-readable output
+            print(result.format_all())
+
+        # Exit with appropriate code
+        if not result.is_valid() or (args.strict and result.has_warnings()):
+            sys.exit(1)
+        sys.exit(0)
+
     if args.list_examples:
         show_available_examples()
         return
@@ -2942,6 +3004,13 @@ Environment Variables:
 
         show_schema(backend=args.schema_backend, show_examples=args.with_examples)
         return
+
+    # Setup logging for all other commands (actual execution, setup, init, etc.)
+    setup_logging(debug=args.debug)
+
+    if args.debug:
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
 
     # Launch interactive API key setup if requested
     if args.setup:

@@ -7,16 +7,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
-**v0.1.5 (October 2025)** - Memory System
+**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
+Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
+
+**v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
+External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
+
+**v0.1.5 (October 29, 2025)** - Memory System
 Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
 
-**v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
-Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
-
-**v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
-Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
-
 ---
+
+## [0.1.7] - 2025-11-03
+
+### Added
+- **Agent Task Planning System**: MCP-based task management with dependency tracking
+  - New `massgen/mcp_tools/planning/` module with dedicated planning server (`_planning_mcp_server.py`)
+  - Task dataclasses with dependency validation and status management (`planning_dataclasses.py`)
+  - Support for task states (pending/in_progress/completed/blocked) with automatic transitions based on dependencies
+  - Orchestrator integration for plan-aware coordination
+  - Test suite in `test_planning_integration.py` and `test_planning_tools.py`
+
+- **Background Shell Execution**: Long-running command support with persistent sessions
+  - New `BackgroundShell` class in `massgen/filesystem_manager/background_shell.py`
+  - Shell lifecycle management with output streaming and real-time monitoring
+  - Automatic timeout handling for long-running processes
+  - Enhanced code execution server with background execution capabilities
+  - Test coverage in `test_background_shell.py`
+
+- **Preemption Coordination**: Multi-agent coordination with interruption support
+  - Agents can preempt ongoing coordination to submit better answers without full restart
+  - Enhanced coordination tracker with preemption event logging
+  - Improved orchestrator logic to preserve partial progress during preemption
+
+### Fixed
+- **System Message Handling**: Resolved system message extraction in Claude Code backend for background shell execution
+- **Case Study Documentation**: Fixed broken links and outdated examples in older case studies
+
+### Documentations, Configurations and Resources
+
+- **Documentation Updates**: New user guides and design documentation
+  - New `docs/source/user_guide/agent_task_planning.rst`: Task planning guide with usage patterns and API reference
+  - Updated `docs/source/user_guide/code_execution.rst`: Added 122 lines for background shell usage
+  - New `docs/dev_notes/agent_planning_coordination_design.md`: Comprehensive design document for agent planning and coordination system
+  - New `docs/dev_notes/preempt_not_restart_design.md`: 456-line design document with preemption algorithms
+  - Updated `docs/source/development/architecture.rst`: Added 61 lines for preemption coordination architecture
+
+- **Configuration Examples**: New YAML configurations demonstrating v0.1.7 features
+  - `example_task_todo.yaml`: Task planning configuration
+  - `background_shell_demo.yaml`: Background shell execution demonstration
+
+### Technical Details
+- **Major Focus**: Agent task planning with dependencies, background command execution, preemption-based coordination
+- **Contributors**: @ncrispino @Henry-811 and the MassGen team
+
+## [0.1.6] - 2025-10-31
+
+### Added
+- **Framework Interoperability**: External agent framework integration as MassGen custom tools
+  - New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
+  - **AG2 Lesson Planner Tool**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning (supports streaming)
+  - **LangGraph Lesson Planner Tool**: LangGraph graph-based workflows integrated as tool
+  - **AgentScope Lesson Planner Tool**: AgentScope agent system wrapped for lesson creation
+  - **OpenAI Assistants Lesson Planner Tool**: OpenAI Assistants API integrated as tool
+  - **SmoLAgent Lesson Planner Tool**: HuggingFace SmoLAgent integration for lesson planning
+  - Enables MassGen agents to delegate tasks to specialized external frameworks
+  - Each framework runs autonomously and returns results to MassGen orchestrator
+  - Note: Only AG2 currently supports streaming; other frameworks return complete results
+
+- **Configuration Validator**: Comprehensive YAML configuration validation system
+  - New `ConfigValidator` class in `massgen/config_validator.py` for pre-flight validation
+  - Memory configuration validation with detailed error messages
+  - Pre-commit hook integration for automatic config validation
+  - Comprehensive test suite in `massgen/tests/test_config_validator.py`
+  - Validates agent configurations, backend parameters, tool settings, and memory options
+  - Provides actionable error messages with suggestions for common mistakes
+
+### Changed
+- **Backend Architecture Refactoring**: Unified tool execution with ToolExecutionConfig
+  - New `ToolExecutionConfig` dataclass in `base_with_custom_tool_and_mcp.py` for standardized tool handling
+  - Refactored `ResponseBackend` with unified tool execution flow
+  - Refactored `ChatCompletionsBackend` with unified tool execution flow
+  - Refactored `ClaudeBackend` with unified tool execution methods
+  - Eliminates duplicate code paths between custom tools and MCP tools
+  - Consistent error handling and status reporting across all tool types
+  - Improved maintainability and extensibility for future tool systems
+
+- **Gemini Backend Simplification**: Major architectural cleanup and consolidation
+  - Removed `gemini_mcp_manager.py` module
+  - Removed `gemini_trackers.py` module
+  - Refactored `gemini.py` to use manual tool execution via base class
+  - Streamlined tool handling and cleanup logic
+  - Removed continuation logic and duplicate code
+  - Updated `_gemini_formatter.py` for simplified tool conversion
+  - Net reduction of 1,598 lines through consolidation
+  - Improved maintainability and performance
+
+- **Custom Tool System Enhancement**: Improved tool management and execution
+  - Enhanced `ToolManager` with category management capabilities
+  - Improved tool registration and validation system
+  - Enhanced tool result handling and error reporting
+  - Better support for async tool execution
+  - Improved tool schema generation for LLM consumption
+
+### Documentations, Configurations and Resources
+
+- **Framework Interoperability Examples**: 8 new configuration files demonstrating external framework integration
+  - **AG2 Examples**: `ag2_lesson_planner_example.yaml`, `ag2_and_langgraph_lesson_planner.yaml`, `ag2_and_openai_assistant_lesson_planner.yaml`
+  - **LangGraph Examples**: `langgraph_lesson_planner_example.yaml`
+  - **AgentScope Examples**: `agentscope_lesson_planner_example.yaml`
+  - **OpenAI Assistants Examples**: `openai_assistant_lesson_planner_example.yaml`
+  - **SmoLAgent Examples**: `smolagent_lesson_planner_example.yaml`
+  - **Multi-Framework Examples**: `two_models_with_tools_example.yaml`
+
+### Technical Details
+- **Major Focus**: Framework interoperability for external agent integration, unified tool execution architecture, Gemini backend simplification, and configuration validation system
+- **Contributors**: @Eric-Shang @praneeth999 @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.5] - 2025-10-29
 

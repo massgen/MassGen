@@ -61,7 +61,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.5 Features](#-latest-features-v015)
+- [v0.1.7 Features](#-latest-features-v017)
 </details>
 
 <details open>
@@ -106,15 +106,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.5](#recent-achievements-v015)
-  - [v0.0.3 - v0.1.4](#previous-achievements-v003---v014)
+  - [v0.1.7](#recent-achievements-v017)
+  - [v0.0.3 - v0.1.6](#previous-achievements-v003---v016)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.6 Roadmap](#v016-roadmap)
+- [v0.1.8 Roadmap](#v018-roadmap)
 </details>
 
 <details open>
@@ -139,51 +139,32 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.5)
+## 🆕 Latest Features (v0.1.7)
 
-**🎉 Released: October 2025**
+**🎉 Released: November 3, 2025**
 
-**What's New in v0.1.5:**
-- **🧠 Long-Term Memory System** - Semantic memory with retrieval across sessions
-- **🗜️ Automatic Context Compression** - Smart compression when approaching token limits
-- **🔄 Memory Sharing for Multi-Turn Conversations** - Agents access knowledge from previous turns
+**What's New in v0.1.7:**
+- **📋 Agent Task Planning** - Organize complex multi-step workflows with dependency tracking
+- **🔄 Background Shell Execution** - Run long-running commands with persistent sessions and real-time monitoring
+- **⚡ Preemption Coordination** - Interrupt ongoing coordination without restarting to preserve progress
 
 **Key Improvements:**
-- Persistent memory via mem0 integration with vector storage
-- Conversational memory for short-term context tracking
-- Context monitoring with real-time token usage tracking
-- Session management for memory isolation and continuation
-- Qdrant vector database integration for semantic search
+- MCP-based planning tools with automatic task status management
+- Persistent shell sessions that survive across agent interactions
+- Agents can submit better answers mid-coordination without losing partial progress
+- Task dependencies with automatic validation and blocking
+- Output streaming for background commands with timeout handling
 
-**Get Started with v0.1.5:**
+**Try v0.1.7 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Multi-agent collaboration with context compression
-massgen --config @examples/memory/gpt5mini_gemini_context_window_management \
-  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+# Agent task planning for complex multi-step projects
+massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
 
-# Research-to-implementation workflow with memory persistence
-# Prerequisites: Start Qdrant and crawl4ai Docker containers
-docker run -d -p 6333:6333 -p 6334:6334 \
-  -v $(pwd)/.massgen/qdrant_storage:/qdrant/storage:z qdrant/qdrant
-docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
-
-# Session 1 - Research phase:
-massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation \
-  "Use crawl4ai to research the latest multi-agent AI papers and techniques from 2025. Focus on: coordination mechanisms, voting strategies, tool-use patterns, and architectural innovations."
-
-# Session 2 - Implementation analysis (continue in same session):
-# "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
-```
-
-→ See [Multi-Turn Persistent Memory Case Study](docs/source/examples/case_studies/multi-turn-persistent-memory.md) for detailed analysis
-
-```bash
-# Test automatic context compression
-massgen --config @examples/memory/single_agent_compression_test \
-  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+# Background shell execution for parallel long-running commands
+uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1027,43 +1008,45 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.5)
+### Recent Achievements (v0.1.7)
 
-**🎉 Released: October 2025**
+**🎉 Released: November 3, 2025**
 
-#### Memory System
-- **PersistentMemory**: Long-term semantic memory storage via mem0 integration with fact extraction and retrieval across sessions
-- **ConversationMemory**: Short-term verbatim message tracking for active conversation context
-- **Automatic Context Compression**: Smart compression when approaching token limits with configurable thresholds (trigger_threshold, target_ratio)
-- **Cross-Agent Memory Sharing**: Agents share memory with turn-aware filtering to prevent temporal information leakage
-- **Context Monitoring**: Real-time token usage tracking with automatic compression triggers
-- **Session Management**: Memory isolation and continuation across runs with session naming support
-- **Qdrant Integration**: Vector database support for efficient semantic search in both server and local modes
-- **Configurable Memory Providers**: Support for OpenAI, Anthropic, Groq, and other mem0-compatible LLM and embedding providers
+#### Agent Task Planning System
+- **Planning MCP Server**: Dedicated server for task lifecycle management with dependency tracking
+- **Task Dataclasses**: Complete task and plan structures with validation
+- **Status Management**: Automatic transitions between task states (pending/in_progress/completed/blocked)
+- **Dependency Validation**: Tasks automatically blocked until dependencies complete
+- **Orchestrator Integration**: Plan-aware coordination for multi-agent workflows
 
-#### Memory Configuration
-- **Global and Per-Agent Control**: Enable/disable memory at system or individual agent level
-- **Compression Settings**: Configurable trigger thresholds and target ratios for context window management
-- **Retrieval Configuration**: Customizable retrieval limits and smart filtering to exclude recent messages
-- **Memory Persistence**: Session continuation with named sessions for cross-session memory access
+#### Background Shell Execution
+- **BackgroundShell Class**: Async command execution with persistent sessions
+- **Shell Lifecycle Management**: Start, monitor, and terminate long-running processes
+- **Output Streaming**: Real-time monitoring of command output
+- **Timeout Handling**: Automatic timeout management for long-running operations
+- **Code Execution Server**: Enhanced server with background execution capabilities
+
+#### Preemption Coordination
+- **Interruption Support**: Agents can preempt coordination to submit better answers
+- **Progress Preservation**: Partial progress maintained during preemption
+- **Coordination Tracker**: Enhanced logging of preemption events
+- **Orchestrator Logic**: Improved handling of agent interruptions without full restart
 
 #### Configuration Files
-- `gpt5mini_gemini_context_window_management.yaml` - Multi-agent with automatic context compression
-- `gpt5mini_gemini_research_to_implementation.yaml` - Research-to-implementation workflow with memory
-- `gpt5mini_high_reasoning_gemini.yaml` - High reasoning agents with memory integration
-- `gpt5mini_gemini_baseline_research_to_implementation.yaml` - Baseline research workflow for comparison
-- `single_agent_compression_test.yaml` - Single agent testing context compression behavior
+- `example_task_todo.yaml` - Task planning with dependency management
+- `background_shell_demo.yaml` - Background command execution demo
 
-#### Documentation
-- Complete memory system user guide: `docs/source/user_guide/memory.rst`
-- Design decisions documentation explaining architectural choices
-- API reference for PersistentMemory, ConversationMemory, and ContextMonitor classes
-- Comprehensive troubleshooting guide and monitoring instructions
+### Previous Achievements (v0.0.3 - v0.1.6)
 
-#### Testing Infrastructure
-- Memory test suite: `test_agent_memory.py`, `test_conversation_memory.py`, `test_orchestrator_memory.py`, `test_persistent_memory.py`
+✅ **Framework Interoperability (v0.1.6)**: AG2 nested chat, LangGraph workflows, AgentScope agents, OpenAI Assistants, and SmoLAgent integrated as custom tools with cross-framework collaboration and streaming support for AG2
 
-### Previous Achievements (v0.0.3 - v0.1.4)
+✅ **Configuration Validator (v0.1.6)**: Comprehensive YAML validation with ConfigValidator class, pre-commit integration, and detailed error messages with actionable suggestions
+
+✅ **Unified Tool Execution (v0.1.6)**: ToolExecutionConfig dataclass standardizing tool handling across ResponseBackend, ChatCompletionsBackend, and ClaudeBackend with consistent error reporting
+
+✅ **Gemini Backend Simplification (v0.1.6)**: Removed gemini_mcp_manager and gemini_trackers modules, consolidated code reducing codebase by 1,598 lines
+
+✅ **Memory System (v0.1.5)**: Long-term semantic memory via mem0 integration with fact extraction and retrieval across sessions, short-term conversational memory for active context, automatic context compression when approaching token limits, cross-agent memory sharing with turn-aware filtering, session management for memory isolation and continuation, Qdrant vector database integration for semantic search
 
 ✅ **Multimodal Generation Tools (v0.1.4)**: Create images from text via DALL-E API, generate videos from descriptions, text-to-speech with audio transcription support, document generation for PDF/DOCX/XLSX/PPTX formats, image transformation capabilities for existing images
 
@@ -1183,21 +1166,20 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.6 Roadmap
+### v0.1.8 Roadmap
 
-Version 0.1.6 focuses on backend code refactoring for improved maintainability and developer experience:
+Version 0.1.8 focuses on rate management for improved API cost control:
 
 #### Planned Features
-- **Backend Code Refactoring**: Major code refactoring for improved maintainability and developer experience with better code organization, modularity, and architectural improvements
+- **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs with model-specific limits and configurable thresholds
 
 Key technical approach:
-- **Code Architecture**: Enhanced code organization with improved modularity and separation of concerns
-- **Developer Experience**: Simplified backend extension points, improved API clarity, better error handling and debugging support
-- **Quality Assurance**: Comprehensive testing to ensure no functionality regressions
+- **Rate Limiting**: Sliding window tracking, external YAML configuration, optional CLI flag, mandatory cooldown periods after startup
+- **Configuration**: Optional and configurable via `--rate-limit` flag
 
-**Target Release**: November 1, 2025 (Friday @ 9am PT)
+**Target Release**: November 5, 2025 (Wednesday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.6 roadmap](ROADMAP_v0.1.6.md).
+For detailed milestones and technical specifications, see the [full v0.1.8 roadmap](ROADMAP_v0.1.8.md).
 
 ---
 

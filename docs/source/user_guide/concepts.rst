@@ -163,10 +163,10 @@ Here's how agents asynchronously evaluate and respond during coordination:
                              ┌──────────▼───────────────┐
                              │ Agent provided new_answer│
                              │ ↓                        │
-                             │ RESTART coordination:    │
-                             │ ALL agents re-evaluate   │
-                             │ with new answer added    │
-                             │ to context               │
+                             │ INJECT update to others: │
+                             │ ALL agents receive update│
+                             │ and continue with new    │
+                             │ answer in context        │
                              │ (loop back to top)       │
                              └──────────────────────────┘
 
@@ -175,7 +175,7 @@ Here's how agents asynchronously evaluate and respond during coordination:
 * **Asynchronous evaluation** - No "rounds", agents evaluate continuously and independently
 * **Anonymized answers** - Agents don't know who provided which answer, reducing bias
 * **Actual agent prompt** - Agents evaluate "Does best CURRENT ANSWER address ORIGINAL MESSAGE well?"
-* **Restart on new_answer** - When any agent uses `new_answer` tool, ALL agents restart evaluation with new context
+* **Inject-and-continue** - When any agent uses `new_answer` tool, other agents receive an update mid-work and continue (preserving their thinking), rather than restarting from scratch
 * **Natural consensus** - Coordination ends only when all agents vote (no agent provides new_answer)
 * **Democratic selection** - Winner determined by peer voting
 
@@ -473,26 +473,27 @@ External Framework Integration
 AG2 Integration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Integrate :term:`AG2` agents with code execution:
+Integrate :term:`AG2` framework as a custom tool:
 
 .. code-block:: yaml
 
    agents:
-     - id: "ag2_coder"
+     - id: "ag2_assistant"
        backend:
-         type: ag2
-         agent_config:
-           type: assistant
-           llm_config:
-             api_type: "openai"
-             model: "gpt-4o"
-           code_execution_config:
-             executor:
-               type: "LocalCommandLineCodeExecutor"
+         type: "openai"
+         model: "gpt-4o"
+         custom_tools:
+           - name: ["ag2_lesson_planner"]
+             category: "education"
+             path: "massgen/tool/_extraframework_agents/ag2_lesson_planner_tool.py"
+             function: ["ag2_lesson_planner"]
+       system_message: |
+         You have access to an AG2-powered tool that uses
+         nested chats and group collaboration.
 
-AG2 agents participate in MassGen's coordination system alongside native agents.
+AG2's multi-agent orchestration patterns are wrapped as tools that MassGen agents can invoke.
 
-See :doc:`ag2_integration` for details.
+See :doc:`general_interoperability` for details.
 
 File Operation Safety
 ---------------------
@@ -641,10 +642,13 @@ Hybrid Teams
 .. code-block:: yaml
 
    agents:
-     - id: "ag2_executor"  # Code execution
+     - id: "ag2_executor"  # AG2 framework tool
        backend:
-         type: ag2
-         # ... AG2 config
+         custom_tools:
+           - name: ["ag2_lesson_planner"]
+             # ... AG2 tool config
+         type: "openai"
+         # ... backend config
      - id: "claude_analyst"  # File operations
        backend:
          type: "claude_code"
@@ -672,4 +676,4 @@ Next Steps
 * :doc:`mcp_integration` - Add tools to agents
 * :doc:`multi_turn_mode` - Interactive conversations
 * :doc:`project_integration` - Work with your codebase
-* :doc:`ag2_integration` - External framework integration
+* :doc:`general_interoperability` - External framework integration

@@ -31,12 +31,12 @@
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
-    <img src="docs/source/_static/images/readme.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
+    <img src="docs/source/_static/images/thumbnail.png" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
 </p>
 
 <p align="center">
-  <i>Multi-agent scaling through intelligent collaboration in Grok Heavy style</i>
+  <i>Scaling AI with collaborative, continuously improving agents</i>
 </p>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
@@ -60,7 +60,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.4 Features](#-latest-features-v014)
+- [v0.1.7 Features](#-latest-features-v017)
 </details>
 
 <details open>
@@ -105,16 +105,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.4](#recent-achievements-v014)
-  - [v0.1.3](#recent-achievements-v013)
-  - [v0.0.3 - v0.1.2](#previous-achievements-v003---v012)
+  - [v0.1.7](#recent-achievements-v017)
+  - [v0.0.3 - v0.1.6](#previous-achievements-v003---v016)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.5 Roadmap](#v015-roadmap)
+- [v0.1.8 Roadmap](#v018-roadmap)
 </details>
 
 <details open>
@@ -139,37 +138,32 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.4)
+## 🆕 Latest Features (v0.1.7)
 
-**🎉 Released: October 27, 2025**
+**🎉 Released: November 3, 2025**
 
-**What's New in v0.1.4:**
-- **🎨 Multimodal Generation Tools** - Create images, videos, audio, and documents with AI
-- **🔒 Binary File Protection** - Automatic security preventing accidental binary file reads
-- **🕷️ Crawl4AI Integration** - Intelligent web scraping with LLM-powered extraction
+**What's New in v0.1.7:**
+- **📋 Agent Task Planning** - Organize complex multi-step workflows with dependency tracking
+- **🔄 Background Shell Execution** - Run long-running commands with persistent sessions and real-time monitoring
+- **⚡ Preemption Coordination** - Interrupt ongoing coordination without restarting to preserve progress
 
 **Key Improvements:**
-- 6 new generation tools: text-to-image, text-to-video, text-to-speech, text-to-file, image-to-image
-- Binary file protection for 40+ file types with smart tool suggestions
-- Web crawling with customizable extraction patterns
-- Enhanced documentation and automation infrastructure
+- MCP-based planning tools with automatic task status management
+- Persistent shell sessions that survive across agent interactions
+- Agents can submit better answers mid-coordination without losing partial progress
+- Task dependencies with automatic validation and blocking
+- Output streaming for background commands with timeout handling
 
-**Get Started with v0.1.4:**
+**Try v0.1.7 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Generate an image from text
-massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_image_generation_single \
-  "Please generate an image of a cat in space."
+# Agent task planning for complex multi-step projects
+massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
 
-# Generate a video from text
-massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_video_generation_single \
-  "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
-
-# Generate documents (PDF, DOCX, etc.)
-massgen --config @examples/tools/custom_tools/multimodal_tools/text_to_file_generation_single \
-  "Please generate a comprehensive technical report about the latest developments in Large Language Models (LLMs)."
+# Background shell execution for parallel long-running commands
+uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -391,17 +385,20 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal (Image/Audio/Video) | Advanced Features |
-|---------|:-----------:|:--------------:|:---------------:|:-----------:|:----------:|:-----------------|
-| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
-| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code execution, **MCP integration**|
-| **Grok API** | ✅ | ❌ | ✅ | ✅ | ❌ | Web search, **MCP integration** |
-| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ❌ | **MCP integration** |
+| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal Understanding | Multimodal Generation | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------:|:------------------------:|:---------------------:|:-----------------|
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | Web search, code interpreter, **MCP integration** |
+| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
+| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | Web search, code execution, **MCP integration**|
+| **Grok API** | ✅ | ❌ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | Web search, **MCP integration** |
+| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image (native)*<br/>*Audio/Video/Docs (custom tools)* | ✅<br/>*via custom tools* | Web search, code interpreter, **MCP integration** |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ✅<br/>*via custom tools* | ✅<br/>*via custom tools* | **MCP integration** |
 
-**Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
+**Notes:**
+- **Multimodal Understanding** (NEW in v0.1.3): Analyze images, audio, video, and documents via custom tools using OpenAI GPT-4.1 - works with any backend
+- **Multimodal Generation** (NEW in v0.1.4): Generate images, videos, audio, and documents via custom tools using OpenAI APIs - works with any backend
+- See custom tool configurations: [`understand_image.yaml`](massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml), [`text_to_image_generation_single.yaml`](massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_single.yaml)
 
 → For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://docs.massgen.ai/en/latest/user_guide/backends.html)
 
@@ -994,6 +991,10 @@ All sessions are automatically logged with detailed information for debugging an
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
+**Featured:**
+- [**Multi-Turn Persistent Memory**](docs/source/examples/case_studies/multi-turn-persistent-memory.md) - Research-to-implementation workflow demonstrating memory system (v0.1.5) | [📹 Watch Demo](https://youtu.be/wWxxFgyw40Y)
+
+**All Case Studies:**
 - [**MassGen Case Studies**](docs/source/examples/case_studies/README.md)
 - [**Case Studies Documentation**](https://docs.massgen.ai/en/latest/examples/case_studies.html) - Browse case studies online
 
@@ -1006,49 +1007,65 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.4)
+### Recent Achievements (v0.1.7)
 
-**🎉 Released: October 27, 2025**
+**🎉 Released: November 3, 2025**
 
-#### Multimodal Generation Tools
-- **Text-to-Image**: `text_to_image_generation` tool creates images from text prompts via DALL-E API
-- **Text-to-Video**: `text_to_video_generation` tool generates videos from text descriptions
-- **Text-to-Speech**: `text_to_speech_continue_generation` and `text_to_speech_transcription_generation` tools for audio generation and transcription
-- **Text-to-File**: `text_to_file_generation` tool creates documents in PDF, DOCX, XLSX, and PPTX formats
-- **Image-to-Image**: `image_to_image_generation` tool transforms existing images
+#### Agent Task Planning System
+- **Planning MCP Server**: Dedicated server for task lifecycle management with dependency tracking
+- **Task Dataclasses**: Complete task and plan structures with validation
+- **Status Management**: Automatic transitions between task states (pending/in_progress/completed/blocked)
+- **Dependency Validation**: Tasks automatically blocked until dependencies complete
+- **Orchestrator Integration**: Plan-aware coordination for multi-agent workflows
 
-#### Binary File Protection
-- **Automatic Blocking**: `PathPermissionManager` now prevents text-based read tools from accessing binary files
-- **Protected File Types**: 40+ extensions including images (.jpg, .png), videos (.mp4, .avi), audio (.mp3, .wav), archives (.zip, .tar), executables (.exe, .dll), and Office documents (.pdf, .docx, .xlsx, .pptx)
-- **Intelligent Guidance**: Error messages automatically suggest appropriate specialized tools (e.g., "use understand_image tool" for .jpg files)
-- **Test Coverage**: `test_binary_file_blocking.py`
+#### Background Shell Execution
+- **BackgroundShell Class**: Async command execution with persistent sessions
+- **Shell Lifecycle Management**: Start, monitor, and terminate long-running processes
+- **Output Streaming**: Real-time monitoring of command output
+- **Timeout Handling**: Automatic timeout management for long-running operations
+- **Code Execution Server**: Enhanced server with background execution capabilities
 
-#### Web Scraping Capabilities
-- **Crawl4AI Tool**: `crawl4ai_tool` enables intelligent web scraping with LLM-powered content extraction and customizable patterns
+#### Preemption Coordination
+- **Interruption Support**: Agents can preempt coordination to submit better answers
+- **Progress Preservation**: Partial progress maintained during preemption
+- **Coordination Tracker**: Enhanced logging of preemption events
+- **Orchestrator Logic**: Improved handling of agent interruptions without full restart
 
-#### Documentation & Infrastructure
-  - **Generation Tools**: 8 multimodal generation configurations
-    - `text_to_image_generation_single.yaml` and `text_to_image_generation_multi.yaml`
-    - `text_to_video_generation_single.yaml` and `text_to_video_generation_multi.yaml`
-    - `text_to_speech_generation_single.yaml` and `text_to_speech_generation_multi.yaml`
-    - `text_to_file_generation_single.yaml` and `text_to_file_generation_multi.yaml`
-  - **Web Scraping**: `crawl4ai_example.yaml` for Crawl4AI integration
+#### Configuration Files
+- `example_task_todo.yaml` - Task planning with dependency management
+- `background_shell_demo.yaml` - Background command execution demo
 
-### Previous Achievements (v0.0.3 - v0.1.3)
+### Previous Achievements (v0.0.3 - v0.1.6)
 
-✅ **Post-Evaluation Workflow (v0.1.3)**: `PostEvaluationToolkit` class with submit tool for confirming final answers and restart tool for orchestration restart with feedback, winning agent evaluates answer before submission, universal backend support (Claude, Response API, Chat Completions), opt-in via `enable_post_evaluation_tools` parameter
+✅ **Framework Interoperability (v0.1.6)**: AG2 nested chat, LangGraph workflows, AgentScope agents, OpenAI Assistants, and SmoLAgent integrated as custom tools with cross-framework collaboration and streaming support for AG2
 
-✅ **Multimodal Understanding Tools (v0.1.3)**: `understand_image` for PNG/JPEG analysis, `understand_audio` for WAV/MP3 transcription, `understand_video` for MP4/AVI frame extraction, `understand_file` for PDF/DOCX processing, cross-backend support via OpenAI GPT-4.1, structured JSON output, configurations: `understand_image.yaml`, `understand_audio.yaml`, `understand_video.yaml`, `understand_file.yaml`
+✅ **Configuration Validator (v0.1.6)**: Comprehensive YAML validation with ConfigValidator class, pre-commit integration, and detailed error messages with actionable suggestions
 
-✅ **Docker Sudo Mode (v0.1.3)**: `use_sudo` parameter for privileged Docker execution, system-level command support in containers, enhanced security documentation, test coverage in `test_code_execution.py`
+✅ **Unified Tool Execution (v0.1.6)**: ToolExecutionConfig dataclass standardizing tool handling across ResponseBackend, ChatCompletionsBackend, and ClaudeBackend with consistent error reporting
 
-✅ **Intelligent Planning Mode (v0.1.2)**: Automatic question analysis determining operation irreversibility via `_analyze_question_irreversibility()` in orchestrator, selective tool blocking with `set_planning_mode_blocked_tools()` and `is_mcp_tool_blocked()` methods, read-only MCP operations during coordination with write operations blocked, zero-configuration transparent operation, multi-workspace support, comprehensive tests in `test_intelligent_planning_mode.py`, complete guide in `docs/dev_notes/intelligent_planning_mode.md`
+✅ **Gemini Backend Simplification (v0.1.6)**: Removed gemini_mcp_manager and gemini_trackers modules, consolidated code reducing codebase by 1,598 lines
 
-✅ **Model Updates (v0.1.2)**: Claude 4.5 Haiku model `claude-haiku-4-5-20251001`, reorganized Claude model priorities with `claude-sonnet-4-5-20250929` default, Grok web search fix with `_add_grok_search_params()` method for proper `extra_body` parameter handling, 5 updated planning mode configurations in `configs/tools/planning/`, updated `three_agents_default.yaml` with Grok-4-fast
+✅ **Memory System (v0.1.5)**: Long-term semantic memory via mem0 integration with fact extraction and retrieval across sessions, short-term conversational memory for active context, automatic context compression when approaching token limits, cross-agent memory sharing with turn-aware filtering, session management for memory isolation and continuation, Qdrant vector database integration for semantic search
+
+✅ **Multimodal Generation Tools (v0.1.4)**: Create images from text via DALL-E API, generate videos from descriptions, text-to-speech with audio transcription support, document generation for PDF/DOCX/XLSX/PPTX formats, image transformation capabilities for existing images
+
+✅ **Binary File Protection (v0.1.4)**: Automatic blocking prevents text tools from accessing 40+ binary file types including images, videos, audio, archives, and Office documents, intelligent error messages guide users to appropriate specialized tools for binary content
+
+✅ **Crawl4AI Integration (v0.1.4)**: Intelligent web scraping with LLM-powered content extraction and customizable extraction patterns for structured data retrieval from websites
+
+✅ **Post-Evaluation Workflow (v0.1.3)**: Winning agents evaluate their own answers before submission with submit and restart capabilities, supports answer confirmation and orchestration restart with feedback across all backends
+
+✅ **Multimodal Understanding Tools (v0.1.3)**: Analyze images, transcribe audio, extract video frames, and process documents (PDF/DOCX/XLSX/PPTX) with structured JSON output, works across all backends via OpenAI GPT-4.1 integration
+
+✅ **Docker Sudo Mode (v0.1.3)**: Privileged command execution in Docker containers for system-level operations requiring elevated permissions
+
+✅ **Intelligent Planning Mode (v0.1.2)**: Automatic question analysis determining operation irreversibility via `_analyze_question_irreversibility()` in orchestrator, selective tool blocking with `set_planning_mode_blocked_tools()` and `is_mcp_tool_blocked()` methods, read-only MCP operations during coordination with write operations blocked, zero-configuration transparent operation, multi-workspace support
+
+✅ **Model Updates (v0.1.2)**: Claude 4.5 Haiku model `claude-haiku-4-5-20251001`, reorganized Claude model priorities with `claude-sonnet-4-5-20250929` default, Grok web search fix with `_add_grok_search_params()` method for proper `extra_body` parameter handling
 
 ✅ **Custom Tools System (v0.1.1)**: User-defined Python function registration using `ToolManager` class in `massgen/tool/_manager.py`, cross-backend support alongside MCP servers, builtin/MCP/custom tool categories with automatic discovery, 40+ examples in `massgen/configs/tools/custom_tools/`, voting sensitivity controls with three-tier quality system (lenient/balanced/strict), answer novelty detection preventing duplicates
 
-✅ **Backend Enhancements (v0.1.1)**: Gemini architecture refactoring with extracted MCP management (`gemini_mcp_manager.py`), tracking (`gemini_trackers.py`), and utilities, new capabilities registry in `massgen/backend/capabilities.py` documenting feature support across backends
+✅ **Backend Enhancements (v0.1.1)**: Gemini architecture refactoring with extracted MCP management (`gemini_mcp_manager.py`), tracking (`gemini_trackers.py`), and utilities, new capabilities registry in `massgen/backend/capabilities.py` documenting feature support across all backends
 
 ✅ **PyPI Package Release (v0.1.0)**: Official distribution via `pip install massgen` with simplified installation, global `massgen` command accessible from any directory, comprehensive Sphinx documentation at [docs.massgen.ai](https://docs.massgen.ai/), interactive setup wizard with use case presets and API key management, enhanced CLI with `@examples/` prefix for built-in configurations
 
@@ -1148,21 +1165,20 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.5 Roadmap
+### v0.1.8 Roadmap
 
-Version 0.1.5 focuses on Docker integration for MCP tools and backend code refactoring:
+Version 0.1.8 focuses on rate management for improved API cost control:
 
-#### Required Features
-- **Running MCP Tools in Docker**: Containerized execution environment for MCP tools with enhanced security and isolation
-- **Backend Code Refactoring**: Major code refactoring for improved maintainability and developer experience
+#### Planned Features
+- **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs with model-specific limits and configurable thresholds
 
 Key technical approach:
-- **Docker Integration**: Secure execution of third-party MCP tools in isolated Docker containers with resource limits and network isolation
-- **Backend Improvements**: Enhanced code organization, modularity, and architectural improvements for better maintainability
+- **Rate Limiting**: Sliding window tracking, external YAML configuration, optional CLI flag, mandatory cooldown periods after startup
+- **Configuration**: Optional and configurable via `--rate-limit` flag
 
-**Target Release**: October 30, 2025 (Wednesday @ 9am PT)
+**Target Release**: November 5, 2025 (Wednesday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.5 roadmap](ROADMAP_v0.1.5.md).
+For detailed milestones and technical specifications, see the [full v0.1.8 roadmap](ROADMAP_v0.1.8.md).
 
 ---
 
