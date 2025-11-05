@@ -61,7 +61,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.7 Features](#-latest-features-v017)
+- [v0.1.8 Features](#-latest-features-v018)
 </details>
 
 <details open>
@@ -106,15 +106,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.7](#recent-achievements-v017)
-  - [v0.0.3 - v0.1.6](#previous-achievements-v003---v016)
+  - [v0.1.8](#recent-achievements-v018)
+  - [v0.0.3 - v0.1.7](#previous-achievements-v003---v017)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.8 Roadmap](#v018-roadmap)
+- [v0.1.9 Roadmap](#v019-roadmap)
 </details>
 
 <details open>
@@ -139,32 +139,35 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.7)
+## 🆕 Latest Features (v0.1.8)
 
-**🎉 Released: November 3, 2025**
+**🎉 Released: November 5, 2025**
 
-**What's New in v0.1.7:**
-- **📋 Agent Task Planning** - Organize complex multi-step workflows with dependency tracking
-- **🔄 Background Shell Execution** - Run long-running commands with persistent sessions and real-time monitoring
-- **⚡ Preemption Coordination** - Interrupt ongoing coordination without restarting to preserve progress
+**What's New in v0.1.8:**
+- **🤖 Automation Mode** - Silent execution designed for LLM agents with minimal output and real-time status tracking
+- **🎯 DSPy Question Paraphrasing** - Intelligent question diversity for enhanced multi-agent perspectives
+- **📚 Case Study Summary** - Comprehensive documentation of 33 case studies organized by category
 
 **Key Improvements:**
-- MCP-based planning tools with automatic task status management
-- Persistent shell sessions that survive across agent interactions
-- Agents can submit better answers mid-coordination without losing partial progress
-- Task dependencies with automatic validation and blocking
-- Output streaming for background commands with timeout handling
+- Real-time `status.json` monitoring file updated every 2 seconds during coordination
+- Meaningful exit codes for programmatic workflows (0=success, 1=config error, 2=execution error, 3=timeout, 4=interrupted)
+- Three paraphrasing strategies (diverse, balanced, conservative) with semantic validation
+- Meta-coordination capabilities: MassGen running MassGen configurations
+- Automatic workspace isolation for parallel execution
 
-**Try v0.1.7 Features:**
+**Try v0.1.8 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Agent task planning for complex multi-step projects
-massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
+# DSPy question paraphrasing for diverse agent perspectives
+massgen --config massgen/configs/basic/multi/three_agents_dspy_enabled.yaml "Explain the differences between transformer architecture and recurrent neural networks"
 
-# Background shell execution for parallel long-running commands
-uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
+# Automation mode for LLM agents (minimal output, status tracking)
+uv run massgen --automation --config massgen/configs/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
+
+# Meta-coordination: MassGen running MassGen
+uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml "Run a MassGen experiment to create a webpage about Bob Dylan"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1008,35 +1011,45 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.7)
+### Recent Achievements (v0.1.8)
 
-**🎉 Released: November 3, 2025**
+**🎉 Released: November 5, 2025**
 
-#### Agent Task Planning System
-- **Planning MCP Server**: Dedicated server for task lifecycle management with dependency tracking
-- **Task Dataclasses**: Complete task and plan structures with validation
-- **Status Management**: Automatic transitions between task states (pending/in_progress/completed/blocked)
-- **Dependency Validation**: Tasks automatically blocked until dependencies complete
-- **Orchestrator Integration**: Plan-aware coordination for multi-agent workflows
+#### Automation Mode for LLM Agents
+- **Silent Execution**: New `--automation` CLI flag reduces output from 250-3,000+ lines to ~10 lines for LLM-friendly monitoring
+- **SilentDisplay Class**: Specialized display adapter optimized for programmatic consumption
+- **Real-Time Status Tracking**: `status.json` file updated every 2 seconds with current coordination state
+- **Meaningful Exit Codes**: Standardized codes for success (0), config error (1), execution error (2), timeout (3), and interruption (4)
+- **Workspace Isolation**: Automatic unique suffixes for parallel MassGen executions
+- **Meta-Coordination**: MassGen can autonomously run and monitor other MassGen instances
 
-#### Background Shell Execution
-- **BackgroundShell Class**: Async command execution with persistent sessions
-- **Shell Lifecycle Management**: Start, monitor, and terminate long-running processes
-- **Output Streaming**: Real-time monitoring of command output
-- **Timeout Handling**: Automatic timeout management for long-running operations
-- **Code Execution Server**: Enhanced server with background execution capabilities
+#### DSPy Question Paraphrasing Integration
+- **Paraphrasing Module**: New `massgen/dspy_paraphraser.py` with semantic-preserving question variants
+- **Strategy Selection**: Three strategies (diverse, balanced, conservative) for different use cases
+- **Semantic Validation**: Automatic validation ensures paraphrases preserve original meaning
+- **Orchestrator Integration**: Agents receive different question variants to encourage diverse perspectives
+- **Thread-Safe Caching**: Performance optimization with SHA-256-based caching system
+- **Universal Backend Support**: Works with all backends (Gemini, OpenAI, Claude, Grok, etc.)
 
-#### Preemption Coordination
-- **Interruption Support**: Agents can preempt coordination to submit better answers
-- **Progress Preservation**: Partial progress maintained during preemption
-- **Coordination Tracker**: Enhanced logging of preemption events
-- **Orchestrator Logic**: Improved handling of agent interruptions without full restart
+#### Documentation and Resources
+- **Case Study Summary**: Comprehensive `docs/CASE_STUDIES_SUMMARY.md` documenting 33 case studies across 6 categories
+- **Automation Guides**: `AI_USAGE.md` for LLM agents, `docs/source/user_guide/automation.rst` for detailed patterns
+- **Status File Reference**: Complete schema documentation in `docs/source/reference/status_file.rst`
+- **DSPy Implementation Guide**: Full guide in `massgen/backend/docs/DSPY_IMPLEMENTATION_GUIDE.md`
+- **Meta-Coordination Configs**: `massgen_runs_massgen.yaml` and `massgen_suggests_to_improve_massgen.yaml`
 
 #### Configuration Files
-- `example_task_todo.yaml` - Task planning with dependency management
-- `background_shell_demo.yaml` - Background command execution demo
+- `three_agents_dspy_enabled.yaml` - DSPy paraphrasing demonstration
+- `massgen_runs_massgen.yaml` - Meta-coordination example
+- `massgen_suggests_to_improve_massgen.yaml` - Self-improvement workflow
 
-### Previous Achievements (v0.0.3 - v0.1.6)
+### Previous Achievements (v0.0.3 - v0.1.7)
+
+✅ **Agent Task Planning System (v0.1.7)**: MCP-based planning tools with task dependencies, status management (pending/in_progress/completed/blocked), plan-aware orchestrator coordination for complex multi-step workflows
+
+✅ **Background Shell Execution (v0.1.7)**: Persistent shell sessions surviving across agent interactions with async command execution, output streaming, timeout handling, and enhanced code execution server
+
+✅ **Preemption Coordination (v0.1.7)**: Agents can interrupt coordination to submit better answers with progress preservation, enhanced coordination tracker logging, and improved orchestrator interruption handling
 
 ✅ **Framework Interoperability (v0.1.6)**: AG2 nested chat, LangGraph workflows, AgentScope agents, OpenAI Assistants, and SmoLAgent integrated as custom tools with cross-framework collaboration and streaming support for AG2
 
@@ -1166,20 +1179,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.8 Roadmap
+### v0.1.9 Roadmap
 
-Version 0.1.8 focuses on rate management for improved API cost control:
+Version 0.1.9 focuses on rate management and contributor documentation:
 
 #### Planned Features
 - **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs with model-specific limits and configurable thresholds
+- **MassGen Handbook**: Centralized handbook for development and research teams with PR guidelines, case study templates, and review standards
 
 Key technical approach:
 - **Rate Limiting**: Sliding window tracking, external YAML configuration, optional CLI flag, mandatory cooldown periods after startup
-- **Configuration**: Optional and configurable via `--rate-limit` flag
+- **Handbook**: Comprehensive policies for PR activities, case studies, reviews, and research workflows
 
-**Target Release**: November 5, 2025 (Wednesday @ 9am PT)
+**Target Release**: November 7, 2025 (Friday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.8 roadmap](ROADMAP_v0.1.8.md).
+For detailed milestones and technical specifications, see the [full v0.1.9 roadmap](ROADMAP_v0.1.9.md).
 
 ---
 

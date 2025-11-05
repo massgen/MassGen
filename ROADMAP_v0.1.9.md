@@ -1,19 +1,19 @@
-# MassGen v0.1.8 Roadmap
+# MassGen v0.1.9 Roadmap
 
 ## Overview
 
-Version 0.1.8 focuses on rate management and session continuity, bringing two key improvements to enhance the MassGen developer experience.
+Version 0.1.9 focuses on rate management and documentation, bringing two key improvements to enhance the MassGen developer experience and contributor ecosystem.
 
 - **Gemini Rate Limiting System** (Required): ⚡ Multi-dimensional rate limiting to prevent API spam and manage costs
-- **Session Restart** (Required): 🔄 Resume previous conversations from log files for seamless development continuity
+- **MassGen Handbook** (Required): 📚 Centralized handbook for development and research team policies and resources
 
 ## Key Technical Priorities
 
 1. **Gemini Rate Limiting System**: Prevent API quota violations and manage costs while ensuring smooth operation
    **Use Case**: Enterprise deployments requiring cost control and API compliance
 
-2. **Session Restart**: Resume previous MassGen conversations from log files
-   **Use Case**: Resume previous development sessions after closing, mirroring user experience with other LLM tools
+2. **MassGen Handbook**: Unified reference for contributors, streamlining onboarding and ensuring consistency
+   **Use Case**: Provide comprehensive guidelines for PR activities, case studies, reviews, and research workflows
 
 ## Key Milestones
 
@@ -21,7 +21,7 @@ Version 0.1.8 focuses on rate management and session continuity, bringing two ke
 
 **Goal**: Multi-dimensional rate limiting for Gemini models to prevent API spam and manage costs
 
-**Owner**: @AbhimanyuAryan (TBD on Discord)
+**Owner**: @AbhimanyuAryan (abhimanyuaryan on Discord)
 
 **PR**: [#383](https://github.com/Leezekun/MassGen/pull/383) (Draft)
 
@@ -62,46 +62,48 @@ Version 0.1.8 focuses on rate management and session continuity, bringing two ke
 
 ---
 
-### 🎯 Milestone 2: Session Restart (REQUIRED)
+### 🎯 Milestone 2: MassGen Handbook (REQUIRED)
 
-**Goal**: Resume previous MassGen conversations by loading existing log files
+**Goal**: Create centralized handbook for MassGen development and research teams
 
-**Owner**: @ncrispino (nickcrispino on Discord)
+**Owner**: @a5507203, @Henry-811 (Yu, henry_weiqi on Discord)
 
-**Issue**: [#412](https://github.com/massgen/MassGen/issues/412) (Open)
+**Issue**: [#387](https://github.com/massgen/MassGen/issues/387) (Open)
 
-#### 2.1 Core Session Restart Implementation
-- [ ] Load existing log files to resume previous conversations
-- [ ] New CLI parameter: `massgen --continue [LOG_DIR]`
-- [ ] System treats resumed session as "Nth turn in multi-turn conversation"
-- [ ] Parse and process historical dialogue from logs
-- [ ] Maintain context and state from previous session
+#### 2.1 Core Handbook Content
+- [ ] Centralized handbook for development and research teams
+- [ ] Common policies and resources for PR activities
+- [ ] Case study guidelines and templates
+- [ ] Review processes and standards
+- [ ] Research documentation and best practices
 
-#### 2.2 Configuration Management
-- [ ] Default to using same configuration as original session
-- [ ] Support for specifying different configuration if needed
-- [ ] Preserve agent settings from original session
-- [ ] Handle configuration conflicts gracefully
+#### 2.2 PR Activity Guidelines
+- [ ] Pull request creation workflow
+- [ ] Code review standards and checklist
+- [ ] PR approval process and requirements
+- [ ] Common PR issues and solutions
+- [ ] PR templates and examples
 
-#### 2.3 User Experience Enhancements
-- [ ] Optional: Continue most recent conversation without specifying log directory
-- [ ] Clear feedback on which session is being resumed
-- [ ] Display conversation summary from previous session
-- [ ] Handle edge cases (corrupted logs, missing files)
+#### 2.3 Case Study Documentation
+- [ ] Case study creation guidelines
+- [ ] Case study template and format
+- [ ] Testing and validation requirements
+- [ ] Video demonstration standards
+- [ ] Case study categorization system
 
-#### 2.4 Testing and Documentation
-- [ ] Test session restart with various log formats
-- [ ] Validate state preservation across restart
-- [ ] Test configuration override functionality
-- [ ] Create usage examples and documentation
-- [ ] Integration tests for continuation flow
+#### 2.4 Review and Research Standards
+- [ ] Code review best practices
+- [ ] Research methodology documentation
+- [ ] Experiment design guidelines
+- [ ] Results documentation standards
+- [ ] Publication and sharing policies
 
 **Success Criteria**:
-- ✅ Session restart loads conversation history correctly
-- ✅ Context and state are preserved from previous session
-- ✅ Configuration management works seamlessly
-- ✅ User experience is intuitive and matches expectations
-- ✅ Edge cases are handled gracefully
+- ✅ Handbook provides comprehensive contributor guidelines
+- ✅ Clear policies for PR activities and reviews
+- ✅ Case study creation is standardized
+- ✅ Research workflows are documented
+- ✅ Easy to navigate and maintain
 
 ---
 
@@ -116,16 +118,16 @@ Version 0.1.8 focuses on rate management and session continuity, bringing two ke
 - [ ] CLI flag enables/disables feature
 - [ ] Cooldown periods enforced
 
-**Session Restart:**
-- [ ] Load and parse existing log files
-- [ ] `--continue [LOG_DIR]` CLI parameter functional
-- [ ] Historical context preserved correctly
-- [ ] Configuration management working
-- [ ] Optional auto-resume most recent session
+**MassGen Handbook:**
+- [ ] Handbook published and accessible
+- [ ] PR guidelines complete
+- [ ] Case study templates available
+- [ ] Review standards documented
+- [ ] Research workflows defined
 
 ### Performance Requirements
 - [ ] Rate limiting doesn't significantly impact latency
-- [ ] Session restart loads quickly even with large log files
+- [ ] Handbook loads quickly and is easy to navigate
 - [ ] Overall system remains responsive
 - [ ] Efficient tracking and monitoring
 
@@ -142,30 +144,30 @@ Version 0.1.8 focuses on rate management and session continuity, bringing two ke
 
 ### Dependencies
 - **Rate Limiting**: Gemini backend, configuration system, CLI infrastructure
-- **Session Restart**: Log file system, CLI infrastructure, conversation state management
+- **Handbook**: Documentation infrastructure, contributor feedback, community input
 
 ### Risks & Mitigations
 1. **Rate Limit Accuracy**: *Mitigation*: Sliding window tracking, extensive testing, configurable safety margins
 2. **Performance Impact**: *Mitigation*: Efficient tracking algorithms, minimal overhead design, performance benchmarks
 3. **User Adoption**: *Mitigation*: Clear documentation, optional feature with sensible defaults, usage examples
-4. **Log File Compatibility**: *Mitigation*: Robust parsing with backward compatibility, graceful error handling, log format validation
-5. **State Preservation Complexity**: *Mitigation*: Comprehensive testing, clear state tracking, fallback mechanisms
+4. **Handbook Maintenance**: *Mitigation*: Clear ownership, regular updates, community feedback process
+5. **Content Completeness**: *Mitigation*: Phased rollout, iterative improvements, contributor collaboration
 
 ---
 
-## Future Enhancements (Post-v0.1.8)
-
-### v0.1.9 Plans
-- **Add computer use** (@franklinnwren): Visual perception and automated computer interaction with Gemini API
-- **Case study summary** (@franklinnwren): Comprehensive case study documentation for MassGen features
+## Future Enhancements (Post-v0.1.9)
 
 ### v0.1.10 Plans
-- **DSPy Integration** (@praneeth999): Automated prompt optimization for domain-specific tasks
+- **Add computer use** (@franklinnwren): Visual perception and automated computer interaction with Gemini API
+- **Session Restart** (@ncrispino): Resume previous conversations from log files for seamless development continuity
+
+### v0.1.11 Plans
+- **Parallel File Operations & Performance** (@ncrispino): Increase parallelism and efficiency with standard evaluation metrics
 
 ### Long-term Vision
 - **Universal Rate Limiting**: Rate limiting for all backends (OpenAI, Claude, etc.)
 - **Cost Analytics**: Detailed cost tracking and budget management across all APIs
-- **Advanced Computer Use**: Cross-platform automation and enhanced visual perception capabilities
+- **Interactive Handbook**: Web-based handbook with search, examples, and interactive tutorials
 
 ---
 
@@ -174,9 +176,9 @@ Version 0.1.8 focuses on rate management and session continuity, bringing two ke
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
 | Phase 1 | Gemini Rate Limiting | Multi-dimensional limits, YAML config, CLI flag | @AbhimanyuAryan | **REQUIRED** |
-| Phase 2 | Session Restart | `--continue` CLI parameter, log file parsing, state preservation | @ncrispino | **REQUIRED** |
+| Phase 2 | MassGen Handbook | Handbook content, PR guidelines, case study templates | @a5507203 | **REQUIRED** |
 
-**Target Release**: November 5, 2025 (Wednesday @ 9am PT)
+**Target Release**: November 7, 2025 (Friday @ 9am PT)
 
 ---
 
@@ -191,17 +193,17 @@ Version 0.1.8 focuses on rate management and session continuity, bringing two ke
 4. Create YAML configuration examples
 5. Document CLI usage and configuration
 
-**Phase 2 - Session Restart:**
-1. Implement log file parsing and loading (Issue #412)
-2. Add `--continue [LOG_DIR]` CLI parameter
-3. Build state preservation mechanism
-4. Add configuration management for resumed sessions
-5. Test with various log file formats and sizes
-6. Create usage examples and documentation
+**Phase 2 - MassGen Handbook:**
+1. Create handbook structure and organization (Issue #387)
+2. Document PR activity guidelines
+3. Create case study templates and guidelines
+4. Document review processes and standards
+5. Add research workflow documentation
+6. Gather community feedback and iterate
 
 ### For Users
 
-- v0.1.8 brings rate management and session continuity capabilities:
+- v0.1.9 brings rate management and documentation capabilities:
 
   **Gemini Rate Limiting:**
   - Prevent API quota violations automatically
@@ -209,11 +211,11 @@ Version 0.1.8 focuses on rate management and session continuity, bringing two ke
   - Model-specific rate management (Flash vs Pro)
   - Enable/disable via `--rate-limit` CLI flag
 
-  **Session Restart:**
-  - Resume previous conversations with `massgen --continue [LOG_DIR]`
-  - Seamlessly pick up where you left off
-  - Preserve full conversation context and state
-  - Compatible with existing log files
+  **MassGen Handbook:**
+  - Access centralized contributor guidelines
+  - Follow standardized PR workflows
+  - Use case study templates and standards
+  - Reference review and research best practices
 
 ---
 
@@ -226,12 +228,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Documentation guidelines
 
 **Contact Track Owners:**
-- Rate Limiting System: @AbhimanyuAryan on Discord (TBD)
-- Session Restart: @ncrispino on Discord (nickcrispino)
+- Rate Limiting System: @AbhimanyuAryan on Discord (abhimanyuaryan)
+- MassGen Handbook: @a5507203, @Henry-811 on Discord (Yu, henry_weiqi)
 
 ---
 
-*This roadmap reflects v0.1.8 priorities focusing on rate management and session continuity.*
+*This roadmap reflects v0.1.9 priorities focusing on rate management and documentation.*
 
-**Last Updated:** November 3, 2025
+**Last Updated:** November 5, 2025
 **Maintained By:** MassGen Team

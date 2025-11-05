@@ -7,16 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
+Complete automation infrastructure for LLM agents with real-time status tracking, silent execution mode, and DSPy-powered question paraphrasing for enhanced multi-agent diversity.
+
 **v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
 Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
 
 **v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
 External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
 
-**v0.1.5 (October 29, 2025)** - Memory System
-Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
-
 ---
+
+## [0.1.8] - 2025-11-05
+
+### Added
+- **Automation Mode for LLM Agents**: Complete infrastructure for running MassGen via LLM agents and programmatic workflows
+  - New `--automation` CLI flag for silent execution with minimal output (~10 lines vs 250-3,000+)
+  - New `SilentDisplay` class in `massgen/frontend/displays/silent_display.py` for automation-friendly output
+  - Real-time `status.json` monitoring file updated every 2 seconds via enhanced `CoordinationTracker`
+  - Meaningful exit codes: 0 (success), 1 (config error), 2 (execution error), 3 (timeout), 4 (interrupted)
+  - Automatic workspace isolation for parallel execution with unique suffixes
+  - Meta-coordination capabilities: MassGen running MassGen configurations
+  - Automatic log directory creation and management for automation sessions
+
+- **DSPy Question Paraphrasing Integration**: Intelligent question diversity for multi-agent coordination
+  - New `massgen/dspy_paraphraser.py` module with semantic-preserving paraphrasing (557 lines)
+  - Three paraphrasing strategies: "diverse", "balanced" (default), "conservative"
+  - Configurable number of variants per orchestrator session
+  - Automatic semantic validation using `SemanticValidationSignature` to ensure meaning preservation
+  - Thread-safe caching system with SHA-256 hashing for performance
+  - Support for all backends (Gemini, OpenAI, Claude, etc.) as paraphrasing engines
+
+- **Case Study Summary**: Comprehensive documentation of MassGen capabilities
+  - New `docs/CASE_STUDIES_SUMMARY.md` providing centralized overview of 33 case studies (368 lines)
+  - Organized by category: Release Features, Research, Travel, Creative, In Development, Planned
+  - Covers versions v0.0.3 to v0.1.5 with status tracking and links to videos
+  - Statistics: 19 completed, 8 with video demonstrations, 6 categories
+
+### Changed
+- **Orchestrator Enhancement**: Integration of DSPy paraphrasing and automation tracking
+  - Question variant distribution to different agents based on configured strategy
+  - Improved coordination event logging with structured status exports
+
+- **CLI Enhancement**: Extended command-line interface for automation workflows
+  - Enhanced display selection logic automatically choosing SilentDisplay in automation mode
+  - Improved output formatting optimized for LLM agent parsing and monitoring
+
+### Documentations, Configurations and Resources
+
+- **Automation Documentation**: Comprehensive guides for LLM agent integration
+  - New `AI_USAGE.md`: Complete guide for LLM agents running MassGen (319 lines)
+  - New `docs/source/user_guide/automation.rst`: Full automation guide with BackgroundShellManager patterns (890 lines)
+  - New `docs/source/reference/status_file.rst`: Complete `status.json` schema reference with field-by-field documentation (565 lines)
+  - Updated `README.md` and `README_PYPI.md` with automation mode sections (135 lines each)
+
+- **DSPy Documentation**: Complete implementation and usage guide
+  - New `massgen/backend/docs/DSPY_IMPLEMENTATION_GUIDE.md`: Comprehensive DSPy integration guide (653 lines)
+  - Covers quick start, configuration, strategies, troubleshooting, and semantic validation
+  - Includes paraphrasing examples and best practices
+
+- **Meta-Coordination Configurations**: MassGen running MassGen examples
+  - `massgen/configs/meta/massgen_runs_massgen.yaml`: Single agent autonomously running MassGen experiments
+  - `massgen/configs/meta/massgen_suggests_to_improve_massgen.yaml`: Self-improvement configuration
+  - Demonstrates automation mode usage for meta-coordination workflows
+
+- **DSPy Configuration Example**: New YAML configuration for DSPy-enabled coordination
+  - `massgen/configs/basic/multi/three_agents_dspy_enabled.yaml`: Three-agent setup with DSPy paraphrasing
+
+- **Case Study Summary Documentation**: Centralized case study reference
+  - New `docs/CASE_STUDIES_SUMMARY.md`: Comprehensive overview of all MassGen case studies with categorization and status tracking
+
+### Technical Details
+- **Major Focus**: Automation infrastructure for LLM agents, DSPy-powered question paraphrasing, meta-coordination capabilities, comprehensive case study documentation
+- **Contributors**: @ncrispino @praneeth999 @franklinnwren @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.7] - 2025-11-03
 

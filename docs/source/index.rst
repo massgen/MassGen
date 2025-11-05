@@ -111,6 +111,10 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
+
+Complete automation infrastructure for LLM agents with real-time status tracking, silent execution mode, and DSPy-powered question paraphrasing for enhanced multi-agent diversity.
+
 **v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
 
 Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
@@ -118,10 +122,6 @@ Agent task planning system with dependency tracking, background shell execution 
 **v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
 
 External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
-
-**v0.1.5 (October 29, 2025)** - Memory System
-
-Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
 
 Quick Start
 -----------
