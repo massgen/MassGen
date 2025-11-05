@@ -27,12 +27,15 @@ import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, List, Optional
 
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
 from .coordination_tracker import CoordinationTracker
+
+if TYPE_CHECKING:
+    from .dspy_paraphraser import QuestionParaphraser
 from .logger_config import get_log_session_dir  # Import to get log directory
 from .logger_config import logger  # Import logger directly for INFO logging
 from .logger_config import (
@@ -70,6 +73,7 @@ class AgentState:
     is_killed: bool = False
     timeout_reason: Optional[str] = None
     last_context: Optional[Dict[str, Any]] = None  # Store the context sent to this agent
+    paraphrase: Optional[str] = None
 
 
 class Orchestrator(ChatAgent):
@@ -117,6 +121,7 @@ class Orchestrator(ChatAgent):
         orchestrator_id: str = "orchestrator",
         session_id: Optional[str] = None,
         config: Optional[AgentConfig] = None,
+        dspy_paraphraser: Optional["QuestionParaphraser"] = None,
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
         previous_turns: Optional[List[Dict[str, Any]]] = None,
@@ -132,6 +137,7 @@ class Orchestrator(ChatAgent):
             orchestrator_id: Unique identifier for this orchestrator (default: "orchestrator")
             session_id: Optional session identifier
             config: Optional AgentConfig for customizing orchestrator behavior
+            dspy_paraphraser: Optional DSPy paraphraser for multi-agent question diversity
             snapshot_storage: Optional path to store agent workspace snapshots
             agent_temporary_workspace: Optional path for agent temporary workspaces
             previous_turns: List of previous turn metadata for multi-turn conversations (loaded by CLI)
@@ -146,6 +152,7 @@ class Orchestrator(ChatAgent):
         self.agents = agents
         self.agent_states = {aid: AgentState() for aid in agents.keys()}
         self.config = config or AgentConfig.create_openai_config()
+        self.dspy_paraphraser = dspy_paraphraser
 
         # Shared memory for all agents
         self.shared_conversation_memory = shared_conversation_memory
@@ -202,6 +209,10 @@ class Orchestrator(ChatAgent):
         self._snapshot_storage: Optional[str] = snapshot_storage
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
 
+        # DSPy paraphrase tracking
+        self._agent_paraphrases: Dict[str, str] = {}
+        self._paraphrase_generation_errors: int = 0
+
         # Multi-turn session tracking (loaded by CLI, not managed by orchestrator)
         self._previous_turns: List[Dict[str, Any]] = previous_turns or []
 
@@ -239,6 +250,71 @@ class Orchestrator(ChatAgent):
                 logger.info("[Orchestrator] Planning tools injection complete")
         else:
             logger.info("[Orchestrator] Planning config not found or disabled")
+
+    async def _prepare_paraphrases_for_agents(self, question: str) -> None:
+        """Generate and assign DSPy paraphrases for the current question."""
+
+        # Reset paraphrases before regenerating
+        self._agent_paraphrases = {}
+        for state in self.agent_states.values():
+            state.paraphrase = None
+
+        if not self.dspy_paraphraser:
+            return
+
+        if not question:
+            return
+
+        try:
+            variants = await asyncio.to_thread(
+                self.dspy_paraphraser.generate_variants,
+                question,
+            )
+        except Exception as exc:
+            self._paraphrase_generation_errors += 1
+            logger.warning(f"Failed to generate DSPy paraphrases: {exc}")
+            return
+
+        if not variants:
+            logger.warning("DSPy paraphraser returned no variants; proceeding with original question for all agents.")
+            return
+
+        agent_ids = list(self.agents.keys())
+        if not agent_ids:
+            return
+
+        for idx, agent_id in enumerate(agent_ids):
+            paraphrase = variants[idx % len(variants)]
+            self._agent_paraphrases[agent_id] = paraphrase
+            self.agent_states[agent_id].paraphrase = paraphrase
+
+        # Log at INFO level so users know paraphrasing is active
+        logger.info(f" DSPy paraphrasing enabled: {len(variants)} variant(s) generated and assigned to {len(agent_ids)} agent(s)")
+
+        log_coordination_step(
+            "DSPy paraphrases prepared",
+            {
+                "variants": len(variants),
+                "assigned_agents": self._agent_paraphrases,
+            },
+        )
+
+    def get_paraphrase_status(self) -> Dict[str, Any]:
+        """Return current DSPy paraphrase assignments and metrics for observability."""
+
+        status = {
+            "paraphrases": self._agent_paraphrases.copy(),
+            "generation_errors": self._paraphrase_generation_errors,
+            "metrics": None,
+        }
+
+        if self.dspy_paraphraser:
+            try:
+                status["metrics"] = self.dspy_paraphraser.get_metrics()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.debug(f"Unable to fetch DSPy paraphraser metrics: {exc}")
+
+        return status
 
     def _inject_planning_tools_for_all_agents(self) -> None:
         """
@@ -381,6 +457,7 @@ class Orchestrator(ChatAgent):
         if self.workflow_phase == "idle":
             # New task - start MassGen coordination with full context
             self.current_task = user_message
+            await self._prepare_paraphrases_for_agents(self.current_task)
             # Reinitialize session with user prompt now that we have it
             self.coordination_tracker.initialize_session(list(self.agents.keys()), self.current_task)
             self.workflow_phase = "coordinating"
@@ -881,6 +958,27 @@ Your answer:"""
             )
             return {"has_irreversible": True, "blocked_tools": set()}
 
+    async def _continuous_status_updates(self):
+        """Background task to continuously update status.json during coordination.
+
+        This task runs every 2 seconds to provide real-time status monitoring
+        for automation tools and LLM agents.
+        """
+        try:
+            while True:
+                await asyncio.sleep(2)  # Update every 2 seconds
+                log_session_dir = get_log_session_dir()
+                if log_session_dir:
+                    try:
+                        self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
+                    except Exception as e:
+                        logger.debug(f"Failed to update status file in background: {e}")
+        except asyncio.CancelledError:
+            # Task was cancelled, this is expected behavior
+            pass
+        except Exception as e:
+            logger.warning(f"Background status update task encountered error: {e}")
+
     async def _coordinate_agents_with_timeout(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute coordination with orchestrator-level timeout protection.
 
@@ -990,6 +1088,9 @@ Your answer:"""
             source=self.orchestrator_id,
         )
 
+        # Start background status update task for real-time monitoring
+        status_update_task = asyncio.create_task(self._continuous_status_updates())
+
         votes = {}  # Track votes: voter_id -> {"agent_id": voted_for, "reason": reason}
 
         # Initialize all agents with has_voted = False and set restart flags
@@ -1033,6 +1134,13 @@ Your answer:"""
             "Final agent selected",
             {"selected_agent": self._selected_agent, "votes": votes},
         )
+
+        # Cancel background status update task
+        status_update_task.cancel()
+        try:
+            await status_update_task
+        except asyncio.CancelledError:
+            pass  # Expected
 
         # Present final answer
         async for chunk in self._present_final_answer():
@@ -1080,6 +1188,7 @@ Your answer:"""
                         self.current_task,
                         current_answers,
                         conversation_context,
+                        self._agent_paraphrases.get(agent_id),
                     )
 
             if not active_streams:
@@ -1163,6 +1272,10 @@ Your answer:"""
                                 result_data,
                                 snapshot_timestamp=answer_timestamp,
                             )
+                            # Update status file for real-time monitoring
+                            log_session_dir = get_log_session_dir()
+                            if log_session_dir:
+                                self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
                             restart_triggered_id = agent_id  # Last agent to provide new answer
                             reset_signal = True
                             log_stream_chunk(
@@ -1228,6 +1341,10 @@ Your answer:"""
                                     result_data,
                                     snapshot_timestamp=vote_timestamp,
                                 )
+                                # Update status file for real-time monitoring
+                                log_session_dir = get_log_session_dir()
+                                if log_session_dir:
+                                    self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
 
                                 # Track new vote event
                                 voted_for = result_data.get("agent_id", "<unknown>")
@@ -1986,6 +2103,7 @@ Your answer:"""
         task: str,
         answers: Dict[str, str],
         conversation_context: Optional[Dict[str, Any]] = None,
+        paraphrase: Optional[str] = None,
     ) -> AsyncGenerator[tuple, None]:
         """
         Stream agent execution with real-time content and final result.
@@ -2013,14 +2131,17 @@ Your answer:"""
             {
                 "agent_id": agent_id,
                 "backend": backend_name,
-                "task": task if task else None,  # Full task for debug logging
+                "task": task if task else None,
+                "paraphrased_task": paraphrase,
+                "agent_view_task": paraphrase or task,
                 "has_answers": bool(answers),
                 "num_answers": len(answers) if answers else 0,
             },
         )
 
         # Add periodic heartbeat logging for stuck agents
-        logger.info(f"[Orchestrator] Agent {agent_id} starting execution loop...")
+        paraphrase_note = " (with DSPy paraphrased question)" if paraphrase else ""
+        logger.info(f"[Orchestrator] Agent {agent_id} starting execution loop...{paraphrase_note}")
 
         # Initialize agent state
         self.agent_states[agent_id].is_killed = False
@@ -2131,6 +2252,7 @@ Your answer:"""
                     agent_summaries=normalized_answers,
                     valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
+                    paraphrase=paraphrase,
                 )
             else:
                 # Fallback to standard conversation building
@@ -2139,6 +2261,7 @@ Your answer:"""
                     agent_summaries=normalized_answers,
                     valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
+                    paraphrase=paraphrase,
                 )
 
             # Inject restart context if this is a restart attempt (like multi-turn context)
@@ -3010,6 +3133,10 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
                 self.coordination_tracker.change_status(aid, AgentStatus.COMPLETED)
 
         self.coordination_tracker.set_final_agent(selected_agent_id, voting_summary, all_answers)
+        # Update status file for real-time monitoring
+        log_session_dir = get_log_session_dir()
+        if log_session_dir:
+            self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
 
         # Add workspace context information to system message if workspace was restored
         if agent.backend.filesystem_manager and temp_workspace_path:
@@ -3722,6 +3849,9 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
         # Clear coordination state
         self._active_streams = {}
         self._active_tasks = {}
+
+        if self.dspy_paraphraser:
+            self.dspy_paraphraser.clear_cache()
 
 
 # =============================================================================

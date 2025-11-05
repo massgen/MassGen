@@ -1,0 +1,95 @@
+# Meta Configuration: MassGen Running MassGen
+#
+# This config demonstrates MassGen's ability to run and monitor itself then suggest improvements.
+# The agent uses code execution to run MassGen commands in automation mode,
+# monitor their progress, and report results.
+#
+# Run with:
+#   uv run massgen --config @examples/configs/meta/massgen_suggests_to_improve_massgen.yaml "Read through the attached MassGen code and docs. Then, run an experiment with MassGen then read the logs and suggest any improvements to help MassGen perform better along any dimension (quality, speed, cost, creativity, etc.) and write small code snippets suggesting how to start."
+# Later: Fix DIRECTLY then run again to improve.
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "local"  # "docker"
+      # command_line_docker_enable_sudo: true
+
+    # System message to guide the agent
+    system_message: |
+      You have access to MassGen through the command line and can:
+      - Run MassGen in automation mode using: uv run massgen --automation --config [config] "[question]"
+      - Monitor progress by reading status.json files
+      - Read final results from log directories
+      - Parse coordination outcomes
+      - Always run MassGen in a background process to avoid blocking
+
+      When asked to run a MassGen experiment:
+      1. Use this command:
+         uv run massgen --automation --config @examples/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
+
+      2. Monitor the status.json file to track progress:
+         - Parse the log directory from the initial output
+         - Read .massgen/massgen_logs/log_YYYYMMDD_HHMMSS/status.json
+         - Check completion_percentage and agent statuses
+         - Note it may take a long time to complete (> 10 minutes is common, should not run over 30 minutes though). If you already have a good idea of what improvements to make, you can stop early. Do not say it is hanging when it is simply just taking a long time.
+
+      Always use automation mode for running MassGen to get structured output.
+      The status.json file is updated every 2 seconds with real-time progress.
+
+  - id: "agent_b"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "local"  # "docker"
+      # command_line_docker_enable_sudo: true
+
+    # System message to guide the agent
+    system_message: |
+      You have access to MassGen through the command line and can:
+      - Run MassGen in automation mode using: uv run massgen --automation --config [config] "[question]"
+      - Monitor progress by reading status.json files
+      - Read final results from log directories
+      - Parse coordination outcomes
+      - Always run MassGen in a background process to avoid blocking
+
+      When asked to run a MassGen experiment:
+      1. Use this command:
+         uv run massgen --automation --config @examples/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
+
+      2. Monitor the status.json file to track progress:
+         - Parse the log directory from the initial output
+         - Read .massgen/massgen_logs/log_YYYYMMDD_HHMMSS/status.json
+         - Check completion_percentage and agent statuses
+         - Note it may take a long time to complete (> 10 minutes is common, should not run over 30 minutes though). If you already have a good idea of what improvements to make, you can stop early. Do not say it is hanging when it is simply just taking a long time.
+
+      Always use automation mode for running MassGen to get structured output.
+      The status.json file is updated every 2 seconds with real-time progress.
+
+orchestrator:
+  snapshot_storage: "snapshots_meta"
+  agent_temporary_workspace: "temp_workspaces_meta"
+
+  voting_sensitivity: balanced
+  max_new_answers_per_agent: 5
+  # answer_novelty_requirement: balanced
+
+  # Add context path so agent understands MassGen structure
+  context_paths:
+    - path: "docs/"
+      permission: "read"
+    - path: "massgen/"
+      permission: "read"
+
+  # Use task planning to help agents make a better plan.
+  coordination:
+    enable_agent_task_planning: true
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
