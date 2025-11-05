@@ -21,9 +21,13 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | General Interoperability | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
+| Computer Use | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
 | Memory Module | [@qidanrui](https://github.com/qidanrui) [@ncrispino](https://github.com/ncrispino) | danrui2020, nickcrispino |
 | Rate Limiting System | [@AbhimanyuAryan](https://github.com/AbhimanyuAryan) | abhimanyuaryan |
 | DSPy Integration | [@praneeth999](https://github.com/praneeth999) | ram2561 |
+| MassGen Handbook | [@a5507203](https://github.com/a5507203) [@Henry-811](https://github.com/Henry-811) | crinvo, henry_weiqi |
+| Session Restart | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
+| Parallel File Operations | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Web UI | [@voidcenter](https://github.com/voidcenter) | justin_zhang |
 
 *For general questions, join the #massgen channel on [Discord](https://discord.gg/VVrT2rQaz5)*
@@ -33,17 +37,17 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.8** | 11/05/25 | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
+| **v0.1.9** | 11/07/25 | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
+| | | MassGen Handbook | @a5507203 | Centralized policies and resources for development and research teams |
+| **v0.1.10** | 11/10/25 | Add computer use | @franklinnwren | Visual perception and automated computer interaction |
 | | | Session Restart | @ncrispino | Resume previous conversations from log files |
-| **v0.1.9** | 11/07/25 | Add computer use | @franklinnwren | Visual perception and automated computer interaction |
-| | | Case study summary | @franklinnwren | Comprehensive case study documentation |
-| **v0.1.10** | 11/10/25 | DSPy Integration | @praneeth999 | Automated prompt optimization for domain-specific tasks |
+| **v0.1.11** | 11/12/25 | Parallel File Operations & Performance | @ncrispino | Increase parallelism and efficiency with standard evaluation metrics |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.8 - Rate Management & Session Continuity
+## 📋 v0.1.9 - Rate Limiting & Documentation
 
 ### Features
 
@@ -57,24 +61,23 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Mandatory cooldown after agent startup to prevent API bursts
 - **Use Case**: Prevent API spam and manage costs while ensuring smooth operation within Gemini's rate limits
 
-**2. Be able to restart existing sessions** (@ncrispino)
-- Issue: [#412](https://github.com/massgen/MassGen/issues/412) (Open)
-- Resume previous MassGen conversations by loading existing log files
-- New CLI parameter: `massgen --continue [LOG_DIR]` to initiate fresh conversation with prior dialogue history
-- System treats resumed session as "Nth turn in a multi-turn conversation" based on log history
-- Default to using same configuration as original session
-- Support for specifying different configuration if needed
-- Optional: Continue most recent conversation without specifying log directory
-- **Use Case**: Resume previous development sessions after closing, mirroring user experience with other LLM tools
+**2. MassGen Handbook** (@a5507203)
+- Issue: [#387](https://github.com/massgen/MassGen/issues/387)
+- Centralized policies and resources for development and research teams
+- Comprehensive user documentation and handbook for MassGen
+- Detailed guides covering installation, configuration, and usage patterns
+- Best practices and troubleshooting documentation
+- Integration examples and case studies
+- **Use Case**: Provide centralized policies and resources for development and research teams
 
 ### Success Criteria
 - ✅ Rate limiting prevents API quota violations and manages costs
-- ✅ Session restart allows seamless continuation of previous conversations
+- ✅ MassGen Handbook provides comprehensive user documentation
 - ✅ Features are configurable and well-documented
 
 ---
 
-## 📋 v0.1.9 - Computer Use Agent
+## 📋 v0.1.10 - Computer Use & Session Management
 
 ### Features
 
@@ -87,35 +90,46 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Integration with image understanding tools for screen content interpretation
 - **Use Case**: Visual perception and automated computer interaction, enabling agents to interpret screen content and execute automated tasks
 
-**2. Case study summary** (@franklinnwren)
-- PR: [#401](https://github.com/massgen/MassGen/pull/401) (Open)
-- Case study summary documentation
-- Comprehensive case study guide for MassGen features
-- **Use Case**: Provide case study documentation demonstrating MassGen capabilities across different features
+**2. Session Restart** (@ncrispino)
+- Issue: [#412](https://github.com/massgen/MassGen/issues/412) (Open)
+- Resume previous MassGen conversations by loading existing log files
+- New CLI parameter: `massgen --continue [LOG_DIR]` to initiate fresh conversation with prior dialogue history
+- System treats resumed session as "Nth turn in a multi-turn conversation" based on log history
+- Default to using same configuration as original session
+- Support for specifying different configuration if needed
+- Optional: Continue most recent conversation without specifying log directory
+- **Use Case**: Resume previous development sessions after closing, mirroring user experience with other LLM tools
 
 ### Success Criteria
 - ✅ Computer use agent successfully integrated with Gemini API
 - ✅ Screenshot processing and visual perception working
 - ✅ Configuration examples provided for multiple models
-- ✅ Case study documentation completed and published
+- ✅ Session restart allows seamless continuation of previous conversations
+- ✅ Log directory structure supports session continuation
+- ✅ Configuration persistence works correctly
+- ✅ Features are well-documented with examples
 
 ---
 
-## 📋 v0.1.10 - Intelligent Optimization
+## 📋 v0.1.11 - Parallel File Operations & Performance
 
 ### Features
 
-**1. DSPy Integration** (@praneeth999)
-- Branch: `mcp_refactor` (In Progress)
-- Automated system prompt optimization for case studies
-- Question rephrasing for increased diversity and clarity
-- QuestionParaphraser module for multi-agent coordination
-- **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
+**1. Parallel File Operations & Performance** (@ncrispino)
+- Issue: [#441](https://github.com/massgen/MassGen/issues/441)
+- Increase parallelism of file read operations for improved performance
+- Standard methodology for efficiency evaluation and benchmarking
+- Optimized file I/O for multi-agent scenarios
+- Performance metrics and monitoring framework
+- Comprehensive efficiency evaluation with standard metrics
+- **Use Case**: Increase parallelism and efficiency with standard evaluation metrics, reducing file operation latency in multi-agent workflows
 
 ### Success Criteria
-- ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
-- ✅ Question paraphrasing increases diversity and clarity
-- ✅ Feature is well-documented with examples
+- ✅ Parallel file reads demonstrate measurable performance improvement
+- ✅ Efficiency evaluation framework established with clear metrics
+- ✅ Standard evaluation methodology implemented and documented
+- ✅ Benchmarking shows improvements in real-world scenarios
+- ✅ Feature maintains data consistency and safety
 
 ---
 
@@ -146,6 +160,47 @@ These features are being actively developed on **separate parallel tracks** and 
 ### Track: Agent Task Planning (@ncrispino, nickcrispino)
 - Agent task planning with dependency tracking
 - **Status:** ✅ Completed in v0.1.7
+
+### Track: Automation & Meta-Coordination (@ncrispino, nickcrispino)
+- LLM agent automation with status tracking and silent execution
+- MassGen running MassGen for self-improvement workflows
+- **Status:** ✅ Completed in v0.1.8
+- **Case Study:** Meta-level self-analysis demonstrating automation mode (`meta-self-analysis-automation-mode.md`)
+
+### Track: DSPy Integration (@praneeth999, ram2561)
+- Question paraphrasing for multi-agent diversity
+- Semantic validation and caching system
+- **Status:** ✅ Completed in v0.1.8
+
+### Track: Rate Limiting System (@AbhimanyuAryan, abhimanyuaryan)
+- PR: [#383](https://github.com/Leezekun/MassGen/pull/383)
+- Multi-dimensional rate limiting for Gemini models
+- Model-specific limits with sliding window tracking
+- **Target:** v0.1.9
+
+### Track: MassGen Handbook (@a5507203, @Henry-811, crinvo, henry_weiqi)
+- Issue: [#387](https://github.com/massgen/MassGen/issues/387)
+- Comprehensive user documentation and handbook
+- Centralized policies and resources for development and research teams
+- **Target:** v0.1.9
+
+### Track: Computer Use (@franklinnwren, zhichengren)
+- PR: [#402](https://github.com/massgen/MassGen/pull/402)
+- Custom computer use agent tool with Gemini API integration
+- Visual perception through screenshot processing
+- **Target:** v0.1.10
+
+### Track: Session Restart (@ncrispino, nickcrispino)
+- Issue: [#412](https://github.com/massgen/MassGen/issues/412)
+- Resume previous MassGen conversations from log files
+- Multi-turn conversation continuation
+- **Target:** v0.1.10
+
+### Track: Parallel File Operations (@ncrispino, nickcrispino)
+- Issue: [#441](https://github.com/massgen/MassGen/issues/441)
+- Increase parallelism of file operations
+- Standard efficiency evaluation metrics
+- **Target:** v0.1.11
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)

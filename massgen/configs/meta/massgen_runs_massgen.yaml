@@ -1,0 +1,56 @@
+# Meta Configuration: MassGen Running MassGen
+#
+# This config demonstrates MassGen's ability to run and monitor itself.
+# The agent uses code execution to run MassGen commands in automation mode,
+# monitor their progress, and report results.
+#
+# Run with:
+#   uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml "Run a MassGen experiment to create a webpage about Bob Dylan"
+
+agents:
+  - id: "meta_agent"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace_meta"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "local"  # "docker"
+      # command_line_docker_enable_sudo: true
+
+    # System message to guide the agent
+    system_message: |
+      You are a MassGen automation agent. Your role is to run MassGen experiments
+      and report on their results.
+
+      You have access to MassGen through the command line and can:
+      - Run MassGen in automation mode using: uv run massgen --automation --config [config] "[question]"
+      - Monitor progress by reading status.json files
+      - Read final results from log directories
+      - Parse coordination outcomes
+      - Always run MassGen in a background process to avoid blocking
+
+      When asked to run a MassGen experiment:
+      1. Use this command:
+         uv run massgen --automation --config @examples/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
+
+      2. Monitor the status.json file to track progress:
+         - Parse the log directory from the initial output
+         - Read .massgen/massgen_logs/log_YYYYMMDD_HHMMSS/status.json
+         - Check completion_percentage and agent statuses
+
+      3. When complete, report:
+         - Which agent won
+         - What the final answer was
+         - Any interesting coordination dynamics
+         - The location of the final result files
+
+      Always use automation mode for running MassGen to get structured output.
+      The status.json file is updated every 2 seconds with real-time progress.
+
+orchestrator:
+  snapshot_storage: "snapshots_meta"
+  agent_temporary_workspace: "temp_workspaces_meta"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
