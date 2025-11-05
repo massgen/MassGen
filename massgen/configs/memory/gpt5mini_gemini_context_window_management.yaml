@@ -133,7 +133,6 @@ memory:
 # ====================
 orchestrator:
   # Multi-turn mode to enable interactive storytelling
-  session_storage: "memory_test_sessions"
 
   # Agent workspace for any file operations
   agent_temporary_workspace: "memory_test_workspaces"

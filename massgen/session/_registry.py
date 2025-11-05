@@ -231,11 +231,12 @@ class SessionRegistry:
         return False
 
 
-def format_session_list(sessions: List[Dict[str, Any]]) -> str:
+def format_session_list(sessions: List[Dict[str, Any]], show_all: bool = False) -> str:
     """Format session list for display in CLI.
 
     Args:
         sessions: List of session metadata dicts
+        show_all: If True, show full details. If False, show compact format
 
     Returns:
         Formatted string for display
@@ -244,36 +245,67 @@ def format_session_list(sessions: List[Dict[str, Any]]) -> str:
         return "No sessions found."
 
     output = []
-    output.append("\nAvailable Memory Sessions:")
-    output.append("=" * 80)
+    output.append(f"\n{'Recent' if not show_all else 'All'} Memory Sessions:")
+    output.append("=" * 100)
 
-    for session in sessions:
-        session_id = session.get("session_id", "unknown")
-        start_time = session.get("start_time", "unknown")
-        status = session.get("status", "unknown")
-        model = session.get("model", "N/A")
-        config = session.get("config_path", "N/A")
-        description = session.get("description", "")
+    if show_all:
+        # Detailed format
+        for session in sessions:
+            session_id = session.get("session_id", "unknown")
+            start_time = session.get("start_time", "unknown")
+            status = session.get("status", "unknown")
+            model = session.get("model", "N/A")
+            config = session.get("config_path", "N/A")
+            description = session.get("description", "")
 
-        # Parse and format start time
-        try:
-            dt = datetime.fromisoformat(start_time)
-            time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-        except (ValueError, TypeError):
-            time_str = start_time
+            # Parse and format start time
+            try:
+                dt = datetime.fromisoformat(start_time)
+                time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except (ValueError, TypeError):
+                time_str = start_time
 
-        output.append(f"\nSession ID: {session_id}")
-        output.append(f"  Status:  {status}")
-        output.append(f"  Started: {time_str}")
-        output.append(f"  Model:   {model}")
-        if description:
-            output.append(f"  Description: {description}")
-        if config != "N/A":
-            # Show just filename for brevity
-            config_name = Path(config).name if config else "N/A"
-            output.append(f"  Config:  {config_name}")
+            output.append(f"\nSession ID: {session_id}")
+            output.append(f"  Status:  {status}")
+            output.append(f"  Started: {time_str}")
+            output.append(f"  Model:   {model}")
+            if description:
+                output.append(f"  Description: {description}")
+            if config != "N/A":
+                # Show just filename for brevity
+                config_name = Path(config).name if config else "N/A"
+                output.append(f"  Config:  {config_name}")
+    else:
+        # Compact format - table view
+        output.append(f"\n{'Session ID':<30} {'Started':<20} {'Status':<12} {'Model':<20}")
+        output.append("-" * 100)
 
-    output.append("\n" + "=" * 80)
-    output.append('\nTo load a session, use: massgen --session-id <SESSION_ID> "Your question"')
+        for session in sessions:
+            session_id = session.get("session_id", "unknown")
+            start_time = session.get("start_time", "unknown")
+            status = session.get("status", "unknown")
+            model = session.get("model", "N/A")
+
+            # Parse and format start time
+            try:
+                dt = datetime.fromisoformat(start_time)
+                time_str = dt.strftime("%Y-%m-%d %H:%M")
+            except (ValueError, TypeError):
+                time_str = start_time[:16] if len(start_time) > 16 else start_time
+
+            # Truncate model name if too long
+            model_display = model[:18] + ".." if model and len(model) > 20 else (model or "N/A")
+
+            # Status indicator
+            status_icon = "✓" if status == "completed" else "○"
+            status_display = f"{status_icon} {status}"
+
+            output.append(f"{session_id:<30} {time_str:<20} {status_display:<12} {model_display:<20}")
+
+    output.append("\n" + "=" * 100)
+    if not show_all and len(sessions) >= 10:
+        output.append(f"\nShowing {len(sessions)} most recent sessions. Use --list-sessions --all to see all sessions.")
+    output.append('\nTo load a session: massgen --session-id <SESSION_ID> "Your question"')
+    output.append("To continue most recent: massgen --continue")
 
     return "\n".join(output)

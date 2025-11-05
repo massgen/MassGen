@@ -3,7 +3,6 @@
 # This configuration enables agents to build upon previous work across multiple conversation turns.
 #
 # Key Features:
-# - session_storage: Saves conversation history and workspace state between turns
 # - context_paths: Gives agents access to your project files
 #   - Use "." for current directory to work directly in your project
 #   - Files are read-only during coordination, writable by final agent
@@ -30,7 +29,6 @@ agents:
 orchestrator:
     snapshot_storage: "snapshots"  # Directory to store workspace snapshots
     agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
-    session_storage: "sessions"  # Used for multi-turn conversations to store previous rounds
 
     # Context paths - give agents access to your project files
     # Tip: Use "." to automatically work in current directory
