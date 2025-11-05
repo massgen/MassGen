@@ -1162,14 +1162,14 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
                         self.code_execution_count += 1
 
-            elif final_response and hasattr(final_response, "candidates"):
+            elif final_response and hasattr(final_response, "candidates") and final_response.candidates:
                 for candidate in final_response.candidates:
                     if hasattr(candidate, "grounding_metadata"):
                         self.search_count += 1
                         logger.debug(f"[Gemini] Grounding (web search) used, count: {self.search_count}")
 
                     if hasattr(candidate, "content") and candidate.content:
-                        if hasattr(candidate.content, "parts"):
+                        if hasattr(candidate.content, "parts") and candidate.content.parts:
                             for part in candidate.content.parts:
                                 if hasattr(part, "executable_code") or hasattr(part, "code_execution_result"):
                                     self.code_execution_count += 1

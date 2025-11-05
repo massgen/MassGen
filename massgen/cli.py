@@ -96,6 +96,13 @@ BRIGHT_WHITE = "\033[97m"
 RESET = "\033[0m"
 BOLD = "\033[1m"
 
+# Exit code constants for automation mode
+EXIT_SUCCESS = 0  # Coordination completed successfully
+EXIT_CONFIG_ERROR = 1  # Configuration or validation error
+EXIT_EXECUTION_ERROR = 2  # Agent failure, API error, or execution error
+EXIT_TIMEOUT = 3  # Orchestrator or agent timeout
+EXIT_INTERRUPTED = 4  # KeyboardInterrupt (Ctrl+C)
+
 # Custom questionary style for polished selection interface
 MASSGEN_QUESTIONARY_STYLE = Style(
     [
@@ -1004,6 +1011,18 @@ def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
                 continue
             # Otherwise, relocate under .massgen/workspaces/
             backend_config["cwd"] = str(massgen_dir / "workspaces" / user_cwd)
+
+    # Validate no duplicate workspace paths (critical for parallel execution)
+    workspace_paths = []
+    for agent_data in agent_entries:
+        backend_config = agent_data.get("backend", {})
+        if "cwd" in backend_config:
+            cwd = Path(backend_config["cwd"]).resolve()
+            if cwd in workspace_paths:
+                raise ConfigurationError(
+                    f"Duplicate workspace path detected: {cwd}\n" "Each agent must have a unique workspace directory.\n" "For parallel execution, ensure configs use different workspace names.",
+                )
+            workspace_paths.append(cwd)
 
 
 def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -2566,7 +2585,7 @@ async def main(args):
                 # User provided a question but no config exists - this is an error
                 print("❌ Configuration error: No default configuration found.", flush=True)
                 print("Run 'massgen --init' to create one, or use 'massgen --model MODEL \"question\"'", flush=True)
-                sys.exit(1)
+                sys.exit(EXIT_CONFIG_ERROR)
             # No question and no config - wizard will be triggered in cli_main()
             return
 
@@ -2574,7 +2593,7 @@ async def main(args):
     if not args.backend:
         if not args.model and not args.config:
             print("❌ Configuration error: Either --config, --model, or --backend must be specified", flush=True)
-            sys.exit(1)
+            sys.exit(EXIT_CONFIG_ERROR)
 
     # Track config path for error messages
     resolved_path = None
@@ -2603,14 +2622,14 @@ async def main(args):
                 if validation_result.has_errors():
                     print(validation_result.format_errors(), file=sys.stderr)
                     print(f"\n{BRIGHT_RED}❌ Config validation failed. Fix errors above or use --skip-validation to bypass.{RESET}\n")
-                    sys.exit(1)
+                    sys.exit(EXIT_CONFIG_ERROR)
 
                 # Show warnings (non-blocking unless --strict-validation)
                 if validation_result.has_warnings():
                     print(validation_result.format_warnings())
                     if args.strict_validation:
                         print(f"\n{BRIGHT_RED}❌ Config validation failed in strict mode (warnings treated as errors).{RESET}\n")
-                        sys.exit(1)
+                        sys.exit(EXIT_CONFIG_ERROR)
                     print()  # Extra newline for readability
         else:
             model = args.model
@@ -2643,6 +2662,27 @@ async def main(args):
 
         # Apply command-line overrides
         ui_config = config.get("ui", {})
+        if args.automation:
+            # Automation mode: silent display, keep logging enabled for status.json
+            ui_config["display_type"] = "silent"
+            ui_config["logging_enabled"] = True
+            ui_config["automation_mode"] = True
+
+            # Auto-generate unique workspace suffixes for parallel execution safety
+            # This prevents conflicts when running multiple instances with the same config
+            import uuid
+
+            unique_suffix = uuid.uuid4().hex[:8]
+
+            agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
+            for agent_data in agent_entries:
+                backend_config = agent_data.get("backend", {})
+                if "cwd" in backend_config:
+                    original_cwd = backend_config["cwd"]
+                    # Append unique suffix to workspace path
+                    # e.g., ".massgen/workspaces/workspace1" -> ".massgen/workspaces/workspace1_a1b2c3d4"
+                    backend_config["cwd"] = f"{original_cwd}_{unique_suffix}"
+                    logger.debug(f"[Automation] Auto-generated unique workspace: {original_cwd} -> {backend_config['cwd']}")
         if args.no_display:
             ui_config["display_type"] = "simple"
         if args.no_logs:
@@ -2788,12 +2828,16 @@ async def main(args):
 
     except ConfigurationError as e:
         print(f"❌ Configuration error: {e}", flush=True)
-        sys.exit(1)
+        sys.exit(EXIT_CONFIG_ERROR)
     except KeyboardInterrupt:
         print("\n👋 Goodbye!", flush=True)
+        sys.exit(EXIT_INTERRUPTED)
+    except TimeoutError as e:
+        print(f"❌ Timeout error: {e}", flush=True)
+        sys.exit(EXIT_TIMEOUT)
     except Exception as e:
         print(f"❌ Error: {e}", flush=True)
-        sys.exit(1)
+        sys.exit(EXIT_EXECUTION_ERROR)
 
 
 def cli_main():
@@ -2898,6 +2942,12 @@ Environment Variables:
     parser.add_argument("--no-display", action="store_true", help="Disable visual coordination display")
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode with verbose logging")
+    parser.add_argument(
+        "--automation",
+        action="store_true",
+        help="Enable automation mode: silent output (~10 lines), status.json tracking, meaningful exit codes. "
+        "REQUIRED for LLM agents and background execution. Automatically isolates workspaces for parallel runs.",
+    )
     parser.add_argument(
         "--init",
         action="store_true",

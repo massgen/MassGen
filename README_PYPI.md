@@ -30,6 +30,10 @@
 </p>
 
 <p align="center">
+  <b>🤖 For LLM Agents:</b> <a href="AI_USAGE.md">AI_USAGE.md</a> - Complete automation guide to run MassGen inside an LLM
+</p>
+
+<p align="center">
   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
     <img src="docs/source/_static/images/thumbnail.png" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
@@ -93,6 +97,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 - [📊 View Results](#5--view-results)
   - [Real-time Display](#real-time-display)
   - [Comprehensive Logging](#comprehensive-logging)
+</details>
+
+<details open>
+<summary><h3>🤖 Automation & LLM Integration</h3></summary>
+
+- [Automation Mode](#-automation--llm-integration)
+- [BackgroundShellManager](#using-backgroundshellmanager)
+- [Status File Reference](#statusjson-structure)
+- [Full Automation Guide](https://docs.massgen.ai/en/latest/user_guide/automation.html)
 </details>
 
 <details open>
@@ -986,6 +999,128 @@ All sessions are automatically logged with detailed information for debugging an
 - **Debug Log** (`massgen.log`): Complete system operations, API calls, tool usage, and error traces (use `--debug` for verbose logging)
 
 → For comprehensive logging guide and debugging techniques, see [Logging & Debugging](https://docs.massgen.ai/en/latest/user_guide/logging.html)
+
+---
+
+## 🤖 Automation & LLM Integration
+
+**→ For LLM agents: See [AI_USAGE.md](AI_USAGE.md) for complete command-line usage guide**
+
+MassGen provides **automation mode** designed for LLM agents and programmatic workflows:
+
+### Quick Start - Automation Mode
+
+```bash
+# Run with minimal output and status tracking
+uv run massgen --automation --config your_config.yaml "Your question"
+```
+
+**Features:**
+- ✅ **Silent output** (~10 lines instead of 250-3,000+)
+- ✅ **Real-time status file** (`status.json` updated every 2 seconds)
+- ✅ **Meaningful exit codes** (0=success, 1=config error, 2=execution error, 3=timeout, 4=interrupted)
+- ✅ **Automatic parallel execution** support (workspaces auto-isolated with unique suffixes)
+
+### Using BackgroundShellManager
+
+For robust background execution, use MassGen's built-in `BackgroundShellManager`:
+
+```python
+from massgen.filesystem_manager.background_shell import (
+    start_shell,
+    get_shell_output,
+    get_shell_status,
+    kill_shell,
+)
+
+# Start MassGen in background
+shell_id = start_shell(
+    "uv run massgen --automation --config config.yaml 'Your question'"
+)
+
+# Monitor progress via status.json
+import json, time
+from pathlib import Path
+
+# Get log directory from initial output
+output = get_shell_output(shell_id)
+for line in output["stdout"].split("\n"):
+    if line.startswith("LOG_DIR:"):
+        log_dir = Path(line.split(": ", 1)[1].strip())
+        status_file = log_dir / "status.json"
+        break
+
+# Poll status
+while True:
+    status = get_shell_status(shell_id)
+    if status["status"] != "running":
+        break
+
+    # Read real-time progress
+    if status_file.exists():
+        progress = json.load(open(status_file))
+        print(f"Progress: {progress['coordination']['completion_percentage']}%")
+
+    time.sleep(2)
+
+# Get final result
+output = get_shell_output(shell_id)
+if output["exit_code"] == 0:
+    winner = json.load(open(status_file))["results"]["winner"]
+    answer = (log_dir / f"final/{winner}/answer.txt").read_text()
+    print(f"Success! Answer: {answer[:200]}...")
+```
+
+### status.json Structure
+
+Real-time status file updated every 2 seconds:
+
+```json
+{
+  "meta": {
+    "last_updated": 1730678901.234,
+    "log_dir": "/path/to/logs",
+    "elapsed_seconds": 101.2
+  },
+  "coordination": {
+    "phase": "enforcement",
+    "completion_percentage": 65,
+    "active_agent": "agent_b"
+  },
+  "agents": {
+    "agent_a": {
+      "status": "voted",
+      "answer_count": 1,
+      "vote_cast": {...},
+      "error": null
+    }
+  },
+  "results": {
+    "votes": {"agent1.1": 2},
+    "winner": "agent_a"
+  }
+}
+```
+
+**Agent Status Values:**
+- `streaming` - Actively generating content
+- `answered` - Provided answer
+- `voted` - Cast vote
+- `error` - Encountered error
+- `completed` - Finished
+
+### Comprehensive Guide
+
+→ **Full automation guide with examples:** [Automation Guide](https://docs.massgen.ai/en/latest/user_guide/automation.html)
+
+Topics covered:
+- Complete automation patterns with error handling
+- Parallel experiment execution
+- Hyperparameter tuning
+- A/B testing configurations
+- Performance tips and troubleshooting
+
+---
 
 ## 💡 Case Studies
 
