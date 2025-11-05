@@ -227,7 +227,36 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.7 - Latest
+### v0.1.8 - Latest
+**New Features:** Automation Mode & DSPy Integration
+
+**Configuration Files:**
+- `three_agents_dspy_enabled.yaml` - Three-agent setup with DSPy paraphrasing
+- `massgen_runs_massgen.yaml` - Meta-coordination configuration
+- `massgen_suggests_to_improve_massgen.yaml` - Autonomous MassGen experiments
+
+**Key Features:**
+- **Automation Mode**: Clean structured output (~10 lines vs 250-3,000+) for LLM agents with `--automation` flag
+- **DSPy Integration**: Question paraphrasing with three strategies (diverse/balanced/conservative) for multi-agent diversity
+- **Meta-Coordination**: MassGen running MassGen for self-improvement workflows
+- **Status Monitoring**: Real-time `status.json` updated every 2 seconds with phase tracking and voting results
+
+**Try It:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# DSPy question paraphrasing for multi-agent diversity
+massgen --config massgen/configs/basic/multi/three_agents_dspy_enabled.yaml "Explain the differences between transformer architecture and recurrent neural networks"
+
+# Automation mode - clean output for LLM agents
+uv run massgen --automation --config massgen/configs/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
+
+# Meta-coordination - MassGen running MassGen
+uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml "Run a MassGen experiment to create a webpage about Bob Dylan"
+```
+
+### v0.1.7
 **New Features:** Agent Task Planning & Background Execution
 
 **Configuration Files:**
@@ -241,9 +270,6 @@ Most configurations use environment variables for API keys:so
 
 **Try It:**
 ```bash
-# Install or upgrade
-pip install --upgrade massgen
-
 # Agent task planning for complex multi-step projects
 massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
 

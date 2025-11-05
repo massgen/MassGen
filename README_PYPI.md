@@ -30,10 +30,6 @@
 </p>
 
 <p align="center">
-  <b>🤖 For LLM Agents:</b> <a href="AI_USAGE.md">AI_USAGE.md</a> - Complete automation guide to run MassGen inside an LLM
-</p>
-
-<p align="center">
   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
     <img src="docs/source/_static/images/thumbnail.png" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
@@ -46,6 +42,10 @@
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
 
 This project started with the "threads of thought" and "iterative refinement" ideas presented in [The Myth of Reasoning](https://docs.ag2.ai/latest/docs/blog/2025/04/16/Reasoning/), and extends the classic "multi-agent conversation" idea in [AG2](https://github.com/ag2ai/ag2). Here is a [video recording](https://www.youtube.com/watch?v=xM2Uguw1UsQ) of the background context introduction presented at the Berkeley Agentic AI Summit 2025.
+
+<p align="center">
+  <b>🤖 For LLM Agents:</b> <a href="AI_USAGE.md">AI_USAGE.md</a> - Complete automation guide to run MassGen inside an LLM
+</p>
 
 ---
 
@@ -64,7 +64,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.7 Features](#-latest-features-v017)
+- [v0.1.8 Features](#-latest-features-v018)
 </details>
 
 <details open>
@@ -118,15 +118,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.7](#recent-achievements-v017)
-  - [v0.0.3 - v0.1.6](#previous-achievements-v003---v016)
+  - [v0.1.8](#recent-achievements-v018)
+  - [v0.0.3 - v0.1.7](#previous-achievements-v003---v017)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.8 Roadmap](#v018-roadmap)
+- [v0.1.9 Roadmap](#v019-roadmap)
 </details>
 
 <details open>
@@ -151,32 +151,35 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.7)
+## 🆕 Latest Features (v0.1.8)
 
-**🎉 Released: November 3, 2025**
+**🎉 Released: November 5, 2025**
 
-**What's New in v0.1.7:**
-- **📋 Agent Task Planning** - Organize complex multi-step workflows with dependency tracking
-- **🔄 Background Shell Execution** - Run long-running commands with persistent sessions and real-time monitoring
-- **⚡ Preemption Coordination** - Interrupt ongoing coordination without restarting to preserve progress
+**What's New in v0.1.8:**
+- **🤖 Automation Mode** - Run MassGen inside LLM agents with silent execution and structured output
+- **🎯 DSPy Integration** - Intelligent question paraphrasing for enhanced multi-agent diversity
+- **📚 Case Study Documentation** - Comprehensive overview of MassGen capabilities with examples
 
 **Key Improvements:**
-- MCP-based planning tools with automatic task status management
-- Persistent shell sessions that survive across agent interactions
-- Agents can submit better answers mid-coordination without losing partial progress
-- Task dependencies with automatic validation and blocking
-- Output streaming for background commands with timeout handling
+- Clean automation output (~10 lines vs 250-3,000+) perfect for LLM agents to parse
+- Real-time `status.json` monitoring updated every 2 seconds for async workflows
+- Question paraphrasing with three strategies (diverse/balanced/conservative) using DSPy
+- Automatic semantic validation to preserve meaning during paraphrasing
+- Meta-coordination: MassGen can run MassGen for self-improvement workflows
 
-**Try v0.1.7 Features:**
+**Try v0.1.8 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Agent task planning for complex multi-step projects
-massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
+# DSPy question paraphrasing for multi-agent diversity
+massgen --config massgen/configs/basic/multi/three_agents_dspy_enabled.yaml "Explain the differences between transformer architecture and recurrent neural networks"
 
-# Background shell execution for parallel long-running commands
-uv run massgen --config massgen/configs/tools/code-execution/background_shell_demo.yaml "Run three experiments in parallel using background shell commands: test sorting algorithms (bubble, quick, merge) on arrays of size 10000. Compare their execution times."
+# Automation mode - clean output for LLM agents
+uv run massgen --automation --config massgen/configs/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
+
+# Meta-coordination - MassGen running MassGen
+uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml "Run a MassGen experiment to create a webpage about Bob Dylan"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1015,100 +1018,6 @@ MassGen provides **automation mode** designed for LLM agents and programmatic wo
 uv run massgen --automation --config your_config.yaml "Your question"
 ```
 
-**Features:**
-- ✅ **Silent output** (~10 lines instead of 250-3,000+)
-- ✅ **Real-time status file** (`status.json` updated every 2 seconds)
-- ✅ **Meaningful exit codes** (0=success, 1=config error, 2=execution error, 3=timeout, 4=interrupted)
-- ✅ **Automatic parallel execution** support (workspaces auto-isolated with unique suffixes)
-
-### Using BackgroundShellManager
-
-For robust background execution, use MassGen's built-in `BackgroundShellManager`:
-
-```python
-from massgen.filesystem_manager.background_shell import (
-    start_shell,
-    get_shell_output,
-    get_shell_status,
-    kill_shell,
-)
-
-# Start MassGen in background
-shell_id = start_shell(
-    "uv run massgen --automation --config config.yaml 'Your question'"
-)
-
-# Monitor progress via status.json
-import json, time
-from pathlib import Path
-
-# Get log directory from initial output
-output = get_shell_output(shell_id)
-for line in output["stdout"].split("\n"):
-    if line.startswith("LOG_DIR:"):
-        log_dir = Path(line.split(": ", 1)[1].strip())
-        status_file = log_dir / "status.json"
-        break
-
-# Poll status
-while True:
-    status = get_shell_status(shell_id)
-    if status["status"] != "running":
-        break
-
-    # Read real-time progress
-    if status_file.exists():
-        progress = json.load(open(status_file))
-        print(f"Progress: {progress['coordination']['completion_percentage']}%")
-
-    time.sleep(2)
-
-# Get final result
-output = get_shell_output(shell_id)
-if output["exit_code"] == 0:
-    winner = json.load(open(status_file))["results"]["winner"]
-    answer = (log_dir / f"final/{winner}/answer.txt").read_text()
-    print(f"Success! Answer: {answer[:200]}...")
-```
-
-### status.json Structure
-
-Real-time status file updated every 2 seconds:
-
-```json
-{
-  "meta": {
-    "last_updated": 1730678901.234,
-    "log_dir": "/path/to/logs",
-    "elapsed_seconds": 101.2
-  },
-  "coordination": {
-    "phase": "enforcement",
-    "completion_percentage": 65,
-    "active_agent": "agent_b"
-  },
-  "agents": {
-    "agent_a": {
-      "status": "voted",
-      "answer_count": 1,
-      "vote_cast": {...},
-      "error": null
-    }
-  },
-  "results": {
-    "votes": {"agent1.1": 2},
-    "winner": "agent_a"
-  }
-}
-```
-
-**Agent Status Values:**
-- `streaming` - Actively generating content
-- `answered` - Provided answer
-- `voted` - Cast vote
-- `error` - Encountered error
-- `completed` - Finished
-
 ### Comprehensive Guide
 
 → **Full automation guide with examples:** [Automation Guide](https://docs.massgen.ai/en/latest/user_guide/automation.html)
@@ -1116,8 +1025,6 @@ Real-time status file updated every 2 seconds:
 Topics covered:
 - Complete automation patterns with error handling
 - Parallel experiment execution
-- Hyperparameter tuning
-- A/B testing configurations
 - Performance tips and troubleshooting
 
 ---
@@ -1142,35 +1049,48 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.7)
+### Recent Achievements (v0.1.8)
 
-**🎉 Released: November 3, 2025**
+**🎉 Released: November 5, 2025**
 
-#### Agent Task Planning System
-- **Planning MCP Server**: Dedicated server for task lifecycle management with dependency tracking
-- **Task Dataclasses**: Complete task and plan structures with validation
-- **Status Management**: Automatic transitions between task states (pending/in_progress/completed/blocked)
-- **Dependency Validation**: Tasks automatically blocked until dependencies complete
-- **Orchestrator Integration**: Plan-aware coordination for multi-agent workflows
+#### Automation Mode for LLM Agents
+- **SilentDisplay Class**: New `massgen/frontend/displays/silent_display.py` for automation-friendly output (~10 lines vs 250-3,000+)
+- **CLI Flag**: `--automation` flag for silent execution with structured output
+- **Status Monitoring**: Real-time `status.json` file updated every 2 seconds with phase, agent states, and voting results
+- **Exit Codes**: Meaningful codes (0=success, 1=config error, 2=execution error, 3=timeout, 4=interrupted)
+- **Workspace Isolation**: Automatic unique workspace suffixes for parallel execution preventing collisions
+- **Meta-Coordination**: MassGen running MassGen configurations for self-improvement workflows
 
-#### Background Shell Execution
-- **BackgroundShell Class**: Async command execution with persistent sessions
-- **Shell Lifecycle Management**: Start, monitor, and terminate long-running processes
-- **Output Streaming**: Real-time monitoring of command output
-- **Timeout Handling**: Automatic timeout management for long-running operations
-- **Code Execution Server**: Enhanced server with background execution capabilities
+#### DSPy Question Paraphrasing Integration
+- **Paraphraser Module**: New `massgen/dspy_paraphraser.py` (557 lines) with semantic-preserving paraphrasing
+- **Three Strategies**: "diverse", "balanced" (default), and "conservative" paraphrasing modes
+- **Semantic Validation**: Automatic validation using `SemanticValidationSignature` ensuring meaning preservation
+- **Thread-Safe Caching**: SHA-256 hashing for performance with configurable cache system
+- **Multi-Backend Support**: Works with all backends (Gemini, OpenAI, Claude, etc.) as paraphrasing engines
+- **Orchestrator Integration**: Automatic question variant distribution to different agents
 
-#### Preemption Coordination
-- **Interruption Support**: Agents can preempt coordination to submit better answers
-- **Progress Preservation**: Partial progress maintained during preemption
-- **Coordination Tracker**: Enhanced logging of preemption events
-- **Orchestrator Logic**: Improved handling of agent interruptions without full restart
+#### Documentation
+- **Case Study Summary**: New `docs/CASE_STUDIES_SUMMARY.md` (368 lines) with centralized overview of 33 case studies organized by category
+- **Automation Guide**: New `AI_USAGE.md` (319 lines) complete guide for LLM agents running MassGen
+- **DSPy Implementation**: New `massgen/backend/docs/DSPY_IMPLEMENTATION_GUIDE.md` (653 lines) comprehensive integration guide
+- **Status File Reference**: New `docs/source/reference/status_file.rst` (565 lines) complete `status.json` schema documentation
+- **Automation Documentation**: New `docs/source/user_guide/automation.rst` (890 lines) full automation guide with BackgroundShellManager patterns
 
 #### Configuration Files
-- `example_task_todo.yaml` - Task planning with dependency management
-- `background_shell_demo.yaml` - Background command execution demo
+- `three_agents_dspy_enabled.yaml` - Three-agent setup with DSPy paraphrasing
+- `massgen_runs_massgen.yaml` - Meta-coordination for self-improvement
+- `massgen_suggests_to_improve_massgen.yaml` - Autonomously running MassGen experiments
 
-### Previous Achievements (v0.0.3 - v0.1.6)
+#### Case Study
+- `meta-self-analysis-automation-mode.md` - Meta-level self-analysis demonstrating automation mode
+
+### Previous Achievements (v0.0.3 - v0.1.7)
+
+✅ **Agent Task Planning System (v0.1.7)**: MCP-based planning server with task lifecycle management, dependency tracking with automatic validation and blocking, status transitions between pending/in_progress/completed/blocked states, orchestrator integration for plan-aware multi-agent coordination
+
+✅ **Background Shell Execution (v0.1.7)**: Persistent shell sessions for long-running commands with BackgroundShell class supporting async execution, real-time output streaming and monitoring, automatic timeout handling, enhanced code execution server with background capabilities
+
+✅ **Preemption Coordination (v0.1.7)**: Agents can interrupt ongoing coordination to submit better answers without full restart, partial progress preservation during preemption, enhanced coordination tracker logging preemption events
 
 ✅ **Framework Interoperability (v0.1.6)**: AG2 nested chat, LangGraph workflows, AgentScope agents, OpenAI Assistants, and SmoLAgent integrated as custom tools with cross-framework collaboration and streaming support for AG2
 
@@ -1300,20 +1220,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.8 Roadmap
+### v0.1.9 Roadmap
 
-Version 0.1.8 focuses on rate management for improved API cost control:
+Version 0.1.9 focuses on rate management and comprehensive documentation:
 
 #### Planned Features
 - **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs with model-specific limits and configurable thresholds
+- **MassGen Handbook**: Comprehensive user documentation and centralized policies for development and research teams
 
 Key technical approach:
 - **Rate Limiting**: Sliding window tracking, external YAML configuration, optional CLI flag, mandatory cooldown periods after startup
-- **Configuration**: Optional and configurable via `--rate-limit` flag
+- **Documentation**: Installation guides, configuration patterns, best practices, troubleshooting, case studies, and integration examples
 
-**Target Release**: November 5, 2025 (Wednesday @ 9am PT)
+**Target Release**: November 7, 2025 (Friday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.8 roadmap](ROADMAP_v0.1.8.md).
+For detailed milestones and technical specifications, see the [full v0.1.9 roadmap](ROADMAP_v0.1.9.md).
 
 ---
 
