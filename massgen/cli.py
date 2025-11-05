@@ -456,6 +456,86 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             )
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
+    elif backend_type == "cerebras":
+        # Cerebras AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("CEREBRAS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Cerebras AI", "CEREBRAS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.cerebras.ai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "together":
+        # Together AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("TOGETHER_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Together AI", "TOGETHER_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.together.xyz/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "fireworks":
+        # Fireworks AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("FIREWORKS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Fireworks AI", "FIREWORKS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.fireworks.ai/inference/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "groq":
+        # Groq uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Groq", "GROQ_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.groq.com/openai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "openrouter":
+        # OpenRouter uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("OpenRouter", "OPENROUTER_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://openrouter.ai/api/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "moonshot":
+        # Kimi/Moonshot AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("MOONSHOT_API_KEY") or os.getenv("KIMI_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Moonshot AI", "MOONSHOT_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.moonshot.cn/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "nebius":
+        # Nebius AI Studio uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("NEBIUS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Nebius AI Studio", "NEBIUS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.studio.nebius.ai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "poe":
+        # POE uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("POE_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("POE", "POE_API_KEY", config_path))
+        # base_url must be provided in config as it's platform-specific
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "qwen":
+        # Qwen uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("QWEN_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Qwen", "QWEN_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
     elif backend_type == "lmstudio":
         # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
         return LMStudioBackend(**kwargs)
@@ -601,6 +681,8 @@ def create_agents_from_config(
         elif backend_type_lower == "zai":
             agent_config = AgentConfig.create_zai_config(**backend_params)
         elif backend_type_lower == "chatcompletion":
+            agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
+        elif backend_type_lower in ["cerebras", "together", "fireworks", "groq", "openrouter", "moonshot", "nebius", "poe", "qwen"]:
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
         elif backend_type_lower == "lmstudio":
             agent_config = AgentConfig.create_lmstudio_config(**backend_params)
