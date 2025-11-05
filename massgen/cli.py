@@ -52,6 +52,11 @@ from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
 from .config_builder import ConfigBuilder
+from .dspy_paraphraser import (
+    QuestionParaphraser,
+    create_dspy_lm_from_backend_config,
+    is_dspy_available,
+)
 from .frontend.coordination_ui import CoordinationUI
 from .logger_config import _DEBUG_MODE, logger, save_execution_metadata, setup_logging
 from .orchestrator import Orchestrator
@@ -827,6 +832,76 @@ def create_agents_from_config(
     return agents
 
 
+def create_dspy_paraphraser_from_config(
+    config: Dict[str, Any],
+    *,
+    config_path: Optional[str] = None,
+) -> Optional[QuestionParaphraser]:
+    """Instantiate DSPy paraphraser from orchestrator configuration.
+
+    Returns:
+        QuestionParaphraser instance when DSPy is enabled and properly configured; otherwise None.
+    """
+
+    orchestrator_cfg = config.get("orchestrator", {}) if isinstance(config, dict) else {}
+    dspy_cfg = orchestrator_cfg.get("dspy") if isinstance(orchestrator_cfg, dict) else None
+
+    if not isinstance(dspy_cfg, dict) or not dspy_cfg.get("enabled", False):
+        return None
+
+    if not is_dspy_available():
+        location = f" ({config_path})" if config_path else ""
+        logger.warning("DSPy is not installed")
+        return None
+
+    backend_cfg = dspy_cfg.get("backend", {})
+    if not isinstance(backend_cfg, dict) or not backend_cfg:
+        logger.warning("DSPy paraphrasing enabled but no backend configuration provided. Skipping DSPy setup.")
+        return None
+
+    lm = create_dspy_lm_from_backend_config(backend_cfg)
+    if lm is None:
+        logger.warning("Failed to initialize DSPy language model from backend configuration. Skipping DSPy setup.")
+        return None
+
+    paraphraser_kwargs: Dict[str, Any] = {}
+
+    # Simple pass-through configuration values
+    for key in [
+        "num_variants",
+        "strategy",
+        "cache_enabled",
+        "semantic_threshold",
+        "use_chain_of_thought",
+        "validate_semantics",
+    ]:
+        if key in dspy_cfg:
+            paraphraser_kwargs[key] = dspy_cfg[key]
+
+    # Temperature range expects a tuple of two numeric values
+    temperature_range = dspy_cfg.get("temperature_range")
+    if isinstance(temperature_range, (list, tuple)) and len(temperature_range) == 2:
+        try:
+            paraphraser_kwargs["temperature_range"] = (
+                float(temperature_range[0]),
+                float(temperature_range[1]),
+            )
+        except (TypeError, ValueError):
+            logger.warning("Ignoring invalid DSPy temperature_range; expected two numeric values.")
+    elif temperature_range is not None:
+        logger.warning("Ignoring invalid DSPy temperature_range; expected a list/tuple with two values.")
+
+    try:
+        paraphraser = QuestionParaphraser(lm=lm, **paraphraser_kwargs)
+    except Exception as exc:
+        location = f" ({config_path})" if config_path else ""
+        logger.warning(f"Failed to initialize DSPy paraphraser{location}: {exc}")
+        return None
+
+    logger.info("✅ DSPy question paraphrasing enabled (strategy=%s, variants=%s)", paraphraser_kwargs.get("strategy", "balanced"), paraphraser_kwargs.get("num_variants", 3))
+    return paraphraser
+
+
 def create_simple_config(
     backend_type: str,
     model: str,
@@ -1186,6 +1261,7 @@ async def run_question_with_history(
         agent_temporary_workspace=agent_temporary_workspace,
         previous_turns=previous_turns,
         winning_agents_history=winning_agents_history,  # Restore for memory sharing
+        dspy_paraphraser=kwargs.get("dspy_paraphraser"),
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(
@@ -1408,6 +1484,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             config=orchestrator_config,
             snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace,
+            dspy_paraphraser=kwargs.get("dspy_paraphraser"),
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
@@ -2701,6 +2778,14 @@ async def main(args):
         # Add orchestrator configuration if present
         if "orchestrator" in config:
             kwargs["orchestrator"] = config["orchestrator"]
+
+        # Optionally enable DSPy paraphrasing
+        dspy_paraphraser = create_dspy_paraphraser_from_config(
+            config,
+            config_path=str(resolved_path) if resolved_path else None,
+        )
+        if dspy_paraphraser:
+            kwargs["dspy_paraphraser"] = dspy_paraphraser
 
         # Save execution metadata for debugging and reconstruction
         if args.question:
