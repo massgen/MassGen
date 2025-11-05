@@ -189,6 +189,37 @@ cat [log_dir]/status.json
 cat [log_dir]/final/[winner]/answer.txt
 ```
 
+## Example Configs
+
+### Standard Multi-Agent Config
+
+```bash
+massgen/configs/tools/todo/example_task_todo.yaml
+```
+
+**Features**: 2 agents (Gemini 2.5 Pro + GPT-5 Mini), task planning, file operations
+
+### Meta-Config: MassGen Running MassGen
+
+```bash
+massgen/configs/meta/massgen_runs_massgen.yaml
+```
+
+**Run it:**
+```bash
+uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml \
+    "Run a MassGen experiment to create a webpage about Bob Dylan"
+```
+
+**What it does**: Single agent autonomously runs MassGen experiments, monitors status.json, and reports results.
+
+**Use for**: Self-improvement, hyperparameter tuning, bug fixing, automated testing.
+
+**Limitation**: Local execution only. Docker requires:
+- API credential passing to nested instances
+- Automatic dependency installation (e.g., reinstalling MassGen)
+- See Issue #436
+
 ## Files You'll Read
 
 After completion, these files are available:
@@ -230,6 +261,56 @@ Before running MassGen:
 - [ ] Reading final answer from `final/{winner}/answer.txt`
 
 **That's it!** With `--automation` mode, MassGen is fully automatable.
+
+## Limitations
+
+### 1. Local Code Execution Only (Meta-Coordination)
+
+For MassGen-running-MassGen scenarios, currently only local execution is supported:
+
+```yaml
+# ✅ Works
+agents:
+  - backend:
+      enable_mcp_command_line: true
+      command_line_execution_mode: "local"
+
+# ❌ Not yet supported for nested MassGen
+agents:
+  - backend:
+      command_line_execution_mode: "docker"
+```
+
+**Why:** Docker execution requires:
+- API credentials to be passed to nested instances
+- Automatic dependency installation (e.g., reinstalling MassGen in container)
+- Planned for future PR (Issue #436)
+
+### 2. Cost Control ⚠️
+
+**CRITICAL**: Automation mode runs without human oversight. Agents can make many API calls, potentially incurring significant costs.
+
+**Mitigation Strategies:**
+
+1. **Set strict timeouts**:
+   ```yaml
+   timeout_settings:
+     orchestrator_timeout_seconds: 300
+     agent_timeout_seconds: 180
+   ```
+
+2. **Use economical models**:
+   ```yaml
+   agents:
+     - backend:
+         model: "gpt-4o-mini"  # or gpt-5-mini
+   ```
+
+3. **Monitor costs**: Check API provider dashboards regularly
+4. **Set provider rate limits**: Configure spending limits at API provider level
+5. **Start small**: Test with single experiments before scaling
+
+**Future**: Built-in cost tracking and spending limits (planned).
 
 ## Full Documentation
 

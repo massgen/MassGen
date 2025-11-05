@@ -530,6 +530,119 @@ Programmatic Access
            "question": metadata["question"],
        }
 
+Meta-Coordination: MassGen Running MassGen
+===========================================
+
+MassGen can autonomously run and monitor itself, enabling self-improvement and automated experimentation.
+
+Available Meta Configs
+-----------------------
+
+**1. massgen_runs_massgen.yaml** - Run MassGen experiments
+
+.. code-block:: bash
+
+   uv run massgen --config @examples/configs/meta/massgen_runs_massgen.yaml \
+       "Run a MassGen experiment to create a webpage about Bob Dylan"
+
+**2. massgen_suggests_to_improve_massgen.yaml** - Run experiments AND suggest improvements
+
+.. code-block:: bash
+
+   uv run massgen --config @examples/configs/meta/massgen_suggests_to_improve_massgen.yaml \
+       "Run an experiment with MassGen then read the logs and suggest any improvements to help MassGen perform better along any dimension (quality, speed, cost, creativity, etc.)."
+
+Example Configuration
+---------------------
+
+**Config**: ``@examples/configs/meta/massgen_runs_massgen.yaml``
+
+.. code-block:: yaml
+
+   agents:
+     - id: "meta_agent"
+       backend:
+         type: "openai"
+         model: "gpt-5-mini"
+         cwd: "workspace_meta"
+         enable_mcp_command_line: true
+         command_line_execution_mode: "local"
+
+       system_message: |
+         You are a MassGen automation agent. Your role is to run MassGen
+         experiments and report on their results.
+
+         When asked to run a MassGen experiment:
+         1. Use: uv run massgen --automation --config [config] "[question]"
+         2. Monitor the status.json file to track progress
+         3. When complete, report the winner and final answer
+
+   orchestrator:
+     snapshot_storage: "snapshots_meta"
+     agent_temporary_workspace: "temp_workspaces_meta"
+
+Running the Example
+-------------------
+
+.. code-block:: bash
+
+   uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml \
+       "Run a MassGen experiment to create a webpage about Bob Dylan"
+
+**What happens:**
+
+1. The meta_agent receives your request
+2. It executes: ``uv run massgen --automation --config massgen/configs/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"``
+3. It monitors the nested MassGen's ``status.json`` file
+4. It reads the final results
+5. It reports which agent won (agent_a or agent_b) and shows the final HTML page
+
+**Output demonstrates:**
+
+- ✅ MassGen can autonomously run experiments
+- ✅ Can monitor progress via status.json
+- ✅ Can parse and report coordination outcomes
+- ✅ Can read final results from log directories
+
+Current Limitations
+-------------------
+
+.. note::
+   **Local Execution Only**: The meta-config currently uses ``command_line_execution_mode: "local"``.
+   Docker execution for nested MassGen requires:
+
+   - API credential passing to nested instances
+   - Automatic dependency installation (e.g., reinstalling MassGen in container)
+   - See Issue #436 for planned Docker support
+
+.. warning::
+   **Cost Control**: Meta-coordination can result in significant API costs as agents run experiments
+   autonomously. Always set strict timeout limits. See Issue #432 for planned cost tracking features.
+
+Use Cases for Meta-Coordination
+--------------------------------
+
+**1. Self-Improvement**
+
+.. code-block:: bash
+
+   uv run massgen --config @examples/configs/meta/massgen_runs_massgen.yaml \
+       "Run an experiment with MassGen then read the logs and suggest any improvements to help MassGen perform better along any dimension (quality, speed, cost, creativity, etc.)."
+
+**2. Hyperparameter Optimization**
+
+.. code-block:: bash
+
+   uv run massgen --config @examples/configs/meta/massgen_runs_massgen.yaml \
+       "Run the same task with 3 different coordination strategies and compare results"
+
+**3. Bug Fixing**
+
+.. code-block:: bash
+
+   uv run massgen --config @examples/configs/meta/massgen_runs_massgen.yaml \
+       "Run MassGen with a test case that currently fails, analyze the logs, and suggest fixes"
+
 Advanced Patterns
 =================
 
@@ -712,10 +825,66 @@ Issue: Exit code always 1
 - Check that all required API keys are set
 - Verify model names are correct
 
+Limitations
+===========
+
+Current Constraints
+-------------------
+
+**1. Local Code Execution Only (for MassGen-running-MassGen)**
+
+When using MassGen to run MassGen (meta-coordination), currently only local code execution is supported:
+
+.. code-block:: yaml
+
+   # ✅ Supported
+   agents:
+     - backend:
+         enable_mcp_command_line: true
+         command_line_execution_mode: "local"
+
+   # ❌ Not yet supported for meta-coordination
+   agents:
+     - backend:
+         command_line_execution_mode: "docker"
+         # Issue: Requires credential passing to nested instances
+
+**Why:** Docker execution requires API credentials, which need to be securely passed to nested MassGen instances. This will be addressed in a future PR.
+
+**2. Cost Control**
+
+.. warning::
+   **IMPORTANT:** When using automation mode for autonomous experiments, agents can potentially execute many API calls without human oversight. This can result in unexpected costs.
+
+**Best Practices:**
+
+- Set explicit timeout limits in configs:
+
+  .. code-block:: yaml
+
+     timeout_settings:
+       orchestrator_timeout_seconds: 300  # 5 minutes max
+       agent_timeout_seconds: 180         # 3 minutes per agent
+
+- Monitor costs via your API provider dashboards
+- Use less expensive models for automated experimentation:
+
+  .. code-block:: yaml
+
+     agents:
+       - backend:
+           model: "gpt-4o-mini"  # More economical than gpt-4o
+
+- Set API rate limits at the provider level
+- Start with small experiments before scaling
+
+**Future Enhancement:** Built-in cost tracking and limits (planned).
+
 Next Steps
 ==========
 
 - **Read** :doc:`../reference/cli` for all CLI options
+- **See** :doc:`../reference/status_file` for complete status.json documentation
 - **See** :doc:`../reference/yaml_schema` for configuration details
 - **Check** :doc:`../examples/multi_agent` for working examples
 - **Review** ``massgen/filesystem_manager/background_shell.py`` source code
