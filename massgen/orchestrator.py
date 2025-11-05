@@ -27,13 +27,15 @@ import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, List, Optional
 
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
 from .coordination_tracker import CoordinationTracker
-from .dspy_paraphraser import QuestionParaphraser
+
+if TYPE_CHECKING:
+    from .dspy_paraphraser import QuestionParaphraser
 from .logger_config import get_log_session_dir  # Import to get log directory
 from .logger_config import logger  # Import logger directly for INFO logging
 from .logger_config import (
@@ -238,7 +240,7 @@ class Orchestrator(ChatAgent):
                 # Update MCP config with agent_id for Docker mode (must be after setup_orchestration_paths)
                 agent.backend.filesystem_manager.update_backend_mcp_config(agent.backend.config)
 
-         # Inject planning tools if enabled
+        # Inject planning tools if enabled
         logger.info(f"[Orchestrator] Checking planning config: coordination_config exists={hasattr(self.config, 'coordination_config')}")
         if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_agent_task_planning"):
             logger.info(f"[Orchestrator] enable_agent_task_planning={self.config.coordination_config.enable_agent_task_planning}")
