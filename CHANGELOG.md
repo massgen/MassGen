@@ -56,7 +56,7 @@ External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenA
 ### Documentations, Configurations and Resources
 
 - **Case Study**: Meta-level self-analysis demonstrating automation mode
-  - New `docs/source/examples/case_studies/meta-self-analysis-automation-mode.md`: Comprehensive case study showing MassGen analyzing its own v0.1.8 codebase using automation mode with GPT-5 Mini agent
+  - New `docs/source/examples/case_studies/meta-self-analysis-automation-mode.md`: Comprehensive case study showing MassGen analyzing its own v0.1.8 codebase using automation mode
 
 - **Automation Documentation**: Comprehensive guides for LLM agent integration
   - New `AI_USAGE.md`: Complete guide for LLM agents running MassGen (319 lines)
