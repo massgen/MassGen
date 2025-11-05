@@ -31,10 +31,6 @@
 </p>
 
 <p align="center">
-  <b>🤖 For LLM Agents:</b> <a href="AI_USAGE.md">AI_USAGE.md</a> - Complete automation guide to run MassGen inside an LLM
-</p>
-
-<p align="center">
   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
     <img src="docs/source/_static/images/readme.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
@@ -42,6 +38,10 @@
 
 <p align="center">
   <i>Scaling AI with collaborative, continuously improving agents</i>
+</p>
+
+<p align="center">
+  <b>🤖 For LLM Agents:</b> <a href="AI_USAGE.md">AI_USAGE.md</a> - Complete automation guide to run MassGen inside an LLM
 </p>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
