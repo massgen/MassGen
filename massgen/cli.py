@@ -1266,11 +1266,11 @@ async def run_question_with_history(
 
     # Handle session persistence if applicable
     # Get metadata for session registration (on first turn)
-    from massgen.logger_config import get_log_session_dir_base
+    from massgen.logger_config import get_log_session_root
 
     config_path = kwargs.get("config_path")
     model_name = kwargs.get("model_name")
-    log_dir = get_log_session_dir_base()
+    log_dir = get_log_session_root()
     log_dir_name = log_dir.name  # Get log_YYYYMMDD_HHMMSS from path
 
     session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
@@ -1539,12 +1539,12 @@ async def run_single_question(
         # Handle session persistence for single-question runs
         if session_id:
             try:
-                from massgen.logger_config import get_log_session_dir_base
+                from massgen.logger_config import get_log_session_root
 
                 # Get metadata for session registration
                 config_path_for_session = kwargs.get("config_path")
                 model_for_session = kwargs.get("model_name")
-                log_dir = get_log_session_dir_base()
+                log_dir = get_log_session_root()
                 log_dir_name = log_dir.name
 
                 session_info = {
@@ -2784,10 +2784,10 @@ async def main(args):
 
             # Register new session immediately (before first turn runs)
             # Get log directory for session metadata
-            from massgen.logger_config import get_log_session_dir_base
+            from massgen.logger_config import get_log_session_root
             from massgen.session import SessionRegistry
 
-            log_dir = get_log_session_dir_base()
+            log_dir = get_log_session_root()
             log_dir_name = log_dir.name
 
             registry = SessionRegistry()

@@ -148,24 +148,40 @@ def set_log_base_session_dir(log_dir: str) -> None:
 
 
 def get_log_session_dir_base() -> Path:
-    """Get the base log session directory (log_YYYYMMDD_HHMMSS) without turn/attempt subdirectories.
+    """Get the turn-level directory without attempt subdirectory.
 
-    This returns the root session directory name, useful for:
-    - Getting the log directory name to save in session registry
-    - Copying final results to the root level after all attempts complete
+    Returns the current turn directory (e.g., .massgen/massgen_logs/log_XXX/turn_1/)
+    for copying final results from attempts.
 
     Returns:
-        Path to the base session directory (e.g., .massgen/massgen_logs/log_20251104_191641)
-        WITHOUT turn_N or attempt_N subdirectories
+        Path to turn directory (turn_N/) without attempt_N subdirectory
+    """
+    global _LOG_BASE_SESSION_DIR, _CURRENT_TURN
+
+    # Ensure base session dir is initialized
+    if _LOG_BASE_SESSION_DIR is None:
+        get_log_session_dir()
+
+    # Return turn directory (minimum turn_1)
+    turn_num = _CURRENT_TURN if _CURRENT_TURN and _CURRENT_TURN > 0 else 1
+    return _LOG_BASE_SESSION_DIR / f"turn_{turn_num}"
+
+
+def get_log_session_root() -> Path:
+    """Get the session root directory (log_YYYYMMDD_HHMMSS).
+
+    Returns the base log session directory without any turn or attempt subdirectories.
+    Useful for getting the log directory name to save in session registry.
+
+    Returns:
+        Path to session root (e.g., .massgen/massgen_logs/log_20251104_191641)
     """
     global _LOG_BASE_SESSION_DIR
 
     # Ensure base session dir is initialized
     if _LOG_BASE_SESSION_DIR is None:
-        # Initialize by calling get_log_session_dir
         get_log_session_dir()
 
-    # Return the actual base directory (without turn or attempt subdirs)
     return _LOG_BASE_SESSION_DIR
 
 
@@ -768,6 +784,8 @@ __all__ = [
     "restore_console_logging",
     "get_logger",
     "get_log_session_dir",
+    "get_log_session_dir_base",
+    "get_log_session_root",
     "set_log_turn",
     "set_log_attempt",
     "set_log_base_session_dir",
