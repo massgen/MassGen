@@ -588,7 +588,7 @@ You must call ONE of these tools:
         else:
             return evaluation_instructions
 
-    def format_restart_context(self, reason: str, instructions: str) -> str:
+    def format_restart_context(self, reason: str, instructions: str, previous_answer: Optional[str] = None) -> str:
         """Format restart context for subsequent orchestration attempts.
 
         This context is added to agent messages (like multi-turn context) on restart attempts.
@@ -596,22 +596,34 @@ You must call ONE of these tools:
         Args:
             reason: Why the previous attempt was insufficient
             instructions: Detailed guidance for improvement
+            previous_answer: The winning answer from the previous attempt (optional)
         """
         if "format_restart_context" in self._template_overrides:
             override = self._template_overrides["format_restart_context"]
             if callable(override):
-                return override(reason, instructions)
-            return str(override).format(reason=reason, instructions=instructions)
+                return override(reason, instructions, previous_answer)
+            return str(override).format(reason=reason, instructions=instructions, previous_answer=previous_answer or "")
 
-        return f"""<PREVIOUS ATTEMPT FEEDBACK>
+        base_context = f"""<PREVIOUS ATTEMPT FEEDBACK>
 The previous orchestration attempt was restarted because:
 {reason}
 
 **Instructions for this attempt:**
-{instructions}
+{instructions}"""
+
+        # Include previous answer if available
+        if previous_answer:
+            base_context += f"""
+
+**Previous attempt's winning answer (for reference):**
+{previous_answer}"""
+
+        base_context += """
 
 Please address these specific issues in your coordination and final answer.
 <END OF PREVIOUS ATTEMPT FEEDBACK>"""
+
+        return base_context
 
     # =============================================================================
     # COMPLETE MESSAGE BUILDERS

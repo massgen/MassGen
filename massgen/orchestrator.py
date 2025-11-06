@@ -192,6 +192,7 @@ class Orchestrator(ChatAgent):
         self.restart_pending: bool = False
         self.restart_reason: Optional[str] = None
         self.restart_instructions: Optional[str] = None
+        self.previous_attempt_answer: Optional[str] = None  # Store previous winner's answer for restart context
 
         # Coordination state tracking for cleanup
         self._active_streams: Dict = {}
@@ -1901,6 +1902,7 @@ Your answer:"""
                 restart_context = self.message_templates.format_restart_context(
                     self.restart_reason,
                     self.restart_instructions,
+                    previous_answer=self.previous_attempt_answer,
                 )
                 # Prepend restart context to user message
                 conversation["user_message"] = restart_context + "\n\n" + conversation["user_message"]
@@ -3109,6 +3111,11 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
                                     self.restart_reason = tool_args.get("reason", "No reason provided")
                                     self.restart_instructions = tool_args.get("instructions", "No instructions provided")
                                     self.restart_pending = True
+
+                                    # Save the current winning answer for next attempt's context
+                                    if self._selected_agent and self._selected_agent in self.agent_states:
+                                        self.previous_attempt_answer = self.agent_states[self._selected_agent].answer
+                                        logger.info(f"Saved previous attempt answer from {self._selected_agent} for restart context")
 
                                     log_stream_chunk("orchestrator", "status", "🔄 Restart requested\n")
                                     yield StreamChunk(type="status", content="🔄 Restart requested\n", source="orchestrator")

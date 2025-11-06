@@ -1215,7 +1215,12 @@ async def run_question_with_history(
             for agent_id, agent in orchestrator.agents.items():
                 if hasattr(agent.backend, "reset_state"):
                     try:
-                        await agent.backend.reset_state()
+                        import inspect
+
+                        result = agent.backend.reset_state()
+                        # Handle both sync and async reset_state
+                        if inspect.iscoroutine(result):
+                            await result
                         logger.info(f"Reset backend state for {agent_id}")
                     except Exception as e:
                         logger.warning(f"Failed to reset backend for {agent_id}: {e}")
@@ -1479,7 +1484,12 @@ async def run_single_question(
                 for agent_id, agent in orchestrator.agents.items():
                     if hasattr(agent.backend, "reset_state"):
                         try:
-                            await agent.backend.reset_state()
+                            import inspect
+
+                            result = agent.backend.reset_state()
+                            # Handle both sync and async reset_state
+                            if inspect.iscoroutine(result):
+                                await result
                             logger.info(f"Reset backend state for {agent_id}")
                         except Exception as e:
                             logger.warning(f"Failed to reset backend for {agent_id}: {e}")
