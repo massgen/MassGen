@@ -799,7 +799,7 @@ Post-evaluation workflow with submit/restart capabilities, custom multimodal und
 
 ### Added
 - **Multi-Turn Filesystem Support**: Complete implementation for persistent filesystem context across conversation turns
-  - Automatic session management when `session_storage` is configured (no flag needed)
+  - Automatic session management (no flag needed)
   - Persistent workspace management across conversation turns with `.massgen` directory
   - Workspace snapshot preservation and restoration between turns
   - Support for maintaining file context and modifications throughout multi-turn sessions

@@ -42,7 +42,7 @@ MassGen configurations have a clear hierarchy of settings. Understanding this st
 
 5. **Orchestrator Level** - Multi-agent coordination (top-level ``orchestrator``)
 
-   - Workspace: ``snapshot_storage``, ``agent_temporary_workspace``, ``session_storage``
+   - Workspace: ``snapshot_storage``, ``agent_temporary_workspace``
    - Project Integration: ``context_paths``
    - Coordination: ``coordination.enable_planning_mode``, ``coordination.planning_mode_instruction``, ``coordination.max_orchestration_restarts``
    - Debug: ``debug_final_answer``
@@ -398,7 +398,6 @@ Full multi-agent configuration demonstrating all 6 configuration levels:
      # Workspace management
      snapshot_storage: "snapshots"
      agent_temporary_workspace: "temp_workspaces"
-     session_storage: "sessions"
 
      # Project integration
      context_paths:
@@ -657,10 +656,6 @@ Orchestrator
      - string
      - No
      - Directory for temporary workspaces
-   * - ``session_storage``
-     - string
-     - No
-     - Directory for session history
    * - ``context_paths``
      - list
      - No

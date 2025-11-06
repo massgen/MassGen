@@ -57,7 +57,8 @@ from .logger_config import _DEBUG_MODE, logger, save_execution_metadata, setup_l
 from .orchestrator import Orchestrator
 from .utils import get_backend_type_from_model
 
-# Session storage is internal state management - always in .massgen/sessions/
+# Session storage is internal state management - HARDCODED, NOT CONFIGURABLE
+# Old configs with orchestrator.session_storage are backwards compatible (value ignored)
 SESSION_STORAGE = ".massgen/sessions"
 
 
@@ -876,7 +877,7 @@ def create_simple_config(
         config["orchestrator"] = {
             "snapshot_storage": ".massgen/snapshots",
             "agent_temporary_workspace": ".massgen/temp_workspaces",
-            "session_storage": ".massgen/sessions",
+            # Note: session_storage is hardcoded to .massgen/sessions (not configurable)
         }
 
     return config
@@ -928,7 +929,8 @@ def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
         path_fields = [
             "snapshot_storage",
             "agent_temporary_workspace",
-            "session_storage",
+            # Note: session_storage is not in this list - it's hardcoded to .massgen/sessions
+            # Old configs with session_storage are backwards compatible (value is ignored)
         ]
 
         for field in path_fields:
@@ -3102,11 +3104,16 @@ Environment Variables:
 
         # Restore config from session if not explicitly provided
         session_config_path = session_metadata.get("config_path")
-        if args.config and session_config_path and args.config != session_config_path:
-            # User is overriding with a different config - warn them
-            print("⚠️  Warning: Using different config than original session")
-            print(f"   Original: {session_config_path}")
-            print(f"   Current:  {args.config}")
+        if args.config and session_config_path:
+            # Resolve both paths to compare actual files (handles @examples aliases)
+            current_resolved = resolve_config_path(args.config)
+            session_resolved = Path(session_config_path).resolve() if session_config_path else None
+
+            if current_resolved and session_resolved and current_resolved.resolve() != session_resolved:
+                # User is overriding with a different config - warn them
+                print("⚠️  Warning: Using different config than original session")
+                print(f"   Original: {session_config_path}")
+                print(f"   Current:  {args.config}")
         elif not args.config and session_config_path:
             # Automatically load config from session
             args.config = session_config_path
