@@ -88,9 +88,9 @@ Key Features
 
       Model Context Protocol support for tools via YAML configuration.
 
-   .. grid-item-card:: 🔗 AG2 Framework Support
+   .. grid-item-card:: 🔗 Framework Interoperability
 
-      Integrate AG2 agents with code execution alongside native MassGen agents.
+      Integrate external frameworks (AG2, LangGraph, AgentScope, OpenAI, SmolAgent) as tools within MassGen's coordination.
 
    .. grid-item-card:: 📊 Live Visualization
 
@@ -111,17 +111,17 @@ Key Features
 Recent Releases
 ---------------
 
-**v0.1.5 (October 2025)** - Memory System
+**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
 
-Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
+Automation Mode for LLM agents with silent execution and status monitoring, DSPy question paraphrasing integration with semantic validation, and comprehensive case study documentation.
 
-**v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
+**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
 
-Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
+Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
 
-**v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
+**v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
 
-Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
+External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
 
 Quick Start
 -----------
@@ -253,7 +253,7 @@ Documentation Sections
       * :doc:`user_guide/tools`
       * :doc:`user_guide/file_operations`
       * :doc:`user_guide/multi_turn_mode`
-      * :doc:`user_guide/ag2_integration`
+      * :doc:`user_guide/general_interoperability`
 
    .. grid-item::
 
@@ -298,13 +298,15 @@ Documentation Sections
 
    user_guide/concepts
    user_guide/backends
+   user_guide/validating_configs
    user_guide/tools
    user_guide/file_operations
    user_guide/multi_turn_mode
    user_guide/memory
    user_guide/orchestration_restart
+   user_guide/agent_task_planning
    user_guide/multimodal
-   user_guide/ag2_integration
+   user_guide/general_interoperability
    user_guide/logging
 
 .. toctree::

@@ -52,6 +52,11 @@ from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
 from .config_builder import ConfigBuilder
+from .dspy_paraphraser import (
+    QuestionParaphraser,
+    create_dspy_lm_from_backend_config,
+    is_dspy_available,
+)
 from .frontend.coordination_ui import CoordinationUI
 from .logger_config import _DEBUG_MODE, logger, save_execution_metadata, setup_logging
 from .orchestrator import Orchestrator
@@ -94,6 +99,13 @@ BRIGHT_RED = "\033[91m"
 BRIGHT_WHITE = "\033[97m"
 RESET = "\033[0m"
 BOLD = "\033[1m"
+
+# Exit code constants for automation mode
+EXIT_SUCCESS = 0  # Coordination completed successfully
+EXIT_CONFIG_ERROR = 1  # Configuration or validation error
+EXIT_EXECUTION_ERROR = 2  # Agent failure, API error, or execution error
+EXIT_TIMEOUT = 3  # Orchestrator or agent timeout
+EXIT_INTERRUPTED = 4  # KeyboardInterrupt (Ctrl+C)
 
 # Custom questionary style for polished selection interface
 MASSGEN_QUESTIONARY_STYLE = Style(
@@ -617,17 +629,11 @@ def create_agents_from_config(
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
 
-        # Route system_message to backend-specific system prompt parameter
+        # System message handling: all backends use system_message at agent level
         system_msg = agent_data.get("system_message")
         if system_msg:
-            if backend_type_lower == "claude_code":
-                # For Claude Code, use append_system_prompt to preserve Claude Code capabilities
-                agent_config.backend_params["append_system_prompt"] = system_msg
-            else:
-                # For other backends, fall back to deprecated custom_system_instruction
-                # TODO: Add backend-specific routing for other backends
-                # Set private attribute directly to avoid deprecation warning
-                agent_config._custom_system_instruction = system_msg
+            # Set on AgentConfig (ConfigurableAgent will extract it)
+            agent_config._custom_system_instruction = system_msg
 
         # Timeout configuration will be applied to orchestrator instead of individual agents
 
@@ -843,6 +849,76 @@ def create_agents_from_config(
     return agents
 
 
+def create_dspy_paraphraser_from_config(
+    config: Dict[str, Any],
+    *,
+    config_path: Optional[str] = None,
+) -> Optional[QuestionParaphraser]:
+    """Instantiate DSPy paraphraser from orchestrator configuration.
+
+    Returns:
+        QuestionParaphraser instance when DSPy is enabled and properly configured; otherwise None.
+    """
+
+    orchestrator_cfg = config.get("orchestrator", {}) if isinstance(config, dict) else {}
+    dspy_cfg = orchestrator_cfg.get("dspy") if isinstance(orchestrator_cfg, dict) else None
+
+    if not isinstance(dspy_cfg, dict) or not dspy_cfg.get("enabled", False):
+        return None
+
+    if not is_dspy_available():
+        location = f" ({config_path})" if config_path else ""
+        logger.warning("DSPy is not installed")
+        return None
+
+    backend_cfg = dspy_cfg.get("backend", {})
+    if not isinstance(backend_cfg, dict) or not backend_cfg:
+        logger.warning("DSPy paraphrasing enabled but no backend configuration provided. Skipping DSPy setup.")
+        return None
+
+    lm = create_dspy_lm_from_backend_config(backend_cfg)
+    if lm is None:
+        logger.warning("Failed to initialize DSPy language model from backend configuration. Skipping DSPy setup.")
+        return None
+
+    paraphraser_kwargs: Dict[str, Any] = {}
+
+    # Simple pass-through configuration values
+    for key in [
+        "num_variants",
+        "strategy",
+        "cache_enabled",
+        "semantic_threshold",
+        "use_chain_of_thought",
+        "validate_semantics",
+    ]:
+        if key in dspy_cfg:
+            paraphraser_kwargs[key] = dspy_cfg[key]
+
+    # Temperature range expects a tuple of two numeric values
+    temperature_range = dspy_cfg.get("temperature_range")
+    if isinstance(temperature_range, (list, tuple)) and len(temperature_range) == 2:
+        try:
+            paraphraser_kwargs["temperature_range"] = (
+                float(temperature_range[0]),
+                float(temperature_range[1]),
+            )
+        except (TypeError, ValueError):
+            logger.warning("Ignoring invalid DSPy temperature_range; expected two numeric values.")
+    elif temperature_range is not None:
+        logger.warning("Ignoring invalid DSPy temperature_range; expected a list/tuple with two values.")
+
+    try:
+        paraphraser = QuestionParaphraser(lm=lm, **paraphraser_kwargs)
+    except Exception as exc:
+        location = f" ({config_path})" if config_path else ""
+        logger.warning(f"Failed to initialize DSPy paraphraser{location}: {exc}")
+        return None
+
+    logger.info("✅ DSPy question paraphrasing enabled (strategy=%s, variants=%s)", paraphraser_kwargs.get("strategy", "balanced"), paraphraser_kwargs.get("num_variants", 3))
+    return paraphraser
+
+
 def create_simple_config(
     backend_type: str,
     model: str,
@@ -953,6 +1029,18 @@ def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
                 continue
             # Otherwise, relocate under .massgen/workspaces/
             backend_config["cwd"] = str(massgen_dir / "workspaces" / user_cwd)
+
+    # Validate no duplicate workspace paths (critical for parallel execution)
+    workspace_paths = []
+    for agent_data in agent_entries:
+        backend_config = agent_data.get("backend", {})
+        if "cwd" in backend_config:
+            cwd = Path(backend_config["cwd"]).resolve()
+            if cwd in workspace_paths:
+                raise ConfigurationError(
+                    f"Duplicate workspace path detected: {cwd}\n" "Each agent must have a unique workspace directory.\n" "For parallel execution, ensure configs use different workspace names.",
+                )
+            workspace_paths.append(cwd)
 
 
 async def handle_session_persistence(
@@ -1127,6 +1215,8 @@ async def run_question_with_history(
                 "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
             ),
             max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+            enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
+            max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
         )
 
     # Get previous turns and winning agents history from session_info if already loaded,
@@ -1154,6 +1244,7 @@ async def run_question_with_history(
         agent_temporary_workspace=agent_temporary_workspace,
         previous_turns=previous_turns,
         winning_agents_history=winning_agents_history,  # Restore for memory sharing
+        dspy_paraphraser=kwargs.get("dspy_paraphraser"),
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(
@@ -1180,6 +1271,8 @@ async def run_question_with_history(
                     """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
+                enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
@@ -1408,6 +1501,8 @@ async def run_single_question(
                     """During coordination, describe what you would do. Only provide concrete implementation details and execute read-only actions.
                     DO NOT execute any actions that have side effects (e.g., sending messages, modifying data)""",
                 ),
+                enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
             )
 
         # Get orchestrator parameters from config
@@ -1448,6 +1543,8 @@ async def run_single_question(
                     "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
                 ),
                 max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
+                enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
+                max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
             )
 
         orchestrator = Orchestrator(
@@ -1455,6 +1552,7 @@ async def run_single_question(
             config=orchestrator_config,
             snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace,
+            dspy_paraphraser=kwargs.get("dspy_paraphraser"),
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
@@ -2626,7 +2724,7 @@ async def main(args):
                 # User provided a question but no config exists - this is an error
                 print("❌ Configuration error: No default configuration found.", flush=True)
                 print("Run 'massgen --init' to create one, or use 'massgen --model MODEL \"question\"'", flush=True)
-                sys.exit(1)
+                sys.exit(EXIT_CONFIG_ERROR)
             # No question and no config - wizard will be triggered in cli_main()
             return
 
@@ -2647,7 +2745,7 @@ async def main(args):
     if not args.backend:
         if not args.model and not args.config:
             print("❌ Configuration error: Either --config, --model, or --backend must be specified", flush=True)
-            sys.exit(1)
+            sys.exit(EXIT_CONFIG_ERROR)
 
     # Track config path for error messages
     resolved_path = None
@@ -2664,6 +2762,27 @@ async def main(args):
             if args.debug:
                 logger.debug(f"Resolved config path: {resolved_path}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
+
+            # Automatic config validation (unless --skip-validation flag is set)
+            if not args.skip_validation:
+                from .config_validator import ConfigValidator
+
+                validator = ConfigValidator()
+                validation_result = validator.validate_config(config)
+
+                # Show errors if any
+                if validation_result.has_errors():
+                    print(validation_result.format_errors(), file=sys.stderr)
+                    print(f"\n{BRIGHT_RED}❌ Config validation failed. Fix errors above or use --skip-validation to bypass.{RESET}\n")
+                    sys.exit(EXIT_CONFIG_ERROR)
+
+                # Show warnings (non-blocking unless --strict-validation)
+                if validation_result.has_warnings():
+                    print(validation_result.format_warnings())
+                    if args.strict_validation:
+                        print(f"\n{BRIGHT_RED}❌ Config validation failed in strict mode (warnings treated as errors).{RESET}\n")
+                        sys.exit(EXIT_CONFIG_ERROR)
+                    print()  # Extra newline for readability
         else:
             model = args.model
             if args.backend:
@@ -2695,6 +2814,27 @@ async def main(args):
 
         # Apply command-line overrides
         ui_config = config.get("ui", {})
+        if args.automation:
+            # Automation mode: silent display, keep logging enabled for status.json
+            ui_config["display_type"] = "silent"
+            ui_config["logging_enabled"] = True
+            ui_config["automation_mode"] = True
+
+            # Auto-generate unique workspace suffixes for parallel execution safety
+            # This prevents conflicts when running multiple instances with the same config
+            import uuid
+
+            unique_suffix = uuid.uuid4().hex[:8]
+
+            agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
+            for agent_data in agent_entries:
+                backend_config = agent_data.get("backend", {})
+                if "cwd" in backend_config:
+                    original_cwd = backend_config["cwd"]
+                    # Append unique suffix to workspace path
+                    # e.g., ".massgen/workspaces/workspace1" -> ".massgen/workspaces/workspace1_a1b2c3d4"
+                    backend_config["cwd"] = f"{original_cwd}_{unique_suffix}"
+                    logger.debug(f"[Automation] Auto-generated unique workspace: {original_cwd} -> {backend_config['cwd']}")
         if args.no_display:
             ui_config["display_type"] = "simple"
         if args.no_logs:
@@ -2829,6 +2969,14 @@ async def main(args):
         if "orchestrator" in config:
             kwargs["orchestrator"] = config["orchestrator"]
 
+        # Optionally enable DSPy paraphrasing
+        dspy_paraphraser = create_dspy_paraphraser_from_config(
+            config,
+            config_path=str(resolved_path) if resolved_path else None,
+        )
+        if dspy_paraphraser:
+            kwargs["dspy_paraphraser"] = dspy_paraphraser
+
         # Save execution metadata for debugging and reconstruction
         if args.question:
             # For single question mode, save metadata now (use original config before .massgen/ relocation)
@@ -2890,12 +3038,16 @@ async def main(args):
 
     except ConfigurationError as e:
         print(f"❌ Configuration error: {e}", flush=True)
-        sys.exit(1)
+        sys.exit(EXIT_CONFIG_ERROR)
     except KeyboardInterrupt:
         print("\n👋 Goodbye!", flush=True)
+        sys.exit(EXIT_INTERRUPTED)
+    except TimeoutError as e:
+        print(f"❌ Timeout error: {e}", flush=True)
+        sys.exit(EXIT_TIMEOUT)
     except Exception as e:
         print(f"❌ Error: {e}", flush=True)
-        sys.exit(1)
+        sys.exit(EXIT_EXECUTION_ERROR)
 
 
 def cli_main():
@@ -3001,6 +3153,12 @@ Environment Variables:
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode with verbose logging")
     parser.add_argument(
+        "--automation",
+        action="store_true",
+        help="Enable automation mode: silent output (~10 lines), status.json tracking, meaningful exit codes. "
+        "REQUIRED for LLM agents and background execution. Automatically isolates workspaces for parallel runs.",
+    )
+    parser.add_argument(
         "--init",
         action="store_true",
         help="Launch interactive configuration builder to create config file",
@@ -3034,6 +3192,33 @@ Environment Variables:
         "--with-examples",
         action="store_true",
         help="Include example configurations in schema display",
+    )
+    parser.add_argument(
+        "--validate",
+        type=str,
+        metavar="CONFIG_FILE",
+        help="Validate a configuration file without running it",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as errors during validation (use with --validate)",
+    )
+    parser.add_argument(
+        "--json",
+        dest="json_output",
+        action="store_true",
+        help="Output validation results in JSON format (use with --validate)",
+    )
+    parser.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skip automatic config validation when loading config files",
+    )
+    parser.add_argument(
+        "--strict-validation",
+        action="store_true",
+        help="Treat config warnings as errors and abort execution",
     )
 
     # Session options
@@ -3119,7 +3304,7 @@ Environment Variables:
             args.config = session_config_path
             print(f"📄 Using config from session: {session_config_path}")
 
-    # Handle special commands BEFORE setting up logging (these don't need log files)
+    # Handle special commands first (before logging setup to avoid creating log dirs)
     if args.list_sessions:
         from massgen.session import SessionRegistry, format_session_list
 
@@ -3129,6 +3314,25 @@ Environment Variables:
         sessions = registry.list_sessions(limit=limit)
         print(format_session_list(sessions, show_all=args.list_all_sessions))
         return
+
+    if args.validate:
+        from .config_validator import ConfigValidator
+
+        validator = ConfigValidator()
+        result = validator.validate_config_file(args.validate)
+
+        # Output results
+        if args.json_output:
+            # JSON output for machine parsing
+            print(json.dumps(result.to_dict(), indent=2))
+        else:
+            # Human-readable output
+            print(result.format_all())
+
+        # Exit with appropriate code
+        if not result.is_valid() or (args.strict and result.has_warnings()):
+            sys.exit(1)
+        sys.exit(0)
 
     if args.list_examples:
         show_available_examples()
@@ -3143,6 +3347,13 @@ Environment Variables:
 
         show_schema(backend=args.schema_backend, show_examples=args.with_examples)
         return
+
+    # Setup logging for all other commands (actual execution, setup, init, etc.)
+    setup_logging(debug=args.debug)
+
+    if args.debug:
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
 
     # Launch interactive API key setup if requested
     if args.setup:

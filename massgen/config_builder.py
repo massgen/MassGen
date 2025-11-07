@@ -1500,51 +1500,12 @@ class ConfigBuilder:
                 if "reasoning" in multimodal_caps:
                     console.print("[dim]  • Extended reasoning (deep thinking for complex problems)[/dim]")
 
-            # Generation capabilities (optional tools that require explicit flags)
-            generation_caps = [s for s in supports if s in ["image_generation", "audio_generation", "video_generation"]]
-
-            if generation_caps:
-                console.print()
-                console.print("[cyan]Optional generation capabilities (requires explicit enablement):[/cyan]")
-
-                gen_choices = []
-                if "image_generation" in generation_caps:
-                    gen_choices.append(questionary.Choice("Image Generation (DALL-E, etc.)", value="image_generation", checked=False))
-                if "audio_generation" in generation_caps:
-                    gen_choices.append(questionary.Choice("Audio Generation (TTS, music, etc.)", value="audio_generation", checked=False))
-                if "video_generation" in generation_caps:
-                    gen_choices.append(questionary.Choice("Video Generation (Sora, etc.)", value="video_generation", checked=False))
-
-                if gen_choices:
-                    selected_gen = questionary.checkbox(
-                        "Enable generation capabilities (Space to select, Enter to confirm):",
-                        choices=gen_choices,
-                        style=questionary.Style(
-                            [
-                                ("selected", "fg:cyan"),
-                                ("pointer", "fg:cyan bold"),
-                                ("highlighted", "fg:cyan"),
-                            ],
-                        ),
-                        use_arrow_keys=True,
-                    ).ask()
-
-                    if selected_gen:
-                        if "image_generation" in selected_gen:
-                            agent["backend"]["enable_image_generation"] = True
-                        if "audio_generation" in selected_gen:
-                            agent["backend"]["enable_audio_generation"] = True
-                        if "video_generation" in selected_gen:
-                            agent["backend"]["enable_video_generation"] = True
-
-                        console.print(f"✅ Enabled {len(selected_gen)} generation capability(ies)")
-
-            # Custom multimodal understanding tools (new in v0.1.3+)
-            # Available for ALL use cases - these are active tools that process workspace files
+            # Custom multimodal tools (unified understanding and generation)
+            # Available for ALL use cases - these are active tools using OpenAI's gpt-4.1 API
             console.print()
-            console.print("[cyan]Custom Multimodal Understanding Tools (New in v0.1.3+):[/cyan]")
-            console.print("[dim]These tools let agents analyze workspace files using OpenAI's gpt-4.1 API:[/dim]")
-            console.print("[dim]  • Works with any backend (uses OpenAI for analysis)[/dim]")
+            console.print("[cyan]Custom Multimodal Tools (New in v0.1.3+):[/cyan]")
+            console.print("[dim]These tools let agents process multimodal content using OpenAI's gpt-4.1 API:[/dim]")
+            console.print("[dim]  • Works with any backend (uses OpenAI for processing)[/dim]")
             console.print("[dim]  • Processes files agents generate or discover during execution[/dim]")
             console.print("[dim]  • Returns structured JSON with detailed metadata[/dim]")
             console.print("[dim]  • Requires OPENAI_API_KEY in your .env file[/dim]")
@@ -1552,38 +1513,43 @@ class ConfigBuilder:
             # Default to True for multimodal use case, False for others
             default_add_mm = use_case == "multimodal"
 
-            if questionary.confirm("Add custom multimodal understanding tools?", default=default_add_mm).ask():
+            if questionary.confirm("Add custom multimodal tools?", default=default_add_mm).ask():
                 # Determine default selections based on use case
                 if use_case == "multimodal":
                     # For multimodal preset, select all by default
-                    pass
-                elif use_case == "data_analysis":
-                    # For data analysis, suggest image and file tools
-                    pass
-                else:
-                    # For other use cases, none selected by default (let user choose)
-                    pass
-
-                if use_case == "multimodal":
                     multimodal_tool_choices = [
                         questionary.Choice("understand_image - Analyze images (PNG, JPEG, JPG)", value="understand_image", checked=True),
                         questionary.Choice("understand_audio - Transcribe and analyze audio", value="understand_audio", checked=True),
                         questionary.Choice("understand_video - Extract frames and analyze video", value="understand_video", checked=True),
                         questionary.Choice("understand_file - Process documents (PDF, DOCX, XLSX, PPTX)", value="understand_file", checked=True),
+                        questionary.Choice("text_to_image_generation - Generate images from text prompts", value="text_to_image_generation", checked=True),
+                        questionary.Choice("image_to_image_generation - Transform existing images", value="image_to_image_generation", checked=True),
+                        questionary.Choice("text_to_video_generation - Generate videos from text prompts", value="text_to_video_generation", checked=True),
+                        questionary.Choice("text_to_file_generation - Generate documents (PDF, DOCX, etc.)", value="text_to_file_generation", checked=True),
                     ]
                 elif use_case == "data_analysis":
+                    # For data analysis, suggest image and file tools
                     multimodal_tool_choices = [
                         questionary.Choice("understand_image - Analyze images (PNG, JPEG, JPG)", value="understand_image", checked=True),
                         questionary.Choice("understand_audio - Transcribe and analyze audio", value="understand_audio", checked=False),
                         questionary.Choice("understand_video - Extract frames and analyze video", value="understand_video", checked=False),
                         questionary.Choice("understand_file - Process documents (PDF, DOCX, XLSX, PPTX)", value="understand_file", checked=True),
+                        questionary.Choice("text_to_image_generation - Generate images from text prompts", value="text_to_image_generation", checked=False),
+                        questionary.Choice("image_to_image_generation - Transform existing images", value="image_to_image_generation", checked=False),
+                        questionary.Choice("text_to_video_generation - Generate videos from text prompts", value="text_to_video_generation", checked=False),
+                        questionary.Choice("text_to_file_generation - Generate documents (PDF, DOCX, etc.)", value="text_to_file_generation", checked=True),
                     ]
                 else:
+                    # For other use cases, none selected by default (let user choose)
                     multimodal_tool_choices = [
                         questionary.Choice("understand_image - Analyze images (PNG, JPEG, JPG)", value="understand_image", checked=False),
                         questionary.Choice("understand_audio - Transcribe and analyze audio", value="understand_audio", checked=False),
                         questionary.Choice("understand_video - Extract frames and analyze video", value="understand_video", checked=False),
                         questionary.Choice("understand_file - Process documents (PDF, DOCX, XLSX, PPTX)", value="understand_file", checked=False),
+                        questionary.Choice("text_to_image_generation - Generate images from text prompts", value="text_to_image_generation", checked=False),
+                        questionary.Choice("image_to_image_generation - Transform existing images", value="image_to_image_generation", checked=False),
+                        questionary.Choice("text_to_video_generation - Generate videos from text prompts", value="text_to_video_generation", checked=False),
+                        questionary.Choice("text_to_file_generation - Generate documents (PDF, DOCX, etc.)", value="text_to_file_generation", checked=False),
                     ]
 
                 selected_mm_tools = questionary.checkbox(
@@ -2421,6 +2387,24 @@ class ConfigBuilder:
                     }
                     console.print()
                     console.print("  ✅ Planning mode enabled - MCP tools will plan without executing during coordination")
+
+            # Agent Task Planning
+            console.print()
+            console.print("  [dim]Agent Task Planning: Agents can organize work with task lists and dependencies[/dim]")
+            console.print("  [dim]• Agents can create task plans to break down complex work[/dim]")
+            console.print("  [dim]• Track progress and manage dependencies between tasks[/dim]")
+            console.print("  [dim]• Useful for multi-step projects and coordination[/dim]")
+            console.print()
+
+            task_planning_choice = Confirm.ask("  [prompt]Enable agent task planning?[/prompt]", default=False)
+            if task_planning_choice is None:
+                raise KeyboardInterrupt  # User cancelled
+            if task_planning_choice:
+                if "coordination" not in orchestrator_config:
+                    orchestrator_config["coordination"] = {}
+                orchestrator_config["coordination"]["enable_agent_task_planning"] = True
+                console.print()
+                console.print("  ✅ Agent task planning enabled - agents can create and manage task plans")
 
             # Orchestration Restart Feature
             console.print()

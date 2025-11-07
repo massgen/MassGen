@@ -335,7 +335,7 @@ v0.0.29 - Latest
 v0.0.28
 ~~~~~~~
 
-**New Features:** :doc:`../user_guide/ag2_integration`, External Agent Backend, Code Execution Support
+**New Features:** :doc:`../user_guide/general_interoperability`, External Agent Backend, Code Execution Support
 
 **Key Configurations:**
 

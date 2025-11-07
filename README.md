@@ -37,12 +37,16 @@
 </p>
 
 <p align="center">
-  <i>Multi-agent scaling through intelligent collaboration in Grok Heavy style</i>
+  <i>Scaling AI with collaborative, continuously improving agents</i>
 </p>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
 
 This project started with the "threads of thought" and "iterative refinement" ideas presented in [The Myth of Reasoning](https://docs.ag2.ai/latest/docs/blog/2025/04/16/Reasoning/), and extends the classic "multi-agent conversation" idea in [AG2](https://github.com/ag2ai/ag2). Here is a [video recording](https://www.youtube.com/watch?v=xM2Uguw1UsQ) of the background context introduction presented at the Berkeley Agentic AI Summit 2025.
+
+<p align="center">
+  <b>🤖 For LLM Agents:</b> <a href="AI_USAGE.md">AI_USAGE.md</a> - Complete automation guide to run MassGen inside an LLM
+</p>
 
 ---
 
@@ -61,7 +65,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.5 Features](#-latest-features-v015)
+- [v0.1.8 Features](#-latest-features-v018)
 </details>
 
 <details open>
@@ -97,6 +101,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 </details>
 
 <details open>
+<summary><h3>🤖 Automation & LLM Integration</h3></summary>
+
+- [Automation Mode](#-automation--llm-integration)
+- [BackgroundShellManager](#using-backgroundshellmanager)
+- [Status File Reference](#statusjson-structure)
+- [Full Automation Guide](https://docs.massgen.ai/en/latest/user_guide/automation.html)
+</details>
+
+<details open>
 <summary><h3>💡 Case Studies & Examples</h3></summary>
 
 - [Case Studies](#-case-studies)
@@ -106,15 +119,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.5](#recent-achievements-v015)
-  - [v0.0.3 - v0.1.4](#previous-achievements-v003---v014)
+  - [v0.1.8](#recent-achievements-v018)
+  - [v0.0.3 - v0.1.7](#previous-achievements-v003---v017)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.6 Roadmap](#v016-roadmap)
+- [v0.1.9 Roadmap](#v019-roadmap)
 </details>
 
 <details open>
@@ -139,49 +152,35 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.5)
+## 🆕 Latest Features (v0.1.8)
 
-**🎉 Released: October 2025**
+**🎉 Released: November 5, 2025**
 
-**What's New in v0.1.5:**
-- **🧠 Long-Term Memory System** - Semantic memory with retrieval across sessions
-- **🗜️ Automatic Context Compression** - Smart compression when approaching token limits
-- **🔄 Memory Sharing for Multi-Turn Conversations** - Agents access knowledge from previous turns
+**What's New in v0.1.8:**
+- **🤖 Automation Mode** - Run MassGen inside LLM agents with silent execution and structured output
+- **🎯 DSPy Integration** - Intelligent question paraphrasing for enhanced multi-agent diversity
+- **📚 Case Study Documentation** - Comprehensive overview of MassGen capabilities with examples
 
 **Key Improvements:**
-- Persistent memory via mem0 integration with vector storage
-- Conversational memory for short-term context tracking
-- Context monitoring with real-time token usage tracking
-- Session management for memory isolation and continuation
-- Qdrant vector database integration for semantic search
+- Clean automation output (~10 lines vs 250-3,000+) perfect for LLM agents to parse
+- Real-time `status.json` monitoring updated every 2 seconds for async workflows
+- Question paraphrasing with three strategies (diverse/balanced/conservative) using DSPy
+- Automatic semantic validation to preserve meaning during paraphrasing
+- Meta-coordination: MassGen can run MassGen for self-improvement workflows
 
-**Get Started with v0.1.5:**
+**Try v0.1.8 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Multi-agent collaboration with context compression
-massgen --config @examples/memory/gpt5mini_gemini_context_window_management \
-  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+# DSPy question paraphrasing for multi-agent diversity
+massgen --config massgen/configs/basic/multi/three_agents_dspy_enabled.yaml "Explain the differences between transformer architecture and recurrent neural networks"
 
-# Research-to-implementation workflow with memory persistence
-# Prerequisites: Start Qdrant and crawl4ai Docker containers
-docker run -d -p 6333:6333 -p 6334:6334 \
-  -v $(pwd)/.massgen/qdrant_storage:/qdrant/storage:z qdrant/qdrant
-docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+# Automation mode - clean output for LLM agents
+uv run massgen --automation --config massgen/configs/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
 
-# Session 1 - Research phase:
-massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation \
-  "Use crawl4ai to research the latest multi-agent AI papers and techniques from 2025. Focus on: coordination mechanisms, voting strategies, tool-use patterns, and architectural innovations."
-
-# Session 2 - Implementation analysis (continue in same session):
-# "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
-
-→ See [Multi-Turn Persistent Memory Case Study](docs/source/examples/case_studies/multi-turn-persistent-memory.md) for detailed analysis
-
-# Test automatic context compression
-massgen --config @examples/memory/single_agent_compression_test \
-  "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+# Meta-coordination - MassGen running MassGen
+uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml "Run a MassGen experiment to create a webpage about Bob Dylan"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1004,6 +1003,32 @@ All sessions are automatically logged with detailed information for debugging an
 
 → For comprehensive logging guide and debugging techniques, see [Logging & Debugging](https://docs.massgen.ai/en/latest/user_guide/logging.html)
 
+---
+
+## 🤖 Automation & LLM Integration
+
+**→ For LLM agents: See [AI_USAGE.md](AI_USAGE.md) for complete command-line usage guide**
+
+MassGen provides **automation mode** designed for LLM agents and programmatic workflows:
+
+### Quick Start - Automation Mode
+
+```bash
+# Run with minimal output and status tracking
+uv run massgen --automation --config your_config.yaml "Your question"
+```
+
+### Comprehensive Guide
+
+→ **Full automation guide with examples:** [Automation Guide](https://docs.massgen.ai/en/latest/user_guide/automation.html)
+
+Topics covered:
+- Complete automation patterns with error handling
+- Parallel experiment execution
+- Performance tips and troubleshooting
+
+---
+
 ## 💡 Case Studies
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
@@ -1024,43 +1049,58 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.5)
+### Recent Achievements (v0.1.8)
 
-**🎉 Released: October 2025**
+**🎉 Released: November 5, 2025**
 
-#### Memory System
-- **PersistentMemory**: Long-term semantic memory storage via mem0 integration with fact extraction and retrieval across sessions
-- **ConversationMemory**: Short-term verbatim message tracking for active conversation context
-- **Automatic Context Compression**: Smart compression when approaching token limits with configurable thresholds (trigger_threshold, target_ratio)
-- **Cross-Agent Memory Sharing**: Agents share memory with turn-aware filtering to prevent temporal information leakage
-- **Context Monitoring**: Real-time token usage tracking with automatic compression triggers
-- **Session Management**: Memory isolation and continuation across runs with session naming support
-- **Qdrant Integration**: Vector database support for efficient semantic search in both server and local modes
-- **Configurable Memory Providers**: Support for OpenAI, Anthropic, Groq, and other mem0-compatible LLM and embedding providers
+#### Automation Mode for LLM Agents
+- **SilentDisplay Class**: New `massgen/frontend/displays/silent_display.py` for automation-friendly output (~10 lines vs 250-3,000+)
+- **CLI Flag**: `--automation` flag for silent execution with structured output
+- **Status Monitoring**: Real-time `status.json` file updated every 2 seconds with phase, agent states, and voting results
+- **Exit Codes**: Meaningful codes (0=success, 1=config error, 2=execution error, 3=timeout, 4=interrupted)
+- **Workspace Isolation**: Automatic unique workspace suffixes for parallel execution preventing collisions
+- **Meta-Coordination**: MassGen running MassGen configurations for self-improvement workflows
 
-#### Memory Configuration
-- **Global and Per-Agent Control**: Enable/disable memory at system or individual agent level
-- **Compression Settings**: Configurable trigger thresholds and target ratios for context window management
-- **Retrieval Configuration**: Customizable retrieval limits and smart filtering to exclude recent messages
-- **Memory Persistence**: Session continuation with named sessions for cross-session memory access
-
-#### Configuration Files
-- `gpt5mini_gemini_context_window_management.yaml` - Multi-agent with automatic context compression
-- `gpt5mini_gemini_research_to_implementation.yaml` - Research-to-implementation workflow with memory
-- `gpt5mini_high_reasoning_gemini.yaml` - High reasoning agents with memory integration
-- `gpt5mini_gemini_baseline_research_to_implementation.yaml` - Baseline research workflow for comparison
-- `single_agent_compression_test.yaml` - Single agent testing context compression behavior
+#### DSPy Question Paraphrasing Integration
+- **Paraphraser Module**: New `massgen/dspy_paraphraser.py` (557 lines) with semantic-preserving paraphrasing
+- **Three Strategies**: "diverse", "balanced" (default), and "conservative" paraphrasing modes
+- **Semantic Validation**: Automatic validation using `SemanticValidationSignature` ensuring meaning preservation
+- **Thread-Safe Caching**: SHA-256 hashing for performance with configurable cache system
+- **Multi-Backend Support**: Works with all backends (Gemini, OpenAI, Claude, etc.) as paraphrasing engines
+- **Orchestrator Integration**: Automatic question variant distribution to different agents
 
 #### Documentation
-- Complete memory system user guide: `docs/source/user_guide/memory.rst`
-- Design decisions documentation explaining architectural choices
-- API reference for PersistentMemory, ConversationMemory, and ContextMonitor classes
-- Comprehensive troubleshooting guide and monitoring instructions
+- **Case Study Summary**: New `docs/CASE_STUDIES_SUMMARY.md` (368 lines) with centralized overview of 33 case studies organized by category
+- **Automation Guide**: New `AI_USAGE.md` (319 lines) complete guide for LLM agents running MassGen
+- **DSPy Implementation**: New `massgen/backend/docs/DSPY_IMPLEMENTATION_GUIDE.md` (653 lines) comprehensive integration guide
+- **Status File Reference**: New `docs/source/reference/status_file.rst` (565 lines) complete `status.json` schema documentation
+- **Automation Documentation**: New `docs/source/user_guide/automation.rst` (890 lines) full automation guide with BackgroundShellManager patterns
 
-#### Testing Infrastructure
-- Memory test suite: `test_agent_memory.py`, `test_conversation_memory.py`, `test_orchestrator_memory.py`, `test_persistent_memory.py`
+#### Configuration Files
+- `three_agents_dspy_enabled.yaml` - Three-agent setup with DSPy paraphrasing
+- `massgen_runs_massgen.yaml` - Meta-coordination for self-improvement
+- `massgen_suggests_to_improve_massgen.yaml` - Autonomously running MassGen experiments
 
-### Previous Achievements (v0.0.3 - v0.1.4)
+#### Case Study
+- `meta-self-analysis-automation-mode.md` - Meta-level self-analysis demonstrating automation mode
+
+### Previous Achievements (v0.0.3 - v0.1.7)
+
+✅ **Agent Task Planning System (v0.1.7)**: MCP-based planning server with task lifecycle management, dependency tracking with automatic validation and blocking, status transitions between pending/in_progress/completed/blocked states, orchestrator integration for plan-aware multi-agent coordination
+
+✅ **Background Shell Execution (v0.1.7)**: Persistent shell sessions for long-running commands with BackgroundShell class supporting async execution, real-time output streaming and monitoring, automatic timeout handling, enhanced code execution server with background capabilities
+
+✅ **Preemption Coordination (v0.1.7)**: Agents can interrupt ongoing coordination to submit better answers without full restart, partial progress preservation during preemption, enhanced coordination tracker logging preemption events
+
+✅ **Framework Interoperability (v0.1.6)**: AG2 nested chat, LangGraph workflows, AgentScope agents, OpenAI Assistants, and SmoLAgent integrated as custom tools with cross-framework collaboration and streaming support for AG2
+
+✅ **Configuration Validator (v0.1.6)**: Comprehensive YAML validation with ConfigValidator class, pre-commit integration, and detailed error messages with actionable suggestions
+
+✅ **Unified Tool Execution (v0.1.6)**: ToolExecutionConfig dataclass standardizing tool handling across ResponseBackend, ChatCompletionsBackend, and ClaudeBackend with consistent error reporting
+
+✅ **Gemini Backend Simplification (v0.1.6)**: Removed gemini_mcp_manager and gemini_trackers modules, consolidated code reducing codebase by 1,598 lines
+
+✅ **Memory System (v0.1.5)**: Long-term semantic memory via mem0 integration with fact extraction and retrieval across sessions, short-term conversational memory for active context, automatic context compression when approaching token limits, cross-agent memory sharing with turn-aware filtering, session management for memory isolation and continuation, Qdrant vector database integration for semantic search
 
 ✅ **Multimodal Generation Tools (v0.1.4)**: Create images from text via DALL-E API, generate videos from descriptions, text-to-speech with audio transcription support, document generation for PDF/DOCX/XLSX/PPTX formats, image transformation capabilities for existing images
 
@@ -1180,21 +1220,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.6 Roadmap
+### v0.1.9 Roadmap
 
-Version 0.1.6 focuses on backend code refactoring for improved maintainability and developer experience:
+Version 0.1.9 focuses on rate management and comprehensive documentation:
 
 #### Planned Features
-- **Backend Code Refactoring**: Major code refactoring for improved maintainability and developer experience with better code organization, modularity, and architectural improvements
+- **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs with model-specific limits and configurable thresholds
+- **MassGen Handbook**: Comprehensive user documentation and centralized policies for development and research teams
 
 Key technical approach:
-- **Code Architecture**: Enhanced code organization with improved modularity and separation of concerns
-- **Developer Experience**: Simplified backend extension points, improved API clarity, better error handling and debugging support
-- **Quality Assurance**: Comprehensive testing to ensure no functionality regressions
+- **Rate Limiting**: Sliding window tracking, external YAML configuration, optional CLI flag, mandatory cooldown periods after startup
+- **Documentation**: Installation guides, configuration patterns, best practices, troubleshooting, case studies, and integration examples
 
-**Target Release**: November 1, 2025 (Friday @ 9am PT)
+**Target Release**: November 7, 2025 (Friday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.6 roadmap](ROADMAP_v0.1.6.md).
+For detailed milestones and technical specifications, see the [full v0.1.9 roadmap](ROADMAP_v0.1.9.md).
 
 ---
 

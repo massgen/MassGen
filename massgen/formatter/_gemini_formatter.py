@@ -52,11 +52,57 @@ class GeminiFormatter(FormatterBase):
         """
         return tools or []
 
-    def format_mcp_tools(self, mcp_functions: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def format_mcp_tools(
+        self,
+        mcp_functions: Dict[str, Any],
+        return_sdk_objects: bool = True,
+    ) -> List[Any]:
         """
-        MCP tools are passed via SDK sessions in stream_with_tools; not function declarations.
+        Convert MCP Function objects to Gemini FunctionDeclaration format.
+
         """
-        return []
+        if not mcp_functions:
+            return []
+
+        # Step 1: Convert MCP Function objects to Gemini dictionary format
+        gemini_dicts = []
+
+        for mcp_function in mcp_functions.values():
+            try:
+                # Extract attributes from Function object
+                name = getattr(mcp_function, "name", "")
+                description = getattr(mcp_function, "description", "")
+                parameters = getattr(mcp_function, "parameters", {})
+
+                # Build Gemini-compatible dictionary
+                gemini_dict = {
+                    "name": name,
+                    "description": description,
+                    "parameters": parameters,
+                }
+                gemini_dicts.append(gemini_dict)
+
+                logger.debug(f"[GeminiFormatter] Converted MCP tool '{name}' to dictionary format")
+
+            except Exception as e:
+                logger.error(f"[GeminiFormatter] Failed to convert MCP tool: {e}")
+                # Continue processing remaining tools instead of failing completely
+                continue
+
+        if not return_sdk_objects:
+            return gemini_dicts
+
+        # Step 2: Convert dictionaries to SDK FunctionDeclaration objects
+        function_declarations = self._convert_to_function_declarations(gemini_dicts)
+
+        # Log successful conversion
+        for func_decl in function_declarations:
+            if hasattr(func_decl, "name"):
+                logger.debug(
+                    f"[GeminiFormatter] Converted MCP tool '{func_decl.name}' to FunctionDeclaration",
+                )
+
+        return function_declarations
 
     # Coordination helpers
 
@@ -239,15 +285,14 @@ Make your decision and include the JSON at the very end of your response."""
             vote_data = structured_response.get("vote_data", {})
             return [
                 {
-                    "id": f"vote_{abs(hash(str(vote_data))) % 10000 + 1}",
-                    "type": "function",
-                    "function": {
-                        "name": "vote",
-                        "arguments": {
+                    "call_id": f"vote_{abs(hash(str(vote_data))) % 10000 + 1}",
+                    "name": "vote",
+                    "arguments": json.dumps(
+                        {
                             "agent_id": vote_data.get("agent_id", ""),
                             "reason": vote_data.get("reason", ""),
                         },
-                    },
+                    ),
                 },
             ]
 
@@ -255,12 +300,13 @@ Make your decision and include the JSON at the very end of your response."""
             answer_data = structured_response.get("answer_data", {})
             return [
                 {
-                    "id": f"new_answer_{abs(hash(str(answer_data))) % 10000 + 1}",
-                    "type": "function",
-                    "function": {
-                        "name": "new_answer",
-                        "arguments": {"content": answer_data.get("content", "")},
-                    },
+                    "call_id": f"new_answer_{abs(hash(str(answer_data))) % 10000 + 1}",
+                    "name": "new_answer",
+                    "arguments": json.dumps(
+                        {
+                            "content": answer_data.get("content", ""),
+                        },
+                    ),
                 },
             ]
 

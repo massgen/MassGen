@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from .displays.base_display import BaseDisplay
 from .displays.rich_terminal_display import RichTerminalDisplay, is_rich_available
+from .displays.silent_display import SilentDisplay
 from .displays.simple_display import SimpleDisplay
 from .displays.terminal_display import TerminalDisplay
 
@@ -156,6 +157,8 @@ class CoordinationUI:
                 self.display = TerminalDisplay(self.agent_ids, **self.config)
             elif self.display_type == "simple":
                 self.display = SimpleDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "silent":
+                self.display = SilentDisplay(self.agent_ids, **self.config)
             elif self.display_type == "rich_terminal":
                 if not is_rich_available():
                     print("⚠️  Rich library not available. Falling back to terminal display.")
@@ -479,6 +482,8 @@ class CoordinationUI:
                 self.display = TerminalDisplay(self.agent_ids, **self.config)
             elif self.display_type == "simple":
                 self.display = SimpleDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "silent":
+                self.display = SilentDisplay(self.agent_ids, **self.config)
             elif self.display_type == "rich_terminal":
                 if not is_rich_available():
                     print("⚠️  Rich library not available. Falling back to terminal display.")

@@ -489,8 +489,6 @@ class SingleAgent(ChatAgent):
                             except Exception as e:
                                 # Log but don't fail if memory record fails
                                 logger.warning(f"⚠️  Failed to record to persistent memory: {e}")
-                    else:
-                        logger.warning("⚠️  [done chunk] messages_to_record is EMPTY - nothing to record!")
 
                     # Log context usage after response (if monitor enabled)
                     if self.context_monitor:

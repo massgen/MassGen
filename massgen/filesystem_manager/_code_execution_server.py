@@ -23,6 +23,15 @@ from typing import Any, Dict, List, Optional
 
 import fastmcp
 
+# Background shell execution (absolute import for fastmcp compatibility)
+from massgen.filesystem_manager.background_shell import (
+    get_shell_output,
+    get_shell_status,
+    kill_shell,
+    list_shells,
+    start_shell,
+)
+
 # Platform detection
 WIN32 = sys.platform == "win32"
 
@@ -547,6 +556,214 @@ async def create_server() -> fastmcp.FastMCP:
                 "execution_time": 0.0,
                 "command": command,
                 "work_dir": work_dir or str(Path.cwd()),
+            }
+
+    # ============================================================================
+    # BACKGROUND SHELL EXECUTION TOOLS
+    # ============================================================================
+
+    @mcp.tool()
+    def start_background_shell(command: str, work_dir: Optional[str] = None) -> Dict[str, Any]:
+        """Start a command in the background without blocking.
+
+        This allows you to run long-running commands (servers, training jobs, etc.)
+        and continue with other work. Use get_background_shell_output() to check
+        progress and retrieve output later.
+
+        Args:
+            command: Shell command to execute in background
+            work_dir: Working directory for the command (default: current directory)
+
+        Returns:
+            Dictionary with:
+            - shell_id: Unique identifier to track this background shell
+            - status: Current status ("running")
+            - command: The command being executed
+            - pid: Process ID
+
+        Example:
+            Start a web server in background:
+            >>> result = start_background_shell("python -m http.server 8000")
+            >>> shell_id = result["shell_id"]
+            >>> # Continue other work...
+            >>> output = get_background_shell_output(shell_id)
+        """
+        try:
+            # Validate command (same security checks as execute_command)
+            _sanitize_command(command, enable_sudo=mcp.enable_sudo)
+
+            # Resolve working directory
+            if work_dir:
+                work_path = Path(work_dir).resolve()
+                if mcp.allowed_paths:
+                    _validate_path_access(work_path, mcp.allowed_paths)
+            else:
+                work_path = Path.cwd()
+
+            # Start background shell
+            shell_id = start_shell(command, cwd=str(work_path))
+
+            # Get initial status
+            status = get_shell_status(shell_id)
+
+            return {
+                "shell_id": shell_id,
+                "status": status["status"],
+                "command": command,
+                "pid": status["pid"],
+                "work_dir": str(work_path),
+            }
+
+        except ValueError as e:
+            return {
+                "success": False,
+                "error": f"Command validation error: {str(e)}",
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to start background shell: {str(e)}",
+            }
+
+    @mcp.tool()
+    def get_background_shell_output(shell_id: str) -> Dict[str, Any]:
+        """Get output from a background shell.
+
+        Retrieves stdout and stderr from a shell started with start_background_shell().
+        Can be called multiple times to monitor progress.
+
+        Args:
+            shell_id: Shell identifier returned by start_background_shell()
+
+        Returns:
+            Dictionary with:
+            - shell_id: Shell identifier
+            - stdout: Standard output captured so far
+            - stderr: Standard error captured so far
+            - status: Current status ("running", "stopped", "failed", "killed")
+            - exit_code: Exit code if process finished, null if still running
+
+        Example:
+            >>> output = get_background_shell_output("shell_abc123")
+            >>> print(output["stdout"])
+            >>> if output["status"] == "stopped":
+            ...     print(f"Completed with exit code: {output['exit_code']}")
+        """
+        try:
+            output = get_shell_output(shell_id)
+            return output
+        except KeyError:
+            return {
+                "success": False,
+                "error": f"Shell not found: {shell_id}",
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to get shell output: {str(e)}",
+            }
+
+    @mcp.tool()
+    def get_background_shell_status(shell_id: str) -> Dict[str, Any]:
+        """Get status of a background shell without retrieving full output.
+
+        Lighter-weight alternative to get_background_shell_output() when you only
+        need to check if a process is still running.
+
+        Args:
+            shell_id: Shell identifier returned by start_background_shell()
+
+        Returns:
+            Dictionary with:
+            - shell_id: Shell identifier
+            - status: Current status ("running", "stopped", "failed", "killed")
+            - exit_code: Exit code if finished, null if running
+            - pid: Process ID
+            - command: The command being executed
+            - duration_seconds: How long the process has been running
+
+        Example:
+            >>> status = get_background_shell_status("shell_abc123")
+            >>> if status["status"] == "running":
+            ...     print(f"Still running ({status['duration_seconds']}s)...")
+        """
+        try:
+            status = get_shell_status(shell_id)
+            return status
+        except KeyError:
+            return {
+                "success": False,
+                "error": f"Shell not found: {shell_id}",
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to get shell status: {str(e)}",
+            }
+
+    @mcp.tool()
+    def kill_background_shell(shell_id: str) -> Dict[str, Any]:
+        """Terminate a background shell.
+
+        Sends SIGTERM to gracefully stop the process, followed by SIGKILL if needed.
+        Partial output is still available via get_background_shell_output().
+
+        Args:
+            shell_id: Shell identifier returned by start_background_shell()
+
+        Returns:
+            Dictionary with:
+            - shell_id: Shell identifier
+            - status: New status ("killed" or current status if already stopped)
+            - signal: Signal sent ("SIGTERM" if killed, null otherwise)
+
+        Example:
+            >>> result = kill_background_shell("shell_abc123")
+            >>> if result["status"] == "killed":
+            ...     print("Process terminated successfully")
+        """
+        try:
+            result = kill_shell(shell_id)
+            return result
+        except KeyError:
+            return {
+                "success": False,
+                "error": f"Shell not found: {shell_id}",
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to kill shell: {str(e)}",
+            }
+
+    @mcp.tool()
+    def list_background_shells() -> Dict[str, Any]:
+        """List all background shells and their status.
+
+        Useful for monitoring multiple concurrent processes or checking what's
+        still running.
+
+        Returns:
+            Dictionary with:
+            - shells: List of shell status dictionaries (same format as get_background_shell_status)
+            - count: Total number of background shells
+
+        Example:
+            >>> result = list_background_shells()
+            >>> for shell in result["shells"]:
+            ...     if shell["status"] == "running":
+            ...         print(f"{shell['shell_id']}: {shell['command']}")
+        """
+        try:
+            shells = list_shells()
+            return {
+                "shells": shells,
+                "count": len(shells),
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to list shells: {str(e)}",
             }
 
     print("🚀 Command Execution MCP Server started and ready")

@@ -7,16 +7,188 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
-**v0.1.5 (October 2025)** - Memory System
-Long-term memory with semantic retrieval via mem0, automatic context compression, and memory sharing for multi-turn conversations.
+**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
+Complete automation infrastructure for LLM agents with real-time status tracking, silent execution mode, and DSPy-powered question paraphrasing for enhanced multi-agent diversity.
 
-**v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
-Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
+**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
+Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
 
-**v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
-Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
+**v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
+External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
 
 ---
+
+## [0.1.8] - 2025-11-05
+
+### Added
+- **Automation Mode for LLM Agents**: Complete infrastructure for running MassGen via LLM agents and programmatic workflows
+  - New `--automation` CLI flag for silent execution with minimal output (~10 lines vs 250-3,000+)
+  - New `SilentDisplay` class in `massgen/frontend/displays/silent_display.py` for automation-friendly output
+  - Real-time `status.json` monitoring file updated every 2 seconds via enhanced `CoordinationTracker`
+  - Meaningful exit codes: 0 (success), 1 (config error), 2 (execution error), 3 (timeout), 4 (interrupted)
+  - Automatic workspace isolation for parallel execution with unique suffixes
+  - Meta-coordination capabilities: MassGen running MassGen configurations
+  - Automatic log directory creation and management for automation sessions
+
+- **DSPy Question Paraphrasing Integration**: Intelligent question diversity for multi-agent coordination
+  - New `massgen/dspy_paraphraser.py` module with semantic-preserving paraphrasing (557 lines)
+  - Three paraphrasing strategies: "diverse", "balanced" (default), "conservative"
+  - Configurable number of variants per orchestrator session
+  - Automatic semantic validation using `SemanticValidationSignature` to ensure meaning preservation
+  - Thread-safe caching system with SHA-256 hashing for performance
+  - Support for all backends (Gemini, OpenAI, Claude, etc.) as paraphrasing engines
+
+- **Case Study Summary**: Comprehensive documentation of MassGen capabilities
+  - New `docs/CASE_STUDIES_SUMMARY.md` providing centralized overview of 33 case studies (368 lines)
+  - Organized by category: Release Features, Research, Travel, Creative, In Development, Planned
+  - Covers versions v0.0.3 to v0.1.5 with status tracking and links to videos
+  - Statistics: 19 completed, 8 with video demonstrations, 6 categories
+
+### Changed
+- **Orchestrator Enhancement**: Integration of DSPy paraphrasing and automation tracking
+  - Question variant distribution to different agents based on configured strategy
+  - Improved coordination event logging with structured status exports
+
+- **CLI Enhancement**: Extended command-line interface for automation workflows
+  - Enhanced display selection logic automatically choosing SilentDisplay in automation mode
+  - Improved output formatting optimized for LLM agent parsing and monitoring
+
+### Documentations, Configurations and Resources
+
+- **Case Study**: Meta-level self-analysis demonstrating automation mode
+  - New `docs/source/examples/case_studies/meta-self-analysis-automation-mode.md`: Comprehensive case study showing MassGen analyzing its own v0.1.8 codebase using automation mode
+
+- **Automation Documentation**: Comprehensive guides for LLM agent integration
+  - New `AI_USAGE.md`: Complete guide for LLM agents running MassGen (319 lines)
+  - New `docs/source/user_guide/automation.rst`: Full automation guide with BackgroundShellManager patterns (890 lines)
+  - New `docs/source/reference/status_file.rst`: Complete `status.json` schema reference with field-by-field documentation (565 lines)
+  - Updated `README.md` and `README_PYPI.md` with automation mode sections (135 lines each)
+
+- **DSPy Documentation**: Complete implementation and usage guide
+  - New `massgen/backend/docs/DSPY_IMPLEMENTATION_GUIDE.md`: Comprehensive DSPy integration guide (653 lines)
+  - Covers quick start, configuration, strategies, troubleshooting, and semantic validation
+  - Includes paraphrasing examples and best practices
+
+- **Meta-Coordination Configurations**: MassGen running MassGen examples
+  - `massgen/configs/meta/massgen_runs_massgen.yaml`: Single agent autonomously running MassGen experiments
+  - `massgen/configs/meta/massgen_suggests_to_improve_massgen.yaml`: Self-improvement configuration
+  - Demonstrates automation mode usage for meta-coordination workflows
+
+- **DSPy Configuration Example**: New YAML configuration for DSPy-enabled coordination
+  - `massgen/configs/basic/multi/three_agents_dspy_enabled.yaml`: Three-agent setup with DSPy paraphrasing
+
+- **Case Study Summary Documentation**: Centralized case study reference
+  - New `docs/CASE_STUDIES_SUMMARY.md`: Comprehensive overview of all MassGen case studies with categorization and status tracking
+
+### Technical Details
+- **Major Focus**: Automation infrastructure for LLM agents, DSPy-powered question paraphrasing, meta-coordination capabilities, comprehensive case study documentation
+- **Contributors**: @ncrispino @praneeth999 @franklinnwren @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.1.7] - 2025-11-03
+
+### Added
+- **Agent Task Planning System**: MCP-based task management with dependency tracking
+  - New `massgen/mcp_tools/planning/` module with dedicated planning server (`_planning_mcp_server.py`)
+  - Task dataclasses with dependency validation and status management (`planning_dataclasses.py`)
+  - Support for task states (pending/in_progress/completed/blocked) with automatic transitions based on dependencies
+  - Orchestrator integration for plan-aware coordination
+  - Test suite in `test_planning_integration.py` and `test_planning_tools.py`
+
+- **Background Shell Execution**: Long-running command support with persistent sessions
+  - New `BackgroundShell` class in `massgen/filesystem_manager/background_shell.py`
+  - Shell lifecycle management with output streaming and real-time monitoring
+  - Automatic timeout handling for long-running processes
+  - Enhanced code execution server with background execution capabilities
+  - Test coverage in `test_background_shell.py`
+
+- **Preemption Coordination**: Multi-agent coordination with interruption support
+  - Agents can preempt ongoing coordination to submit better answers without full restart
+  - Enhanced coordination tracker with preemption event logging
+  - Improved orchestrator logic to preserve partial progress during preemption
+
+### Fixed
+- **System Message Handling**: Resolved system message extraction in Claude Code backend for background shell execution
+- **Case Study Documentation**: Fixed broken links and outdated examples in older case studies
+
+### Documentations, Configurations and Resources
+
+- **Documentation Updates**: New user guides and design documentation
+  - New `docs/source/user_guide/agent_task_planning.rst`: Task planning guide with usage patterns and API reference
+  - Updated `docs/source/user_guide/code_execution.rst`: Added 122 lines for background shell usage
+  - New `docs/dev_notes/agent_planning_coordination_design.md`: Comprehensive design document for agent planning and coordination system
+  - New `docs/dev_notes/preempt_not_restart_design.md`: 456-line design document with preemption algorithms
+  - Updated `docs/source/development/architecture.rst`: Added 61 lines for preemption coordination architecture
+
+- **Configuration Examples**: New YAML configurations demonstrating v0.1.7 features
+  - `example_task_todo.yaml`: Task planning configuration
+  - `background_shell_demo.yaml`: Background shell execution demonstration
+
+### Technical Details
+- **Major Focus**: Agent task planning with dependencies, background command execution, preemption-based coordination
+- **Contributors**: @ncrispino @Henry-811 and the MassGen team
+
+## [0.1.6] - 2025-10-31
+
+### Added
+- **Framework Interoperability**: External agent framework integration as MassGen custom tools
+  - New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
+  - **AG2 Lesson Planner Tool**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning (supports streaming)
+  - **LangGraph Lesson Planner Tool**: LangGraph graph-based workflows integrated as tool
+  - **AgentScope Lesson Planner Tool**: AgentScope agent system wrapped for lesson creation
+  - **OpenAI Assistants Lesson Planner Tool**: OpenAI Assistants API integrated as tool
+  - **SmoLAgent Lesson Planner Tool**: HuggingFace SmoLAgent integration for lesson planning
+  - Enables MassGen agents to delegate tasks to specialized external frameworks
+  - Each framework runs autonomously and returns results to MassGen orchestrator
+  - Note: Only AG2 currently supports streaming; other frameworks return complete results
+
+- **Configuration Validator**: Comprehensive YAML configuration validation system
+  - New `ConfigValidator` class in `massgen/config_validator.py` for pre-flight validation
+  - Memory configuration validation with detailed error messages
+  - Pre-commit hook integration for automatic config validation
+  - Comprehensive test suite in `massgen/tests/test_config_validator.py`
+  - Validates agent configurations, backend parameters, tool settings, and memory options
+  - Provides actionable error messages with suggestions for common mistakes
+
+### Changed
+- **Backend Architecture Refactoring**: Unified tool execution with ToolExecutionConfig
+  - New `ToolExecutionConfig` dataclass in `base_with_custom_tool_and_mcp.py` for standardized tool handling
+  - Refactored `ResponseBackend` with unified tool execution flow
+  - Refactored `ChatCompletionsBackend` with unified tool execution flow
+  - Refactored `ClaudeBackend` with unified tool execution methods
+  - Eliminates duplicate code paths between custom tools and MCP tools
+  - Consistent error handling and status reporting across all tool types
+  - Improved maintainability and extensibility for future tool systems
+
+- **Gemini Backend Simplification**: Major architectural cleanup and consolidation
+  - Removed `gemini_mcp_manager.py` module
+  - Removed `gemini_trackers.py` module
+  - Refactored `gemini.py` to use manual tool execution via base class
+  - Streamlined tool handling and cleanup logic
+  - Removed continuation logic and duplicate code
+  - Updated `_gemini_formatter.py` for simplified tool conversion
+  - Net reduction of 1,598 lines through consolidation
+  - Improved maintainability and performance
+
+- **Custom Tool System Enhancement**: Improved tool management and execution
+  - Enhanced `ToolManager` with category management capabilities
+  - Improved tool registration and validation system
+  - Enhanced tool result handling and error reporting
+  - Better support for async tool execution
+  - Improved tool schema generation for LLM consumption
+
+### Documentations, Configurations and Resources
+
+- **Framework Interoperability Examples**: 8 new configuration files demonstrating external framework integration
+  - **AG2 Examples**: `ag2_lesson_planner_example.yaml`, `ag2_and_langgraph_lesson_planner.yaml`, `ag2_and_openai_assistant_lesson_planner.yaml`
+  - **LangGraph Examples**: `langgraph_lesson_planner_example.yaml`
+  - **AgentScope Examples**: `agentscope_lesson_planner_example.yaml`
+  - **OpenAI Assistants Examples**: `openai_assistant_lesson_planner_example.yaml`
+  - **SmoLAgent Examples**: `smolagent_lesson_planner_example.yaml`
+  - **Multi-Framework Examples**: `two_models_with_tools_example.yaml`
+
+### Technical Details
+- **Major Focus**: Framework interoperability for external agent integration, unified tool execution architecture, Gemini backend simplification, and configuration validation system
+- **Contributors**: @Eric-Shang @praneeth999 @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.5] - 2025-10-29
 

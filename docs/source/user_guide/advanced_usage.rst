@@ -220,7 +220,7 @@ Combine MassGen and AG2 agents:
      --config @examples/ag2/ag2_coder_case_study.yaml \
      "Build a data analysis pipeline with visualizations"
 
-See :doc:`ag2_integration` for complete AG2 documentation.
+See :doc:`general_interoperability` for complete AG2 documentation.
 
 Logging and Debugging
 ---------------------
@@ -647,7 +647,7 @@ Next Steps
 * :doc:`multi_turn_mode` - Interactive sessions and conversation management
 * :doc:`file_operations` - Workspace management and file operations
 * :doc:`project_integration` - Secure project access with context paths
-* :doc:`ag2_integration` - AG2 framework integration
+* :doc:`general_interoperability` - Framework interoperability (including AG2)
 * :doc:`mcp_integration` - MCP planning mode and tool filtering
 * :doc:`../examples/advanced_patterns` - Advanced configuration patterns
 * :doc:`../reference/yaml_schema` - Complete YAML reference

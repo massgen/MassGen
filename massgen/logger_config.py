@@ -78,8 +78,8 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
         log_base_dir = Path(".massgen") / "massgen_logs"
         log_base_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create timestamped session directory
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Create timestamped session directory (with microseconds to prevent collisions)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         _LOG_BASE_SESSION_DIR = log_base_dir / f"log_{timestamp}"
         _LOG_BASE_SESSION_DIR.mkdir(parents=True, exist_ok=True)
 
