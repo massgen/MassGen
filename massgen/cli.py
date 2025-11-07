@@ -467,6 +467,86 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             )
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
+    elif backend_type == "cerebras":
+        # Cerebras AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("CEREBRAS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Cerebras AI", "CEREBRAS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.cerebras.ai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "together":
+        # Together AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("TOGETHER_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Together AI", "TOGETHER_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.together.xyz/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "fireworks":
+        # Fireworks AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("FIREWORKS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Fireworks AI", "FIREWORKS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.fireworks.ai/inference/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "groq":
+        # Groq uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Groq", "GROQ_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.groq.com/openai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "openrouter":
+        # OpenRouter uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("OpenRouter", "OPENROUTER_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://openrouter.ai/api/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "moonshot":
+        # Kimi/Moonshot AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("MOONSHOT_API_KEY") or os.getenv("KIMI_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Moonshot AI", "MOONSHOT_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.moonshot.cn/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "nebius":
+        # Nebius AI Studio uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("NEBIUS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Nebius AI Studio", "NEBIUS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.studio.nebius.ai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "poe":
+        # POE uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("POE_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("POE", "POE_API_KEY", config_path))
+        # base_url must be provided in config as it's platform-specific
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "qwen":
+        # Qwen uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("QWEN_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Qwen", "QWEN_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
     elif backend_type == "lmstudio":
         # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
         return LMStudioBackend(**kwargs)
@@ -613,6 +693,8 @@ def create_agents_from_config(
         elif backend_type_lower == "zai":
             agent_config = AgentConfig.create_zai_config(**backend_params)
         elif backend_type_lower == "chatcompletion":
+            agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
+        elif backend_type_lower in ["cerebras", "together", "fireworks", "groq", "openrouter", "moonshot", "nebius", "poe", "qwen"]:
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
         elif backend_type_lower == "lmstudio":
             agent_config = AgentConfig.create_lmstudio_config(**backend_params)
@@ -2349,11 +2431,16 @@ async def run_interactive_mode(
     orchestrator_cfg: Dict[str, Any] = None,
     config_path: Optional[str] = None,
     memory_session_id: Optional[str] = None,
+    initial_question: Optional[str] = None,
     restore_session_if_exists: bool = False,
     debug: bool = False,
     **kwargs,
 ):
-    """Run MassGen in interactive mode with conversation history."""
+    """Run MassGen in interactive mode with conversation history.
+
+    Args:
+        initial_question: Optional first question to auto-submit when entering interactive mode
+    """
 
     # Use Rich console for better display
     rich_console = Console()
@@ -2540,7 +2627,13 @@ async def run_interactive_mode(
                         )
                         logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
 
-                question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
+                # Use initial_question for first turn if provided, otherwise prompt
+                if initial_question and current_turn == 0:
+                    question = initial_question
+                    rich_console.print(f"\n[bold blue]👤 User:[/bold blue] {question}")
+                    initial_question = None  # Clear so we prompt on subsequent turns
+                else:
+                    question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
 
                 # Handle slash commands
                 if question.startswith("/"):
@@ -3004,6 +3097,8 @@ async def main(args):
             else:
                 # Pass the config path and session_id to interactive mode
                 config_file_path = str(resolved_path) if args.config and resolved_path else None
+                # Check if we have an initial question from config builder
+                initial_q = getattr(args, "interactive_with_initial_question", None)
                 # Remove config_path from kwargs to avoid duplicate argument
                 interactive_kwargs = {k: v for k, v in kwargs.items() if k != "config_path"}
                 await run_interactive_mode(
@@ -3013,6 +3108,8 @@ async def main(args):
                     orchestrator_cfg=orchestrator_cfg,
                     config_path=config_file_path,
                     memory_session_id=memory_session_id,
+                    initial_question=initial_q,
+                    **kwargs,
                     restore_session_if_exists=restore_existing_session,
                     debug=args.debug,
                     **interactive_kwargs,
@@ -3387,9 +3484,12 @@ Environment Variables:
         if result and len(result) == 2:
             filepath, question = result
             if filepath and question:
-                # Update args to use the newly created config
+                # Update args to use the newly created config and launch interactive mode with initial question
                 args.config = filepath
                 args.question = question
+                # Store initial question for interactive mode (don't run single-question mode)
+                args.interactive_with_initial_question = question
+                args.question = None  # Clear to trigger interactive mode instead of single-question
             elif filepath:
                 # Config created but user chose not to run
                 print(f"\n✅ Configuration saved to: {filepath}")

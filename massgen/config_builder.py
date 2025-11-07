@@ -30,6 +30,7 @@ from massgen.backend.capabilities import (
     get_capabilities,
     has_capability,
 )
+from massgen.utils.model_matcher import get_all_models_for_provider
 
 # Load environment variables
 load_dotenv()
@@ -230,6 +231,131 @@ class ConfigBuilder:
         }
         self.orchestrator_config = {}
         self.default_mode = default_mode
+
+    def select_model_smart(
+        self,
+        backend_type: str,
+        models: List[str],
+        current_model: Optional[str] = None,
+        prompt: str = "Select model:",
+    ) -> Optional[str]:
+        """Smart model selection with autocomplete for providers with many models.
+
+        For providers with custom/many models (OpenRouter, Nebius, POE), offers text input with fuzzy matching.
+        For providers with specific model lists, uses traditional select UI.
+
+        Args:
+            backend_type: The backend type (e.g., "openrouter", "openai")
+            models: List of available models from capabilities
+            current_model: Currently selected model
+            prompt: Prompt text to display
+
+        Returns:
+            Selected model name, or None if cancelled
+        """
+        # Get expanded model list for fuzzy matching if provider has curated common models
+        try:
+            fuzzy_match_models = get_all_models_for_provider(backend_type)
+        except Exception:
+            # If API fails, fall back to models from capabilities
+            fuzzy_match_models = models
+
+        # All chatcompletion providers should use autocomplete search
+        chatcompletion_providers = [
+            "openrouter",
+            "poe",
+            "groq",
+            "cerebras",
+            "together",
+            "nebius",
+            "fireworks",
+            "moonshot",
+            "qwen",
+        ]
+
+        # Providers that should use text input/autocomplete instead of select
+        use_text_input = (
+            "custom" in models  # Provider with custom models
+            or len(models) > 20  # Too many models for select UI
+            or backend_type in chatcompletion_providers  # All chatcompletion providers use autocomplete
+            or len(fuzzy_match_models) > 20  # API returned many models
+        )
+
+        if use_text_input:
+            console.print("\n[dim]Type to search models (e.g., 'sonnet', 'gpt-5', 'gemini')[/dim]")
+            console.print(f"[dim]Searching through {len(fuzzy_match_models)} models...[/dim]")
+            if current_model and current_model != "custom":
+                console.print(f"[dim]Current: {current_model}[/dim]")
+            console.print()
+
+            try:
+                model_input = questionary.autocomplete(
+                    prompt,
+                    choices=fuzzy_match_models,
+                    default="" if current_model == "custom" else (current_model or ""),
+                    meta_information={},  # Can add model descriptions here later
+                    match_middle=True,  # Match anywhere in string
+                    ignore_case=True,  # Case insensitive
+                    style=questionary.Style(
+                        [
+                            ("question", "fg:cyan bold"),
+                            ("answer", "fg:cyan"),
+                            ("pointer", "fg:cyan bold"),
+                        ],
+                    ),
+                    validate=lambda text: len(text.strip()) > 0 or "Model name cannot be empty",
+                ).ask()
+
+                if model_input is None:  # User cancelled
+                    return None
+
+                return model_input.strip()
+
+            except ImportError:
+                # Fallback to simple text input if autocomplete not available
+                console.print("[warning]⚠️  Autocomplete not available, using text input[/warning]")
+                model_input = questionary.text(
+                    prompt,
+                    default="" if current_model == "custom" else (current_model or ""),
+                    style=questionary.Style(
+                        [
+                            ("question", "fg:cyan bold"),
+                            ("answer", "fg:cyan"),
+                        ],
+                    ),
+                    validate=lambda text: len(text.strip()) > 0 or "Model name cannot be empty",
+                ).ask()
+
+                if model_input is None:
+                    return None
+
+                return model_input.strip()
+
+        else:
+            # Traditional select UI for providers with specific models
+            model_choices = [
+                questionary.Choice(
+                    f"{model}" + (" (current)" if model == current_model else ""),
+                    value=model,
+                )
+                for model in models
+            ]
+
+            selected_model = questionary.select(
+                prompt,
+                choices=model_choices,
+                default=current_model,
+                style=questionary.Style(
+                    [
+                        ("selected", "fg:cyan bold"),
+                        ("pointer", "fg:cyan bold"),
+                        ("highlighted", "fg:cyan"),
+                    ],
+                ),
+                use_arrow_keys=True,
+            ).ask()
+
+            return selected_model
 
     def show_banner(self) -> None:
         """Display welcome banner using Rich Panel."""
@@ -543,8 +669,15 @@ class ConfigBuilder:
             table.add_column("Models", style="dim", min_width=25)
             table.add_column("Capabilities", style="dim cyan", min_width=20)
 
+            # Exclude generic backends from display (superseded by specific providers)
+            excluded_generic_backends = ["chatcompletion", "inference"]
+
             # Add rows for each provider
             for provider_id, provider_info in self.PROVIDERS.items():
+                # Skip generic backends
+                if provider_id in excluded_generic_backends:
+                    continue
+
                 try:
                     has_key = api_keys.get(provider_id, False)
                     status = "✅" if has_key else "❌"
@@ -1012,27 +1145,12 @@ class ConfigBuilder:
                 models = provider_info.get("models", [])
                 if models:
                     current_model = agent["backend"].get("model")
-                    model_choices = [
-                        questionary.Choice(
-                            f"{model}" + (" (current)" if model == current_model else ""),
-                            value=model,
-                        )
-                        for model in models
-                    ]
-
-                    selected_model = questionary.select(
-                        f"Select model for {agent['id']}:",
-                        choices=model_choices,
-                        default=current_model,
-                        style=questionary.Style(
-                            [
-                                ("selected", "fg:cyan bold"),
-                                ("pointer", "fg:cyan bold"),
-                                ("highlighted", "fg:cyan"),
-                            ],
-                        ),
-                        use_arrow_keys=True,
-                    ).ask()
+                    selected_model = self.select_model_smart(
+                        backend_type=backend_type,
+                        models=models,
+                        current_model=current_model,
+                        prompt=f"Select model for {agent['id']}:",
+                    )
 
                     if selected_model:
                         agent["backend"]["model"] = selected_model
@@ -1253,27 +1371,12 @@ class ConfigBuilder:
                 console.print(Panel("\n".join(panel_content), border_style="cyan", width=80))
                 console.print()
 
-                model_choices = [
-                    questionary.Choice(
-                        f"{model}" + (" (current)" if model == current_model else ""),
-                        value=model,
-                    )
-                    for model in models
-                ]
-
-                selected_model = questionary.select(
-                    f"Select model for {agent['id']}:",
-                    choices=model_choices,
-                    default=current_model,
-                    style=questionary.Style(
-                        [
-                            ("selected", "fg:cyan bold"),
-                            ("pointer", "fg:cyan bold"),
-                            ("highlighted", "fg:cyan"),
-                        ],
-                    ),
-                    use_arrow_keys=True,
-                ).ask()
+                selected_model = self.select_model_smart(
+                    backend_type=backend_type,
+                    models=models,
+                    current_model=current_model,
+                    prompt=f"Select model for {agent['id']}:",
+                )
 
                 if selected_model:
                     agent["backend"]["model"] = selected_model
@@ -1692,7 +1795,10 @@ class ConfigBuilder:
                 console.print("[warning]⚠️  Number of agents must be at least 1. Setting to 1.[/warning]")
                 num_agents = 1
 
-            available_providers = [p for p, has_key in api_keys.items() if has_key]
+            # Filter providers: only those with API keys, excluding generic backends
+            excluded_generic_backends = ["chatcompletion", "inference"]  # Now superseded by specific providers
+
+            available_providers = [p for p, has_key in api_keys.items() if has_key and p not in excluded_generic_backends]  # Only show providers with keys, exclude generic
 
             if not available_providers:
                 console.print("[error]❌ No providers with API keys found. Please set at least one API key.[/error]")
@@ -1901,27 +2007,12 @@ class ConfigBuilder:
                             current_model = agent["backend"].get("model")
                             console.print(f"[bold]Agent {i} ({agent['id']}) - {provider_info.get('name')}:[/bold]")
 
-                            model_choices = [
-                                questionary.Choice(
-                                    f"{model}" + (" (default)" if model == current_model else ""),
-                                    value=model,
-                                )
-                                for model in models
-                            ]
-
-                            selected_model = questionary.select(
-                                "Select model:",
-                                choices=model_choices,
-                                default=current_model,
-                                style=questionary.Style(
-                                    [
-                                        ("selected", "fg:cyan bold"),
-                                        ("pointer", "fg:cyan bold"),
-                                        ("highlighted", "fg:cyan"),
-                                    ],
-                                ),
-                                use_arrow_keys=True,
-                            ).ask()
+                            selected_model = self.select_model_smart(
+                                backend_type=backend_type,
+                                models=models,
+                                current_model=current_model,
+                                prompt="Select model:",
+                            )
 
                             if selected_model:
                                 agent["backend"]["model"] = selected_model
