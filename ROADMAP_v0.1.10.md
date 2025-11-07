@@ -1,64 +1,64 @@
-# MassGen v0.1.9 Roadmap
+# MassGen v0.1.10 Roadmap
 
 ## Overview
 
-Version 0.1.9 focuses on rate limiting and comprehensive documentation, bringing two key improvements to enhance the MassGen developer experience.
+Version 0.1.10 focuses on framework streaming improvements and comprehensive documentation, bringing two key enhancements to the MassGen multi-agent coordination experience.
 
-- **Gemini Rate Limiting System** (Required): ⚡ Multi-dimensional rate limiting to prevent API spam and manage costs
+- **Stream LangGraph & SmoLAgent Steps** (Required): ⚡ Real-time intermediate step streaming for external framework tools
 - **MassGen Handbook** (Required): 📚 Comprehensive user documentation and centralized policies for development teams
 
 ## Key Technical Priorities
 
-1. **Gemini Rate Limiting System**: Prevent API quota violations and manage costs while ensuring smooth operation
-   **Use Case**: Enterprise deployments requiring cost control and API compliance
+1. **Stream LangGraph & SmoLAgent Intermediate Steps**: Real-time visibility into external framework reasoning steps
+   **Use Case**: Better debugging and monitoring of complex multi-agent workflows using LangGraph and SmoLAgent
 
 2. **MassGen Handbook**: Comprehensive user documentation and handbook for MassGen
    **Use Case**: Provide centralized policies and resources for development and research teams
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Gemini Rate Limiting System (REQUIRED)
+### 🎯 Milestone 1: Stream LangGraph & SmoLAgent Intermediate Steps (REQUIRED)
 
-**Goal**: Multi-dimensional rate limiting for Gemini models to prevent API spam and manage costs
+**Goal**: Real-time streaming of intermediate steps for LangGraph and SmoLAgent framework integrations
 
-**Owner**: @AbhimanyuAryan (abhimanyuaryan on Discord)
+**Owner**: @Eric-Shang (ericshang. on Discord)
 
-**PR**: [#383](https://github.com/Leezekun/MassGen/pull/383) (Draft)
+**PR**: [#462](https://github.com/massgen/MassGen/pull/462)
 
-#### 1.1 Rate Limiting Implementation
-- [ ] Multi-dimensional rate limiting (RPM, TPM, RPD)
-- [ ] Model-specific limits: Flash (9 RPM), Pro (2 RPM)
-- [ ] Sliding window tracking for precise rate management
-- [ ] Configurable limits via external YAML configuration
-- [ ] Mandatory cooldown periods after agent startup
+#### 1.1 LangGraph Streaming Implementation
+- [ ] Real-time streaming of LangGraph intermediate steps
+- [ ] Integration with LangGraph framework tool wrapper
+- [ ] Step-by-step reasoning visibility
+- [ ] Progress tracking and monitoring
+- [ ] Error handling during streaming
 
-#### 1.2 Configuration System
-- [ ] External YAML configuration for centralized limit control
-- [ ] Optional `--rate-limit` CLI flag to enable/disable
-- [ ] `enable_rate_limit` configuration parameter
-- [ ] Model-specific rate limit profiles
-- [ ] Dynamic rate limit adjustments
+#### 1.2 SmoLAgent Streaming Implementation
+- [ ] Real-time streaming of SmoLAgent intermediate steps
+- [ ] Integration with SmoLAgent framework tool wrapper
+- [ ] Agent action and reasoning visibility
+- [ ] Consistent streaming format with LangGraph
+- [ ] Progress indicators and status updates
 
-#### 1.3 Rate Tracking and Enforcement
-- [ ] Sliding window tracking for RPM, TPM, RPD
-- [ ] Request queuing when limits approached
-- [ ] Automatic cooldown enforcement
-- [ ] Rate limit violation detection and handling
-- [ ] Logging and monitoring for rate limit events
+#### 1.3 Streaming Infrastructure
+- [ ] Unified streaming interface for external frameworks
+- [ ] Buffering and flow control for streaming data
+- [ ] Real-time display integration with MassGen UI
+- [ ] Performance optimization for streaming overhead
+- [ ] Logging and debugging support for streaming
 
 #### 1.4 Testing and Validation
-- [ ] Test rate limiting accuracy
-- [ ] Validate model-specific limits
-- [ ] Stress testing with high request volumes
-- [ ] Configuration validation
+- [ ] Test streaming with various LangGraph workflows
+- [ ] Test streaming with various SmoLAgent tasks
+- [ ] Validate streaming performance and latency
+- [ ] Error handling and recovery testing
 - [ ] Documentation and usage examples
 
 **Success Criteria**:
-- ✅ Rate limiting prevents API quota violations
-- ✅ Model-specific limits work correctly
-- ✅ Configuration is flexible and easy to use
-- ✅ Minimal impact on performance
-- ✅ Clear monitoring and debugging capabilities
+- ✅ LangGraph intermediate steps stream in real-time
+- ✅ SmoLAgent intermediate steps stream in real-time
+- ✅ Streaming performance maintains acceptable latency
+- ✅ Error handling works correctly during streaming
+- ✅ Enhanced debugging capabilities for framework tools
 
 ---
 
@@ -111,12 +111,12 @@ Version 0.1.9 focuses on rate limiting and comprehensive documentation, bringing
 
 ### Functional Requirements
 
-**Gemini Rate Limiting:**
-- [ ] Multi-dimensional rate limiting active
-- [ ] Model-specific limits enforced
-- [ ] YAML configuration working
-- [ ] CLI flag enables/disables feature
-- [ ] Cooldown periods enforced
+**Framework Streaming:**
+- [ ] LangGraph intermediate steps streaming
+- [ ] SmoLAgent intermediate steps streaming
+- [ ] Real-time display integration
+- [ ] Consistent streaming format
+- [ ] Progress tracking and monitoring
 
 **MassGen Handbook:**
 - [ ] Comprehensive documentation complete
@@ -126,10 +126,10 @@ Version 0.1.9 focuses on rate limiting and comprehensive documentation, bringing
 - [ ] Case studies and examples provided
 
 ### Performance Requirements
-- [ ] Rate limiting doesn't significantly impact latency
+- [ ] Streaming maintains acceptable latency
 - [ ] Documentation is well-organized and easily navigable
 - [ ] Overall system remains responsive
-- [ ] Efficient tracking and monitoring
+- [ ] Minimal overhead from streaming infrastructure
 
 ### Quality Requirements
 - [ ] All tests passing
@@ -143,31 +143,31 @@ Version 0.1.9 focuses on rate limiting and comprehensive documentation, bringing
 ## Dependencies & Risks
 
 ### Dependencies
-- **Rate Limiting**: Gemini backend, configuration system, CLI infrastructure
+- **Framework Streaming**: LangGraph framework integration, SmoLAgent framework integration, streaming infrastructure, display system
 - **MassGen Handbook**: Documentation system, case studies, configuration examples, best practices knowledge
 
 ### Risks & Mitigations
-1. **Rate Limit Accuracy**: *Mitigation*: Sliding window tracking, extensive testing, configurable safety margins
-2. **Performance Impact**: *Mitigation*: Efficient tracking algorithms, minimal overhead design, performance benchmarks
-3. **User Adoption**: *Mitigation*: Clear documentation, optional feature with sensible defaults, usage examples
+1. **Streaming Performance**: *Mitigation*: Efficient buffering, flow control, performance testing, minimal overhead design
+2. **Framework Compatibility**: *Mitigation*: Thorough testing with LangGraph and SmoLAgent, flexible streaming interface, version compatibility checks
+3. **Error Handling**: *Mitigation*: Robust error handling, graceful degradation, comprehensive error logging
 4. **Documentation Completeness**: *Mitigation*: Community feedback, iterative improvements, comprehensive coverage of all features
 5. **Documentation Maintenance**: *Mitigation*: Regular updates with each release, clear ownership, automated checks for broken links
 
 ---
 
-## Future Enhancements (Post-v0.1.9)
-
-### v0.1.10 Plans
-- **Add computer use** (@franklinnwren): Visual perception and automated computer interaction with Gemini API
-- **Session Restart** (@ncrispino): Resume previous conversations from log files
+## Future Enhancements (Post-v0.1.10)
 
 ### v0.1.11 Plans
+- **Gemini Rate Limiting System** (@AbhimanyuAryan): Multi-dimensional rate limiting to prevent API spam and manage costs
+
+### v0.1.12 Plans
 - **Parallel File Operations & Performance** (@ncrispino): Increase parallelism and efficiency with standard evaluation metrics
 
 ### Long-term Vision
+- **Universal Framework Streaming**: Streaming support for all external framework integrations (AG2, CrewAI, etc.)
+- **Advanced Streaming Analytics**: Detailed performance metrics and bottleneck detection
 - **Universal Rate Limiting**: Rate limiting for all backends (OpenAI, Claude, etc.)
 - **Cost Analytics**: Detailed cost tracking and budget management across all APIs
-- **Advanced Computer Use**: Cross-platform automation and enhanced visual perception capabilities
 
 ---
 
@@ -175,10 +175,10 @@ Version 0.1.9 focuses on rate limiting and comprehensive documentation, bringing
 
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
-| Phase 1 | Gemini Rate Limiting | Multi-dimensional limits, YAML config, CLI flag | @AbhimanyuAryan | **REQUIRED** |
+| Phase 1 | Framework Streaming | LangGraph streaming, SmoLAgent streaming, real-time display | @Eric-Shang | **REQUIRED** |
 | Phase 2 | MassGen Handbook | Comprehensive documentation, best practices, case studies | @a5507203 @Henry-811 | **REQUIRED** |
 
-**Target Release**: November 7, 2025 (Friday @ 9am PT)
+**Target Release**: November 10, 2025 (Monday @ 9am PT)
 
 ---
 
@@ -186,12 +186,12 @@ Version 0.1.9 focuses on rate limiting and comprehensive documentation, bringing
 
 ### For Contributors
 
-**Phase 1 - Gemini Rate Limiting:**
-1. Complete rate limiting implementation (PR #383)
-2. Add comprehensive tests for rate tracking
-3. Validate model-specific limits
-4. Create YAML configuration examples
-5. Document CLI usage and configuration
+**Phase 1 - Framework Streaming:**
+1. Implement LangGraph streaming (PR #462)
+2. Implement SmoLAgent streaming
+3. Add comprehensive tests for streaming functionality
+4. Integrate with real-time display system
+5. Document streaming usage and configuration
 
 **Phase 2 - MassGen Handbook:**
 1. Create comprehensive user documentation (Issue #387)
@@ -203,13 +203,14 @@ Version 0.1.9 focuses on rate limiting and comprehensive documentation, bringing
 
 ### For Users
 
-- v0.1.9 brings rate management and comprehensive documentation:
+- v0.1.10 brings framework streaming and comprehensive documentation:
 
-  **Gemini Rate Limiting:**
-  - Prevent API quota violations automatically
-  - Manage costs with configurable limits
-  - Model-specific rate management (Flash vs Pro)
-  - Enable/disable via `--rate-limit` CLI flag
+  **Framework Streaming:**
+  - Real-time visibility into LangGraph reasoning steps
+  - Real-time visibility into SmoLAgent agent actions
+  - Enhanced debugging and monitoring capabilities
+  - Better understanding of multi-step workflows
+  - Improved troubleshooting for framework integrations
 
   **MassGen Handbook:**
   - Comprehensive user documentation
@@ -229,12 +230,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Documentation guidelines
 
 **Contact Track Owners:**
-- Rate Limiting System: @AbhimanyuAryan on Discord (abhimanyuaryan)
+- Framework Streaming: @Eric-Shang on Discord (ericshang.)
 - MassGen Handbook: @a5507203 on Discord (crinvo), @Henry-811 on Discord (henry_weiqi)
 
 ---
 
-*This roadmap reflects v0.1.9 priorities focusing on rate management and comprehensive documentation.*
+*This roadmap reflects v0.1.10 priorities focusing on framework streaming improvements and comprehensive documentation.*
 
-**Last Updated:** November 5, 2025
+**Last Updated:** November 7, 2025
 **Maintained By:** MassGen Team

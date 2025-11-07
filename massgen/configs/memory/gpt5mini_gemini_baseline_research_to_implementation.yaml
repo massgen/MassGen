@@ -75,7 +75,6 @@ memory:
 # ====================
 orchestrator:
   # Multi-turn mode for interactive research sessions
-  session_storage: "research_sessions"
   agent_temporary_workspace: "research_workspaces"
   snapshot_storage: "research_snapshots"
 

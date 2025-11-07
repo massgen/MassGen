@@ -12,15 +12,26 @@
 #   3. For Docker environment: Have Docker installed and running
 
 agents:
-  - id: "computer_use_agent"
+  - id: "automation_agent"
     backend:
       type: "openai"
-      model: "gpt-4.1"  # You can also use "computer-use-preview" for the main model
+      model: "computer-use-preview"
       custom_tools:
         - name: ["computer_use"]
           category: "automation"
           path: "massgen/tool/_computer_use/computer_use_tool.py"
           function: ["computer_use"]
+          default_params:
+            environment: "browser"
+            display_width: 1920
+            display_height: 1080
+            max_iterations: 30
+            include_reasoning: true
+            model: "computer-use-preview"
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
 
     system_message: |
       You are an AI assistant with access to computer automation capabilities.

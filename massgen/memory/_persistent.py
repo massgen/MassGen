@@ -13,6 +13,7 @@ from pydantic import field_validator
 
 from ._base import PersistentMemoryBase
 from ._fact_extraction_prompts import get_fact_extraction_prompt
+from ._update_prompts import get_update_memory_prompt
 
 if TYPE_CHECKING:
     from mem0.configs.base import MemoryConfig
@@ -107,6 +108,7 @@ class PersistentMemory(PersistentMemoryBase):
         mem0_config: Optional[MemoryConfig] = None,
         memory_type: Optional[str] = None,
         qdrant_client: Optional[Any] = None,
+        debug: bool = False,
         **kwargs: Any,
     ) -> None:
         """
@@ -154,6 +156,7 @@ class PersistentMemory(PersistentMemoryBase):
             qdrant_client: Optional shared QdrantClient instance (for multi-agent concurrent access)
                 Note: Local file-based Qdrant doesn't support concurrent access.
                 Use qdrant_client from a Qdrant server for multi-agent scenarios.
+            debug: Enable memory debug mode (saves messages and extracted facts to disk)
             **kwargs: Additional options (e.g., on_disk=True for persistence)
 
         Raises:
@@ -205,6 +208,7 @@ class PersistentMemory(PersistentMemoryBase):
         self.agent_id = agent_name
         self.user_id = user_name
         self.session_id = session_name
+        self.debug = debug
 
         # Configure mem0 instance
         if mem0_config is not None:
@@ -288,13 +292,15 @@ class PersistentMemory(PersistentMemoryBase):
                     config={"model": embedding_backend},
                 )
 
-            # Add custom fact extraction prompt for better memory quality
+            # Add custom prompts for better memory quality
             custom_prompt = get_fact_extraction_prompt("default")
+            custom_update_prompt = get_update_memory_prompt("default")
 
             mem0_config = mem0.configs.base.MemoryConfig(
                 llm=llm,
                 embedder=embedder,
                 custom_fact_extraction_prompt=custom_prompt,
+                custom_update_memory_prompt=custom_update_prompt,
             )
 
             # Configure vector store
@@ -317,6 +323,128 @@ class PersistentMemory(PersistentMemoryBase):
         # Initialize async mem0 instance
         self.mem0_memory = mem0.AsyncMemory(mem0_config)
         self.default_memory_type = memory_type
+
+    def _extract_metadata(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Extract structured metadata from messages for better memory organization.
+
+        Analyzes message content to identify:
+        - Tool names used
+        - Whether tool calls are present
+
+        Args:
+            messages: List of message dictionaries to analyze
+
+        Returns:
+            Dictionary with extracted metadata:
+            {
+                "tools_used": List[str],   # Tool names extracted from [Tool Call: X]
+                "has_tools": bool,         # Whether tools used
+                "message_count": int,      # Number of messages
+            }
+
+        Note:
+            We simplified this from chunk-type detection because we can't reliably
+            differentiate reasoning vs final_answer from accumulated text. All
+            content is treated uniformly.
+        """
+        import re
+
+        tools_used = []
+
+        for msg in messages:
+            content = msg.get("content", "")
+
+            if not isinstance(content, str):
+                continue
+
+            # Extract tool names from [Tool Call: tool_name] format
+            if "[Tool Call:" in content:
+                tool_matches = re.findall(r"\[Tool Call: ([^\]]+)\]", content)
+                tools_used.extend(tool_matches)
+
+        # Deduplicate tools_used
+        unique_tools = list(set(tools_used))
+
+        return {
+            "tools_used": unique_tools,
+            "has_tools": len(unique_tools) > 0,
+            "message_count": len(messages),
+        }
+
+    def _save_memory_debug(
+        self,
+        messages: List[Dict[str, Any]],
+        metadata: Dict[str, Any],
+        facts_extracted: List[Dict[str, Any]],
+        turn: Optional[int] = None,
+    ) -> None:
+        """
+        Save memory debug information to disk for inspection.
+
+        Creates a JSON file containing:
+        - Input messages sent to mem0
+        - Extracted metadata
+        - Facts returned by mem0
+        - Timestamp and turn information
+
+        Files are saved to: .massgen/massgen_logs/log_*/attempt_N/memory_debug/agent_id/turn_X.json
+
+        Args:
+            messages: Messages sent to mem0
+            metadata: Extracted metadata
+            facts_extracted: List of facts returned by mem0
+            turn: Turn number (optional)
+        """
+        if not self.debug:
+            return
+
+        try:
+            import json
+            from datetime import datetime
+
+            from ..logger_config import get_log_session_dir
+
+            # Get current log session directory (includes attempt_N if set)
+            log_dir = get_log_session_dir()
+
+            # Create memory_debug directory structure
+            memory_debug_dir = log_dir / "memory_debug"
+            if self.agent_id:
+                memory_debug_dir = memory_debug_dir / self.agent_id
+            memory_debug_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create filename with turn number
+            turn_str = f"turn_{turn}" if turn is not None else "unknown_turn"
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{turn_str}_{timestamp}.json"
+            filepath = memory_debug_dir / filename
+
+            # Prepare debug data
+            debug_data = {
+                "timestamp": datetime.now().isoformat(),
+                "agent_id": self.agent_id,
+                "user_id": self.user_id,
+                "session_id": self.session_id,
+                "turn": turn,
+                "metadata": metadata,
+                "messages_sent": messages,
+                "facts_extracted": facts_extracted,
+                "extraction_count": len(facts_extracted),
+            }
+
+            # Save to file
+            with open(filepath, "w") as f:
+                json.dump(debug_data, f, indent=2, default=str)
+
+            from ..logger_config import logger
+
+            logger.debug(f"💾 [DEBUG] Saved memory debug to: {filepath}")
+
+        except Exception as e:
+            from ..logger_config import logger
+
+            logger.warning(f"⚠️  Failed to save memory debug file: {e}")
 
     async def save_to_memory(
         self,
@@ -488,19 +616,49 @@ class PersistentMemory(PersistentMemoryBase):
             # Format: "role: content" for each message
             conversation_parts.append(f"{role}: {content}")
 
+        combined_content = "\n".join(conversation_parts)
+
+        # Additional validation: Ensure combined content has substance
+        if not combined_content.strip() or len(combined_content.strip()) < 10:
+            logger.warning(f"⚠️  Combined content too short ({len(combined_content)} chars) - skipping mem0 recording")
+            return
+
+        # Extract structured metadata from messages
+        extracted_metadata = self._extract_metadata(valid_messages)
+
+        # Merge extracted metadata with user-provided metadata
+        user_metadata = kwargs.get("metadata", {})
+        full_metadata = {**extracted_metadata, **user_metadata}
+
+        # Log what we're about to send to mem0
+        logger.info(f"📝 [record] Combining {len(valid_messages)} message(s) for mem0 extraction")
+        logger.debug(f"   Combined content length: {len(combined_content)} chars")
+        logger.debug(f"   Extracted metadata: {extracted_metadata}")
+
+        # Show preview of what's being sent
+        preview_length = 500
+        if len(combined_content) > preview_length:
+            logger.debug(f"   Content preview (first {preview_length} chars):\n{combined_content[:preview_length]}...")
+        else:
+            logger.debug(f"   Full content:\n{combined_content}")
+
         mem0_messages = [
             {
                 "role": "assistant",
-                "content": "\n".join(conversation_parts),
+                "content": combined_content,
                 "name": "conversation",
             },
         ]
+
+        # Create new kwargs with full_metadata
+        mem0_kwargs = {k: v for k, v in kwargs.items() if k != "metadata"}
+        mem0_kwargs["metadata"] = full_metadata
 
         await self._mem0_add(
             mem0_messages,
             memory_type=memory_type,
             infer=infer,
-            **kwargs,
+            **mem0_kwargs,
         )
 
     async def _mem0_add(
@@ -526,7 +684,21 @@ class PersistentMemory(PersistentMemoryBase):
 
         try:
             # Logging - show what we're sending to mem0
-            logger.info(f"🔍 [_mem0_add] Recording to mem0 (agent={self.agent_id}, session={self.session_id}, turn={kwargs.get('metadata', {}).get('turn', 'N/A')})")
+            metadata = kwargs.get("metadata", {})
+            turn = metadata.get("turn", "N/A")
+            tools_used = metadata.get("tools_used", [])
+            message_count = metadata.get("message_count", 0)
+
+            logger.info(f"🔍 [_mem0_add] Recording to mem0 (agent={self.agent_id}, session={self.session_id}, turn={turn})")
+
+            # Show metadata if present
+            if tools_used or message_count > 1:
+                metadata_summary = []
+                if tools_used:
+                    metadata_summary.append(f"tools={tools_used}")
+                if message_count:
+                    metadata_summary.append(f"messages={message_count}")
+                logger.info(f"   📊 Metadata: {', '.join(metadata_summary)}")
 
             # Debug: Show message preview
             if isinstance(messages, str):
@@ -553,13 +725,60 @@ class PersistentMemory(PersistentMemoryBase):
                 **kwargs,
             )
 
-            # Show results
+            # Show results in detail
             if isinstance(results, dict):
-                result_count = len(results.get("results", []))
+                result_list = results.get("results", [])
                 relation_count = len(results.get("relations", []))
+                result_count = len(result_list)
+
                 logger.info(f"   ✅ mem0 extracted {result_count} fact(s), {relation_count} relation(s)")
+
+                # Show the actual extracted facts for verification
+                if result_count > 0:
+                    logger.info("   📋 Extracted facts:")
+                    for i, result in enumerate(result_list[:5], 1):  # Show first 5 facts
+                        if isinstance(result, dict):
+                            # Result format: {"id": "...", "memory": "fact text", ...}
+                            fact_text = result.get("memory", str(result))
+                            fact_id = result.get("id", "unknown")
+
+                            # Truncate long facts for readability
+                            if len(fact_text) > 150:
+                                fact_preview = fact_text[:150] + "..."
+                            else:
+                                fact_preview = fact_text
+
+                            logger.info(f"      [{i}] {fact_preview}")
+                            logger.debug(f"          ID: {fact_id}")
+                        else:
+                            logger.info(f"      [{i}] {str(result)[:150]}")
+
+                    if result_count > 5:
+                        logger.info(f"      ... and {result_count - 5} more fact(s)")
+                else:
+                    logger.warning("   ⚠️  mem0 extracted 0 facts (check fact extraction prompt or content quality)")
+
+                # Save debug information if debug mode is enabled
+                if self.debug:
+                    turn = metadata.get("turn") if metadata else None
+                    self._save_memory_debug(
+                        messages=messages if isinstance(messages, list) else [{"content": messages}],
+                        metadata=metadata,
+                        facts_extracted=result_list,
+                        turn=turn,
+                    )
             else:
                 logger.info("   ✅ mem0.add() completed")
+
+                # Save debug information even if results format is unexpected
+                if self.debug:
+                    turn = metadata.get("turn") if metadata else None
+                    self._save_memory_debug(
+                        messages=messages if isinstance(messages, list) else [{"content": messages}],
+                        metadata=metadata,
+                        facts_extracted=[],
+                        turn=turn,
+                    )
 
             return results
 
@@ -580,7 +799,7 @@ class PersistentMemory(PersistentMemoryBase):
         query: Union[str, Dict[str, Any], List[Dict[str, Any]]],
         limit: int = 5,
         previous_winners: Optional[List[Dict[str, Any]]] = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> str:
         """
         Developer interface: Retrieve relevant memories for a query.

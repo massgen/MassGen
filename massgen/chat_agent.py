@@ -146,6 +146,8 @@ class SingleAgent(ChatAgent):
         conversation_memory: Optional[ConversationMemory] = None,
         persistent_memory: Optional[PersistentMemoryBase] = None,
         context_monitor: Optional[Any] = None,
+        record_all_tool_calls: bool = False,
+        record_reasoning: bool = False,
     ):
         """
         Initialize single agent.
@@ -158,6 +160,8 @@ class SingleAgent(ChatAgent):
             conversation_memory: Optional conversation memory instance
             persistent_memory: Optional persistent memory instance
             context_monitor: Optional context window monitor for tracking token usage
+            record_all_tool_calls: If True, record ALL tool calls to memory (including intermediate MCP tools)
+            record_reasoning: If True, record reasoning/thinking chunks to memory
         """
         super().__init__(session_id, conversation_memory, persistent_memory)
         self.backend = backend
@@ -179,6 +183,10 @@ class SingleAgent(ChatAgent):
         # Track previous winning agents for shared memory retrieval
         # Format: [{"agent_id": "agent_b", "turn": 1}, {"agent_id": "agent_a", "turn": 2}]
         self._previous_winners = []
+
+        # Memory recording configuration
+        self._record_all_tool_calls = record_all_tool_calls  # Record ALL tools (not just workflow)
+        self._record_reasoning = record_reasoning  # Record reasoning chunks
 
         # Create context compressor if monitor and conversation_memory exist
         self.context_compressor = None
@@ -222,9 +230,10 @@ class SingleAgent(ChatAgent):
         complete_message = None
         messages_to_record = []
 
-        # Accumulate all chunks for complete memory recording
-        reasoning_chunks = []  # Accumulate reasoning content
-        reasoning_summaries = []  # Accumulate reasoning summaries
+        # Optional accumulators (based on config)
+        all_tool_calls_executed = [] if self._record_all_tool_calls else None
+        reasoning_chunks = [] if self._record_reasoning else None
+        reasoning_summaries = [] if self._record_reasoning else None
 
         try:
             async for chunk in backend_stream:
@@ -235,16 +244,72 @@ class SingleAgent(ChatAgent):
                 elif chunk_type == "tool_calls":
                     chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
                     tool_calls.extend(chunk_tool_calls)
+
+                    # Optionally accumulate ALL tool calls for memory
+                    if self._record_all_tool_calls and chunk_tool_calls:
+                        all_tool_calls_executed.extend(chunk_tool_calls)
+                        logger.debug(f"   🔧 [ALL mode] Accumulated {len(chunk_tool_calls)} tool(s), total: {len(all_tool_calls_executed)}")
+
                     yield chunk
                 elif chunk_type == "reasoning":
-                    # Accumulate reasoning chunks for memory
-                    if hasattr(chunk, "content") and chunk.content:
+                    # Optionally accumulate reasoning chunks for memory
+                    if self._record_reasoning and hasattr(chunk, "content") and chunk.content:
                         reasoning_chunks.append(chunk.content)
                     yield chunk
                 elif chunk_type == "reasoning_summary":
-                    # Accumulate reasoning summaries
-                    if hasattr(chunk, "content") and chunk.content:
+                    # Optionally accumulate reasoning summaries for memory
+                    if self._record_reasoning and hasattr(chunk, "content") and chunk.content:
                         reasoning_summaries.append(chunk.content)
+                    yield chunk
+                elif chunk_type == "mcp_status":
+                    # Optionally track MCP tool calls for memory (if record_all_tool_calls enabled)
+                    if self._record_all_tool_calls and all_tool_calls_executed is not None:
+                        import re
+
+                        content = getattr(chunk, "content", "")
+                        status = getattr(chunk, "status", "")
+
+                        # Status 1: Tool call initiated - "🔧 [MCP Tool] Calling tool_name..."
+                        if status == "mcp_tool_called" and "Calling " in content:
+                            match = re.search(r"Calling ([^\s\.]+)", content)
+                            if match:
+                                tool_name = match.group(1)
+                                all_tool_calls_executed.append(
+                                    {
+                                        "name": tool_name,
+                                        "type": "mcp_tool",
+                                        "arguments": "",  # Will be filled in next chunk
+                                        "result": "",  # Will be filled in later chunk
+                                    },
+                                )
+                                logger.debug(f"   🔧 [MCP tracking] Started tracking: {tool_name}")
+
+                        # Status 2: Arguments - "Arguments for Calling tool_name: {...}"
+                        elif status == "function_call" and "Arguments for Calling " in content:
+                            match = re.search(r"Arguments for Calling ([^\s:]+): (.+)", content)
+                            if match and all_tool_calls_executed:
+                                tool_name = match.group(1)
+                                args = match.group(2)
+                                # Update the last tool call with arguments
+                                for tool in reversed(all_tool_calls_executed):
+                                    if tool.get("name") == tool_name and not tool.get("arguments"):
+                                        tool["arguments"] = args
+                                        logger.debug(f"   🔧 [MCP tracking] Added args for: {tool_name}")
+                                        break
+
+                        # Status 3: Results - "Results for Calling tool_name: [...]"
+                        elif status == "function_call_output" and "Results for Calling " in content:
+                            match = re.search(r"Results for Calling ([^\s:]+): (.+)", content, re.DOTALL)
+                            if match and all_tool_calls_executed:
+                                tool_name = match.group(1)
+                                result = match.group(2)
+                                # Update the last tool call with results (no truncation - send full data to mem0)
+                                for tool in reversed(all_tool_calls_executed):
+                                    if tool.get("name") == tool_name and not tool.get("result"):
+                                        tool["result"] = result
+                                        logger.debug(f"   🔧 [MCP tracking] Added result for: {tool_name}")
+                                        break
+
                     yield chunk
                 elif chunk_type == "complete_message":
                     # Backend provided the complete message structure
@@ -269,16 +334,15 @@ class SingleAgent(ChatAgent):
                     # Complete response is for internal use - don't yield it
                 elif chunk_type == "done":
                     # Debug: Log what we have before assembling
-                    logger.debug(
-                        f"🔍 [done] complete_message type: {type(complete_message)}, has_output: {isinstance(complete_message, dict) and 'output' in complete_message if complete_message else False}",
-                    )
-                    logger.debug(f"🔍 [done] assistant_response length: {len(assistant_response)}, reasoning: {len(reasoning_chunks)}, summaries: {len(reasoning_summaries)}")
+                    logger.debug(f"🔍 [done] assistant_response length: {len(assistant_response)}")
 
-                    # Assemble complete memory from all accumulated chunks
+                    # Assemble messages for memory recording
+                    # SIMPLIFIED: Just use accumulated assistant_response + optional reasoning + tool calls
+                    # (We flatten everything to text in record() anyway, so complex parsing was unnecessary)
                     messages_to_record = []
 
-                    # 1. Add reasoning if present (full context for memory)
-                    if reasoning_chunks:
+                    # 1. Add reasoning if enabled and present
+                    if self._record_reasoning and reasoning_chunks:
                         combined_reasoning = "\n".join(reasoning_chunks)
                         messages_to_record.append(
                             {
@@ -286,9 +350,10 @@ class SingleAgent(ChatAgent):
                                 "content": f"[Reasoning]\n{combined_reasoning}",
                             },
                         )
+                        logger.debug(f"   ✅ Added reasoning ({len(combined_reasoning)} chars)")
 
-                    # 2. Add reasoning summaries if present
-                    if reasoning_summaries:
+                    # 2. Add reasoning summaries if enabled and present
+                    if self._record_reasoning and reasoning_summaries:
                         combined_summary = "\n".join(reasoning_summaries)
                         messages_to_record.append(
                             {
@@ -296,69 +361,104 @@ class SingleAgent(ChatAgent):
                                 "content": f"[Reasoning Summary]\n{combined_summary}",
                             },
                         )
+                        logger.debug(f"   ✅ Added reasoning summary ({len(combined_summary)} chars)")
 
-                    # 3. Add final text response (MCP tools not included - they're implementation details)
-                    if complete_message:
-                        # For Responses API: complete_message is the response object with 'output' array
-                        if isinstance(complete_message, dict) and "output" in complete_message:
-                            # Store raw output for orchestrator (needs full format)
-                            self.conversation_history.extend(complete_message["output"])
+                    # 3. Add main response text (accumulated from all content chunks)
+                    if assistant_response.strip():
+                        messages_to_record.append(
+                            {
+                                "role": "assistant",
+                                "content": assistant_response.strip(),
+                            },
+                        )
+                        logger.debug(f"   ✅ Added main response ({len(assistant_response)} chars)")
 
-                            # Debug: Log what's in the output array
-                            logger.debug(f"🔍 [done] complete_message['output'] has {len(complete_message['output'])} items")
-                            for i, item in enumerate(complete_message["output"][:3]):  # Show first 3
-                                item_type = item.get("type") if isinstance(item, dict) else type(item).__name__
-                                logger.debug(f"   [{i}] type={item_type}")
+                    # 4. Add tool calls to memory
+                    tool_calls_info = []
 
-                            # Extract text from output items
-                            for output_item in complete_message["output"]:
-                                if not isinstance(output_item, dict):
-                                    continue
+                    # Debug: Log which path we're taking
+                    logger.debug(
+                        f"🔍 [done] record_all_tool_calls={self._record_all_tool_calls}, all_tool_calls_executed={len(all_tool_calls_executed) if all_tool_calls_executed is not None else 'None'}",
+                    )
 
-                                output_type = output_item.get("type")
+                    # Option A: Record ALL tool calls (including intermediate MCP tools)
+                    if self._record_all_tool_calls and all_tool_calls_executed is not None and len(all_tool_calls_executed) > 0:
+                        for tool_call in all_tool_calls_executed:
+                            tool_name = tool_call.get("name", "unknown")
+                            tool_args = tool_call.get("arguments", {})
+                            tool_result = tool_call.get("result", "")
 
-                                # Skip function_call (workflow tools - not conversation content)
-                                if output_type == "function_call":
-                                    continue
+                            tool_info = f"[Tool Call: {tool_name}]"
+                            if tool_args:
+                                # Arguments might be string (JSON) or dict
+                                args_str = tool_args if isinstance(tool_args, str) else str(tool_args)
+                                if args_str:  # Only add if not empty
+                                    tool_info += f"\nArguments: {args_str}"
+                            if tool_result:
+                                # MCP tools captured from mcp_status chunks have results
+                                tool_info += f"\nResult: {tool_result}"
 
-                                # Extract text content from various formats
-                                if output_type == "output_text":
-                                    # Responses API format
-                                    text_content = output_item.get("text", "")
-                                elif output_type == "message":
-                                    # Standard message format
-                                    text_content = output_item.get("content", "")
-                                elif output_type == "reasoning":
-                                    # Reasoning chunks are already captured above, skip duplicate
-                                    continue
-                                else:
-                                    # Unknown type - try to get content/text
-                                    text_content = output_item.get("content") or output_item.get("text", "")
-                                    logger.debug(f"   ⚠️  Unknown output type '{output_type}', extracted: {bool(text_content)}")
+                            tool_calls_info.append(tool_info)
 
-                                if text_content:
-                                    logger.debug(f"   ✅ Extracted text ({len(text_content)} chars) from type={output_type}")
-                                    messages_to_record.append(
-                                        {
-                                            "role": "assistant",
-                                            "content": text_content,
-                                        },
-                                    )
-                                else:
-                                    logger.debug(f"   ⚠️  No text content found in type={output_type}")
-                        else:
-                            # Fallback if it's already in message format
-                            self.conversation_history.append(complete_message)
-                            if isinstance(complete_message, dict) and complete_message.get("content"):
-                                messages_to_record.append(complete_message)
-                    elif assistant_response.strip():
-                        # Fallback for legacy backends - use accumulated text
-                        message_data = {
-                            "role": "assistant",
-                            "content": assistant_response.strip(),
-                        }
-                        self.conversation_history.append(message_data)
-                        messages_to_record.append(message_data)
+                        logger.debug(f"   ✅ Captured {len(all_tool_calls_executed)} tool call(s) (ALL mode)")
+
+                    # Option B: Default - only record workflow tools from complete_message
+                    elif complete_message and isinstance(complete_message, dict) and "output" in complete_message:
+                        # Store raw output for orchestrator (needs full format)
+                        self.conversation_history.extend(complete_message["output"])
+
+                        # Collect tool outputs by call_id
+                        tool_outputs_map = {}
+                        for output_item in complete_message["output"]:
+                            if isinstance(output_item, dict) and output_item.get("type") == "function_call_output":
+                                call_id = output_item.get("call_id")
+                                output = output_item.get("output", "")
+                                if call_id:
+                                    tool_outputs_map[call_id] = output
+
+                        # Extract workflow tool calls (new_answer, vote, etc.)
+                        for output_item in complete_message["output"]:
+                            if not isinstance(output_item, dict):
+                                continue
+
+                            if output_item.get("type") == "function_call":
+                                tool_name = output_item.get("name", "unknown")
+                                tool_args = output_item.get("arguments", {})
+                                call_id = output_item.get("call_id", "")
+
+                                # Get the output for this tool call
+                                tool_output = tool_outputs_map.get(call_id, "")
+
+                                # Format tool call with full data (no truncation)
+                                tool_info = f"[Tool Call: {tool_name}]"
+                                if tool_args:
+                                    args_str = str(tool_args)
+                                    tool_info += f"\nArguments: {args_str}"
+                                if tool_output:
+                                    output_str = str(tool_output)
+                                    tool_info += f"\nResult: {output_str}"
+
+                                tool_calls_info.append(tool_info)
+                                logger.debug(f"   ✅ Captured workflow tool call: {tool_name}")
+
+                        logger.debug(f"   ✅ Captured {len(tool_calls_info)} workflow tool call(s)")
+
+                    elif complete_message:
+                        # Fallback: add complete_message to conversation_history for orchestrator
+                        self.conversation_history.append(complete_message)
+                        if isinstance(complete_message, dict) and complete_message.get("content"):
+                            messages_to_record.append(complete_message)
+
+                    # Add tool calls message if any were captured (either mode)
+                    if tool_calls_info:
+                        tool_calls_message = "\n\n".join(tool_calls_info)
+                        messages_to_record.append(
+                            {
+                                "role": "assistant",
+                                "content": f"[Tool Usage]\n{tool_calls_message}",
+                            },
+                        )
+                        logger.debug(f"   ✅ Added tool usage to memory ({len(tool_calls_info)} call(s))")
 
                     # Record to memories
                     logger.debug(f"📋 [done chunk] messages_to_record has {len(messages_to_record)} message(s)")
@@ -592,6 +692,7 @@ class SingleAgent(ChatAgent):
         )
 
         async for chunk in self._process_stream(backend_stream, tools):
+            logger.info(f"🔹 [chat] Yielding chunk: {chunk}")
             yield chunk
 
     def _get_backend_params(self) -> Dict[str, Any]:
@@ -668,6 +769,8 @@ class ConfigurableAgent(SingleAgent):
         conversation_memory: Optional[ConversationMemory] = None,
         persistent_memory: Optional[PersistentMemoryBase] = None,
         context_monitor: Optional[Any] = None,
+        record_all_tool_calls: bool = False,
+        record_reasoning: bool = False,
     ):
         """
         Initialize configurable agent.
@@ -679,6 +782,8 @@ class ConfigurableAgent(SingleAgent):
             conversation_memory: Optional conversation memory instance
             persistent_memory: Optional persistent memory instance
             context_monitor: Optional context window monitor for tracking token usage
+            record_all_tool_calls: If True, record ALL tool calls to memory (including intermediate MCP tools)
+            record_reasoning: If True, record reasoning/thinking chunks to memory
         """
         # Extract system message without triggering deprecation warning
         system_message = None
@@ -693,6 +798,8 @@ class ConfigurableAgent(SingleAgent):
             conversation_memory=conversation_memory,
             persistent_memory=persistent_memory,
             context_monitor=context_monitor,
+            record_all_tool_calls=record_all_tool_calls,
+            record_reasoning=record_reasoning,
         )
         self.config = config
 

@@ -50,7 +50,7 @@ Assistant: [Further extends the API based on all previous turns]
 ```
 testing/
 ├── .massgen/                          # All MassGen state
-│   ├── sessions/session_20250928_143022/
+│   ├── sessions/session_20250928_143022/  # Always stored in .massgen/sessions/
 │   │   ├── SESSION_SUMMARY.txt        # Human-readable conversation summary
 │   │   ├── turn_1/
 │   │   │   ├── workspace/             # Final output from turn 1

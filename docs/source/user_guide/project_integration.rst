@@ -247,7 +247,6 @@ You specify simple names, MassGen organizes under ``.massgen/``:
 
    orchestrator:
      snapshot_storage: "snapshots"         # → .massgen/snapshots/ (REQUIRED)
-     session_storage: "sessions"           # → .massgen/sessions/ (optional)
      agent_temporary_workspace: "temp"     # → .massgen/temp/ (REQUIRED)
 
    agents:
@@ -447,9 +446,6 @@ Example: Complete Project Setup
      # Required for file operations
      snapshot_storage: "snapshots"
      agent_temporary_workspace: "temp"
-
-     # Optional: session management for multi-turn conversations
-     session_storage: "sessions"
 
      # Project integration - mix of directories and files
      context_paths:
