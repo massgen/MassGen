@@ -88,7 +88,7 @@ Add memory configuration to your YAML config:
        limit: 5              # Facts to retrieve
        exclude_recent: true  # Only retrieve after compression
 
-     # Recording settings (v0.1.6+)
+     # Recording settings (v0.1.9+)
      recording:
        record_all_tool_calls: false  # Set true to capture ALL MCP tools
        record_reasoning: false       # Set true to capture thinking separately
@@ -124,7 +124,7 @@ MassGen uses custom prompts designed to extract high-quality, domain-focused mem
    - ✅ Domain expertise with details ("Binet's formula uses golden ratio phi=(1+√5)/2")
    - ✅ Specific recommendations with WHAT, WHEN, WHY
 
-**Tool Usage Patterns** (v0.1.6+):
+**Tool Usage Patterns** (v0.1.9+):
    - ✅ Tool sequences that work ("For code analysis, directory_tree → read_file → grep provides systematic understanding")
    - ✅ Problem-solving approaches ("Breaking large tasks into focused searches yields better results than broad queries")
    - ✅ What worked/failed with reasoning ("Sequential exploration prevents getting lost in implementation details")
@@ -167,7 +167,7 @@ Memory Flow
    ❌ MCP tool calls (unless record_all_tool_calls: true)
    ❌ Reasoning chunks (unless record_reasoning: true)
 
-**Configurable Recording** (v0.1.6+):
+**Configurable Recording** (v0.1.9+):
 
 You can now control what gets recorded to memory via YAML configuration:
 
@@ -377,7 +377,7 @@ Complete Configuration
        limit: 5              # Max facts per agent
        exclude_recent: true  # Skip retrieval before compression
 
-     # Memory recording (v0.1.6+)
+     # Memory recording (v0.1.9+)
      recording:
        record_all_tool_calls: false  # Record ALL MCP tools (not just workflow)
        record_reasoning: false       # Record reasoning chunks separately
@@ -572,10 +572,10 @@ Retrieval Settings
 
 .. _recording-configuration:
 
-Recording Settings (v0.1.6+)
+Recording Settings (v0.1.9+)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**New in v0.1.6**: Control what gets recorded to memory for better observability and learning.
+**New in v0.1.9**: Control what gets recorded to memory for better observability and learning.
 
 .. code-block:: yaml
 
@@ -695,10 +695,10 @@ Memory Operations
       [1] User asked about MassGen architecture
       [2] [From agent_b Turn 1] Explained the adapter pattern
 
-Debug Files (v0.1.6+)
+Debug Files (v0.1.9+)
 ~~~~~~~~~~~~~~~~~~~~~
 
-**New in v0.1.6**: Memory debug mode saves complete message→fact mappings when using the ``--debug`` flag.
+**New in v0.1.9**: Memory debug mode saves complete message→fact mappings when using the ``--debug`` flag.
 
 **Enable debug mode**:
 
@@ -1035,7 +1035,7 @@ Why mem0's Native LLMs/Embedders?
 
 **Trade-off**: Requires separate API keys (can't reuse agent's backend). But memory operations are cheap (~1-2 cents/session).
 
-Why MCP Tools Are Optional in Memory (v0.1.6+)
+Why MCP Tools Are Optional in Memory (v0.1.9+)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: MCP tool calls (read_file, list_directory, etc.) are **not** recorded
