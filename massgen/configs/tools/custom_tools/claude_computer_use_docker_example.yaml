@@ -47,7 +47,7 @@ agents:
           path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
           function: ["claude_computer_use"]
           description: >
-            Automate browser and desktop tasks using Claude's Computer Use capabilities.
+            Automate linux docker tasks using Claude's Computer Use capabilities.
             Can control browser, take screenshots, click, type, scroll, and navigate.
           preset_args:
             environment: "linux"
