@@ -11,10 +11,7 @@ This tool implements browser/desktop control using Claude's Computer Use beta AP
 
 import asyncio
 import base64
-import json
 import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
@@ -86,26 +83,26 @@ async def execute_claude_tool_use(tool_use, page, screen_width: int, screen_heig
     try:
         if tool_name == "computer":
             action = tool_input.get("action")
-            
+
             if action == "screenshot":
                 screenshot_b64 = await take_screenshot(page)
-                logger.info(f"     Screenshot captured")
+                logger.info("     Screenshot captured")
                 return True, screenshot_b64  # Return flag indicating this is a screenshot
-            
+
             elif action == "mouse_move":
                 coordinate = tool_input.get("coordinate", [0, 0])
                 x, y = coordinate[0], coordinate[1]
                 logger.info(f"     Moving mouse to ({x}, {y})")
                 await page.mouse.move(x, y)
                 return False, f"Moved mouse to ({x}, {y})"
-            
+
             elif action == "left_click":
                 coordinate = tool_input.get("coordinate", [0, 0])
                 x, y = coordinate[0], coordinate[1]
                 logger.info(f"     Left click at ({x}, {y})")
                 await page.mouse.click(x, y)
                 return False, f"Clicked at ({x}, {y})"
-            
+
             elif action == "left_click_drag":
                 start = tool_input.get("coordinate", [0, 0])
                 end = tool_input.get("coordinate2", [0, 0])
@@ -115,51 +112,51 @@ async def execute_claude_tool_use(tool_use, page, screen_width: int, screen_heig
                 await page.mouse.move(end[0], end[1])
                 await page.mouse.up()
                 return False, f"Dragged from ({start[0]}, {start[1]}) to ({end[0]}, {end[1]})"
-            
+
             elif action == "right_click":
                 coordinate = tool_input.get("coordinate", [0, 0])
                 x, y = coordinate[0], coordinate[1]
                 logger.info(f"     Right click at ({x}, {y})")
                 await page.mouse.click(x, y, button="right")
                 return False, f"Right clicked at ({x}, {y})"
-            
+
             elif action == "middle_click":
                 coordinate = tool_input.get("coordinate", [0, 0])
                 x, y = coordinate[0], coordinate[1]
                 logger.info(f"     Middle click at ({x}, {y})")
                 await page.mouse.click(x, y, button="middle")
                 return False, f"Middle clicked at ({x}, {y})"
-            
+
             elif action == "double_click":
                 coordinate = tool_input.get("coordinate", [0, 0])
                 x, y = coordinate[0], coordinate[1]
                 logger.info(f"     Double click at ({x}, {y})")
                 await page.mouse.dblclick(x, y)
                 return False, f"Double clicked at ({x}, {y})"
-            
+
             elif action == "triple_click":
                 coordinate = tool_input.get("coordinate", [0, 0])
                 x, y = coordinate[0], coordinate[1]
                 logger.info(f"     Triple click at ({x}, {y})")
                 await page.mouse.click(x, y, click_count=3)
                 return False, f"Triple clicked at ({x}, {y})"
-            
+
             elif action == "left_mouse_down":
-                logger.info(f"     Left mouse button down")
+                logger.info("     Left mouse button down")
                 await page.mouse.down()
                 return False, "Left mouse button pressed down"
-            
+
             elif action == "left_mouse_up":
-                logger.info(f"     Left mouse button up")
+                logger.info("     Left mouse button up")
                 await page.mouse.up()
                 return False, "Left mouse button released"
-            
+
             elif action == "type":
                 text = tool_input.get("text", "")
                 logger.info(f"     Typing: {text}")
                 await page.keyboard.type(text)
                 return False, f"Typed: {text}"
-            
+
             elif action == "key":
                 key = tool_input.get("text", "")
                 logger.info(f"     Pressing key: {key}")
@@ -174,7 +171,7 @@ async def execute_claude_tool_use(tool_use, page, screen_width: int, screen_heig
                 playwright_key = key_map.get(key, key)
                 await page.keyboard.press(playwright_key)
                 return False, f"Pressed key: {key}"
-            
+
             elif action == "hold_key":
                 key = tool_input.get("text", "")
                 logger.info(f"     Holding key: {key}")
@@ -188,12 +185,12 @@ async def execute_claude_tool_use(tool_use, page, screen_width: int, screen_heig
                 playwright_key = key_map.get(key, key)
                 await page.keyboard.down(playwright_key)
                 return False, f"Holding key: {key}"
-            
+
             elif action == "scroll":
                 direction = tool_input.get("direction", "down")
                 amount = tool_input.get("amount", 5)
                 logger.info(f"     Scrolling {direction} by {amount}")
-                
+
                 if direction == "down":
                     await page.mouse.wheel(0, amount * 100)
                 elif direction == "up":
@@ -202,33 +199,33 @@ async def execute_claude_tool_use(tool_use, page, screen_width: int, screen_heig
                     await page.mouse.wheel(-amount * 100, 0)
                 elif direction == "right":
                     await page.mouse.wheel(amount * 100, 0)
-                
+
                 return False, f"Scrolled {direction} by {amount}"
-            
+
             elif action == "wait":
                 delay = tool_input.get("delay", 1000)  # milliseconds
                 logger.info(f"     Waiting {delay}ms")
                 await asyncio.sleep(delay / 1000)
                 return False, f"Waited {delay}ms"
-            
+
             elif action == "cursor_position":
                 return False, "Cursor position tracking not available in browser environment"
-            
+
             else:
                 return False, f"Unknown computer action: {action}"
-        
+
         elif tool_name == "bash":
             command = tool_input.get("command", "")
             logger.warning(f"     Bash execution not supported in browser-only environment: {command}")
             return False, "Bash commands are not available in browser-only environment. Use a Docker/Linux environment for full computer use capabilities."
-        
+
         elif tool_name == "str_replace_editor":
-            logger.warning(f"     File editor not supported in browser-only environment")
+            logger.warning("     File editor not supported in browser-only environment")
             return False, "File editing is not available in browser-only environment. Use a Docker/Linux environment for full computer use capabilities."
-        
+
         else:
             return False, f"Unknown tool: {tool_name}"
-    
+
     except Exception as e:
         logger.error(f"Error executing {tool_name}: {e}")
         return False, f"Error: {str(e)}"
@@ -270,11 +267,12 @@ async def claude_computer_use(
     """
     # Force headless mode on Linux systems without DISPLAY
     import platform
+
     if platform.system() == "Linux" and not os.environ.get("DISPLAY"):
         if not headless:
             logger.warning("Forcing headless=True on Linux system without DISPLAY environment variable")
             headless = True
-    
+
     # Check dependencies
     if not PLAYWRIGHT_AVAILABLE:
         error_msg = "Playwright is not installed. Install with: pip install playwright && playwright install"
@@ -316,15 +314,15 @@ async def claude_computer_use(
 
     # Initialize Playwright
     playwright = await async_playwright().start()
-    
+
     # Launch browser
     browser_launcher = getattr(playwright, browser_type)
     browser = await browser_launcher.launch(headless=headless)
     context = await browser.new_context(
-        viewport={"width": display_width, "height": display_height}
+        viewport={"width": display_width, "height": display_height},
     )
     page = await context.new_page()
-    
+
     # Navigate to a starting page
     await page.goto("about:blank")
 
@@ -354,7 +352,7 @@ async def claude_computer_use(
             {
                 "role": "user",
                 "content": query,
-            }
+            },
         ]
 
         iteration = 0
@@ -382,7 +380,7 @@ async def claude_computer_use(
                 for block in response.content:
                     if hasattr(block, "text"):
                         final_text += block.text
-                
+
                 final_answer = final_text
                 logger.info(f"Task completed: {final_answer}")
                 break
@@ -390,10 +388,12 @@ async def claude_computer_use(
             # Process tool uses
             if response.stop_reason == "tool_use":
                 # Add assistant message to conversation
-                messages.append({
-                    "role": "assistant",
-                    "content": response.content,
-                })
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": response.content,
+                    },
+                )
 
                 # Execute tool uses and collect results
                 tool_results = []
@@ -405,36 +405,42 @@ async def claude_computer_use(
                             display_width,
                             display_height,
                         )
-                        
+
                         # Handle screenshot differently (return as image)
                         if is_screenshot:
-                            tool_results.append({
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": [
-                                    {
-                                        "type": "image",
-                                        "source": {
-                                            "type": "base64",
-                                            "media_type": "image/png",
-                                            "data": result,
+                            tool_results.append(
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": block.id,
+                                    "content": [
+                                        {
+                                            "type": "image",
+                                            "source": {
+                                                "type": "base64",
+                                                "media_type": "image/png",
+                                                "data": result,
+                                            },
                                         },
-                                    }
-                                ],
-                            })
+                                    ],
+                                },
+                            )
                         else:
                             # Regular tool result (text)
-                            tool_results.append({
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": str(result),
-                            })
+                            tool_results.append(
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": block.id,
+                                    "content": str(result),
+                                },
+                            )
 
                 # Add tool results to conversation
-                messages.append({
-                    "role": "user",
-                    "content": tool_results,
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": tool_results,
+                    },
+                )
 
             else:
                 # Unexpected stop reason

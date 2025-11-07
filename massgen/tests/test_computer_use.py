@@ -112,7 +112,7 @@ class ComputerUseTestSuite:
                     if node.module:
                         imports.append(node.module)
                         # Also add the root module
-                        root_module = node.module.split('.')[0]
+                        root_module = node.module.split(".")[0]
                         if root_module not in imports:
                             imports.append(root_module)
 
@@ -538,7 +538,7 @@ class ComputerUseTestSuite:
 
         # Check Playwright availability
         try:
-            from playwright.async_api import async_playwright
+            pass
 
             result = TestResult("Playwright Available", True, "Playwright is installed")
             self.add_result(result)

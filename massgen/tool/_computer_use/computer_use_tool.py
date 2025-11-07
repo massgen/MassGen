@@ -631,7 +631,12 @@ async def computer_use(
                 page.goto("about:blank")
 
                 environment_instance = page
-                cleanup_func = lambda: (browser.close(), playwright.stop())
+
+                def cleanup_browser():
+                    browser.close()
+                    playwright.stop()
+
+                cleanup_func = cleanup_browser
 
                 logger.info(f"Initialized {browser_type} browser ({display_width}x{display_height})")
 

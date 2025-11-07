@@ -209,7 +209,7 @@ async def execute_gemini_function_calls(candidate, page, screen_width: int, scre
             # Wait for potential navigations/renders
             try:
                 await page.wait_for_load_state(timeout=5000)
-            except:
+            except Exception:
                 pass  # Timeout is okay
             await asyncio.sleep(1)
 
