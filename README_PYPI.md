@@ -1081,7 +1081,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Provider Integration**: Support for partial model names with intelligent completion across all backends
 
 #### Backend Capabilities Expansion
-- **Six New Backends**: Cerebras AI (WSE hardware), Together AI (Meta-Llama), Fireworks AI (fast inference), Groq (LPU hardware), OpenRouter (200+ models), Moonshot/Kimi (Chinese-optimized, long context)
 - **Comprehensive Registry**: Updated `massgen/backend/capabilities.py` with detailed specifications for all providers
 - **Enhanced Features**: Audio/video support, hardware acceleration, and unified access across diverse model families
 
