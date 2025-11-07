@@ -43,6 +43,11 @@ memory:
     trigger_threshold: 0.02   # Compress at 2% (very low for quick testing)
     target_ratio: 0.01      # Keep 1% after compression
 
+  # Enable detailed recording for testing
+  recording:
+    record_all_tool_calls: true   # Capture ALL MCP tools
+    record_reasoning: true         # Capture reasoning separately
+
   # Memory retrieval configuration
   retrieval:
     limit: 5              # Number of memory facts to retrieve from mem0 (default: 5)

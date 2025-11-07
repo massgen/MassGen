@@ -897,9 +897,6 @@ agents:
       reasoning:
         effort: "medium"
       cwd: "workspace2"
-
-orchestrator:
-  session_storage: "sessions"  # Multi-turn persistence
 ```
 
 This config provides diverse agent perspectives while maintaining the same multi-turn workflow.

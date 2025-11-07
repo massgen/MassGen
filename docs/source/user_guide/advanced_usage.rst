@@ -655,15 +655,6 @@ Next Steps
 Troubleshooting
 ---------------
 
-**Session not found:**
-
-Check session storage configuration:
-
-.. code-block:: yaml
-
-   orchestrator:
-     session_storage: "sessions"    # Sessions saved to .massgen/sessions/
-
 **Workspace permissions error:**
 
 See :doc:`file_operations` for workspace setup and troubleshooting.

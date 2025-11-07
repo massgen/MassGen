@@ -22,14 +22,19 @@ agents:
           function: ["computer_use"]
           # Default parameters for Docker environment
           default_params:
-            environment: "ubuntu"
+            environment: "linux"
             display_width: 1280
             display_height: 800
             max_iterations: 25
             include_reasoning: true
+            model: "computer-use-preview"
             environment_config:
               container_name: "cua-container"
               display: ":99"
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
 
     system_message: |
       You are a computer automation specialist with access to the computer_use tool.
@@ -61,5 +66,3 @@ agents:
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
-  show_screenshots: true
-  show_reasoning: true

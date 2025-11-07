@@ -90,12 +90,9 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
 
     if _LOG_SESSION_DIR is None:
         # Build directory structure based on turn and attempt
-        if _CURRENT_TURN and _CURRENT_TURN > 0:
-            # Multi-turn conversation: organize by turn within session
-            base_dir = _LOG_BASE_SESSION_DIR / f"turn_{_CURRENT_TURN}"
-        else:
-            # First execution or single execution: use base session dir
-            base_dir = _LOG_BASE_SESSION_DIR
+        # ALWAYS use turn subdirectories (minimum turn_1)
+        turn_num = _CURRENT_TURN if _CURRENT_TURN and _CURRENT_TURN > 0 else 1
+        base_dir = _LOG_BASE_SESSION_DIR / f"turn_{turn_num}"
 
         # Add attempt subdirectory if attempt is set
         if _CURRENT_ATTEMPT and _CURRENT_ATTEMPT > 0:
@@ -106,6 +103,19 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
         _LOG_SESSION_DIR.mkdir(parents=True, exist_ok=True)
 
     return _LOG_SESSION_DIR
+
+
+def set_log_turn(turn: int) -> None:
+    """Set the current turn number for multi-turn conversations.
+
+    This forces the log directory to be recreated with the new turn subdirectory.
+
+    Args:
+        turn: Turn number (1-indexed)
+    """
+    global _LOG_SESSION_DIR, _CURRENT_TURN
+    _CURRENT_TURN = turn
+    _LOG_SESSION_DIR = None  # Force recreation with new turn subdirectory
 
 
 def set_log_attempt(attempt: int) -> None:
@@ -121,28 +131,58 @@ def set_log_attempt(attempt: int) -> None:
     _LOG_SESSION_DIR = None  # Force recreation with new attempt subdirectory
 
 
-def get_log_session_dir_base() -> Path:
-    """Get the base log session directory without attempt subdirectory.
+def set_log_base_session_dir(log_dir: str) -> None:
+    """Set the base log session directory to an existing directory.
 
-    This is useful for copying final results to the root level after all attempts complete.
+    Used when continuing a session to reuse the original log directory
+    instead of creating a new timestamped one.
+
+    Args:
+        log_dir: Path to existing log directory (e.g., "log_20251101_151837")
+    """
+    global _LOG_BASE_SESSION_DIR, _LOG_SESSION_DIR
+    log_base_dir = Path(".massgen") / "massgen_logs"
+    _LOG_BASE_SESSION_DIR = log_base_dir / log_dir
+    _LOG_BASE_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    _LOG_SESSION_DIR = None  # Force recreation with new base
+
+
+def get_log_session_dir_base() -> Path:
+    """Get the turn-level directory without attempt subdirectory.
+
+    Returns the current turn directory (e.g., .massgen/massgen_logs/log_XXX/turn_1/)
+    for copying final results from attempts.
 
     Returns:
-        Path to the base log directory (turn level or session root, without attempt)
+        Path to turn directory (turn_N/) without attempt_N subdirectory
     """
     global _LOG_BASE_SESSION_DIR, _CURRENT_TURN
 
     # Ensure base session dir is initialized
     if _LOG_BASE_SESSION_DIR is None:
-        # Initialize by calling get_log_session_dir
         get_log_session_dir()
 
-    # Build base directory based on turn (without attempt)
-    if _CURRENT_TURN and _CURRENT_TURN > 0:
-        # Multi-turn conversation: return turn directory
-        return _LOG_BASE_SESSION_DIR / f"turn_{_CURRENT_TURN}"
-    else:
-        # Single turn: return base session dir
-        return _LOG_BASE_SESSION_DIR
+    # Return turn directory (minimum turn_1)
+    turn_num = _CURRENT_TURN if _CURRENT_TURN and _CURRENT_TURN > 0 else 1
+    return _LOG_BASE_SESSION_DIR / f"turn_{turn_num}"
+
+
+def get_log_session_root() -> Path:
+    """Get the session root directory (log_YYYYMMDD_HHMMSS).
+
+    Returns the base log session directory without any turn or attempt subdirectories.
+    Useful for getting the log directory name to save in session registry.
+
+    Returns:
+        Path to session root (e.g., .massgen/massgen_logs/log_20251104_191641)
+    """
+    global _LOG_BASE_SESSION_DIR
+
+    # Ensure base session dir is initialized
+    if _LOG_BASE_SESSION_DIR is None:
+        get_log_session_dir()
+
+    return _LOG_BASE_SESSION_DIR
 
 
 def save_execution_metadata(
@@ -744,6 +784,11 @@ __all__ = [
     "restore_console_logging",
     "get_logger",
     "get_log_session_dir",
+    "get_log_session_dir_base",
+    "get_log_session_root",
+    "set_log_turn",
+    "set_log_attempt",
+    "set_log_base_session_dir",
     "save_execution_metadata",
     "log_orchestrator_activity",
     "log_agent_message",
