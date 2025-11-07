@@ -180,6 +180,11 @@ agents:
             display_width: 1280
             display_height: 800
             max_iterations: 100
+            # For Linux/Docker environment:
+            # environment: "linux"
+            # environment_config:
+            #   container_name: "claude-desktop-container"
+            #   display: ":99"
 ```
 
 ### How It Works
@@ -191,7 +196,7 @@ agents:
 
 ### Supported Environments
 - **Browser** - Playwright-based web automation (Chromium)
-- **Linux** - Desktop automation support
+- **Linux** - Docker container with desktop (xdotool, similar to OpenAI implementation)
 
 ### Supported Actions
 

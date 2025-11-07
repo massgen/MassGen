@@ -7,16 +7,6 @@
 # data extraction tasks, use the browser_automation tool instead (see
 # simple_browser_automation_example.yaml), which is much faster and more efficient.
 #
-# ✅ Use Claude Computer Use for:
-#   - Complex multi-step workflows requiring decision-making
-#   - Tasks where you need to interact with dynamic/changing UIs
-#   - Scenarios where the exact steps aren't known in advance
-#
-# ❌ Don't use Claude Computer Use for:
-#   - Simple web page navigation and data extraction (use browser_automation)
-#   - Repetitive tasks with known steps (write a script instead)
-#   - Tasks requiring speed (Computer Use is slow, ~2-5 seconds per action)
-#
 # The Claude Computer Use API requires:
 # 1. Beta header: "computer-use-2025-01-24"
 # 2. Anthropic-defined tools: computer_20250124, text_editor_20250124, bash_20250124
@@ -28,9 +18,10 @@
 #
 # Prerequisites:
 #   1. Set ANTHROPIC_API_KEY environment variable
-#   2. Implement claude_computer_use tool (similar to computer_use or gemini_computer_use)
-#   3. Playwright installed for browser control: pip install playwright && playwright install
-#   4. Virtual display setup (Xvfb) for desktop control
+#   2. For Linux/Docker environment:
+#      a) Run: ./scripts/setup_docker_cua.sh
+#      b) This creates a container named "cua-container" with X11/desktop
+#      c) Verify with: docker ps | grep cua-container
 #
 # Supported Models:
 #   - claude-sonnet-4-5 (recommended)
@@ -58,13 +49,11 @@ agents:
           description: >
             Automate browser and desktop tasks using Claude's Computer Use capabilities.
             Can control browser, take screenshots, click, type, scroll, and navigate.
-          default_params:
-            environment: "browser"  # or "linux", "mac", "windows" (only browser currently supported)
-            display_width: 1024
-            display_height: 768
-            max_iterations: 25
-            headless: true
-            browser_type: "chromium"
+          preset_args:
+            environment: "linux"
+            environment_config:
+              container_name: "cua-container"
+              display: ":99"
         - name: ["understand_image"]
           category: "multimodal"
           path: "massgen/tool/_multimodal_tools/understand_image.py"
@@ -78,9 +67,10 @@ agents:
       - str_replace_editor: Edit files using search and replace
       - bash: Execute shell commands
 
-      **IMPORTANT: This system runs on a headless Linux server without X display.**
-      **You MUST always use headless: true when calling claude_computer_use.**
-      **Never set headless: false as it will fail without a display server.**
+      **IMPORTANT: This system is configured with a Linux Docker environment.**
+      **When calling claude_computer_use, DO NOT specify the environment parameter.**
+      **The environment is pre-configured as "linux" with a Docker container.**
+      **Only provide the query parameter when calling claude_computer_use.**
 
       **PERFORMANCE GUIDELINES:**
       - You have a limited number of iterations (usually 25-40)
