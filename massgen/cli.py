@@ -2330,9 +2330,14 @@ async def run_interactive_mode(
     orchestrator_cfg: Dict[str, Any] = None,
     config_path: Optional[str] = None,
     memory_session_id: Optional[str] = None,
+    initial_question: Optional[str] = None,
     **kwargs,
 ):
-    """Run MassGen in interactive mode with conversation history."""
+    """Run MassGen in interactive mode with conversation history.
+
+    Args:
+        initial_question: Optional first question to auto-submit when entering interactive mode
+    """
 
     # Use Rich console for better display
     rich_console = Console()
@@ -2491,7 +2496,13 @@ async def run_interactive_mode(
                         )
                         logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
 
-                question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
+                # Use initial_question for first turn if provided, otherwise prompt
+                if initial_question and current_turn == 0:
+                    question = initial_question
+                    rich_console.print(f"\n[bold blue]👤 User:[/bold blue] {question}")
+                    initial_question = None  # Clear so we prompt on subsequent turns
+                else:
+                    question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
 
                 # Handle slash commands
                 if question.startswith("/"):
@@ -2889,6 +2900,8 @@ async def main(args):
             else:
                 # Pass the config path and session_id to interactive mode
                 config_file_path = str(resolved_path) if args.config and resolved_path else None
+                # Check if we have an initial question from config builder
+                initial_q = getattr(args, "interactive_with_initial_question", None)
                 await run_interactive_mode(
                     agents,
                     ui_config,
@@ -2896,6 +2909,7 @@ async def main(args):
                     orchestrator_cfg=orchestrator_cfg,
                     config_path=config_file_path,
                     memory_session_id=memory_session_id,
+                    initial_question=initial_q,
                     **kwargs,
                 )
         finally:
@@ -3176,9 +3190,12 @@ Environment Variables:
         if result and len(result) == 2:
             filepath, question = result
             if filepath and question:
-                # Update args to use the newly created config
+                # Update args to use the newly created config and launch interactive mode with initial question
                 args.config = filepath
                 args.question = question
+                # Store initial question for interactive mode (don't run single-question mode)
+                args.interactive_with_initial_question = question
+                args.question = None  # Clear to trigger interactive mode instead of single-question
             elif filepath:
                 # Config created but user chose not to run
                 print(f"\n✅ Configuration saved to: {filepath}")

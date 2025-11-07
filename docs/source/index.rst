@@ -250,6 +250,7 @@ Documentation Sections
 
       * :doc:`user_guide/concepts`
       * :doc:`user_guide/backends`
+      * :doc:`user_guide/diversity`
       * :doc:`user_guide/tools`
       * :doc:`user_guide/file_operations`
       * :doc:`user_guide/multi_turn_mode`
@@ -298,6 +299,7 @@ Documentation Sections
 
    user_guide/concepts
    user_guide/backends
+   user_guide/diversity
    user_guide/validating_configs
    user_guide/tools
    user_guide/file_operations
