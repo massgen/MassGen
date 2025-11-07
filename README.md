@@ -158,13 +158,13 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 **What's New in v0.1.9:**
 - **💾 Session Management System** - Resume conversations with complete state restoration
-- **🖥️ Computer Use Tools** - Automate browsers and desktop with AI agents
+- **🖥️ Computer Use Tools** - Automate browsers and desktop with Claude and Gemini
 - **🔍 Fuzzy Model Matching** - Type approximate model names to find exact matches
 - **🌐 Expanded Backend Support** - Six new providers for more model choices
 
 **Key Improvements:**
 - Multi-turn conversations with automatic session restoration across CLI invocations
-- Browser and desktop automation using OpenAI, Claude, and Gemini APIs
+- Browser and desktop automation using Claude and Gemini APIs with Playwright integration
 - Intelligent model search with fuzzy matching (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
 - New backends: Cerebras AI, Together AI, Fireworks AI, Groq, OpenRouter, Moonshot (Kimi)
 - Enhanced memory update logic for better multi-agent coordination patterns
@@ -173,13 +173,6 @@ This project started with the "threads of thought" and "iterative refinement" id
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
-
-# Computer use automation with OpenAI
-# Prerequisites:
-#   1. Set OPENAI_API_KEY in your .env file
-#   2. For browser: pip install playwright && playwright install
-#   3. For Docker: Have Docker installed and running
-massgen --config @examples/tools/custom_tools/computer_use_example "Search for Python documentation on Google"
 
 # Browser automation with Claude
 # Prerequisites:
@@ -1078,11 +1071,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Workspace Continuity**: Preserves agent workspace states, orchestrator data, and coordination history between turns
 
 #### Computer Use Tools
-- **OpenAI Computer Use Tool**: Automated browser and computer control using computer-use-preview model with Playwright and Docker support
 - **Claude Computer Use Tool**: Native Anthropic Claude Computer Use API integration for browser and desktop automation with safety confirmations
 - **Gemini Computer Use Tool**: Google Gemini-based computer control with screenshot analysis and action generation
 - **Browser Automation Tool**: Lightweight browser automation focused on specific tasks without full computer use overhead
-- **OpenAI Operator API Handler**: Specialized parameter handling for computer-use-preview model actions
 
 #### Config Builder Enhancement
 - **Fuzzy Model Matching**: Intelligent model name search allowing approximate inputs (e.g., "sonnet" → "claude-sonnet-4-5-20250929")

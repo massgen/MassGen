@@ -113,7 +113,7 @@ Recent Releases
 
 **v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
 
-Complete session management system with conversation restoration, computer use automation tools for browser and desktop control, enhanced config builder with fuzzy model matching, and expanded backend support.
+Complete session management system with conversation restoration, Claude and Gemini computer use tools for browser and desktop automation, enhanced config builder with fuzzy model matching, and expanded backend support.
 
 **v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
 

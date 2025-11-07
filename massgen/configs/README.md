@@ -233,14 +233,12 @@ Most configurations use environment variables for API keys:so
 **Configuration Files:**
 - `claude_computer_use_example.yaml` - Claude-specific computer use and browser automation
 - `gemini_computer_use_example.yaml` - Gemini-specific computer use with screenshot analysis
-- `computer_use_example.yaml` - General computer use with OpenAI computer-use-preview
-- `computer_use_docker_example.yaml` - Docker-based computer use for isolated execution
 - `computer_use_browser_example.yaml` - Lightweight browser automation focused on specific tasks
 - `grok4_gpt5_gemini_mcp_filesystem_test_with_claude_code.yaml` - Multi-turn session with MCP filesystem
 
 **Key Features:**
 - **Session Management System**: Resume multi-turn conversations with complete state restoration across CLI invocations
-- **Computer Use Tools**: Automate browsers and desktop using OpenAI, Claude, and Gemini APIs with Playwright integration
+- **Computer Use Tools**: Automate browsers and desktop using Claude and Gemini APIs with Playwright integration
 - **Fuzzy Model Matching**: Type approximate model names to find exact matches (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
 - **Six New Backends**: Cerebras AI, Together AI, Fireworks AI, Groq, OpenRouter, Moonshot (Kimi)
 - **Enhanced Memory**: Improved memory update logic focusing on actionable patterns and technical insights
@@ -249,13 +247,6 @@ Most configurations use environment variables for API keys:so
 ```bash
 # Install or upgrade
 pip install --upgrade massgen
-
-# Computer use automation with OpenAI
-# Prerequisites:
-#   1. Set OPENAI_API_KEY in your .env file
-#   2. For browser: pip install playwright && playwright install
-#   3. For Docker: Have Docker installed and running
-massgen --config @examples/tools/custom_tools/computer_use_example "Search for Python documentation on Google"
 
 # Browser automation with Claude
 # Prerequisites:
