@@ -227,7 +227,56 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.8 - Latest
+### v0.1.9 - Latest
+**New Features:** Session Management & Computer Use Tools
+
+**Configuration Files:**
+- `claude_computer_use_example.yaml` - Claude-specific computer use and browser automation
+- `gemini_computer_use_example.yaml` - Gemini-specific computer use with screenshot analysis
+- `computer_use_example.yaml` - General computer use with OpenAI computer-use-preview
+- `computer_use_docker_example.yaml` - Docker-based computer use for isolated execution
+- `computer_use_browser_example.yaml` - Lightweight browser automation focused on specific tasks
+- `grok4_gpt5_gemini_mcp_filesystem_test_with_claude_code.yaml` - Multi-turn session with MCP filesystem
+
+**Key Features:**
+- **Session Management System**: Resume multi-turn conversations with complete state restoration across CLI invocations
+- **Computer Use Tools**: Automate browsers and desktop using OpenAI, Claude, and Gemini APIs with Playwright integration
+- **Fuzzy Model Matching**: Type approximate model names to find exact matches (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
+- **Six New Backends**: Cerebras AI, Together AI, Fireworks AI, Groq, OpenRouter, Moonshot (Kimi)
+- **Enhanced Memory**: Improved memory update logic focusing on actionable patterns and technical insights
+
+**Try It:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# Computer use automation with OpenAI
+# Prerequisites:
+#   1. Set OPENAI_API_KEY in your .env file
+#   2. For browser: pip install playwright && playwright install
+#   3. For Docker: Have Docker installed and running
+massgen --config @examples/tools/custom_tools/computer_use_example "Search for Python documentation on Google"
+
+# Browser automation with Claude
+# Prerequisites:
+#   1. Set ANTHROPIC_API_KEY environment variable
+#   2. Playwright installed: pip install playwright && playwright install
+#   3. Virtual display setup (Xvfb) for desktop control
+massgen --config @examples/tools/custom_tools/claude_computer_use_example "Search for Python documentation on the web"
+
+# Browser automation with Gemini
+# Prerequisites:
+#   1. Set GOOGLE_API_KEY in your .env file
+#   2. Install Playwright: pip install playwright
+#   3. Install browsers: playwright install
+#   4. Install Google GenAI SDK: pip install google-genai
+massgen --config @examples/tools/custom_tools/gemini_computer_use_example "Navigate to GitHub and search for MassGen repository"
+
+# Interactive model selection with fuzzy matching
+massgen  # Run the interactive config builder with smart model search
+```
+
+### v0.1.8
 **New Features:** Automation Mode & DSPy Integration
 
 **Configuration Files:**
@@ -243,17 +292,14 @@ Most configurations use environment variables for API keys:so
 
 **Try It:**
 ```bash
-# Install or upgrade
-pip install --upgrade massgen
-
 # DSPy question paraphrasing for multi-agent diversity
-massgen --config massgen/configs/basic/multi/three_agents_dspy_enabled.yaml "Explain the differences between transformer architecture and recurrent neural networks"
+massgen --config @examples/basic/multi/three_agents_dspy_enabled "Explain the differences between transformer architecture and recurrent neural networks"
 
 # Automation mode - clean output for LLM agents
-uv run massgen --automation --config massgen/configs/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
+massgen --automation --config @examples/tools/todo/example_task_todo "Create a simple HTML page about Bob Dylan"
 
 # Meta-coordination - MassGen running MassGen
-uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml "Run a MassGen experiment to create a webpage about Bob Dylan"
+massgen --config @examples/meta/massgen_runs_massgen "Run a MassGen experiment to create a webpage about Bob Dylan"
 ```
 
 ### v0.1.7

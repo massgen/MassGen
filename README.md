@@ -65,7 +65,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.8 Features](#-latest-features-v018)
+- [v0.1.9 Features](#-latest-features-v019)
 </details>
 
 <details open>
@@ -119,15 +119,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.8](#recent-achievements-v018)
-  - [v0.0.3 - v0.1.7](#previous-achievements-v003---v017)
+  - [v0.1.9](#recent-achievements-v019)
+  - [v0.0.3 - v0.1.8](#previous-achievements-v003---v018)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.9 Roadmap](#v019-roadmap)
+- [v0.1.10 Roadmap](#v0110-roadmap)
 </details>
 
 <details open>
@@ -152,35 +152,52 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.8)
+## 🆕 Latest Features (v0.1.9)
 
-**🎉 Released: November 5, 2025**
+**🎉 Released: November 7, 2025**
 
-**What's New in v0.1.8:**
-- **🤖 Automation Mode** - Run MassGen inside LLM agents with silent execution and structured output
-- **🎯 DSPy Integration** - Intelligent question paraphrasing for enhanced multi-agent diversity
-- **📚 Case Study Documentation** - Comprehensive overview of MassGen capabilities with examples
+**What's New in v0.1.9:**
+- **💾 Session Management System** - Resume conversations with complete state restoration
+- **🖥️ Computer Use Tools** - Automate browsers and desktop with AI agents
+- **🔍 Fuzzy Model Matching** - Type approximate model names to find exact matches
+- **🌐 Expanded Backend Support** - Six new providers for more model choices
 
 **Key Improvements:**
-- Clean automation output (~10 lines vs 250-3,000+) perfect for LLM agents to parse
-- Real-time `status.json` monitoring updated every 2 seconds for async workflows
-- Question paraphrasing with three strategies (diverse/balanced/conservative) using DSPy
-- Automatic semantic validation to preserve meaning during paraphrasing
-- Meta-coordination: MassGen can run MassGen for self-improvement workflows
+- Multi-turn conversations with automatic session restoration across CLI invocations
+- Browser and desktop automation using OpenAI, Claude, and Gemini APIs
+- Intelligent model search with fuzzy matching (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
+- New backends: Cerebras AI, Together AI, Fireworks AI, Groq, OpenRouter, Moonshot (Kimi)
+- Enhanced memory update logic for better multi-agent coordination patterns
 
-**Try v0.1.8 Features:**
+**Try v0.1.9 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# DSPy question paraphrasing for multi-agent diversity
-massgen --config massgen/configs/basic/multi/three_agents_dspy_enabled.yaml "Explain the differences between transformer architecture and recurrent neural networks"
+# Computer use automation with OpenAI
+# Prerequisites:
+#   1. Set OPENAI_API_KEY in your .env file
+#   2. For browser: pip install playwright && playwright install
+#   3. For Docker: Have Docker installed and running
+massgen --config @examples/tools/custom_tools/computer_use_example "Search for Python documentation on Google"
 
-# Automation mode - clean output for LLM agents
-uv run massgen --automation --config massgen/configs/tools/todo/example_task_todo.yaml "Create a simple HTML page about Bob Dylan"
+# Browser automation with Claude
+# Prerequisites:
+#   1. Set ANTHROPIC_API_KEY environment variable
+#   2. Playwright installed: pip install playwright && playwright install
+#   3. Virtual display setup (Xvfb) for desktop control
+massgen --config @examples/tools/custom_tools/claude_computer_use_example "Search for Python documentation on the web"
 
-# Meta-coordination - MassGen running MassGen
-uv run massgen --config massgen/configs/meta/massgen_runs_massgen.yaml "Run a MassGen experiment to create a webpage about Bob Dylan"
+# Browser automation with Gemini
+# Prerequisites:
+#   1. Set GOOGLE_API_KEY in your .env file
+#   2. Install Playwright: pip install playwright
+#   3. Install browsers: playwright install
+#   4. Install Google GenAI SDK: pip install google-genai
+massgen --config @examples/tools/custom_tools/gemini_computer_use_example "Navigate to GitHub and search for MassGen repository"
+
+# Interactive model selection with fuzzy matching
+massgen  # Run the interactive config builder with smart model search
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1049,42 +1066,45 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.8)
+### Recent Achievements (v0.1.9)
 
-**🎉 Released: November 5, 2025**
+**🎉 Released: November 7, 2025**
 
-#### Automation Mode for LLM Agents
-- **SilentDisplay Class**: New `massgen/frontend/displays/silent_display.py` for automation-friendly output (~10 lines vs 250-3,000+)
-- **CLI Flag**: `--automation` flag for silent execution with structured output
-- **Status Monitoring**: Real-time `status.json` file updated every 2 seconds with phase, agent states, and voting results
-- **Exit Codes**: Meaningful codes (0=success, 1=config error, 2=execution error, 3=timeout, 4=interrupted)
-- **Workspace Isolation**: Automatic unique workspace suffixes for parallel execution preventing collisions
-- **Meta-Coordination**: MassGen running MassGen configurations for self-improvement workflows
+#### Session Management System
+- **Session State Module**: Complete session tracking and restoration (`massgen/session/` module, 530 lines total)
+- **SessionState Dataclass**: Stores conversation history, workspace paths, and turn metadata with winning agents tracking
+- **SessionRegistry**: Manages session lifecycle with listing, restoration, and metadata retrieval capabilities
+- **Multi-Turn Persistence**: Seamless session continuation across CLI invocations with automatic state restoration
+- **Workspace Continuity**: Preserves agent workspace states, orchestrator data, and coordination history between turns
 
-#### DSPy Question Paraphrasing Integration
-- **Paraphraser Module**: New `massgen/dspy_paraphraser.py` (557 lines) with semantic-preserving paraphrasing
-- **Three Strategies**: "diverse", "balanced" (default), and "conservative" paraphrasing modes
-- **Semantic Validation**: Automatic validation using `SemanticValidationSignature` ensuring meaning preservation
-- **Thread-Safe Caching**: SHA-256 hashing for performance with configurable cache system
-- **Multi-Backend Support**: Works with all backends (Gemini, OpenAI, Claude, etc.) as paraphrasing engines
-- **Orchestrator Integration**: Automatic question variant distribution to different agents
+#### Computer Use Tools
+- **OpenAI Computer Use Tool**: Automated browser and computer control using computer-use-preview model with Playwright and Docker support
+- **Claude Computer Use Tool**: Native Anthropic Claude Computer Use API integration for browser and desktop automation with safety confirmations
+- **Gemini Computer Use Tool**: Google Gemini-based computer control with screenshot analysis and action generation
+- **Browser Automation Tool**: Lightweight browser automation focused on specific tasks without full computer use overhead
+- **OpenAI Operator API Handler**: Specialized parameter handling for computer-use-preview model actions
 
-#### Documentation
-- **Case Study Summary**: New `docs/CASE_STUDIES_SUMMARY.md` (368 lines) with centralized overview of 33 case studies organized by category
-- **Automation Guide**: New `AI_USAGE.md` (319 lines) complete guide for LLM agents running MassGen
-- **DSPy Implementation**: New `massgen/backend/docs/DSPY_IMPLEMENTATION_GUIDE.md` (653 lines) comprehensive integration guide
-- **Status File Reference**: New `docs/source/reference/status_file.rst` (565 lines) complete `status.json` schema documentation
-- **Automation Documentation**: New `docs/source/user_guide/automation.rst` (890 lines) full automation guide with BackgroundShellManager patterns
+#### Config Builder Enhancement
+- **Fuzzy Model Matching**: Intelligent model name search allowing approximate inputs (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
+- **Model Catalog System**: Curated lists of common models across providers with automatic discovery (`massgen/utils/model_catalog.py`)
+- **Smart Suggestions**: Enhanced config builder with automatic model search and recommendations
+- **Provider Integration**: Support for partial model names with intelligent completion across all backends
 
-#### Configuration Files
-- `three_agents_dspy_enabled.yaml` - Three-agent setup with DSPy paraphrasing
-- `massgen_runs_massgen.yaml` - Meta-coordination for self-improvement
-- `massgen_suggests_to_improve_massgen.yaml` - Autonomously running MassGen experiments
+#### Backend Capabilities Expansion
+- **Six New Backends**: Cerebras AI (WSE hardware), Together AI (Meta-Llama), Fireworks AI (fast inference), Groq (LPU hardware), OpenRouter (200+ models), Moonshot/Kimi (Chinese-optimized, long context)
+- **Comprehensive Registry**: Updated `massgen/backend/capabilities.py` with detailed specifications for all providers
+- **Enhanced Features**: Audio/video support, hardware acceleration, and unified access across diverse model families
 
-#### Case Study
-- `meta-self-analysis-automation-mode.md` - Meta-level self-analysis demonstrating automation mode
+#### Memory & Coordination Improvements
+- **Memory Update Logic**: Enhanced memory update prompts focusing on actionable patterns and technical insights (`massgen/memory/_update_prompts.py`)
+- **Chat Agent Enhancement**: Session restoration with improved orchestrator restart handling and turn tracking
+- **CLI Extension**: Session listing, restoration commands, and enhanced display selection with automatic state restoration
 
-### Previous Achievements (v0.0.3 - v0.1.7)
+### Previous Achievements (v0.0.3 - v0.1.8)
+
+✅ **Automation Mode for LLM Agents (v0.1.8)**: Complete infrastructure for running MassGen inside LLM agents with SilentDisplay class for minimal output (~10 lines vs 250-3,000+), real-time status.json monitoring updated every 2 seconds, meaningful exit codes (0=success, 1=config error, 2=execution error, 3=timeout, 4=interrupted), automatic workspace isolation for parallel execution, meta-coordination capabilities allowing MassGen to run MassGen
+
+✅ **DSPy Question Paraphrasing Integration (v0.1.8)**: Intelligent question diversity for multi-agent coordination with semantic-preserving paraphrasing module supporting three strategies (diverse/balanced/conservative), automatic semantic validation to ensure meaning preservation, thread-safe caching system with SHA-256 hashing, support for all backends as paraphrasing engines, orchestrator integration for automatic question variant distribution
 
 ✅ **Agent Task Planning System (v0.1.7)**: MCP-based planning server with task lifecycle management, dependency tracking with automatic validation and blocking, status transitions between pending/in_progress/completed/blocked states, orchestrator integration for plan-aware multi-agent coordination
 
@@ -1220,21 +1240,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.9 Roadmap
+### v0.1.10 Roadmap
 
-Version 0.1.9 focuses on rate management and comprehensive documentation:
+Version 0.1.10 focuses on framework streaming improvements and comprehensive documentation:
 
 #### Planned Features
-- **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs with model-specific limits and configurable thresholds
+- **Stream LangGraph & SmoLAgent Steps**: Real-time intermediate step streaming for external framework tools with enhanced debugging capabilities
 - **MassGen Handbook**: Comprehensive user documentation and centralized policies for development and research teams
 
 Key technical approach:
-- **Rate Limiting**: Sliding window tracking, external YAML configuration, optional CLI flag, mandatory cooldown periods after startup
+- **Framework Streaming**: Real-time streaming of LangGraph and SmoLAgent intermediate steps, unified streaming interface, buffering and flow control, performance optimization
 - **Documentation**: Installation guides, configuration patterns, best practices, troubleshooting, case studies, and integration examples
 
-**Target Release**: November 7, 2025 (Friday @ 9am PT)
+**Target Release**: November 10, 2025 (Monday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.9 roadmap](ROADMAP_v0.1.9.md).
+For detailed milestones and technical specifications, see the [full v0.1.10 roadmap](ROADMAP_v0.1.10.md).
 
 ---
 
