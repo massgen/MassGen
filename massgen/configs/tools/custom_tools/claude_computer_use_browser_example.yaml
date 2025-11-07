@@ -14,7 +14,7 @@
 # 4. A sandboxed computing environment (Docker/VM recommended)
 #
 # Usage:
-#   massgen --config claude_computer_use_example.yaml
+#   massgen --config claude_computer_use_browser_example.yaml
 #
 # Prerequisites:
 #   1. Set ANTHROPIC_API_KEY environment variable

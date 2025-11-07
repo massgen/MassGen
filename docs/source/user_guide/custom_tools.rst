@@ -718,10 +718,10 @@ For users with access to Claude 3.7 Sonnet or newer:
 .. code-block:: bash
 
    massgen \
-     --config massgen/configs/tools/custom_tools/claude_computer_use_example.yaml \
+     --config massgen/configs/tools/custom_tools/claude_computer_use_docker_example.yaml \
      "Navigate to Wikipedia and search for 'Artificial Intelligence'"
 
-**Config:** ``claude_computer_use_example.yaml``
+**Config:** ``claude_computer_use_docker_example.yaml``
 
 .. code-block:: yaml
 
@@ -899,7 +899,7 @@ The ``massgen/configs/tools/custom_tools/`` directory contains examples for all 
 **Computer Use Tools:**
 
 * ``gemini_computer_use_example.yaml`` - Google Gemini computer use automation
-* ``claude_computer_use_example.yaml`` - Anthropic Claude computer use automation
+* ``claude_computer_use_docker_example.yaml`` - Anthropic Claude computer use automation
 * ``simple_browser_automation_example.yaml`` - Simple browser automation for any model
 
 Backend Support
