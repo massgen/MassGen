@@ -104,14 +104,19 @@ async def browser_automation(
 
             logger.info(f"Browser automation: {action} - {task}")
 
+            # Navigate if URL provided (for any action)
+            if url:
+                await page.goto(url, wait_until="networkidle")
+                logger.info(f"Navigated to: {url}")
+
             # Perform action
             if action == "navigate":
                 if not url:
                     raise ValueError("URL required for navigate action")
-                await page.goto(url, wait_until="networkidle")
+                # Already navigated above
                 result_data["url"] = url
                 result_data["title"] = await page.title()
-                logger.info(f"Navigated to: {url} - {result_data['title']}")
+                logger.info(f"Page title: {result_data['title']}")
 
             elif action == "click":
                 if not selector:

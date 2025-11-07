@@ -2,8 +2,20 @@
 #
 # This configuration demonstrates how to use Anthropic's Claude models with Computer Use.
 #
-# ⚠️  IMPORTANT: This configuration requires a custom tool implementation
-# similar to the OpenAI computer_use tool or Gemini gemini_computer_use tool.
+# ⚠️  PERFORMANCE NOTE: Claude Computer Use is designed for complex interactive tasks
+# that require reasoning and decision-making at each step. For simple web scraping or
+# data extraction tasks, use the browser_automation tool instead (see
+# simple_browser_automation_example.yaml), which is much faster and more efficient.
+#
+# ✅ Use Claude Computer Use for:
+#   - Complex multi-step workflows requiring decision-making
+#   - Tasks where you need to interact with dynamic/changing UIs
+#   - Scenarios where the exact steps aren't known in advance
+#
+# ❌ Don't use Claude Computer Use for:
+#   - Simple web page navigation and data extraction (use browser_automation)
+#   - Repetitive tasks with known steps (write a script instead)
+#   - Tasks requiring speed (Computer Use is slow, ~2-5 seconds per action)
 #
 # The Claude Computer Use API requires:
 # 1. Beta header: "computer-use-2025-01-24"
@@ -39,31 +51,20 @@ agents:
       # Note: Anthropic-defined tools (computer, text_editor, bash) are added separately
       # They use schema-less tool definitions that are built into Claude's model
       custom_tools:
-        # TODO: Implement claude_computer_use tool similar to gemini_computer_use
-        # This tool would:
-        # 1. Initialize Playwright browser or virtual desktop environment
-        # 2. Make API calls to Claude with the beta header and Anthropic-defined tools
-        # 3. Execute the tool actions (screenshot, click, type, etc.)
-        # 4. Return results to Claude in the agent loop
-        # 5. Handle safety checks and prompt injection warnings
-        #
-        # For reference implementation, see:
-        # - massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py
-        # - massgen/tool/_computer_use/computer_use_tool.py
-        #
-        # Uncomment when implemented:
-        # - name: ["claude_computer_use"]
-        #   category: "automation"
-        #   path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
-        #   function: ["claude_computer_use"]
-        #   description: >
-        #     Automate browser and desktop tasks using Claude's Computer Use capabilities.
-        #   default_params:
-        #     environment: "browser"  # or "linux", "mac", "windows"
-        #     display_width: 1024
-        #     display_height: 768
-        #     max_iterations: 25
-        #     tool_version: "computer_20250124"
+        - name: ["claude_computer_use"]
+          category: "automation"
+          path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
+          function: ["claude_computer_use"]
+          description: >
+            Automate browser and desktop tasks using Claude's Computer Use capabilities.
+            Can control browser, take screenshots, click, type, scroll, and navigate.
+          default_params:
+            environment: "browser"  # or "linux", "mac", "windows" (only browser currently supported)
+            display_width: 1024
+            display_height: 768
+            max_iterations: 25
+            headless: true
+            browser_type: "chromium"
         - name: ["understand_image"]
           category: "multimodal"
           path: "massgen/tool/_multimodal_tools/understand_image.py"
@@ -76,6 +77,15 @@ agents:
       - computer: Take screenshots, control mouse/keyboard, interact with desktop environments
       - str_replace_editor: Edit files using search and replace
       - bash: Execute shell commands
+
+      **IMPORTANT: This system runs on a headless Linux server without X display.**
+      **You MUST always use headless: true when calling claude_computer_use.**
+      **Never set headless: false as it will fail without a display server.**
+
+      **PERFORMANCE GUIDELINES:**
+      - You have a limited number of iterations (usually 25-40)
+      - Each action (screenshot, click, type) counts as one iteration
+      - Focus on efficient, direct actions rather than extensive verification
 
       When users ask you to:
       - Browse websites or search for information
