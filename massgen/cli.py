@@ -3109,7 +3109,6 @@ async def main(args):
                     config_path=config_file_path,
                     memory_session_id=memory_session_id,
                     initial_question=initial_q,
-                    **kwargs,
                     restore_session_if_exists=restore_existing_session,
                     debug=args.debug,
                     **interactive_kwargs,
