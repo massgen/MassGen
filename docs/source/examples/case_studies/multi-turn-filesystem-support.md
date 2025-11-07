@@ -96,13 +96,6 @@ MassGen v0.0.25 (September 29, 2025)
 
 Configuration file: [`massgen/configs/tools/filesystem/multiturn/grok4_gpt5_gemini_filesystem_multiturn.yaml`](../../massgen/configs/tools/filesystem/multiturn/grok4_gpt5_gemini_filesystem_multiturn.yaml)
 
-Key breakthrough - **`session_storage` parameter enables multi-turn support**:
-
-```yaml
-orchestrator:
-  session_storage: "sessions"  # NEW: Enables multi-turn conversation support
-```
-
 #### Command
 
 **Quick Start: Running Multi-Turn MassGen**

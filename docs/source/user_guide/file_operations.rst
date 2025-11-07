@@ -428,7 +428,6 @@ MassGen automatically organizes under ``.massgen/``:
 
    orchestrator:
      snapshot_storage: "snapshots"         # → .massgen/snapshots/
-     session_storage: "sessions"           # → .massgen/sessions/
      agent_temporary_workspace: "temp"     # → .massgen/temp/
 
    agents:

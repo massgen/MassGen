@@ -161,9 +161,6 @@ Interactive mode uses the same YAML configuration as single-turn mode:
      display_type: "rich_terminal"
      logging_enabled: true
 
-   orchestrator:
-     session_storage: "sessions"  # Sessions saved to .massgen/sessions/
-
 Working with Project Files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -172,8 +169,6 @@ Multi-turn mode supports full filesystem integration for working with your codeb
 .. code-block:: yaml
 
    orchestrator:
-     session_storage: ".massgen/sessions"
-
      # Share read-only source code across all agents
      context_paths:
        - path: "src/"

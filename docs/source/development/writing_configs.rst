@@ -110,8 +110,6 @@ Configuration Rules
    * ``enable_web_search`` is a **BACKEND property**
    * ``enable_planning_mode`` is an **ORCHESTRATOR.COORDINATION property**
 
-❌ **Don't include ``session_storage``** unless the config explicitly needs multi-turn mode
-
 ❌ **Don't suggest cleanup commands** that delete logs (avoid ``rm -rf .massgen/``)
 
 Property Placement Reference
@@ -131,7 +129,6 @@ Property Placement Reference
 **Orchestrator Level** (top-level ``orchestrator``):
 
 * ``snapshot_storage``, ``agent_temporary_workspace``
-* ``session_storage`` (only for multi-turn)
 * ``context_paths`` (shared read-only directories)
 * ``voting_sensitivity`` (multi-agent consensus threshold)
 * ``coordination.enable_planning_mode``
@@ -221,9 +218,6 @@ Here's a fully annotated config template showing all conventions:
      # Workspace directories
      snapshot_storage: "massgen_logs/snapshots"
      agent_temporary_workspace: "massgen_logs/temp_workspaces"
-
-     # Multi-turn mode (ONLY include if needed)
-     # session_storage: "massgen_logs/sessions"
 
      # Voting sensitivity (multi-agent only)
      # Controls consensus threshold for agent voting
@@ -326,7 +320,6 @@ Follow this workflow to create a new config:
 * Set up workspace directories
 * Add ``context_paths`` if sharing read-only files
 * Configure ``coordination`` if using planning mode
-* Only add ``session_storage`` if multi-turn is needed
 
 **Step 5: Test the Config**
 
@@ -380,8 +373,6 @@ Orchestrator Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ☐ ``context_paths`` at orchestrator level (not per-agent)
-
-☐ ``session_storage`` only included if multi-turn mode needed
 
 ☐ Planning mode properly configured if used
 
@@ -519,14 +510,6 @@ Planning Mode Configuration
          3. Use only vote/new_answer tools
          4. DO NOT execute MCP commands
          5. Save execution for final presentation
-
-Multi-Turn Interactive Mode
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: yaml
-
-   orchestrator:
-     session_storage: "massgen_logs/sessions"  # Enables multi-turn mode
 
 See Also
 --------
