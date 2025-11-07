@@ -7,16 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
+Complete session management system with conversation restoration, computer use automation tools for browser and desktop control, enhanced config builder with fuzzy model matching, and expanded backend support.
+
 **v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
 Complete automation infrastructure for LLM agents with real-time status tracking, silent execution mode, and DSPy-powered question paraphrasing for enhanced multi-agent diversity.
 
 **v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
 Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
 
-**v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
-External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
-
 ---
+
+## [0.1.9] - 2025-11-07
+
+### Added
+- **Session Management System**: Comprehensive session state tracking and restoration for multi-turn conversations
+  - New `massgen/session/` module with session state and registry management (530 lines total)
+  - **SessionState** dataclass for complete session state including conversation history, workspace paths, and turn metadata (`_state.py`, 219 lines)
+  - **SessionRegistry** for listing, managing, and restoring previous sessions (`_registry.py`, 311 lines)
+  - **restore_session()** function for seamless session continuation across CLI invocations
+  - Session metadata tracking including winning agents history and orchestrator turn data
+  - Automatic session storage with unique identifiers and timestamps
+  - Test suite in `test_session_registry.py` (201 lines)
+
+- **Computer Use Tools**: Browser and desktop automation capabilities for multi-agent workflows
+  - **General Computer Use Tool**: OpenAI computer-use-preview integration for automated browser/computer control (`massgen/tool/_computer_use/computer_use_tool.py`, 741 lines)
+    - Support for browser environment (Playwright) and Docker container execution
+    - Action execution: click, type, scroll, navigate, screenshot analysis
+    - Configurable max iterations and safety controls
+  - **Claude Computer Use Tool**: Anthropic Claude Computer Use API integration (`massgen/tool/_claude_computer_use/claude_computer_use_tool.py`, 473 lines)
+    - Native Claude Computer Use beta API support
+    - Browser and desktop control with safety confirmations
+    - Async execution with Playwright integration
+  - **Gemini Computer Use Tool**: Google Gemini-based computer control (`massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py`, 503 lines)
+    - Gemini model integration for computer use workflows
+    - Screenshot analysis and action generation
+  - **Browser Automation Tool**: Lightweight browser automation for specific tasks (`massgen/tool/_browser_automation/browser_automation_tool.py`, 176 lines)
+    - Focused browser automation without full computer use overhead
+  - Comprehensive test suite in `test_computer_use.py` (629 lines)
+
+- **OpenAI Operator API Handler**: Support for OpenAI's computer-use-preview model
+  - New `massgen/api_params_handler/_openai_operator_api_params_handler.py` (72 lines)
+  - Specialized parameter handling for computer use actions
+  - Integration with computer use tool execution flow
+
+### Changed
+- **Config Builder Enhancement**: Intelligent model matching and discovery
+  - **Fuzzy Model Name Matching**: New `massgen/utils/model_matcher.py` (214 lines) allowing approximate model name input
+  - **Model Catalog System**: New `massgen/utils/model_catalog.py` (218 lines) with curated lists of common models across providers
+  - Enhanced `massgen/config_builder.py` with automatic model search and suggestions
+  - Support for partial model names with intelligent completion (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
+  - Contribution from acrobat3 (K. from JP)
+
+- **Backend Capabilities Enhancement**: Expanded provider support with six new backend registrations
+  - Added **Cerebras AI** backend capabilities (llama models with WSE hardware acceleration)
+  - Added **Together AI** backend capabilities (Meta-Llama, Mixtral models)
+  - Added **Fireworks AI** backend capabilities (Llama, Qwen models with fast inference)
+  - Added **Groq** backend capabilities (Llama, Mixtral with LPU hardware)
+  - Added **OpenRouter** backend capabilities (unified access to 200+ models with audio/video support)
+  - Added **Moonshot (Kimi)** backend capabilities (Chinese-optimized models with long context)
+  - Updated `massgen/backend/capabilities.py` with comprehensive backend specifications
+
+- **Memory System Improvement**: Enhanced memory update logic for multi-agent coordination
+  - New `massgen/memory/_update_prompts.py` (276 lines) with specialized update prompts for mem0
+  - **MASSGEN_UNIVERSAL_UPDATE_MEMORY_PROMPT**: Philosophy for accumulating qualitative patterns vs statistics
+  - Improved fact merging logic focusing on actionable tool usage patterns and technical insights
+
+- **Chat Agent Enhancement**: Session restoration and improved orchestrator restart handling
+  - Session state restoration in `massgen/chat_agent.py`
+  - Enhanced turn tracking and workspace persistence
+  - Improved logging and coordination with orchestrator restarts
+
+- **CLI Enhancement**: Extended command-line interface for session management
+  - Session listing and restoration commands in `massgen/cli.py`
+  - Enhanced display selection and output formatting
+  - Support for continuing previous sessions with automatic state restoration
+
+### Documentations, Configurations and Resources
+
+- **Diversity System Documentation**: Comprehensive guide for increasing agent diversity
+  - New `docs/source/user_guide/diversity.rst` (388 lines)
+  - Covers answer novelty requirements (lenient/balanced/strict)
+  - Documents DSPy question paraphrasing integration (from v0.1.8)
+  - Best practices for multi-agent diversity strategies
+  - Configuration examples and recommendations
+
+- **Memory System Documentation**: Updated memory user guide
+  - Updated `docs/source/user_guide/memory.rst` with enhanced memory update logic and configuration
+
+- **Computer Use Configuration Examples**: Five YAML configurations demonstrating computer use capabilities
+  - `massgen/configs/tools/custom_tools/claude_computer_use_example.yaml`: Claude-specific computer use
+  - `massgen/configs/tools/custom_tools/gemini_computer_use_example.yaml`: Gemini-specific computer use
+  - `massgen/configs/tools/custom_tools/computer_use_example.yaml`: General computer use with OpenAI
+  - `massgen/configs/tools/custom_tools/computer_use_docker_example.yaml`: Docker-based computer use
+  - `massgen/configs/tools/custom_tools/computer_use_browser_example.yaml`: Browser automation focus
+
+- **Session Management Configuration**: Example demonstrating session continuation
+  - `massgen/configs/memory/grok4_gpt5_gemini_mcp_filesystem_test_with_claude_code.yaml`: Multi-turn session with MCP filesystem
+
+- **Computer Use Documentation**:
+  - New `massgen/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md`: Comprehensive guide for computer use tools (494 lines)
+  - New `scripts/computer_use_setup.md`: Setup instructions for computer use tools
+  - New `scripts/setup_docker_cua.sh`: Automated Docker setup script for computer use
+
+### Technical Details
+- **Major Focus**: Session management with conversation restoration, computer use automation tools, intelligent config builder with fuzzy matching, expanded backend support, memory system enhancements
+- **Contributors**: @franklinnwren @ncrispino @Henry-811 and the MassGen team
 
 ## [0.1.8] - 2025-11-05
 

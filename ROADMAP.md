@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.7
+**Current Version:** v0.1.9
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** November 3, 2025
+**Last Updated:** November 8, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -20,13 +20,14 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | Multimodal Support | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | General Interoperability | [@qidanrui](https://github.com/qidanrui) | danrui2020 |
 | Agent Adapter System | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
+| Framework Streaming | [@Eric-Shang](https://github.com/Eric-Shang) | ericshang. |
 | Irreversible Actions Safety | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
 | Computer Use | [@franklinnwren](https://github.com/franklinnwren) | zhichengren |
 | Memory Module | [@qidanrui](https://github.com/qidanrui) [@ncrispino](https://github.com/ncrispino) | danrui2020, nickcrispino |
 | Rate Limiting System | [@AbhimanyuAryan](https://github.com/AbhimanyuAryan) | abhimanyuaryan |
 | DSPy Integration | [@praneeth999](https://github.com/praneeth999) | ram2561 |
 | MassGen Handbook | [@a5507203](https://github.com/a5507203) [@Henry-811](https://github.com/Henry-811) | crinvo, henry_weiqi |
-| Session Restart | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
+| Session Management | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Parallel File Operations | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Web UI | [@voidcenter](https://github.com/voidcenter) | justin_zhang |
 
@@ -37,17 +38,48 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.9** | 11/07/25 | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
+| **v0.1.10** | 11/10/25 | Stream LangGraph & SmoLAgent Steps | @Eric-Shang | Real-time intermediate step streaming for external framework tools |
 | | | MassGen Handbook | @a5507203 | Centralized policies and resources for development and research teams |
-| **v0.1.10** | 11/10/25 | Add computer use | @franklinnwren | Visual perception and automated computer interaction |
-| | | Session Restart | @ncrispino | Resume previous conversations from log files |
-| **v0.1.11** | 11/12/25 | Parallel File Operations & Performance | @ncrispino | Increase parallelism and efficiency with standard evaluation metrics |
+| **v0.1.11** | 11/12/25 | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
+| **v0.1.12** | 11/14/25 | Parallel File Operations | @ncrispino | Increase parallelism and standard efficiency evaluation |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.9 - Rate Limiting & Documentation
+## 📋 v0.1.10 - Framework Streaming & Documentation
+
+### Features
+
+**1. Stream LangGraph & SmoLAgent Intermediate Steps** (@Eric-Shang)
+- PR: [#462](https://github.com/massgen/MassGen/pull/462)
+- Real-time streaming of intermediate steps for LangGraph framework integration
+- Real-time streaming of intermediate steps for SmoLAgent framework integration
+- Enhanced user visibility into multi-step agent reasoning processes
+- Improved debugging and monitoring for external framework tools
+- Consistent streaming experience across all framework integrations
+- **Use Case**: Real-time visibility into LangGraph and SmoLAgent reasoning steps, enabling better debugging and monitoring of complex multi-agent workflows
+
+**2. MassGen Handbook** (@a5507203)
+- Issue: [#387](https://github.com/massgen/MassGen/issues/387)
+- Centralized policies and resources for development and research teams
+- Comprehensive user documentation and handbook for MassGen
+- Detailed guides covering installation, configuration, and usage patterns
+- Best practices and troubleshooting documentation
+- Integration examples and case studies
+- **Use Case**: Provide centralized policies and resources for development and research teams
+
+### Success Criteria
+- ✅ LangGraph intermediate steps stream in real-time
+- ✅ SmoLAgent intermediate steps stream in real-time
+- ✅ Streaming performance maintains acceptable latency
+- ✅ Error handling works correctly during streaming
+- ✅ MassGen Handbook provides comprehensive user documentation
+- ✅ Documentation updated with streaming examples
+
+---
+
+## 📋 v0.1.11 - Rate Limiting System
 
 ### Features
 
@@ -61,57 +93,15 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Mandatory cooldown after agent startup to prevent API bursts
 - **Use Case**: Prevent API spam and manage costs while ensuring smooth operation within Gemini's rate limits
 
-**2. MassGen Handbook** (@a5507203)
-- Issue: [#387](https://github.com/massgen/MassGen/issues/387)
-- Centralized policies and resources for development and research teams
-- Comprehensive user documentation and handbook for MassGen
-- Detailed guides covering installation, configuration, and usage patterns
-- Best practices and troubleshooting documentation
-- Integration examples and case studies
-- **Use Case**: Provide centralized policies and resources for development and research teams
-
 ### Success Criteria
 - ✅ Rate limiting prevents API quota violations and manages costs
-- ✅ MassGen Handbook provides comprehensive user documentation
 - ✅ Features are configurable and well-documented
+- ✅ Rate limiting works across all Gemini model types
+- ✅ Sliding window tracking is accurate and efficient
 
 ---
 
-## 📋 v0.1.10 - Computer Use & Session Management
-
-### Features
-
-**1. Add computer use** (@franklinnwren)
-- PR: [#402](https://github.com/massgen/MassGen/pull/402) (Draft)
-- Custom computer use agent tool with Gemini API integration
-- Visual perception capabilities through screenshot processing
-- Dedicated tool module: `massgen/tool/_computer_using/computer_using_tool.py`
-- Configuration support for multiple model types
-- Integration with image understanding tools for screen content interpretation
-- **Use Case**: Visual perception and automated computer interaction, enabling agents to interpret screen content and execute automated tasks
-
-**2. Session Restart** (@ncrispino)
-- Issue: [#412](https://github.com/massgen/MassGen/issues/412) (Open)
-- Resume previous MassGen conversations by loading existing log files
-- New CLI parameter: `massgen --continue [LOG_DIR]` to initiate fresh conversation with prior dialogue history
-- System treats resumed session as "Nth turn in a multi-turn conversation" based on log history
-- Default to using same configuration as original session
-- Support for specifying different configuration if needed
-- Optional: Continue most recent conversation without specifying log directory
-- **Use Case**: Resume previous development sessions after closing, mirroring user experience with other LLM tools
-
-### Success Criteria
-- ✅ Computer use agent successfully integrated with Gemini API
-- ✅ Screenshot processing and visual perception working
-- ✅ Configuration examples provided for multiple models
-- ✅ Session restart allows seamless continuation of previous conversations
-- ✅ Log directory structure supports session continuation
-- ✅ Configuration persistence works correctly
-- ✅ Features are well-documented with examples
-
----
-
-## 📋 v0.1.11 - Parallel File Operations & Performance
+## 📋 v0.1.12 - Performance Optimization
 
 ### Features
 
@@ -172,35 +162,41 @@ These features are being actively developed on **separate parallel tracks** and 
 - Semantic validation and caching system
 - **Status:** ✅ Completed in v0.1.8
 
+### Track: Framework Streaming (@Eric-Shang, ericshang.)
+- PR: [#462](https://github.com/massgen/MassGen/pull/462)
+- Real-time streaming for LangGraph and SmoLAgent intermediate steps
+- Enhanced debugging and monitoring for external framework tools
+- **Target:** v0.1.10
+
 ### Track: Rate Limiting System (@AbhimanyuAryan, abhimanyuaryan)
-- PR: [#383](https://github.com/Leezekun/MassGen/pull/383)
+- PR: [#383](https://github.com/Leezekun/MassGen/pull/383) (Draft)
 - Multi-dimensional rate limiting for Gemini models
 - Model-specific limits with sliding window tracking
-- **Target:** v0.1.9
+- **Target:** v0.1.11
 
 ### Track: MassGen Handbook (@a5507203, @Henry-811, crinvo, henry_weiqi)
 - Issue: [#387](https://github.com/massgen/MassGen/issues/387)
 - Comprehensive user documentation and handbook
 - Centralized policies and resources for development and research teams
-- **Target:** v0.1.9
+- **Target:** v0.1.10
 
 ### Track: Computer Use (@franklinnwren, zhichengren)
 - PR: [#402](https://github.com/massgen/MassGen/pull/402)
-- Custom computer use agent tool with Gemini API integration
-- Visual perception through screenshot processing
-- **Target:** v0.1.10
+- Browser and desktop automation with OpenAI, Claude, and Gemini integration
+- Visual perception through screenshot processing and action execution
+- **Status:** ✅ Completed in v0.1.9
 
-### Track: Session Restart (@ncrispino, nickcrispino)
-- Issue: [#412](https://github.com/massgen/MassGen/issues/412)
-- Resume previous MassGen conversations from log files
-- Multi-turn conversation continuation
-- **Target:** v0.1.10
+### Track: Session Management (@ncrispino, nickcrispino)
+- PR: [#466](https://github.com/massgen/MassGen/pull/466)
+- Complete session state tracking and restoration
+- Resume previous MassGen conversations with full context
+- **Status:** ✅ Completed in v0.1.9
 
 ### Track: Parallel File Operations (@ncrispino, nickcrispino)
 - Issue: [#441](https://github.com/massgen/MassGen/issues/441)
-- Increase parallelism of file operations
-- Standard efficiency evaluation metrics
-- **Target:** v0.1.11
+- Increase parallelism of file read operations
+- Standard efficiency evaluation and benchmarking methodology
+- **Target:** v0.1.12
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
@@ -210,7 +206,7 @@ These features are being actively developed on **separate parallel tracks** and 
 ### Track: Web UI (@voidcenter, justin_zhang)
 - PR: [#257](https://github.com/Leezekun/MassGen/pull/257)
 - Visual multi-agent coordination interface
-- **Target:** ~v0.1.10
+- **Target:** TBD
 
 ---
 
@@ -282,5 +278,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** November 3, 2025
+**Last Updated:** November 8, 2025
 **Maintained By:** MassGen Team

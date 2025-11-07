@@ -111,6 +111,10 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
+
+Complete session management system with conversation restoration, Claude and Gemini computer use tools for browser and desktop automation, enhanced config builder with fuzzy model matching, and expanded backend support.
+
 **v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
 
 Automation Mode for LLM agents with silent execution and status monitoring, DSPy question paraphrasing integration with semantic validation, and comprehensive case study documentation.
@@ -118,10 +122,6 @@ Automation Mode for LLM agents with silent execution and status monitoring, DSPy
 **v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
 
 Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
-
-**v0.1.6 (October 31, 2025)** - Framework Interoperability & Backend Refactoring
-
-External agent framework integration as tools (AG2, LangGraph, AgentScope, OpenAI Assistants, SmoLAgent), unified tool execution architecture, Gemini backend simplification, and comprehensive configuration validation.
 
 Quick Start
 -----------
