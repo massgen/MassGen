@@ -231,7 +231,7 @@ Most configurations use environment variables for API keys:so
 **New Features:** Session Management & Computer Use Tools
 
 **Configuration Files:**
-- `claude_computer_use_docker_example.yaml` - Claude-specific computer use and browser automation
+- `claude_computer_use_example.yaml` - Claude-specific computer use and browser automation
 - `gemini_computer_use_example.yaml` - Gemini-specific computer use with screenshot analysis
 - `computer_use_browser_example.yaml` - Lightweight browser automation focused on specific tasks
 - `grok4_gpt5_gemini_mcp_filesystem_test_with_claude_code.yaml` - Multi-turn session with MCP filesystem
@@ -253,7 +253,7 @@ pip install --upgrade massgen
 #   1. Set ANTHROPIC_API_KEY environment variable
 #   2. Playwright installed: pip install playwright && playwright install
 #   3. Virtual display setup (Xvfb) for desktop control
-massgen --config @examples/tools/custom_tools/claude_computer_use_docker_example "Search for Python documentation on the web"
+massgen --config @examples/tools/custom_tools/claude_computer_use_example "Search for Python documentation on the web"
 
 # Browser automation with Gemini
 # Prerequisites:

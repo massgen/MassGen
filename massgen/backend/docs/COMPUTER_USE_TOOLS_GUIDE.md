@@ -177,7 +177,6 @@ agents:
           path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
           function: ["claude_computer_use"]
           preset_args:
-            preset_args:
             environment: "linux"
             environment_config:
               container_name: "cua-container"

@@ -178,7 +178,7 @@ pip install --upgrade massgen
 #   1. Set ANTHROPIC_API_KEY environment variable
 #   2. Playwright installed: pip install playwright && playwright install
 #   3. Virtual display setup (Xvfb) for desktop control
-massgen --config @examples/tools/custom_tools/claude_computer_use_docker_example "Search for Python documentation on the web"
+massgen --config @examples/tools/custom_tools/claude_computer_use_example "Search for Python documentation on the web"
 
 # Browser automation with Gemini
 # Prerequisites:

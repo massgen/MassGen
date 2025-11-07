@@ -96,7 +96,7 @@ Agent task planning system with dependency tracking, background shell execution 
   - Updated `docs/source/user_guide/memory.rst` with enhanced memory update logic and configuration
 
 - **Computer Use Configuration Examples**: Five YAML configurations demonstrating computer use capabilities
-  - `massgen/configs/tools/custom_tools/claude_computer_use_docker_example.yaml`: Claude-specific computer use
+  - `massgen/configs/tools/custom_tools/claude_computer_use_example.yaml`: Claude-specific computer use
   - `massgen/configs/tools/custom_tools/gemini_computer_use_example.yaml`: Gemini-specific computer use
   - `massgen/configs/tools/custom_tools/computer_use_example.yaml`: General computer use with OpenAI
   - `massgen/configs/tools/custom_tools/computer_use_docker_example.yaml`: Docker-based computer use
