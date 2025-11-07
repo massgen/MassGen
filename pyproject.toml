@@ -52,12 +52,19 @@ dependencies = [
     "pyautogen>=0.10.0",
     "vertexai>=1.71.1",
     "pytest>=8.4.2",
+    "langchain-openai>=1.0.0",
+    "langgraph>=1.0.0",
+    "langchain-core>=1.0.0",
+    "agentscope>=1.0.6",
+    "smolagents[litellm]>=1.22.0",
     "python-docx>=1.2.0",
     "openpyxl>=3.1.5",
     "python-pptx>=1.0.2",
     "opencv-python>=4.12.0.88",
     "pypdf2>=3.0.1",
+    "mem0ai>=1.0.0",
     "reportlab>=4.0.0",
+    "dspy>=2.4.0",
 ]
 
 [project.optional-dependencies]
@@ -266,5 +273,6 @@ dev = [
     "sphinx-design>=0.6.1",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx-book-theme>=1.1.4",
+    "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
 ]

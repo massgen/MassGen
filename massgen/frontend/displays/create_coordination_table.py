@@ -1514,6 +1514,23 @@ class CoordinationTableBuilder:
                         table.add_row(*row)
                         event_num += 1
 
+            elif event_type == "update_injected":
+                # Handle update injection events (preempt-not-restart feature)
+                details = event.get("details", "")
+                agent_states[agent_id]["status"] = "update_received"
+                agent_states[agent_id]["last_streaming_logged"] = False
+                row = self._create_rich_event_row(
+                    event_num,
+                    agent_id,
+                    agent_states,
+                    "update_injected",
+                    "📨 Update",
+                    details,
+                )
+                if row:
+                    table.add_row(*row)
+                    event_num += 1
+
             elif event_type == "final_answer":
                 label = context.get("label")
                 if label:
@@ -1571,6 +1588,18 @@ class CoordinationTableBuilder:
                         clean_reason = reason.replace("\n", " ").strip()
                         reason_preview = clean_reason[:50] + "..." if len(clean_reason) > 50 else clean_reason
                         cell += f"\n[italic dim]💭 Reason: {reason_preview}[/italic dim]"
+                elif event_type == "update_injected":
+                    label, details = args[0], args[1] if len(args) > 1 else ""
+                    cell = f"[bold magenta]📨 UPDATE RECEIVED: {label}[/bold magenta]"
+                    if details:
+                        clean_details = details.replace("\n", " ").strip()
+                        # Extract just the provider info if it's in the standard format
+                        if "from:" in clean_details:
+                            providers = clean_details.split("from:")[-1].strip()
+                            cell += f"\n[italic dim]📥 From: {providers}[/italic dim]"
+                        else:
+                            details_preview = clean_details[:60] + "..." if len(clean_details) > 60 else clean_details
+                            cell += f"\n[italic dim]{details_preview}[/italic dim]"
                 elif event_type == "final_answer":
                     label, preview = args[0], args[1] if len(args) > 1 else ""
                     cell = f"[bold green]🎯 FINAL ANSWER: {label}[/bold green]"
@@ -1586,6 +1615,8 @@ class CoordinationTableBuilder:
                 status = agent_states[agent]["status"]
                 if status in ["streaming", "answering"]:
                     cell = f"[cyan]🔄 ({status})[/cyan]"
+                elif status == "update_received":
+                    cell = "[magenta]📨 (update received)[/magenta]"
                 elif status == "voted":
                     cell = "[green]✅ (voted)[/green]"
                 elif status == "answered":

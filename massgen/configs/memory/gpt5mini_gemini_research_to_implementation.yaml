@@ -1,0 +1,127 @@
+# Example Configuration: Memory-Enhanced Research-to-Implementation Workflow
+#
+# Use Case: Demonstrates how memory enables strategic self-improvement
+#
+# This configuration demonstrates MassGen's self-evolution capabilities:
+# - Session 1: Research multi-agent AI papers using crawl4ai
+# - Session 2: Apply research findings to say how to improve MassGen itself
+# - Memory: Bridges research phase to implementation analysis
+# - Self-improvement: Agents use external research to enhance their own architecture
+#
+# Prerequisites:
+# 1. Start Qdrant server:
+#    docker run -d -p 6333:6333 -p 6334:6334 -v $(pwd)/.massgen/qdrant_storage:/qdrant/storage:z qdrant/qdrant
+#
+# 2. Start crawl4ai Docker container:
+#    docker pull unclecode/crawl4ai:latest
+#    docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
+#
+# 3. Verify both containers are running:
+#    docker ps | grep -E "qdrant|crawl4ai"
+#
+# Run Session 1 (Research Phase):
+#   uv run massgen --config @examples/memory/gpt5mini_gemini_research_to_implementation.yaml "Use crawl4ai to research the latest multi-agent AI papers and techniques from 2025. Focus on: coordination mechanisms, voting strategies, tool-use patterns, and architectural innovations."
+#
+# Run Session 2 (Implementation Analysis) - Same session:
+#   "Based on the multi-agent research from earlier, which techniques should we implement in MassGen to make it more state-of-the-art? Consider MassGen's current architecture and what would be most impactful."
+#
+
+# ====================
+# AGENT DEFINITIONS
+# ====================
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      cwd: "workspace1"
+
+      # Register crawl4ai custom tools for web scraping
+      custom_tools:
+        - name: ["crawl4ai_md", "crawl4ai_html", "crawl4ai_screenshot", "crawl4ai_pdf", "crawl4ai_execute_js", "crawl4ai_crawl"]
+          category: "web_scraping"
+          path: "massgen/tool/_web_tools/crawl4ai_tool.py"
+          function: ["crawl4ai_md", "crawl4ai_html", "crawl4ai_screenshot", "crawl4ai_pdf", "crawl4ai_execute_js", "crawl4ai_crawl"]
+
+  - id: "agent_b"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace2"
+
+      # Register crawl4ai custom tools for web scraping
+      custom_tools:
+        - name: ["crawl4ai_md", "crawl4ai_html", "crawl4ai_screenshot", "crawl4ai_pdf", "crawl4ai_execute_js", "crawl4ai_crawl"]
+          category: "web_scraping"
+          path: "massgen/tool/_web_tools/crawl4ai_tool.py"
+          function: ["crawl4ai_md", "crawl4ai_html", "crawl4ai_screenshot", "crawl4ai_pdf", "crawl4ai_execute_js", "crawl4ai_crawl"]
+
+
+# ====================
+# MEMORY CONFIGURATION
+# ====================
+memory:
+  enabled: true
+
+  conversation_memory:
+    enabled: true
+
+  persistent_memory:
+    enabled: true
+    on_disk: true
+    session_name: "research_to_implementation"  # Same session for both phases
+    vector_store: "qdrant"
+
+    # LLM configuration for memory operations
+    llm:
+      provider: "openai"
+      model: "gpt-4.1-nano-2025-04-14"
+
+    # Embedding configuration
+    embedding:
+      provider: "openai"
+      model: "text-embedding-3-small"
+
+    # Qdrant server configuration (required for multi-agent)
+    qdrant:
+      mode: "server"
+      host: "localhost"
+      port: 6333
+
+  # Context window management
+  compression:
+    trigger_threshold: 0.75  # Compress at 75%
+    target_ratio: 0.40       # Keep 40% after compression
+
+  # Memory retrieval configuration
+  retrieval:
+    limit: 10             # Get more facts for cross-phase synthesis
+    exclude_recent: true  # Only retrieve after compression
+
+# ====================
+# ORCHESTRATOR CONFIGURATION
+# ====================
+orchestrator:
+  # Multi-turn mode for interactive research sessions
+  session_storage: "research_sessions"
+  agent_temporary_workspace: "research_workspaces"
+  snapshot_storage: "research_snapshots"
+
+  # Give agents read access to MassGen codebase for Phase 2
+  context_paths:
+    - path: "massgen"
+      permission: "read"
+    - path: "docs"
+      permission: "read"
+
+# ====================
+# UI CONFIGURATION
+# ====================
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

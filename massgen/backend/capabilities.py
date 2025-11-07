@@ -272,6 +272,45 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         env_var=None,
         notes="Local model hosting. Capabilities depend on loaded model.",
     ),
+    "zai": BackendCapabilities(
+        backend_type="zai",
+        provider_name="ZAI (Z.AI)",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["glm-4.5", "custom"],
+        default_model="glm-4.5",
+        env_var="ZAI_API_KEY",
+        notes="OpenAI-compatible API from Z.AI. Supports GLM models.",
+    ),
+    "vllm": BackendCapabilities(
+        backend_type="vllm",
+        provider_name="vLLM",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["custom"],
+        default_model="custom",
+        env_var=None,
+        notes="vLLM inference server. Local model hosting with high throughput.",
+    ),
+    "sglang": BackendCapabilities(
+        backend_type="sglang",
+        provider_name="SGLang",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["custom"],
+        default_model="custom",
+        env_var=None,
+        notes="SGLang inference server. Fast local model serving.",
+    ),
     "inference": BackendCapabilities(
         backend_type="inference",
         provider_name="Inference (vLLM/SGLang)",
@@ -382,5 +421,16 @@ def validate_backend_config(backend_type: str, config: Dict) -> List[str]:
     if "mcp_servers" in config and config["mcp_servers"]:
         if "mcp" not in caps.supported_capabilities:
             errors.append(f"{backend_type} does not support MCP")
+
+    # Check for deprecated system prompt parameters (standardized across all backends)
+    if "append_system_prompt" in config:
+        errors.append(
+            "'append_system_prompt' in backend config is not supported. Use 'system_message' at the agent level (outside backend block) instead.",
+        )
+
+    if "system_prompt" in config:
+        errors.append(
+            "'system_prompt' in backend config is not supported. Use 'system_message' at the agent level (outside backend block) instead.",
+        )
 
     return errors

@@ -19,6 +19,7 @@ fastmcp>=2.12.3
 aiohttp>=3.8.0
 websockets>=11.0.0
 pydub>=0.25.1
+dspy>=2.4.0
 
 # Computer Use Tool (Optional)
 # Uncomment the dependencies you need:

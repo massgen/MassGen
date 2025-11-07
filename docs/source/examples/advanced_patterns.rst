@@ -380,7 +380,7 @@ Combine MassGen orchestration with AG2 code execution:
      --config @examples/ag2/ag2_coder_case_study.yaml \
      "Build a data analysis pipeline with visualizations"
 
-See :doc:`../user_guide/ag2_integration` for complete AG2 documentation.
+See :doc:`../user_guide/general_interoperability` for complete AG2 documentation.
 
 Performance Optimization Patterns
 ----------------------------------
