@@ -3092,14 +3092,6 @@ async def main(args):
         if dspy_paraphraser:
             kwargs["dspy_paraphraser"] = dspy_paraphraser
 
-        # Optionally enable DSPy paraphrasing
-        dspy_paraphraser = create_dspy_paraphraser_from_config(
-            config,
-            config_path=str(resolved_path) if resolved_path else None,
-        )
-        if dspy_paraphraser:
-            kwargs["dspy_paraphraser"] = dspy_paraphraser
-
         # Save execution metadata for debugging and reconstruction
         if args.question:
             # For single question mode, save metadata now (use original config before .massgen/ relocation)
