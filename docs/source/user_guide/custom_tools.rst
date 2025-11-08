@@ -734,11 +734,11 @@ For users with access to Claude 3.7 Sonnet or newer:
            - name: ["claude_computer_use"]
              path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
              function: ["claude_computer_use"]
-             default_params:
-               environment: "browser"
-               display_width: 1280
-               display_height: 800
-               max_iterations: 100
+             preset_args:
+               environment: "linux"
+               environment_config:
+                 container_name: "cua-container"
+                 display: ":99"
 
    ui:
      display_type: "rich_terminal"
