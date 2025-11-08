@@ -7,6 +7,7 @@ Practical examples demonstrating MassGen capabilities.
    :maxdepth: 2
    :caption: Example Categories
 
+   case_studies
    basic_examples
    advanced_patterns
 
@@ -34,5 +35,6 @@ Simple Multi-Agent Task
 More Examples
 -------------
 
+* :doc:`case_studies` - Real-world case studies by release version
 * :doc:`basic_examples` - Fundamental patterns
 * :doc:`advanced_patterns` - Complex scenarios

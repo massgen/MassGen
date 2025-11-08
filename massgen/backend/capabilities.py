@@ -272,6 +272,45 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         env_var=None,
         notes="Local model hosting. Capabilities depend on loaded model.",
     ),
+    "zai": BackendCapabilities(
+        backend_type="zai",
+        provider_name="ZAI (Z.AI)",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["glm-4.5", "custom"],
+        default_model="glm-4.5",
+        env_var="ZAI_API_KEY",
+        notes="OpenAI-compatible API from Z.AI. Supports GLM models.",
+    ),
+    "vllm": BackendCapabilities(
+        backend_type="vllm",
+        provider_name="vLLM",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["custom"],
+        default_model="custom",
+        env_var=None,
+        notes="vLLM inference server. Local model hosting with high throughput.",
+    ),
+    "sglang": BackendCapabilities(
+        backend_type="sglang",
+        provider_name="SGLang",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["custom"],
+        default_model="custom",
+        env_var=None,
+        notes="SGLang inference server. Fast local model serving.",
+    ),
     "inference": BackendCapabilities(
         backend_type="inference",
         provider_name="Inference (vLLM/SGLang)",
@@ -297,6 +336,140 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         default_model="custom",
         env_var=None,  # Depends on underlying LLM backend
         notes="AutoGen framework integration. Supports code execution with multiple executor types (Local, Docker, Jupyter). Uses any OpenAI-compatible LLM backend. MCP support planned.",
+    ),
+    # Individual ChatCompletion Provider Backends
+    "cerebras": BackendCapabilities(
+        backend_type="cerebras",
+        provider_name="Cerebras AI",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["llama-3.3-70b", "llama-3.1-70b", "llama-3.1-8b"],
+        default_model="llama-3.3-70b",
+        env_var="CEREBRAS_API_KEY",
+        notes="OpenAI-compatible API. Base URL: https://api.cerebras.ai/v1. Ultra-fast inference with Cerebras WSE hardware.",
+    ),
+    "together": BackendCapabilities(
+        backend_type="together",
+        provider_name="Together AI",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=[
+            "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+            "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+            "mistralai/Mixtral-8x7B-Instruct-v0.1",
+        ],
+        default_model="meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+        env_var="TOGETHER_API_KEY",
+        notes="OpenAI-compatible API. Base URL: https://api.together.xyz/v1. Access to open-source models at scale.",
+    ),
+    "fireworks": BackendCapabilities(
+        backend_type="fireworks",
+        provider_name="Fireworks AI",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=[
+            "accounts/fireworks/models/llama-v3p3-70b-instruct",
+            "accounts/fireworks/models/llama-v3p1-405b-instruct",
+            "accounts/fireworks/models/qwen2p5-72b-instruct",
+        ],
+        default_model="accounts/fireworks/models/llama-v3p3-70b-instruct",
+        env_var="FIREWORKS_API_KEY",
+        notes="OpenAI-compatible API. Base URL: https://api.fireworks.ai/inference/v1. Fast inference for production workloads.",
+    ),
+    "groq": BackendCapabilities(
+        backend_type="groq",
+        provider_name="Groq",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=[
+            "llama-3.3-70b-versatile",
+            "llama-3.1-70b-versatile",
+            "mixtral-8x7b-32768",
+        ],
+        default_model="llama-3.3-70b-versatile",
+        env_var="GROQ_API_KEY",
+        notes="OpenAI-compatible API. Base URL: https://api.groq.com/openai/v1. Ultra-fast inference with LPU hardware.",
+    ),
+    "openrouter": BackendCapabilities(
+        backend_type="openrouter",
+        provider_name="OpenRouter",
+        supported_capabilities={
+            "mcp",
+            "audio_understanding",
+            "video_understanding",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["custom"],  # OpenRouter supports 200+ models
+        default_model="custom",
+        env_var="OPENROUTER_API_KEY",
+        notes="OpenAI-compatible API. Base URL: https://openrouter.ai/api/v1. Unified access to 200+ AI models. Audio/video understanding available on compatible models (v0.0.30+).",
+    ),
+    "moonshot": BackendCapabilities(
+        backend_type="moonshot",
+        provider_name="Kimi (Moonshot AI)",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
+        default_model="moonshot-v1-128k",
+        env_var="MOONSHOT_API_KEY",
+        notes="OpenAI-compatible API. Base URL: https://api.moonshot.cn/v1. Chinese language optimized models with long context windows.",
+    ),
+    "nebius": BackendCapabilities(
+        backend_type="nebius",
+        provider_name="Nebius AI Studio",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["Qwen/Qwen3-4B-fast", "custom"],
+        default_model="Qwen/Qwen3-4B-fast",
+        env_var="NEBIUS_API_KEY",
+        notes="OpenAI-compatible API. Base URL: https://api.studio.nebius.ai/v1. Nebius AI Studio cloud platform.",
+    ),
+    "poe": BackendCapabilities(
+        backend_type="poe",
+        provider_name="POE",
+        supported_capabilities={
+            "mcp",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["custom"],
+        default_model="custom",
+        env_var="POE_API_KEY",
+        notes="OpenAI-compatible API via POE platform. Access to various AI models through POE's ecosystem.",
+    ),
+    "qwen": BackendCapabilities(
+        backend_type="qwen",
+        provider_name="Qwen (Alibaba Cloud)",
+        supported_capabilities={
+            "mcp",
+            "audio_understanding",
+            "video_understanding",
+        },
+        builtin_tools=[],
+        filesystem_support="mcp",
+        models=["qwen-max", "qwen-plus", "qwen-turbo", "qwen3-vl-30b-a3b-thinking"],
+        default_model="qwen-max",
+        env_var="QWEN_API_KEY",
+        notes="OpenAI-compatible API. Base URL: https://dashscope-intl.aliyuncs.com/compatible-mode/v1. Qwen models from Alibaba Cloud. Audio/video understanding support (v0.0.30+).",
     ),
 }
 
@@ -382,5 +555,16 @@ def validate_backend_config(backend_type: str, config: Dict) -> List[str]:
     if "mcp_servers" in config and config["mcp_servers"]:
         if "mcp" not in caps.supported_capabilities:
             errors.append(f"{backend_type} does not support MCP")
+
+    # Check for deprecated system prompt parameters (standardized across all backends)
+    if "append_system_prompt" in config:
+        errors.append(
+            "'append_system_prompt' in backend config is not supported. Use 'system_message' at the agent level (outside backend block) instead.",
+        )
+
+    if "system_prompt" in config:
+        errors.append(
+            "'system_prompt' in backend config is not supported. Use 'system_message' at the agent level (outside backend block) instead.",
+        )
 
     return errors

@@ -7,16 +7,342 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
-**v0.1.4 (October 2025)** - Multimodal Generation Tools & Binary File Protection
-Comprehensive generation tools for images, videos, audio, and documents with OpenAI APIs, binary file blocking for security, web crawling integration, and enhanced documentation infrastructure.
+**v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
+Complete session management system with conversation restoration, computer use automation tools for browser and desktop control, enhanced config builder with fuzzy model matching, and expanded backend support.
 
-**v0.1.3 (October 2025)** - Post-Evaluation Tools & Multimodal Understanding
-Post-evaluation workflow with submit/restart capabilities, custom multimodal understanding tools, Docker sudo mode, and enhanced config builder.
+**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
+Complete automation infrastructure for LLM agents with real-time status tracking, silent execution mode, and DSPy-powered question paraphrasing for enhanced multi-agent diversity.
 
-**v0.1.2 (October 2025)** - Intelligent Planning Mode & Model Updates
-Automatic irreversibility analysis for MCP tools, selective tool blocking, Claude 4.5 Haiku support, and Grok web search improvements.
+**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
+Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
 
 ---
+
+## [0.1.9] - 2025-11-07
+
+### Added
+- **Session Management System**: Comprehensive session state tracking and restoration for multi-turn conversations
+  - New `massgen/session/` module with session state and registry management (530 lines total)
+  - **SessionState** dataclass for complete session state including conversation history, workspace paths, and turn metadata (`_state.py`, 219 lines)
+  - **SessionRegistry** for listing, managing, and restoring previous sessions (`_registry.py`, 311 lines)
+  - **restore_session()** function for seamless session continuation across CLI invocations
+  - Session metadata tracking including winning agents history and orchestrator turn data
+  - Automatic session storage with unique identifiers and timestamps
+  - Test suite in `test_session_registry.py` (201 lines)
+
+- **Computer Use Tools**: Browser and desktop automation capabilities for multi-agent workflows
+  - **General Computer Use Tool**: OpenAI computer-use-preview integration for automated browser/computer control (`massgen/tool/_computer_use/computer_use_tool.py`, 741 lines)
+    - Support for browser environment (Playwright) and Docker container execution
+    - Action execution: click, type, scroll, navigate, screenshot analysis
+    - Configurable max iterations and safety controls
+  - **Claude Computer Use Tool**: Anthropic Claude Computer Use API integration (`massgen/tool/_claude_computer_use/claude_computer_use_tool.py`, 473 lines)
+    - Native Claude Computer Use beta API support
+    - Browser and desktop control with safety confirmations
+    - Async execution with Playwright integration
+  - **Gemini Computer Use Tool**: Google Gemini-based computer control (`massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py`, 503 lines)
+    - Gemini model integration for computer use workflows
+    - Screenshot analysis and action generation
+  - **Browser Automation Tool**: Lightweight browser automation for specific tasks (`massgen/tool/_browser_automation/browser_automation_tool.py`, 176 lines)
+    - Focused browser automation without full computer use overhead
+  - Comprehensive test suite in `test_computer_use.py` (629 lines)
+
+- **OpenAI Operator API Handler**: Support for OpenAI's computer-use-preview model
+  - New `massgen/api_params_handler/_openai_operator_api_params_handler.py` (72 lines)
+  - Specialized parameter handling for computer use actions
+  - Integration with computer use tool execution flow
+
+### Changed
+- **Config Builder Enhancement**: Intelligent model matching and discovery
+  - **Fuzzy Model Name Matching**: New `massgen/utils/model_matcher.py` (214 lines) allowing approximate model name input
+  - **Model Catalog System**: New `massgen/utils/model_catalog.py` (218 lines) with curated lists of common models across providers
+  - Enhanced `massgen/config_builder.py` with automatic model search and suggestions
+  - Support for partial model names with intelligent completion (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
+  - Contribution from acrobat3 (K. from JP)
+
+- **Backend Capabilities Enhancement**: Expanded provider support with six new backend registrations
+  - Added **Cerebras AI** backend capabilities (llama models with WSE hardware acceleration)
+  - Added **Together AI** backend capabilities (Meta-Llama, Mixtral models)
+  - Added **Fireworks AI** backend capabilities (Llama, Qwen models with fast inference)
+  - Added **Groq** backend capabilities (Llama, Mixtral with LPU hardware)
+  - Added **OpenRouter** backend capabilities (unified access to 200+ models with audio/video support)
+  - Added **Moonshot (Kimi)** backend capabilities (Chinese-optimized models with long context)
+  - Updated `massgen/backend/capabilities.py` with comprehensive backend specifications
+
+- **Memory System Improvement**: Enhanced memory update logic for multi-agent coordination
+  - New `massgen/memory/_update_prompts.py` (276 lines) with specialized update prompts for mem0
+  - **MASSGEN_UNIVERSAL_UPDATE_MEMORY_PROMPT**: Philosophy for accumulating qualitative patterns vs statistics
+  - Improved fact merging logic focusing on actionable tool usage patterns and technical insights
+
+- **Chat Agent Enhancement**: Session restoration and improved orchestrator restart handling
+  - Session state restoration in `massgen/chat_agent.py`
+  - Enhanced turn tracking and workspace persistence
+  - Improved logging and coordination with orchestrator restarts
+
+- **CLI Enhancement**: Extended command-line interface for session management
+  - Session listing and restoration commands in `massgen/cli.py`
+  - Enhanced display selection and output formatting
+  - Support for continuing previous sessions with automatic state restoration
+
+### Documentations, Configurations and Resources
+
+- **Diversity System Documentation**: Comprehensive guide for increasing agent diversity
+  - New `docs/source/user_guide/diversity.rst` (388 lines)
+  - Covers answer novelty requirements (lenient/balanced/strict)
+  - Documents DSPy question paraphrasing integration (from v0.1.8)
+  - Best practices for multi-agent diversity strategies
+  - Configuration examples and recommendations
+
+- **Memory System Documentation**: Updated memory user guide
+  - Updated `docs/source/user_guide/memory.rst` with enhanced memory update logic and configuration
+
+- **Computer Use Configuration Examples**: Five YAML configurations demonstrating computer use capabilities
+  - `massgen/configs/tools/custom_tools/claude_computer_use_example.yaml`: Claude-specific computer use
+  - `massgen/configs/tools/custom_tools/gemini_computer_use_example.yaml`: Gemini-specific computer use
+  - `massgen/configs/tools/custom_tools/computer_use_example.yaml`: General computer use with OpenAI
+  - `massgen/configs/tools/custom_tools/computer_use_docker_example.yaml`: Docker-based computer use
+  - `massgen/configs/tools/custom_tools/computer_use_browser_example.yaml`: Browser automation focus
+
+- **Session Management Configuration**: Example demonstrating session continuation
+  - `massgen/configs/memory/grok4_gpt5_gemini_mcp_filesystem_test_with_claude_code.yaml`: Multi-turn session with MCP filesystem
+
+- **Computer Use Documentation**:
+  - New `massgen/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md`: Comprehensive guide for computer use tools (494 lines)
+  - New `scripts/computer_use_setup.md`: Setup instructions for computer use tools
+  - New `scripts/setup_docker_cua.sh`: Automated Docker setup script for computer use
+
+### Technical Details
+- **Major Focus**: Session management with conversation restoration, computer use automation tools, intelligent config builder with fuzzy matching, expanded backend support, memory system enhancements
+- **Contributors**: @franklinnwren @ncrispino @Henry-811 and the MassGen team
+
+## [0.1.8] - 2025-11-05
+
+### Added
+- **Automation Mode for LLM Agents**: Complete infrastructure for running MassGen via LLM agents and programmatic workflows
+  - New `--automation` CLI flag for silent execution with minimal output (~10 lines vs 250-3,000+)
+  - New `SilentDisplay` class in `massgen/frontend/displays/silent_display.py` for automation-friendly output
+  - Real-time `status.json` monitoring file updated every 2 seconds via enhanced `CoordinationTracker`
+  - Meaningful exit codes: 0 (success), 1 (config error), 2 (execution error), 3 (timeout), 4 (interrupted)
+  - Automatic workspace isolation for parallel execution with unique suffixes
+  - Meta-coordination capabilities: MassGen running MassGen configurations
+  - Automatic log directory creation and management for automation sessions
+
+- **DSPy Question Paraphrasing Integration**: Intelligent question diversity for multi-agent coordination
+  - New `massgen/dspy_paraphraser.py` module with semantic-preserving paraphrasing (557 lines)
+  - Three paraphrasing strategies: "diverse", "balanced" (default), "conservative"
+  - Configurable number of variants per orchestrator session
+  - Automatic semantic validation using `SemanticValidationSignature` to ensure meaning preservation
+  - Thread-safe caching system with SHA-256 hashing for performance
+  - Support for all backends (Gemini, OpenAI, Claude, etc.) as paraphrasing engines
+
+- **Case Study Summary**: Comprehensive documentation of MassGen capabilities
+  - New `docs/CASE_STUDIES_SUMMARY.md` providing centralized overview of 33 case studies (368 lines)
+  - Organized by category: Release Features, Research, Travel, Creative, In Development, Planned
+  - Covers versions v0.0.3 to v0.1.5 with status tracking and links to videos
+  - Statistics: 19 completed, 8 with video demonstrations, 6 categories
+
+### Changed
+- **Orchestrator Enhancement**: Integration of DSPy paraphrasing and automation tracking
+  - Question variant distribution to different agents based on configured strategy
+  - Improved coordination event logging with structured status exports
+
+- **CLI Enhancement**: Extended command-line interface for automation workflows
+  - Enhanced display selection logic automatically choosing SilentDisplay in automation mode
+  - Improved output formatting optimized for LLM agent parsing and monitoring
+
+### Documentations, Configurations and Resources
+
+- **Case Study**: Meta-level self-analysis demonstrating automation mode
+  - New `docs/source/examples/case_studies/meta-self-analysis-automation-mode.md`: Comprehensive case study showing MassGen analyzing its own v0.1.8 codebase using automation mode
+
+- **Automation Documentation**: Comprehensive guides for LLM agent integration
+  - New `AI_USAGE.md`: Complete guide for LLM agents running MassGen (319 lines)
+  - New `docs/source/user_guide/automation.rst`: Full automation guide with BackgroundShellManager patterns (890 lines)
+  - New `docs/source/reference/status_file.rst`: Complete `status.json` schema reference with field-by-field documentation (565 lines)
+  - Updated `README.md` and `README_PYPI.md` with automation mode sections (135 lines each)
+
+- **DSPy Documentation**: Complete implementation and usage guide
+  - New `massgen/backend/docs/DSPY_IMPLEMENTATION_GUIDE.md`: Comprehensive DSPy integration guide (653 lines)
+  - Covers quick start, configuration, strategies, troubleshooting, and semantic validation
+  - Includes paraphrasing examples and best practices
+
+- **Meta-Coordination Configurations**: MassGen running MassGen examples
+  - `massgen/configs/meta/massgen_runs_massgen.yaml`: Single agent autonomously running MassGen experiments
+  - `massgen/configs/meta/massgen_suggests_to_improve_massgen.yaml`: Self-improvement configuration
+  - Demonstrates automation mode usage for meta-coordination workflows
+
+- **DSPy Configuration Example**: New YAML configuration for DSPy-enabled coordination
+  - `massgen/configs/basic/multi/three_agents_dspy_enabled.yaml`: Three-agent setup with DSPy paraphrasing
+
+- **Case Study Summary Documentation**: Centralized case study reference
+  - New `docs/CASE_STUDIES_SUMMARY.md`: Comprehensive overview of all MassGen case studies with categorization and status tracking
+
+### Technical Details
+- **Major Focus**: Automation infrastructure for LLM agents, DSPy-powered question paraphrasing, meta-coordination capabilities, comprehensive case study documentation
+- **Contributors**: @ncrispino @praneeth999 @franklinnwren @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.1.7] - 2025-11-03
+
+### Added
+- **Agent Task Planning System**: MCP-based task management with dependency tracking
+  - New `massgen/mcp_tools/planning/` module with dedicated planning server (`_planning_mcp_server.py`)
+  - Task dataclasses with dependency validation and status management (`planning_dataclasses.py`)
+  - Support for task states (pending/in_progress/completed/blocked) with automatic transitions based on dependencies
+  - Orchestrator integration for plan-aware coordination
+  - Test suite in `test_planning_integration.py` and `test_planning_tools.py`
+
+- **Background Shell Execution**: Long-running command support with persistent sessions
+  - New `BackgroundShell` class in `massgen/filesystem_manager/background_shell.py`
+  - Shell lifecycle management with output streaming and real-time monitoring
+  - Automatic timeout handling for long-running processes
+  - Enhanced code execution server with background execution capabilities
+  - Test coverage in `test_background_shell.py`
+
+- **Preemption Coordination**: Multi-agent coordination with interruption support
+  - Agents can preempt ongoing coordination to submit better answers without full restart
+  - Enhanced coordination tracker with preemption event logging
+  - Improved orchestrator logic to preserve partial progress during preemption
+
+### Fixed
+- **System Message Handling**: Resolved system message extraction in Claude Code backend for background shell execution
+- **Case Study Documentation**: Fixed broken links and outdated examples in older case studies
+
+### Documentations, Configurations and Resources
+
+- **Documentation Updates**: New user guides and design documentation
+  - New `docs/source/user_guide/agent_task_planning.rst`: Task planning guide with usage patterns and API reference
+  - Updated `docs/source/user_guide/code_execution.rst`: Added 122 lines for background shell usage
+  - New `docs/dev_notes/agent_planning_coordination_design.md`: Comprehensive design document for agent planning and coordination system
+  - New `docs/dev_notes/preempt_not_restart_design.md`: 456-line design document with preemption algorithms
+  - Updated `docs/source/development/architecture.rst`: Added 61 lines for preemption coordination architecture
+
+- **Configuration Examples**: New YAML configurations demonstrating v0.1.7 features
+  - `example_task_todo.yaml`: Task planning configuration
+  - `background_shell_demo.yaml`: Background shell execution demonstration
+
+### Technical Details
+- **Major Focus**: Agent task planning with dependencies, background command execution, preemption-based coordination
+- **Contributors**: @ncrispino @Henry-811 and the MassGen team
+
+## [0.1.6] - 2025-10-31
+
+### Added
+- **Framework Interoperability**: External agent framework integration as MassGen custom tools
+  - New `massgen/tool/_extraframework_agents/` module with 5 framework integrations
+  - **AG2 Lesson Planner Tool**: Nested chat functionality wrapped as custom tool for multi-agent lesson planning (supports streaming)
+  - **LangGraph Lesson Planner Tool**: LangGraph graph-based workflows integrated as tool
+  - **AgentScope Lesson Planner Tool**: AgentScope agent system wrapped for lesson creation
+  - **OpenAI Assistants Lesson Planner Tool**: OpenAI Assistants API integrated as tool
+  - **SmoLAgent Lesson Planner Tool**: HuggingFace SmoLAgent integration for lesson planning
+  - Enables MassGen agents to delegate tasks to specialized external frameworks
+  - Each framework runs autonomously and returns results to MassGen orchestrator
+  - Note: Only AG2 currently supports streaming; other frameworks return complete results
+
+- **Configuration Validator**: Comprehensive YAML configuration validation system
+  - New `ConfigValidator` class in `massgen/config_validator.py` for pre-flight validation
+  - Memory configuration validation with detailed error messages
+  - Pre-commit hook integration for automatic config validation
+  - Comprehensive test suite in `massgen/tests/test_config_validator.py`
+  - Validates agent configurations, backend parameters, tool settings, and memory options
+  - Provides actionable error messages with suggestions for common mistakes
+
+### Changed
+- **Backend Architecture Refactoring**: Unified tool execution with ToolExecutionConfig
+  - New `ToolExecutionConfig` dataclass in `base_with_custom_tool_and_mcp.py` for standardized tool handling
+  - Refactored `ResponseBackend` with unified tool execution flow
+  - Refactored `ChatCompletionsBackend` with unified tool execution flow
+  - Refactored `ClaudeBackend` with unified tool execution methods
+  - Eliminates duplicate code paths between custom tools and MCP tools
+  - Consistent error handling and status reporting across all tool types
+  - Improved maintainability and extensibility for future tool systems
+
+- **Gemini Backend Simplification**: Major architectural cleanup and consolidation
+  - Removed `gemini_mcp_manager.py` module
+  - Removed `gemini_trackers.py` module
+  - Refactored `gemini.py` to use manual tool execution via base class
+  - Streamlined tool handling and cleanup logic
+  - Removed continuation logic and duplicate code
+  - Updated `_gemini_formatter.py` for simplified tool conversion
+  - Net reduction of 1,598 lines through consolidation
+  - Improved maintainability and performance
+
+- **Custom Tool System Enhancement**: Improved tool management and execution
+  - Enhanced `ToolManager` with category management capabilities
+  - Improved tool registration and validation system
+  - Enhanced tool result handling and error reporting
+  - Better support for async tool execution
+  - Improved tool schema generation for LLM consumption
+
+### Documentations, Configurations and Resources
+
+- **Framework Interoperability Examples**: 8 new configuration files demonstrating external framework integration
+  - **AG2 Examples**: `ag2_lesson_planner_example.yaml`, `ag2_and_langgraph_lesson_planner.yaml`, `ag2_and_openai_assistant_lesson_planner.yaml`
+  - **LangGraph Examples**: `langgraph_lesson_planner_example.yaml`
+  - **AgentScope Examples**: `agentscope_lesson_planner_example.yaml`
+  - **OpenAI Assistants Examples**: `openai_assistant_lesson_planner_example.yaml`
+  - **SmoLAgent Examples**: `smolagent_lesson_planner_example.yaml`
+  - **Multi-Framework Examples**: `two_models_with_tools_example.yaml`
+
+### Technical Details
+- **Major Focus**: Framework interoperability for external agent integration, unified tool execution architecture, Gemini backend simplification, and configuration validation system
+- **Contributors**: @Eric-Shang @praneeth999 @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.1.5] - 2025-10-29
+
+### Added
+- **Memory System**: Complete long-term memory implementation with semantic retrieval
+  - New `massgen/memory/` module with comprehensive memory management
+  - **PersistentMemory** via mem0 integration for semantic fact storage and retrieval
+  - **ConversationMemory** for short-term verbatim message tracking
+  - **Automatic Context Compression** when approaching token limits
+  - **Memory Sharing for Multi-Turn Conversations** with turn-aware filtering to prevent temporal leakage
+  - **Session Management** for memory isolation and continuation across runs
+  - **Qdrant Vector Database Integration** for efficient semantic search (server and local modes)
+  - **Context Monitoring** with real-time token usage tracking
+  - Fact extraction prompts with customizable LLM and embedding providers
+  - Supports OpenAI, Anthropic, Groq, and other mem0-compatible providers
+
+- **Memory Configuration Support**: New YAML configuration options
+  - Memory enable/disable toggle at global and per-agent levels
+  - Configurable compression thresholds (trigger_threshold, target_ratio)
+  - Retrieval settings (limit, exclude_recent for smart retrieval)
+  - Session naming for continuation and cross-session memory
+  - LLM and embedding provider configuration for mem0
+  - Qdrant connection settings (server/local mode, host, port, path)
+
+### Changed
+- **Chat Agent Enhancement**: Memory integration for agent workflows
+  - Memory recording after agent responses (conversation and persistent)
+  - Memory retrieval on restart/reset for context restoration
+  - Integration with compression and context monitoring modules
+
+- **Orchestrator Enhancement**: Memory coordination for multi-agent workflows
+  - Memory initialization and management across agent lifecycles
+  - Memory cleanup on orchestrator shutdown
+
+### Documentations, Configurations and Resources
+
+- **Memory Documentation**: Comprehensive memory system user guide
+  - New `docs/source/user_guide/memory.rst`
+  - Complete usage guide with quick start, configuration reference, and examples
+  - Design decisions documentation explaining architecture choices
+  - Troubleshooting guide for common memory issues
+  - Monitoring and debugging instructions with log examples
+  - API reference for PersistentMemory, ConversationMemory, and ContextMonitor
+
+- **Configuration Examples**: 5 new memory-focused YAML configurations
+  - `gpt5mini_gemini_context_window_management.yaml`: Multi-agent with context compression
+  - `gpt5mini_gemini_research_to_implementation.yaml`: Research to implementation workflow
+  - `gpt5mini_high_reasoning_gemini.yaml`: High reasoning agents with memory
+  - `gpt5mini_gemini_baseline_research_to_implementation.yaml`: Baseline research workflow
+  - `single_agent_compression_test.yaml`: Testing compression behavior
+
+- **Infrastructure and Testing**:
+  - Memory test suite with 4 test files in `massgen/tests/memory/`
+  - Additional memory tests: `test_agent_memory.py`, `test_conversation_memory.py`, `test_orchestrator_memory.py`, `test_persistent_memory.py`
+
+### Technical Details
+- **Major Focus**: Long-term memory system with semantic retrieval and memory sharing for multi-turn conversations
+- **Contributors**: @ncrispino @qidanrui @kitrakrev @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.4] - 2025-10-27
 
@@ -60,14 +386,6 @@ Automatic irreversibility analysis for MCP tools, selective tool blocking, Claud
 - **Binary File Protection Documentation**: Enhanced protected paths user guide
   - Updated `docs/source/user_guide/protected_paths.rst` with binary file protection section
   - Documents 40+ protected binary file types and specialized tool suggestions
-
-- **Enhanced Pre-commit Hooks**: Improved code quality automation
-  - Updated `.pre-commit-config.yaml` with additional checks
-  - Better README synchronization and validation
-
-- **Documentation Automation**: CI/CD for documentation deployment
-  - New `.github/workflows/docs-automation.yml` for automated doc builds
-  - Removed legacy docs.yml workflow
 
 - **Configuration Examples**: 9 new YAML configuration files
   - **Generation Tools**: 8 multimodal generation configurations
@@ -749,7 +1067,7 @@ Automatic irreversibility analysis for MCP tools, selective tool blocking, Claud
 
 ### Added
 - **Multi-Turn Filesystem Support**: Complete implementation for persistent filesystem context across conversation turns
-  - Automatic session management when `session_storage` is configured (no flag needed)
+  - Automatic session management (no flag needed)
   - Persistent workspace management across conversation turns with `.massgen` directory
   - Workspace snapshot preservation and restoration between turns
   - Support for maintaining file context and modifications throughout multi-turn sessions

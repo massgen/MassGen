@@ -197,7 +197,7 @@ When using the AG2 backend, agents gain access to the AG2 framework's execution 
            executor: "docker"
            work_dir: "coding"
 
-See :doc:`ag2_integration` for detailed AG2 tool configuration and usage.
+See :doc:`general_interoperability` for detailed AG2 tool configuration and usage.
 
 Combining Tool Systems
 ----------------------
@@ -456,7 +456,7 @@ Related Documentation
 * :doc:`backends` - Complete backend capabilities matrix
 * :doc:`file_operations` - File system operations and safety
 * :doc:`project_integration` - Secure project access with context paths
-* :doc:`ag2_integration` - AG2 framework integration
+* :doc:`general_interoperability` - Framework interoperability (including AG2)
 * :doc:`../examples/basic_examples` - See tools in action
 * :doc:`../reference/yaml_schema` - Complete YAML configuration reference
 

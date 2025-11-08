@@ -40,12 +40,14 @@ class EventType(str, Enum):
     AGENT_ERROR = "agent_error"
     AGENT_TIMEOUT = "agent_timeout"
     AGENT_CANCELLED = "agent_cancelled"
+    UPDATE_INJECTED = "update_injected"
 
 
 ACTION_TO_EVENT = {
     ActionType.ERROR: EventType.AGENT_ERROR,
     ActionType.TIMEOUT: EventType.AGENT_TIMEOUT,
     ActionType.CANCELLED: EventType.AGENT_CANCELLED,
+    ActionType.UPDATE_INJECTED: EventType.UPDATE_INJECTED,
 }
 
 
@@ -621,6 +623,183 @@ class CoordinationTracker:
             "final_winner": self.final_winner,
             "agent_count": len(self.agent_ids),
         }
+
+    def save_status_file(self, log_dir: Path, orchestrator=None):
+        """Save current coordination status to status.json for real-time monitoring.
+
+        This file is continuously updated during coordination to provide real-time
+        status monitoring for automation tools and LLM agents.
+
+        Args:
+            log_dir: Directory to save the status file
+            orchestrator: Optional orchestrator reference for accessing agent states
+        """
+        try:
+            log_dir = Path(log_dir)
+            status_file = log_dir / "status.json"
+
+            # Calculate elapsed time
+            elapsed = (time.time() - self.start_time) if self.start_time else 0
+
+            # Determine current coordination phase
+            phase = "initial_answer"
+            if self.is_final_round:
+                phase = "presentation"
+            elif len(self.votes) > 0:
+                phase = "enforcement"
+
+            # Determine which agent is currently active (streaming)
+            # An agent is active if it hasn't answered yet and others have, or if it's in voting phase without a vote
+            active_agent = None
+            if orchestrator and hasattr(orchestrator, "agent_states"):
+                for agent_id in self.agent_ids:
+                    agent_state = orchestrator.agent_states.get(agent_id)
+                    if agent_state:
+                        # Agent is active if it hasn't completed its current task
+                        # Check if agent is waiting to answer or vote
+                        answers = self.answers_by_agent.get(agent_id, [])
+                        has_answer = len(answers) > 0
+
+                        # In voting phase, active agent is one without a vote
+                        if len(self.votes) > 0 and not agent_state.has_voted:
+                            active_agent = agent_id
+                            break
+                        # In answer phase, active agent is one without an answer (if others have answered)
+                        elif not has_answer and any(len(self.answers_by_agent.get(aid, [])) > 0 for aid in self.agent_ids if aid != agent_id):
+                            active_agent = agent_id
+                            break
+                        # If no one has answered yet, first agent is active
+                        elif not has_answer and not any(len(self.answers_by_agent.get(aid, [])) > 0 for aid in self.agent_ids):
+                            active_agent = self.agent_ids[0]
+                            break
+
+            # Build agent status entries with per-agent details
+            agent_statuses = {}
+            for agent_id in self.agent_ids:
+                answers = self.answers_by_agent.get(agent_id, [])
+                latest_answer_label = answers[-1].label if answers else None
+
+                # Find vote cast by this agent
+                agent_vote = None
+                for vote in self.votes:
+                    if vote.voter_id == agent_id:
+                        agent_vote = {
+                            "voted_for_agent": vote.voted_for,
+                            "voted_for_label": vote.voted_for_label,
+                            "reason_preview": vote.reason[:100] if vote.reason else None,
+                        }
+                        break
+
+                # Determine agent status from orchestrator if available
+                status = "waiting"  # Default
+                error = None
+                if orchestrator and hasattr(orchestrator, "agent_states"):
+                    agent_state = orchestrator.agent_states.get(agent_id)
+                    if agent_state:
+                        # Infer status from AgentState attributes
+                        if agent_state.is_killed:
+                            status = "error" if not agent_state.timeout_reason else "timeout"
+                        elif agent_state.has_voted:
+                            status = "voted"
+                        elif agent_state.answer:
+                            status = "answered"
+                        elif agent_state.restart_pending:
+                            status = "restarting"
+                        else:
+                            # Check if agent is currently streaming by looking at coordination phase
+                            # If we have answers from other agents but not this one, it's likely streaming
+                            if answers:
+                                status = "streaming"
+                            else:
+                                status = "waiting"
+
+                        # Check for error conditions
+                        if agent_state.is_killed:
+                            if agent_state.timeout_reason:
+                                error = {
+                                    "type": "timeout",
+                                    "message": agent_state.timeout_reason,
+                                    "timestamp": time.time(),
+                                }
+                            else:
+                                error = {
+                                    "type": "error",
+                                    "message": "Agent was killed",
+                                    "timestamp": time.time(),
+                                }
+
+                # Get last activity timestamp
+                last_activity = self.start_time
+                if answers:
+                    last_activity = answers[-1].timestamp
+                elif agent_vote and hasattr(self.votes[-1], "timestamp"):
+                    for vote in self.votes:
+                        if vote.voter_id == agent_id:
+                            last_activity = vote.timestamp
+                            break
+
+                agent_statuses[agent_id] = {
+                    "status": status,
+                    "answer_count": len(answers),
+                    "latest_answer_label": latest_answer_label,
+                    "vote_cast": agent_vote,
+                    "times_restarted": self.agent_rounds.get(agent_id, 0),
+                    "last_activity": last_activity,
+                    "error": error,
+                }
+
+            # Aggregate vote counts by answer label
+            vote_counts = {}
+            for vote in self.votes:
+                label = vote.voted_for_label
+                vote_counts[label] = vote_counts.get(label, 0) + 1
+
+            # Calculate completion percentage estimate
+            # Each agent needs to: (1) provide answer, (2) cast vote
+            total_steps = len(self.agent_ids) * 2
+            completed_steps = sum(len(answers) for answers in self.answers_by_agent.values()) + len(self.votes)
+            completion_pct = min(100, int((completed_steps / total_steps) * 100)) if total_steps > 0 else 0
+
+            # Get final answer preview if available
+            final_answer_preview = None
+            if self.final_winner and self.final_winner in self.final_answers:
+                final_content = self.final_answers[self.final_winner].content
+                final_answer_preview = final_content[:200] if final_content else None
+
+            # Build complete status data structure
+            status_data = {
+                "meta": {
+                    "last_updated": time.time(),
+                    "session_id": log_dir.name,
+                    "log_dir": str(log_dir),
+                    "question": self.user_prompt,
+                    "start_time": self.start_time,
+                    "elapsed_seconds": round(elapsed, 3),
+                },
+                "coordination": {
+                    "phase": phase,
+                    "active_agent": active_agent,
+                    "completion_percentage": completion_pct,
+                    "is_final_presentation": self.is_final_round,
+                },
+                "agents": agent_statuses,
+                "results": {
+                    "votes": vote_counts,
+                    "winner": self.final_winner,
+                    "final_answer_preview": final_answer_preview,
+                },
+            }
+
+            # Write atomically: write to temp file, then rename
+            temp_file = status_file.with_suffix(".json.tmp")
+            with open(temp_file, "w", encoding="utf-8") as f:
+                json.dump(status_data, f, indent=2, default=str)
+
+            # Atomic rename
+            temp_file.replace(status_file)
+
+        except Exception as e:
+            logger.warning(f"Failed to save status file: {e}", exc_info=True)
 
     def save_coordination_logs(self, log_dir):
         """Save all coordination data and create timeline visualization.

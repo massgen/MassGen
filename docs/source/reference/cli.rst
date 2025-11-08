@@ -65,6 +65,10 @@ CLI Parameters
      - Disable real-time logging
    * - ``--debug``
      - Enable debug mode with verbose logging. Debug logs saved to ``agent_outputs/log_{time}/massgen_debug.log``
+   * - ``--session-id ID``
+     - Load memory from a previous session by ID (e.g., ``session_20251028_143000``). Allows continuing conversations with memory context from prior runs. Use with ``--list-sessions`` to find available sessions
+   * - ``--list-sessions``
+     - List all available memory sessions with their metadata (session IDs, timestamps, models, status). Sessions are automatically tracked in ``~/.massgen/sessions.json``
    * - ``"<your question>"``
      - Optional single-question input. If omitted, MassGen enters interactive chat mode
 
@@ -163,6 +167,26 @@ Disable UI
      --no-display \
      --config config.yaml \
      "Question"
+
+Session Management
+~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   # List available memory sessions
+   massgen --list-sessions
+
+   # Load session from previous run
+   massgen --session-id session_20251028_143000 \
+     "What did we discuss about the backend architecture?"
+
+   # Interactive mode with previous session
+   massgen --session-id session_20251028_143000 \
+     --config my_config.yaml
+
+   # Session can also be specified in YAML config
+   # Add to your config.yaml:
+   #   session_id: "session_20251028_143000"
 
 See Also
 --------

@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
+"""Utility modules for MassGen."""
+
 from enum import Enum
+
+from .model_matcher import get_all_models_for_provider
+
+# ===== Enums from original utils.py =====
 
 
 class ActionType(Enum):
-    """All types of actions an agent can take -- TODO: Note this is also in masgen/backend/gemini.py; we should have an enums or utils file with this."""
+    """All types of actions an agent can take."""
 
     NEW_ANSWER = "answer"
     VOTE = "vote"
     VOTE_IGNORED = "vote_ignored"  # Vote was cast but ignored due to restart
+    UPDATE_INJECTED = "update_injected"  # Agent received update and continued working (preempt-not-restart)
     ERROR = "error"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
@@ -96,8 +103,7 @@ MODEL_MAPPINGS = {
 
 
 def get_backend_type_from_model(model: str) -> str:
-    """
-    Determine the agent type based on the model name.
+    """Determine the agent type based on the model name.
 
     Args:
         model: The model name (e.g., "gpt-4", "gemini-pro", "grok-1")
@@ -114,3 +120,17 @@ def get_backend_type_from_model(model: str) -> str:
         if model_lower in models:
             return key
     raise ValueError(f"Unknown model: {model}")
+
+
+__all__ = [
+    # Model fetching
+    "get_all_models_for_provider",
+    # Enums
+    "ActionType",
+    "AgentStatus",
+    "CoordinationStage",
+    # Functions
+    "get_backend_type_from_model",
+    # Constants
+    "MODEL_MAPPINGS",
+]

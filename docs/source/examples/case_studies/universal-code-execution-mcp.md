@@ -18,7 +18,7 @@ MassGen is focused on **case-driven development**. MassGen v0.0.31 introduces un
 The prompt tests whether MassGen agents can create automated tests, execute them, and verify results through the new code execution MCP integration:
 
 ```
-Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing.
+Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing.
 ```
 
 #### Baseline Config
@@ -212,9 +212,9 @@ agent:
 #### Command
 
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/examples/code_execution_use_case_simple.yaml \
-  "Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing."
+uv run massgen \
+  --config massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml \
+  "Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing."
 ```
 
 ### 🤖 Agents
@@ -343,7 +343,7 @@ To provide concrete evidence of the execution capability and demonstrate the cro
 <summary><u>📄 Agent A (Gemini 2.5 Pro) - Final Answer (agent1.1)</u></summary>
 
 ```
-I have created a test case to validate the format of the configuration file and its parameters. The test successfully ran on the provided configuration file, `/Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml`, and all tests passed, confirming that the configuration is valid.
+I have created a test case to validate the format of the configuration file and its parameters. The test successfully ran on the provided configuration file, `/Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml`, and all tests passed, confirming that the configuration is valid.
 
 The test file, `test_config_validation.py`, checks for the presence and correct data types of all required keys within the `agents`, `orchestrator`, and `ui` sections of the configuration.
 
@@ -370,7 +370,7 @@ import os
 
 class TestConfigValidation(unittest.TestCase):
     def setUp(self):
-        self.config_path = '/Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml'
+        self.config_path = '/Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml'
         self.assertTrue(os.path.exists(self.config_path), f"Config file not found at: {self.config_path}")
         with open(self.config_path, 'r') as f:
             self.config = yaml.safe_load(f)
@@ -432,7 +432,7 @@ Files created in this workspace (cwd = /Users/ncrispin/GitHubProjects/MassGenOth
 - .massgen/workspaces/workspace2/test_config_validator.py
 
 Config validated
-- /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml
+- /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml
 
 Test behavior
 - The test loads the YAML, checks it parses, and calls massgen.mcp_tools.config_validator.validate_mcp_integration(data) to ensure the MCP-related configuration is supported by the project validator. It asserts the validator returns a dict (and that no exception is raised).
@@ -466,7 +466,7 @@ Summary
 
 What I added
 - test_config_validator.py (created in workspace)
-  - Loads YAML from /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml
+  - Loads YAML from /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml
   - Calls massgen.mcp_tools.config_validator.validate_mcp_integration(data)
   - Asserts the validator returns a dict and that no exception was raised
 
@@ -643,4 +643,4 @@ This case study validates that universal code execution via MCP successfully bri
 
 *Case study conducted: October 13, 2025*
 *MassGen Version: v0.0.31*
-*Configuration: massgen/configs/examples/code_execution_use_case_simple.yaml*
+*Configuration: massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml*

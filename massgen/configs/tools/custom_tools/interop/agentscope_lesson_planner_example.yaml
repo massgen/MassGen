@@ -1,0 +1,48 @@
+# MassGen Configuration: AgentScope Lesson Planner Tool
+# This demonstrates interoperability by using AgentScope's multi-agent framework as a custom tool
+#
+# Usage:
+#   massgen --config @examples/tools/custom_tools/interop/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#   uv run python -m massgen.cli --config @examples/tools/custom_tools/interop/agentscope_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#
+# Description:
+#   This configuration uses AgentScope to create comprehensive lesson plans through a multi-agent
+#   sequential pipeline. The tool uses multiple specialized AgentScope DialogAgents:
+#   - Curriculum Standards Expert: Determines standards and objectives
+#   - Lesson Planning Specialist: Creates detailed lesson plans
+#   - Lesson Plan Reviewer: Reviews and improves the plan
+#   - Lesson Plan Formatter: Formats the final output
+#
+# Requirements:
+#   - pip install agentscope
+#   - OPENAI_API_KEY environment variable must be set
+
+agents:
+  - id: "agentscope_lesson_planner" # OpenAI GPT-4o with AgentScope custom tool
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      custom_tools:
+        - name: ["agentscope_lesson_planner"]
+          category: "education"
+          path: "massgen/tool/_extraframework_agents/agentscope_lesson_planner_tool.py"
+          function: ["agentscope_lesson_planner"]
+    system_message: |
+      You are an AI assistant with access to an advanced lesson planning tool powered by AgentScope.
+
+      The agentscope_lesson_planner tool is available as a custom tool that creates comprehensive fourth-grade
+      lesson plans using AgentScope's multi-agent framework. This tool demonstrates interoperability
+      between MassGen and AgentScope.
+
+      When users ask for a lesson plan on any topic, use the agentscope_lesson_planner tool. The tool will coordinate multiple specialized agents in a sequential pipeline to:
+      1. Identify relevant curriculum standards and learning objectives
+      2. Design engaging lesson activities with proper timing
+      3. Review the plan for age-appropriateness and effectiveness
+      4. Format the final lesson plan in a structured format
+
+      After receiving the lesson plan, present it clearly to the user and offer to make any adjustments
+      they'd like.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

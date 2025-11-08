@@ -59,6 +59,9 @@ class ExecutionResult:
     is_final: bool = True
     """Indicates if this is the final result in a stream."""
 
+    is_log: bool = False
+    """Indicates if this result is for logging purposes only."""
+
     was_interrupted: bool = False
     """Indicates if the execution was interrupted."""
 

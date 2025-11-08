@@ -1,0 +1,201 @@
+# Example Configuration: Context Window Management with Memory
+#
+# Use Case: Demonstrates automatic context compression when approaching token limits
+#
+# This configuration demonstrates:
+# - Automatic context window monitoring and compression
+# - Token-aware conversation management (75% threshold, 40% target)
+# - Persistent memory integration for long-term knowledge retention
+# - Graceful handling when context window fills up
+# - Multi-agent collaboration with shared context management
+#
+# Run with:
+# uv run massgen --config @examples/memory/gpt5mini_gemini_context_window_management.yaml "Analyze the MassGen codebase comprehensively. Create an architecture document that explains: (1) Core components and their responsibilities, (2) How different modules interact, (3) Key design patterns used, (4) Main entry points and request flows. Read > 30 files to build a complete understanding."
+
+# ====================
+# AGENT DEFINITIONS
+# ====================
+agents:
+  - id: "agent_a"
+    backend:
+      # Use GPT-5-mini with medium reasoning
+      type: "openai"
+      model: "gpt-5-mini"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      cwd: "workspace1"
+
+  - id: "agent_b"
+    backend:
+      # Use Gemini 2.5 Flash for cost-effective testing
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace2"
+
+# ====================
+# MEMORY CONFIGURATION
+# ====================
+memory:
+  # Enable/disable persistent memory (default: true)
+  enabled: true
+  # # Debug mode
+  # debug: true
+
+  # Memory configuration
+  conversation_memory:
+    enabled: true  # Short-term conversation tracking (recommended: always true)
+
+  persistent_memory:
+    enabled: true  # Long-term knowledge storage (set to false to disable)
+    on_disk: true  # Persist across restarts
+    # session_name: "test_session"  # Optional - if not specified, auto-generates unique ID
+                                     # Format: agent_storyteller_20251023_143022_a1b2c3
+                                     # Specify to continue a specific session
+
+    # Vector store backend (default: qdrant)
+    vector_store: "qdrant"
+
+    # LLM configuration for memory operations (fact extraction)
+    # RECOMMENDED: Use mem0's native LLMs (no adapter overhead, no async complexity)
+    llm:
+      provider: "openai"  # Options: openai, anthropic, groq, together, etc.
+      model: "gpt-4.1-nano-2025-04-14"  # Fast and cheap model for memory ops (mem0's default)
+
+    # Embedding configuration (uses mem0's native embedders)
+    # RECOMMENDED: Specify provider and model for clarity
+    embedding:
+      provider: "openai"  # Options: openai, together, azure_openai, gemini, huggingface, etc.
+      model: "text-embedding-3-small"  # OpenAI's efficient embedding model
+
+    # Qdrant client configuration
+    # IMPORTANT: For multi-agent setups, use server mode to avoid concurrent access errors
+    qdrant:
+      mode: "server"  # Options: "server" (recommended for multi-agent) or "local" (single agent only)
+      host: "localhost"  # Qdrant server host (default: localhost)
+      port: 6333         # Qdrant server port (default: 6333)
+      # For local mode (single agent only):
+      # mode: "local"
+      # path: ".massgen/qdrant"  # Local storage path
+
+  # # Enable detailed recording for testing
+  # recording:
+  #   record_all_tool_calls: true   # Capture ALL MCP tools
+  #   record_reasoning: true         # Capture reasoning separately
+
+  # Context window management thresholds
+  compression:
+    trigger_threshold: 0.25  # Compress when context usage exceeds 25%
+    target_ratio: 0.10       # Target 10% of context after compression
+
+  # Memory retrieval configuration
+  retrieval:
+    limit: 5              # Number of memory facts to retrieve from mem0 (default: 5)
+    exclude_recent: true  # Only retrieve after compression to avoid duplicates (default: true)
+
+# Memory system behavior when enabled:
+# - ConversationMemory: Tracks short-term conversation history (verbatim messages)
+# - PersistentMemory: Stores long-term knowledge in vector database (extracted facts via mem0)
+# - Automatic compression: Triggers at threshold, removes old messages from conversation_memory
+# - Smart retrieval: Only retrieves from persistent_memory AFTER compression
+#   - Before compression: All context in conversation_memory, no retrieval (avoids duplicates)
+#   - After compression: Retrieves relevant facts from compressed messages
+# - Each agent gets separate memory: agent_name defaults to agent ID (agent_a, agent_b)
+#
+# How mem0 works:
+# - When recording: mem0's LLM extracts key facts from conversations
+# - When retrieving: Returns extracted facts (e.g., "User explored Mars", not full conversation)
+# - retrieval.limit controls how many facts to retrieve (each fact is ~1 sentence)
+#
+# Session management (UNIFIED):
+# - Each agent gets separate memory (agent_name = agent ID: agent_a, agent_b)
+# - Session ID is unified between orchestrator and memory system:
+#   - Interactive mode: session_YYYYMMDD_HHMMSS (created at start, shared by all turns)
+#   - Single question: temp_YYYYMMDD_HHMMSS (created per run, isolated)
+# - Memories are isolated per session: agent_a in session_1 can't access session_2 memories
+# - To continue a previous session: Specify session_name in YAML (overrides auto-generation)
+# - For cross-session memory: Remove session_name from YAML or set to null
+# - Qdrant database: Shared at .massgen/qdrant, filtered by agent_id + session_id
+#
+# Recording options (NEW - v0.1.6):
+# memory.recording.record_all_tool_calls: false  # Record ALL MCP tools (list_directory, read_file, etc.)
+# memory.recording.record_reasoning: false       # Record reasoning chunks separately
+#
+# To disable persistent memory for testing, set:
+#   memory.persistent_memory.enabled: false
+#
+# See massgen/memory/docs/ for detailed documentation.
+
+# ====================
+# ORCHESTRATOR CONFIGURATION
+# ====================
+orchestrator:
+  # Multi-turn mode to enable interactive storytelling
+
+  # Agent workspace for any file operations
+  agent_temporary_workspace: "memory_test_workspaces"
+  snapshot_storage: "memory_test_snapshots"
+
+  voting_sensitivity: balanced
+  max_new_answers_per_agent: 5
+  # answer_novelty_requirement: balanced
+
+  # Additional context paths
+  context_paths:
+    - path: "massgen"
+      permission: "read"
+
+# ====================
+# UI CONFIGURATION
+# ====================
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# ====================
+# EXECUTION FLOW
+# ====================
+# What happens:
+# 1. User starts an interactive story with the agent
+# 2. Agent responds with detailed narrative (400-600 words per turn)
+# 3. As conversation continues, token usage is monitored automatically
+# 4. When context usage reaches 75% of model's limit:
+#    - System logs: "📊 Context usage: X / Y tokens (Z%) - compressing old context"
+#    - Old messages are compressed into persistent memory (if configured)
+#    - Recent messages (fitting in 40% of context window) are kept
+#    - Compression details logged: "📦 Compressed N messages (X tokens) into long-term memory"
+# 5. Agent continues seamlessly with compressed context
+# 6. Story maintains consistency by referencing persistent memories
+# 7. Process repeats as needed for very long conversations
+#
+# Expected logs with persistent memory:
+#
+# Turn 1-10 (Before compression):
+#   📊 Context Window (Turn 5): 45,000 / 128,000 tokens (35%)
+#   ⏭️  Skipping retrieval (no compression yet, all context in conversation_memory)
+#
+# Turn 11 (Compression triggers):
+#   ⚠️  Context Window (Turn 11): 96,000 / 128,000 tokens (75%) - Approaching limit!
+#   🔄 Attempting compression (96,000 → 51,200 tokens)
+#   📦 Context compressed: Removed 15 old messages (44,800 tokens).
+#      Kept 8 recent messages (51,200 tokens).
+#      Old messages remain accessible via semantic search.
+#   ✅ Conversation history updated after compression: 8 messages
+#
+# Turn 12+ (After compression):
+#   🔍 Retrieving compressed memories (limit=5, compressed=True)...
+#   💭 Retrieved 3 memory fact(s) from mem0
+#   [Agent sees: retrieved facts + recent 8 messages - no duplication!]
+#
+# Expected output WITHOUT persistent memory:
+#   📦 Context compressed: Removed 15 messages (44,800 tokens).
+#      No persistent memory - old messages NOT retrievable.
+#
+# Token Budget Allocation (after compression):
+# - Conversation history: 40% (kept in active context)
+# - Retrieved memories: ~5 facts (~100-250 tokens)
+# - New user messages: varies
+# - System prompt overhead: varies
+# - Response generation: varies
