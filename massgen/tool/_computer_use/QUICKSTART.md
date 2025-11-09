@@ -149,8 +149,8 @@ docker run -d --name cua-container ubuntu:22.04 sleep infinity
 ## Next Steps
 
 - Read the full [README.md](README.md) for detailed documentation
-- Explore [example configs](../../../configs/tools/custom_tools/)
-- Check [OpenAI's Computer Use Guide](https://platform.openai.com/docs/guides/computer-use)
+- Explore [example configs](../../configs/tools/custom_tools/)
+- Check [OpenAI's Computer Use Guide](https://platform.openai.com/docs/guides/tools-computer-use)
 
 ## Support
 
