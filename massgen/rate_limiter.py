@@ -139,7 +139,8 @@ class MultiRateLimiter:
         self.request_times_day: deque = deque()     # For RPD
         self.token_usage: deque = deque()           # For TPM: (timestamp, tokens)
         
-        self._lock = asyncio.Lock()
+        # Lazy initialization of lock to ensure it's created in the correct event loop
+        self._lock: Optional[asyncio.Lock] = None
         
     async def __aenter__(self):
         """Context manager entry - waits until request is allowed."""
@@ -150,13 +151,23 @@ class MultiRateLimiter:
         """Context manager exit."""
         return False
     
+    def _get_lock(self) -> asyncio.Lock:
+        """
+        Lazily initialize and return the asyncio lock.
+        
+        This ensures the lock is created in the correct event loop context.
+        """
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
+    
     async def acquire(self):
         """
         Wait until a request is allowed under all rate limits.
         
         Checks RPM, TPM, and RPD limits and waits for the most restrictive one.
         """
-        async with self._lock:
+        async with self._get_lock():
             max_wait_time = 0.0
             wait_reasons = []
             
@@ -246,7 +257,7 @@ class MultiRateLimiter:
             tokens: Number of tokens used in the request
         """
         if self.tpm is not None:
-            async with self._lock:
+            async with self._get_lock():
                 self.token_usage.append((time.time(), tokens))
 
 
