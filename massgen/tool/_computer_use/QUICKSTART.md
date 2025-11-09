@@ -27,7 +27,7 @@ massgen --config @massgen/configs/tools/custom_tools/computer_use_browser_exampl
     "Search for Python documentation on Google"
 
 # With vision capabilities
-massgen --config @massgen/configs/tools/custom_tools/computer_use_with_vision.yaml \
+massgen --config @massgen/configs/tools/custom_tools/claude_computer_use_docker_example.yaml \
     "Find the latest AI news and summarize"
 
 # Using Gemini
@@ -57,7 +57,7 @@ print(result)
 | `computer_use_example.yaml` | gpt-4.1 | Browser | General automation |
 | `computer_use_browser_example.yaml` | computer-use-preview | Browser | Browser-specific tasks |
 | `computer_use_docker_example.yaml` | computer-use-preview | Docker/Ubuntu | OS-level automation |
-| `computer_use_with_vision.yaml` | gpt-4.1 | Browser + Vision | Combined automation + analysis |
+| `claude_computer_use_docker_example.yaml` | claude-sonnet-4-5 | Docker/Ubuntu | OS-level automation |
 | `gemini_computer_use_example.yaml` | gemini-2.5-flash | Browser | Using Gemini model |
 
 ## Common Tasks
@@ -76,7 +76,7 @@ massgen --config @computer_use_browser_example.yaml \
 
 ### Screenshot Analysis
 ```bash
-massgen --config @computer_use_with_vision.yaml \
+massgen --config @claude_computer_use_docker_example.yaml \
     "Navigate to Wikipedia's homepage and describe what you see"
 ```
 
