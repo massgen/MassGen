@@ -729,7 +729,8 @@ For users with access to Claude 3.7 Sonnet or newer:
      - id: "claude_automation_agent"
        backend:
          type: "anthropic"
-         model: "claude-3-7-sonnet-20250219"  # Recommended!
+         model: "claude-sonnet-4-5"  # Recommended!
+         betas: ["computer-use-2025-01-24"]
          custom_tools:
            - name: ["claude_computer_use"]
              path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
@@ -869,6 +870,8 @@ For users with **any model** (gpt-4.1, gpt-4o, gemini-2.5-flash, etc.):
    * ``massgen/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md`` - Comprehensive guide with performance comparisons, action references, and migration paths
    * ``massgen/tool/_computer_use/README.md`` - Technical implementation details
    * ``massgen/tool/_computer_use/QUICKSTART.md`` - Quick start guide
+
+For docker installation, we have a [script](scripts/computer_use_setup.md) for you to refer.
 
 Available Example Configs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
