@@ -1,0 +1,36 @@
+# Example: Docker with Auto-Dependency Installation
+#
+# This example shows how MassGen can automatically detect and install
+# dependencies from requirements.txt, package.json, etc. in your workspace.
+#
+# Prerequisites:
+# 1. Docker daemon running
+# 2. Build the Docker image: bash massgen/docker/build.sh
+#
+# Usage:
+#   uv run massgen massgen/configs/tools/code-execution/docker_autodeps_install.yaml "Create requirements.txt with requests and flask, create package.json with express, then verify they install automatically"
+
+agent:
+  id: "autodeps_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+
+    # Docker configuration
+    command_line_execution_mode: "docker"
+
+    # Auto-detect and install dependencies from workspace
+    command_line_docker_auto_install_deps: true
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 300  # Longer for dependency installs
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

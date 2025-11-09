@@ -1,0 +1,57 @@
+# Example: Full Docker Development Setup
+#
+# This is a comprehensive example combining all credential and dependency features.
+# Use this as a template for real-world development workflows.
+#
+# Prerequisites:
+# 1. Docker daemon running
+# 2. Build the Docker image: bash massgen/docker/build.sh --sudo
+# 3. Create .env file with: GITHUB_TOKEN=ghp_your_token
+# 4. SSH keys set up (~/.ssh/)
+# 5. Git config (~/.gitconfig)
+#
+# Usage:
+#   uv run massgen massgen/configs/tools/code-execution/docker_full_dev_setup.yaml "Demonstrate full dev environment: check gh auth, verify pre-installed pytest, create Flask app with requirements.txt, show git config"
+
+agent:
+  id: "fullstack_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+
+    # Docker configuration
+    command_line_execution_mode: "docker"
+    command_line_docker_enable_sudo: true
+    command_line_docker_network_mode: "bridge"
+    command_line_docker_memory_limit: "4g"
+    command_line_docker_cpu_limit: 2.0
+
+    # Credentials
+    command_line_docker_env_file_path: ".env"
+    command_line_docker_mount_ssh_keys: true
+    command_line_docker_mount_git_config: true
+
+    # Pre-install base packages (always available)
+    command_line_docker_preinstall_python:
+      - "pytest>=7.0.0"
+      - "requests>=2.31.0"
+      - "numpy>=1.24.0"
+
+    command_line_docker_preinstall_npm:
+      - "typescript"
+
+    # Auto-install workspace dependencies
+    command_line_docker_auto_install_deps: true
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 400  # Longer for all the installs
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

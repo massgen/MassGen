@@ -1,9 +1,9 @@
 # Code Execution System Design
 
-**Issues:** #295, #304
+**Issues:** #295, #304, #436
 **Author:** MassGen Team
-**Date:** 2025-10-13
-**Status:** Complete (Local + Docker Execution)
+**Date:** 2025-10-13 (Updated: 2025-11-03 for credential management)
+**Status:** Complete (Local + Docker Execution + Credentials + Auto-Dependencies)
 
 ## Overview
 
@@ -685,6 +685,160 @@ docker exec massgen-{agent_id} {command}
 3. **Run normally:** Container created automatically at orchestration start
 
 For more details, see `docs/dev_notes/DOCKER_CODE_EXECUTION_DESIGN.md`
+
+### Credential Management (✅ ADDED in v0.1.8)
+
+Docker containers can now access host credentials for authenticated operations (git, npm, PyPI, APIs, etc.).
+
+**Features:**
+- Environment variable passing (from .env files or host environment)
+- Credential file mounting (SSH keys, .gitconfig, .npmrc, .pypirc)
+- GitHub CLI pre-installed and ready for authentication
+- Custom volume mounts for additional credentials
+- All credential mounting is **opt-in** for security
+
+**Environment Variables:**
+
+```yaml
+agent:
+  backend:
+    command_line_execution_mode: "docker"
+
+    # Option 1: Load from .env file (recommended)
+    command_line_docker_env_file_path: ".env"
+
+    # Option 2: Pass specific variables
+    command_line_docker_pass_env_vars:
+      - "GITHUB_TOKEN"
+      - "NPM_TOKEN"
+      - "ANTHROPIC_API_KEY"
+
+    # Option 3: Pass all env vars (dangerous, use with caution)
+    command_line_docker_pass_all_env: false
+```
+
+**Credential File Mounting:**
+
+```yaml
+agent:
+  backend:
+    command_line_execution_mode: "docker"
+
+    # Mount credential files (all read-only)
+    command_line_docker_mount_ssh_keys: true     # ~/.ssh → /home/massgen/.ssh
+    command_line_docker_mount_git_config: true   # ~/.gitconfig → /home/massgen/.gitconfig
+    command_line_docker_mount_npm_config: true   # ~/.npmrc → /home/massgen/.npmrc
+    command_line_docker_mount_pypi_config: true  # ~/.pypirc → /home/massgen/.pypirc
+
+    # Custom mounts
+    command_line_docker_additional_mounts:
+      "/path/to/credentials.json":
+        bind: "/home/massgen/.config/app/credentials.json"
+        mode: "ro"
+```
+
+**GitHub CLI Authentication:**
+
+```yaml
+agent:
+  backend:
+    command_line_execution_mode: "docker"
+    command_line_docker_network_mode: "bridge"  # Enable network
+    command_line_docker_pass_env_vars:
+      - "GITHUB_TOKEN"
+```
+
+Agents can now use `gh` commands:
+```bash
+gh pr create --title "Feature" --body "Description"
+gh repo clone user/repo
+gh issue list
+```
+
+**Security:**
+- All credential files mounted as **read-only** by default
+- Path validation prevents mounting arbitrary directories
+- Credentials only accessible within container (isolated from host)
+- Warning logged when mounting sensitive credentials
+
+**Implementation:**
+- `_docker_manager.py`: `_load_env_file()`, `_build_environment()`, `_build_credential_mounts()`
+- Environment variables passed to container via Docker SDK's `environment` parameter
+- Credential files mounted via Docker SDK's `volumes` parameter
+- Validation ensures paths exist before mounting
+
+### Automatic Dependency Detection (✅ ADDED in v0.1.8)
+
+MassGen can automatically detect and install dependencies when working with repositories.
+
+**Features:**
+- Auto-detects Python, Node.js, and system package files
+- Installs dependencies automatically on container creation
+- Option to install only for newly cloned repos (coming soon)
+- Graceful failure handling (logs errors but continues)
+
+**Configuration:**
+
+```yaml
+agent:
+  backend:
+    command_line_execution_mode: "docker"
+
+    # Auto-install all detected dependencies
+    command_line_docker_auto_install_deps: true
+
+    # Or install only for newly cloned repos
+    command_line_docker_auto_install_on_clone: true
+```
+
+**Supported Dependency Files:**
+
+| Language | Files Detected | Install Command |
+|----------|---------------|-----------------|
+| Python   | requirements.txt | `pip install -r requirements.txt` |
+| Python   | pyproject.toml | `pip install -e .` |
+| Python   | setup.py | `pip install -e .` |
+| Python   | Pipfile | `pip install pipenv && pipenv install` |
+| Node.js  | package.json | `npm install` |
+| Node.js  | yarn.lock | `yarn install` |
+| System   | apt-packages.txt | `sudo apt-get install ...` (requires sudo mode) |
+
+**Installation Process:**
+
+1. Container created and started
+2. DependencyDetector scans workspace for dependency files
+3. Installation commands generated in order: system → Python → Node.js
+4. Commands executed with 5-minute timeout each
+5. Success/failure logged for each installation
+6. Container setup continues even if some installations fail
+
+**Example Log Output:**
+
+```
+📋 [Docker] Found 2 dependency file(s) in myproject
+    python: requirements.txt
+    nodejs: package.json
+📦 [Docker] Auto-installing 2 dependency file(s) for agent agent_a
+    Running: cd /workspace/myproject && pip install -r requirements.txt
+✅ [Docker] Successfully installed dependencies from command
+    Running: cd /workspace/myproject && npm install
+✅ [Docker] Successfully installed dependencies from command
+✅ [Docker] All dependencies installed successfully
+```
+
+**Implementation:**
+- `_dependency_detector.py`: New module for detecting dependency files
+- `DependencyDetector` class with methods:
+  - `detect_python_dependencies()`: Scans for Python dep files
+  - `detect_nodejs_dependencies()`: Scans for Node.js dep files
+  - `detect_system_dependencies()`: Scans for system packages (requires sudo)
+  - `detect_all_dependencies()`: Returns all detected deps
+  - `generate_install_commands()`: Converts detections to shell commands
+- `_docker_manager.py`: `auto_install_dependencies()` method
+  - Called after container creation if enabled
+  - Executes installation commands via `exec_command()`
+  - Timeout: 300 seconds per installation
+  - Graceful error handling
 
 ## Future Enhancements
 

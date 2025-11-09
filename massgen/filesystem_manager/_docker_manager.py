@@ -8,10 +8,13 @@ while keeping MCP servers on the host.
 """
 
 import logging
+import os
 import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from ._dependency_detector import DependencyDetector
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,20 @@ class DockerManager:
         memory_limit: Optional[str] = None,
         cpu_limit: Optional[float] = None,
         enable_sudo: bool = False,
+        env_file_path: Optional[str] = None,
+        pass_env_vars: Optional[List[str]] = None,
+        pass_all_env: bool = False,
+        mount_ssh_keys: bool = False,
+        mount_git_config: bool = False,
+        mount_gh_config: bool = False,
+        mount_npm_config: bool = False,
+        mount_pypi_config: bool = False,
+        additional_mounts: Optional[Dict[str, Dict[str, str]]] = None,
+        auto_install_deps: bool = False,
+        auto_install_on_clone: bool = False,
+        preinstall_python: Optional[List[str]] = None,
+        preinstall_npm: Optional[List[str]] = None,
+        preinstall_system: Optional[List[str]] = None,
     ):
         """
         Initialize Docker manager.
@@ -56,6 +73,20 @@ class DockerManager:
             memory_limit: Memory limit (e.g., "2g", "512m")
             cpu_limit: CPU limit (e.g., 2.0 for 2 CPUs)
             enable_sudo: Enable sudo access in containers (isolated from host system)
+            env_file_path: Path to .env file to load into containers
+            pass_env_vars: List of specific environment variables to pass from host
+            pass_all_env: Pass all host environment variables (DANGEROUS, use with caution)
+            mount_ssh_keys: Mount ~/.ssh directory (read-only) for git SSH authentication
+            mount_git_config: Mount ~/.gitconfig for git configuration
+            mount_gh_config: Mount ~/.config/gh for GitHub CLI authentication
+            mount_npm_config: Mount ~/.npmrc for npm private packages
+            mount_pypi_config: Mount ~/.pypirc for PyPI private packages
+            additional_mounts: Additional volume mounts {host_path: {bind: container_path, mode: ro/rw}}
+            auto_install_deps: Automatically detect and install dependencies in workspace
+            auto_install_on_clone: Auto-install dependencies only for newly cloned repos
+            preinstall_python: List of Python packages to pre-install (e.g., ["requests>=2.31.0", "pytest"])
+            preinstall_npm: List of npm packages to pre-install (e.g., ["typescript", "@types/node"])
+            preinstall_system: List of system packages to pre-install via apt (requires sudo)
 
         Raises:
             RuntimeError: If Docker is not available or cannot connect
@@ -80,6 +111,26 @@ class DockerManager:
         self.network_mode = network_mode
         self.memory_limit = memory_limit
         self.cpu_limit = cpu_limit
+
+        # Credential and environment configuration
+        self.env_file_path = env_file_path
+        self.pass_env_vars = pass_env_vars or []
+        self.pass_all_env = pass_all_env
+        self.mount_ssh_keys = mount_ssh_keys
+        self.mount_git_config = mount_git_config
+        self.mount_gh_config = mount_gh_config
+        self.mount_npm_config = mount_npm_config
+        self.mount_pypi_config = mount_pypi_config
+        self.additional_mounts = additional_mounts or {}
+        self.auto_install_deps = auto_install_deps
+        self.auto_install_on_clone = auto_install_on_clone
+        self.preinstall_python = preinstall_python or []
+        self.preinstall_npm = preinstall_npm or []
+        self.preinstall_system = preinstall_system or []
+
+        # Warning for dangerous options
+        if self.pass_all_env:
+            logger.warning("⚠️ [Docker] pass_all_env is enabled - all host environment variables will be passed to containers")
 
         try:
             self.client = docker.from_env()
@@ -124,6 +175,336 @@ class DockerManager:
                         f"Failed to pull Docker image '{self.image}': {e}\n" f"The sudo image must be built locally. Run:\n" f"    bash massgen/docker/build.sh --sudo",
                     )
                 raise RuntimeError(f"Failed to pull Docker image '{self.image}': {e}")
+
+    def _load_env_file(self, env_file_path: str) -> Dict[str, str]:
+        """
+        Load environment variables from a .env file.
+
+        Args:
+            env_file_path: Path to .env file
+
+        Returns:
+            Dictionary of environment variables
+
+        Raises:
+            RuntimeError: If file cannot be read or parsed
+        """
+        env_vars = {}
+        env_path = Path(env_file_path).expanduser().resolve()
+
+        if not env_path.exists():
+            raise RuntimeError(f"Environment file not found: {env_file_path}")
+
+        logger.info(f"📄 [Docker] Loading environment variables from: {env_path}")
+
+        try:
+            with open(env_path, "r") as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if not line or line.startswith("#"):
+                        continue
+
+                    # Parse KEY=VALUE format
+                    if "=" in line:
+                        key, value = line.split("=", 1)
+                        key = key.strip()
+                        value = value.strip()
+
+                        # Remove quotes if present
+                        if value.startswith('"') and value.endswith('"'):
+                            value = value[1:-1]
+                        elif value.startswith("'") and value.endswith("'"):
+                            value = value[1:-1]
+
+                        env_vars[key] = value
+                    else:
+                        logger.warning(f"⚠️ [Docker] Skipping invalid line {line_num} in {env_file_path}: {line}")
+
+            logger.info(f"    Loaded {len(env_vars)} environment variable(s)")
+            return env_vars
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to read environment file {env_file_path}: {e}")
+
+    def _build_environment(self) -> Dict[str, str]:
+        """
+        Build environment variables dict to pass to container.
+
+        Returns:
+            Dictionary of environment variables
+        """
+        env_vars = {}
+
+        # Option 1: Load from .env file
+        if self.env_file_path:
+            try:
+                file_env = self._load_env_file(self.env_file_path)
+                env_vars.update(file_env)
+            except Exception as e:
+                logger.error(f"❌ [Docker] Failed to load env file: {e}")
+                raise
+
+        # Option 2: Pass all host environment variables
+        if self.pass_all_env:
+            env_vars.update(os.environ.copy())
+            logger.info("    Passing all host environment variables to container")
+
+        # Option 3: Pass specific environment variables
+        if self.pass_env_vars:
+            for var_name in self.pass_env_vars:
+                if var_name in os.environ:
+                    env_vars[var_name] = os.environ[var_name]
+                    logger.debug(f"    Passing env var: {var_name}")
+                else:
+                    logger.warning(f"⚠️ [Docker] Requested env var '{var_name}' not found in host environment")
+
+        return env_vars
+
+    def _build_credential_mounts(self) -> Dict[str, Dict[str, str]]:
+        """
+        Build volume mounts for credential files.
+
+        Returns:
+            Dictionary of volume mounts {host_path: {bind: container_path, mode: ro/rw}}
+        """
+        mounts = {}
+        home_dir = Path.home()
+
+        # Mount SSH keys (read-only)
+        if self.mount_ssh_keys:
+            ssh_dir = home_dir / ".ssh"
+            if ssh_dir.exists():
+                mounts[str(ssh_dir)] = {"bind": "/home/massgen/.ssh", "mode": "ro"}
+                logger.info(f"🔐 [Docker] Mounting SSH keys: {ssh_dir} → /home/massgen/.ssh (ro)")
+            else:
+                logger.warning(f"⚠️ [Docker] SSH directory not found: {ssh_dir}")
+
+        # Mount git config (read-only)
+        if self.mount_git_config:
+            git_config = home_dir / ".gitconfig"
+            if git_config.exists():
+                mounts[str(git_config)] = {"bind": "/home/massgen/.gitconfig", "mode": "ro"}
+                logger.info(f"🔐 [Docker] Mounting git config: {git_config} → /home/massgen/.gitconfig (ro)")
+            else:
+                logger.warning(f"⚠️ [Docker] Git config not found: {git_config}")
+
+        # Mount GitHub CLI config (read-only)
+        if self.mount_gh_config:
+            gh_config = home_dir / ".config" / "gh"
+            if gh_config.exists():
+                mounts[str(gh_config)] = {"bind": "/home/massgen/.config/gh", "mode": "ro"}
+                logger.info(f"🔐 [Docker] Mounting GitHub CLI config: {gh_config} → /home/massgen/.config/gh (ro)")
+            else:
+                logger.warning(f"⚠️ [Docker] GitHub CLI config not found: {gh_config}")
+
+        # Mount npm config (read-only)
+        if self.mount_npm_config:
+            npm_config = home_dir / ".npmrc"
+            if npm_config.exists():
+                mounts[str(npm_config)] = {"bind": "/home/massgen/.npmrc", "mode": "ro"}
+                logger.info(f"🔐 [Docker] Mounting npm config: {npm_config} → /home/massgen/.npmrc (ro)")
+            else:
+                logger.warning(f"⚠️ [Docker] npm config not found: {npm_config}")
+
+        # Mount pypi config (read-only)
+        if self.mount_pypi_config:
+            pypi_config = home_dir / ".pypirc"
+            if pypi_config.exists():
+                mounts[str(pypi_config)] = {"bind": "/home/massgen/.pypirc", "mode": "ro"}
+                logger.info(f"🔐 [Docker] Mounting PyPI config: {pypi_config} → /home/massgen/.pypirc (ro)")
+            else:
+                logger.warning(f"⚠️ [Docker] PyPI config not found: {pypi_config}")
+
+        # Additional custom mounts
+        if self.additional_mounts:
+            for host_path, mount_config in self.additional_mounts.items():
+                host_path_obj = Path(host_path).expanduser().resolve()
+                if host_path_obj.exists():
+                    mounts[str(host_path_obj)] = mount_config
+                    container_path = mount_config.get("bind", host_path)
+                    mode = mount_config.get("mode", "ro")
+                    logger.info(f"🔐 [Docker] Mounting custom path: {host_path_obj} → {container_path} ({mode})")
+                else:
+                    logger.warning(f"⚠️ [Docker] Custom mount path not found: {host_path}")
+
+        return mounts
+
+    def preinstall_packages(
+        self,
+        agent_id: str,
+    ) -> bool:
+        """
+        Pre-install user-specified packages in the container.
+
+        Runs BEFORE auto-dependency detection to provide a consistent base environment.
+
+        Args:
+            agent_id: Agent identifier
+
+        Returns:
+            True if all installations succeeded, False otherwise
+        """
+        if not self.preinstall_python and not self.preinstall_npm and not self.preinstall_system:
+            return True  # Nothing to install
+
+        logger.info(f"📦 [Docker] Pre-installing user-specified packages for agent {agent_id}")
+        success = True
+
+        # Install system packages first (may be needed by Python/npm packages)
+        if self.preinstall_system:
+            if not self.enable_sudo:
+                logger.warning("⚠️ [Docker] System package pre-install requires sudo mode, skipping")
+            else:
+                packages_str = " ".join(self.preinstall_system)
+                cmd = f"sudo apt-get update && sudo apt-get install -y {packages_str}"
+                logger.info(f"    Installing system packages: {', '.join(self.preinstall_system)}")
+
+                try:
+                    result = self.exec_command(
+                        agent_id=agent_id,
+                        command=cmd,
+                        timeout=600,  # 10 minute timeout for system packages
+                    )
+                    if result["success"]:
+                        logger.info("✅ [Docker] System packages installed successfully")
+                    else:
+                        logger.warning("⚠️ [Docker] System package installation failed")
+                        logger.warning(f"    Exit code: {result['exit_code']}")
+                        success = False
+                except Exception as e:
+                    logger.error(f"❌ [Docker] Error installing system packages: {e}")
+                    success = False
+
+        # Install Python packages
+        if self.preinstall_python:
+            packages_str = " ".join(self.preinstall_python)
+            cmd = f"pip install {packages_str}"
+            logger.info(f"    Installing Python packages: {', '.join(self.preinstall_python)}")
+
+            try:
+                result = self.exec_command(
+                    agent_id=agent_id,
+                    command=cmd,
+                    timeout=600,  # 10 minute timeout
+                )
+                if result["success"]:
+                    logger.info("✅ [Docker] Python packages installed successfully")
+                else:
+                    logger.warning("⚠️ [Docker] Python package installation failed")
+                    logger.warning(f"    Exit code: {result['exit_code']}")
+                    success = False
+            except Exception as e:
+                logger.error(f"❌ [Docker] Error installing Python packages: {e}")
+                success = False
+
+        # Install npm packages
+        if self.preinstall_npm:
+            packages_str = " ".join(self.preinstall_npm)
+            # Use sudo for global npm install if sudo is enabled
+            npm_cmd = "sudo npm" if self.enable_sudo else "npm"
+            cmd = f"{npm_cmd} install -g {packages_str}"
+            logger.info(f"    Installing npm packages (global): {', '.join(self.preinstall_npm)}")
+
+            try:
+                result = self.exec_command(
+                    agent_id=agent_id,
+                    command=cmd,
+                    timeout=600,  # 10 minute timeout
+                )
+                if result["success"]:
+                    logger.info("✅ [Docker] npm packages installed successfully")
+                else:
+                    logger.warning("⚠️ [Docker] npm package installation failed")
+                    logger.warning(f"    Exit code: {result['exit_code']}")
+                    success = False
+            except Exception as e:
+                logger.error(f"❌ [Docker] Error installing npm packages: {e}")
+                success = False
+
+        if success:
+            logger.info("✅ [Docker] All pre-install packages installed successfully")
+        else:
+            logger.warning("⚠️ [Docker] Some pre-install packages failed (continuing anyway)")
+
+        return success
+
+    def auto_install_dependencies(
+        self,
+        agent_id: str,
+        workspace_path: Path,
+        is_newly_cloned: bool = False,
+    ) -> bool:
+        """
+        Auto-detect and install dependencies in the workspace.
+
+        Args:
+            agent_id: Agent identifier
+            workspace_path: Path to workspace to scan for dependencies
+            is_newly_cloned: Whether this workspace was just cloned
+
+        Returns:
+            True if dependencies were installed successfully, False otherwise
+        """
+        detector = DependencyDetector(workspace_path)
+
+        # Check if we should auto-install
+        if not detector.should_auto_install(
+            auto_install_deps=self.auto_install_deps,
+            auto_install_on_clone=self.auto_install_on_clone,
+            is_newly_cloned=is_newly_cloned,
+        ):
+            return False
+
+        # Detect all dependencies
+        dependencies = detector.detect_all_dependencies(enable_sudo=self.enable_sudo)
+
+        # Check if any dependencies were found
+        total_deps = sum(len(deps) for deps in dependencies.values())
+        if total_deps == 0:
+            logger.debug(f"📋 [Docker] No dependencies found in {workspace_path.name}")
+            return False
+
+        # Generate installation commands
+        install_commands = detector.generate_install_commands(
+            dependencies,
+            working_dir=str(workspace_path),
+        )
+
+        if not install_commands:
+            return False
+
+        logger.info(f"📦 [Docker] Auto-installing {total_deps} dependency file(s) for agent {agent_id}")
+
+        # Execute installation commands
+        success = True
+        for cmd in install_commands:
+            logger.info(f"    Running: {cmd}")
+            try:
+                result = self.exec_command(
+                    agent_id=agent_id,
+                    command=cmd,
+                    workdir=str(workspace_path),
+                    timeout=300,  # 5 minute timeout for installs
+                )
+
+                if not result["success"]:
+                    logger.warning(f"⚠️ [Docker] Dependency installation command failed: {cmd}")
+                    logger.warning(f"    Exit code: {result['exit_code']}")
+                    logger.warning(f"    Output: {result['stdout'][:500]}")  # First 500 chars
+                    success = False
+                else:
+                    logger.info("✅ [Docker] Successfully installed dependencies from command")
+            except Exception as e:
+                logger.error(f"❌ [Docker] Error installing dependencies: {e}")
+                success = False
+
+        if success:
+            logger.info("✅ [Docker] All dependencies installed successfully")
+        else:
+            logger.warning("⚠️ [Docker] Some dependency installations failed (continuing anyway)")
+
+        return success
 
     def create_container(
         self,
@@ -183,6 +564,11 @@ class DockerManager:
         if self.cpu_limit:
             logger.info(f"    CPU limit: {self.cpu_limit} cores")
 
+        # Build environment variables
+        env_vars = self._build_environment()
+        if env_vars:
+            logger.info(f"    Environment variables: {len(env_vars)} variable(s)")
+
         # Build volume mounts
         # IMPORTANT: Mount paths at the SAME location as on host to avoid path confusion
         # This makes Docker completely transparent to the LLM - it sees identical paths
@@ -209,6 +595,10 @@ class DockerManager:
 
                 volumes[str(ctx_path)] = {"bind": str(ctx_path), "mode": mode}
                 mount_info.append(f"      {ctx_path} ← {ctx_path} ({mode})")
+
+        # Add credential file mounts
+        credential_mounts = self._build_credential_mounts()
+        volumes.update(credential_mounts)
 
         # Log volume mounts
         if mount_info:
@@ -238,6 +628,10 @@ class DockerManager:
             **resource_config,
         }
 
+        # Add environment variables if any
+        if env_vars:
+            container_config["environment"] = env_vars
+
         try:
             # Create and start container
             container = self.client.containers.run(**container_config)
@@ -256,6 +650,26 @@ class DockerManager:
             logger.debug(f"💡 [Docker] Inspect container: docker inspect {container.short_id}")
             logger.debug(f"💡 [Docker] View logs: docker logs {container.short_id}")
             logger.debug(f"💡 [Docker] Execute commands: docker exec -it {container.short_id} /bin/bash")
+
+            # Pre-install user-specified packages FIRST (base environment)
+            if self.preinstall_python or self.preinstall_npm or self.preinstall_system:
+                try:
+                    self.preinstall_packages(agent_id=agent_id)
+                except Exception as e:
+                    logger.warning(f"⚠️ [Docker] Failed to pre-install packages: {e}")
+                    # Don't fail container creation if pre-install fails
+
+            # Auto-install dependencies from workspace SECOND (project-specific)
+            if self.auto_install_deps or self.auto_install_on_clone:
+                try:
+                    self.auto_install_dependencies(
+                        agent_id=agent_id,
+                        workspace_path=workspace_path,
+                        is_newly_cloned=False,  # Can't detect this from create_container
+                    )
+                except Exception as e:
+                    logger.warning(f"⚠️ [Docker] Failed to auto-install dependencies: {e}")
+                    # Don't fail container creation if dependency installation fails
 
             return container.id
 

@@ -1,0 +1,43 @@
+# Example: Docker with SSH Keys for Private Repository Access
+#
+# This example shows how to clone and work with private GitHub repositories
+# using your SSH keys mounted into the Docker container.
+#
+# Prerequisites:
+# 1. Docker daemon running
+# 2. SSH keys set up (~/.ssh/id_rsa with correct permissions)
+# 3. Git config with your name/email (~/.gitconfig)
+# 4. SSH key added to GitHub account
+# 5. Build the Docker image: bash massgen/docker/build.sh
+#
+# Usage:
+#   uv run massgen massgen/configs/tools/code-execution/docker_private_repo_clone.yaml "Test SSH setup and clone a private repo if you have one (replace yourorg/private-repo with real repo)"
+#
+# Note: Replace "yourorg/private-repo" with an actual private repo you have access to
+
+agent:
+  id: "ssh_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+
+    # Docker configuration
+    command_line_execution_mode: "docker"
+    command_line_docker_network_mode: "bridge"  # Need network for git operations
+
+    # Mount SSH keys and git config for authentication
+    command_line_docker_mount_ssh_keys: true   # Mounts ~/.ssh (read-only)
+    command_line_docker_mount_git_config: true  # Mounts ~/.gitconfig (read-only)
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 180
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

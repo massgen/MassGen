@@ -56,6 +56,20 @@ class FilesystemManager:
         command_line_docker_cpu_limit: Optional[float] = None,
         command_line_docker_network_mode: str = "none",
         command_line_docker_enable_sudo: bool = False,
+        command_line_docker_env_file_path: Optional[str] = None,
+        command_line_docker_pass_env_vars: Optional[List[str]] = None,
+        command_line_docker_pass_all_env: bool = False,
+        command_line_docker_mount_ssh_keys: bool = False,
+        command_line_docker_mount_git_config: bool = False,
+        command_line_docker_mount_gh_config: bool = False,
+        command_line_docker_mount_npm_config: bool = False,
+        command_line_docker_mount_pypi_config: bool = False,
+        command_line_docker_additional_mounts: Optional[Dict[str, Dict[str, str]]] = None,
+        command_line_docker_auto_install_deps: bool = False,
+        command_line_docker_auto_install_on_clone: bool = False,
+        command_line_docker_preinstall_python: Optional[List[str]] = None,
+        command_line_docker_preinstall_npm: Optional[List[str]] = None,
+        command_line_docker_preinstall_system: Optional[List[str]] = None,
         enable_audio_generation: bool = False,
         enable_file_generation: bool = False,
     ):
@@ -78,6 +92,20 @@ class FilesystemManager:
             command_line_docker_cpu_limit: CPU limit for Docker containers (e.g., 2.0 for 2 CPUs)
             command_line_docker_network_mode: Network mode for Docker containers (none/bridge/host)
             command_line_docker_enable_sudo: Enable sudo access in Docker containers (isolated from host system)
+            command_line_docker_env_file_path: Path to .env file to load into containers
+            command_line_docker_pass_env_vars: List of specific environment variables to pass from host
+            command_line_docker_pass_all_env: Pass all host environment variables (DANGEROUS)
+            command_line_docker_mount_ssh_keys: Mount ~/.ssh for git SSH authentication
+            command_line_docker_mount_git_config: Mount ~/.gitconfig for git configuration
+            command_line_docker_mount_gh_config: Mount ~/.config/gh for GitHub CLI authentication
+            command_line_docker_mount_npm_config: Mount ~/.npmrc for npm private packages
+            command_line_docker_mount_pypi_config: Mount ~/.pypirc for PyPI private packages
+            command_line_docker_additional_mounts: Additional volume mounts
+            command_line_docker_auto_install_deps: Auto-detect and install dependencies
+            command_line_docker_auto_install_on_clone: Auto-install dependencies only for newly cloned repos
+            command_line_docker_preinstall_python: List of Python packages to pre-install
+            command_line_docker_preinstall_npm: List of npm packages to pre-install
+            command_line_docker_preinstall_system: List of system packages to pre-install
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         self.enable_image_generation = enable_image_generation
@@ -90,6 +118,20 @@ class FilesystemManager:
         self.command_line_docker_cpu_limit = command_line_docker_cpu_limit
         self.command_line_docker_network_mode = command_line_docker_network_mode
         self.command_line_docker_enable_sudo = command_line_docker_enable_sudo
+        self.command_line_docker_env_file_path = command_line_docker_env_file_path
+        self.command_line_docker_pass_env_vars = command_line_docker_pass_env_vars
+        self.command_line_docker_pass_all_env = command_line_docker_pass_all_env
+        self.command_line_docker_mount_ssh_keys = command_line_docker_mount_ssh_keys
+        self.command_line_docker_mount_git_config = command_line_docker_mount_git_config
+        self.command_line_docker_mount_gh_config = command_line_docker_mount_gh_config
+        self.command_line_docker_mount_npm_config = command_line_docker_mount_npm_config
+        self.command_line_docker_mount_pypi_config = command_line_docker_mount_pypi_config
+        self.command_line_docker_additional_mounts = command_line_docker_additional_mounts
+        self.command_line_docker_auto_install_deps = command_line_docker_auto_install_deps
+        self.command_line_docker_auto_install_on_clone = command_line_docker_auto_install_on_clone
+        self.command_line_docker_preinstall_python = command_line_docker_preinstall_python
+        self.command_line_docker_preinstall_npm = command_line_docker_preinstall_npm
+        self.command_line_docker_preinstall_system = command_line_docker_preinstall_system
 
         # Initialize Docker manager if Docker mode enabled
         self.docker_manager = None
@@ -102,6 +144,20 @@ class FilesystemManager:
                 memory_limit=command_line_docker_memory_limit,
                 cpu_limit=command_line_docker_cpu_limit,
                 enable_sudo=command_line_docker_enable_sudo,
+                env_file_path=command_line_docker_env_file_path,
+                pass_env_vars=command_line_docker_pass_env_vars,
+                pass_all_env=command_line_docker_pass_all_env,
+                mount_ssh_keys=command_line_docker_mount_ssh_keys,
+                mount_git_config=command_line_docker_mount_git_config,
+                mount_gh_config=command_line_docker_mount_gh_config,
+                mount_npm_config=command_line_docker_mount_npm_config,
+                mount_pypi_config=command_line_docker_mount_pypi_config,
+                additional_mounts=command_line_docker_additional_mounts,
+                auto_install_deps=command_line_docker_auto_install_deps,
+                auto_install_on_clone=command_line_docker_auto_install_on_clone,
+                preinstall_python=command_line_docker_preinstall_python,
+                preinstall_npm=command_line_docker_preinstall_npm,
+                preinstall_system=command_line_docker_preinstall_system,
             )
         self.enable_audio_generation = enable_audio_generation
 
