@@ -10,6 +10,9 @@ MassGen is focused on **case-driven development**. Each case study demonstrates 
 
 | Title | Version | Short Description | Status | Link |
 |-------|---------|-------------------|--------|------|
+| **Session Management & Computer Use Tools** | v0.1.9 | Complete session state tracking and restoration for multi-turn conversations, computer use automation tools (Claude/Gemini/OpenAI) for browser and desktop control, enhanced config builder with fuzzy model matching | ✅ Ready | [📄 Guide](massgen/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md) |
+| **Automation Mode Enables Meta Self-Analysis** | v0.1.8 | Automation infrastructure with `--automation` flag providing clean structured output, enabling agents to run nested MassGen experiments and analyze results for meta-level self-analysis | ✅ Ready | [📄 Case Study](docs/source/examples/case_studies/meta-self-analysis-automation-mode.md) · [🎥 Video](https://youtu.be/W60TT7NwJSk) |
+| **Agent Task Planning & Background Execution** | v0.1.7 | MCP-based task management with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows | ✅ Ready | Documentation in v0.1.7 changelog |
 | **Persistent Memory with Semantic Retrieval** | v0.1.5 | Research-to-implementation workflow demonstrating memory system with automatic fact extraction, vector storage, and semantic retrieval across multi-turn sessions | ✅ Ready | [📄 Case Study](docs/source/examples/case_studies/multi-turn-persistent-memory.md) · [🎥 Video](https://youtu.be/wWxxFgyw40Y) |
 | **Multimodal Video Analysis** | v0.1.3 | Meta-level demonstration where agents autonomously download and analyze their own case study videos to identify improvements and automation opportunities | ✅ Ready | [📄 Case Study](docs/source/examples/case_studies/multimodal-case-study-video-analysis.md) · [🎥 Video](https://youtu.be/nRP34Bqz-D4) |
 | **Custom Tools with GitHub Issue Market Analysis** | v0.1.1 | Self-evolution through market analysis using custom Python tools combined with web search to analyze GitHub issues, research trends, and drive feature prioritization | ✅ Ready | [📄 Case Study](docs/source/examples/case_studies/github-issue-market-analysis.md) |
@@ -76,21 +79,29 @@ For contributors who want to create their own case studies:
 
 ## Statistics
 
-- **Total Case Studies**: 33
-  - ✅ Ready: 19 (completed with documentation)
+- **Total Case Studies**: 36
+  - ✅ Ready: 22 (completed with documentation)
   - ✅ Completed: 1 (Web UI Development)
   - 📝 Planning: 1 (Interactive Course Generator)
   - 🧪 In Testing: 1 (Codebase Analysis)
   - ⏸️ Blocked: 2 (Revert Feature, Twitter Integration)
   - 📋 Planned: 7 (future backlog)
   - 📝 Template: 1
-- **With Video Demonstrations**: 8
-- **Release Versions Covered**: v0.0.3 to v0.1.5
+- **With Video Demonstrations**: 9
+- **Release Versions Covered**: v0.0.3 to v0.1.9
 - **Categories**: 6 (Release Features, Research, Travel, Creative, In Development, Planned)
 
 ## Key Features Demonstrated
 
 ### Technical Capabilities
+- ✅ Session state tracking and restoration (v0.1.9)
+- ✅ Computer use automation (browser & desktop control) (v0.1.9)
+- ✅ Fuzzy model name matching and discovery (v0.1.9)
+- ✅ Automation mode for meta-analysis (v0.1.8)
+- ✅ DSPy question paraphrasing for diversity (v0.1.8)
+- ✅ Agent task planning with dependencies (v0.1.7)
+- ✅ Background shell execution (v0.1.7)
+- ✅ Preemption coordination (v0.1.7)
 - ✅ Multi-turn conversations with persistent memory
 - ✅ Multimodal understanding (images, audio, video, PDFs)
 - ✅ Custom Python tools integration
@@ -115,7 +126,9 @@ For contributors who want to create their own case studies:
 - ✅ Code development and testing
 - ✅ Content creation and documentation
 - ✅ Market analysis and feature prioritization
-- ✅ Self-evolution and improvement
+- ✅ Self-evolution and meta-analysis (v0.1.8)
+- ✅ Multi-turn conversation continuation (v0.1.9)
+- ✅ Browser and desktop automation (v0.1.9)
 - ✅ External system integration (Discord, Notion, GitHub)
 - 🔄 Web UI design and competitive development
 - 🔄 Educational content generation (interactive courses)
@@ -190,6 +203,13 @@ We want this to be a community document:
 ## Technical Requirements by Case Study Type
 
 ### Completed Features
+- Session management with restoration (v0.1.9) ✅
+- Computer use automation tools (v0.1.9) ✅
+- Fuzzy model matching (v0.1.9) ✅
+- Automation mode for LLM agents (v0.1.8) ✅
+- DSPy question paraphrasing (v0.1.8) ✅
+- Agent task planning (v0.1.7) ✅
+- Background shell execution (v0.1.7) ✅
 - Multi-turn conversations with persistent memory ✅
 - Multimodal understanding (images, audio, video, PDFs) ✅
 - Custom Python tools integration ✅
@@ -202,11 +222,11 @@ We want this to be a community document:
 - Large codebase analysis with memory 🧪
 
 ### Planned Requirements
-- Computer Use (Gemini 2.5, OpenAI Operator) 📋
 - Advanced video understanding and editing 📋
 - Map-reduce document processing 📋
 - User-defined voting criteria 📋
 - Scalable multi-agent backends 📋
+- LangGraph & SmoLAgent streaming (v0.1.10 in progress) 🔄
 
 ## Long-Term Vision
 
@@ -270,7 +290,28 @@ See the [Contributing Guidelines](CONTRIBUTING.md) for submission instructions.
 
 ## Version History
 
-This summary covers case studies from **MassGen v0.0.3** (initial release) through **v0.1.5** (latest), demonstrating the framework's evolution and expanding capabilities over time.
+This summary covers case studies from **MassGen v0.0.3** (initial release) through **v0.1.9** (latest), demonstrating the framework's evolution and expanding capabilities over time.
+
+### Recent Releases (Post v0.1.5)
+
+**v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
+- Complete session state tracking and restoration for multi-turn conversations
+- Computer use automation tools (Claude, Gemini, OpenAI) for browser and desktop control
+- Enhanced config builder with fuzzy model matching
+- Expanded backend support (Cerebras, Together, Fireworks, Groq, OpenRouter, Moonshot)
+
+**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
+- Automation infrastructure with `--automation` flag for LLM agents
+- Real-time `status.json` monitoring for programmatic workflows
+- DSPy-powered question paraphrasing for multi-agent diversity
+- Meta-coordination capabilities (MassGen running MassGen)
+
+**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
+- MCP-based task management with dependency tracking
+- Background shell execution for long-running commands
+- Preemption coordination for multi-agent workflows
+
+**v0.1.6 (November 1, 2025)** - Additional improvements and bug fixes
 
 ## Detailed Case Study Notes
 
@@ -365,4 +406,27 @@ This summary covers case studies from **MassGen v0.0.3** (initial release) throu
 
 ---
 
-*Last Updated: November 2, 2025*
+## Additional Resources
+
+### Computer Use Tools (v0.1.9)
+- **Comprehensive Guide**: [Computer Use Tools Guide](massgen/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md)
+- **Setup Instructions**: [Docker Setup for Computer Use](scripts/computer_use_setup.md)
+- **Supported Tools**:
+  - Claude Computer Use (Anthropic computer-use-2025-01-24 API)
+  - Gemini Computer Use (Google gemini-2.5-computer-use-preview)
+  - OpenAI Computer Use (computer-use-preview model)
+  - General Browser Automation tool
+
+### Automation Mode (v0.1.8)
+- **LLM Agent Guide**: [AI Usage Guide](AI_USAGE.md)
+- **Automation Documentation**: [Automation User Guide](docs/source/user_guide/automation.rst)
+- **Status File Reference**: [status.json Schema](docs/source/reference/status_file.rst)
+- **DSPy Integration**: [DSPy Implementation Guide](massgen/backend/docs/DSPY_IMPLEMENTATION_GUIDE.md)
+
+### Diversity System (v0.1.8)
+- **Diversity Documentation**: [Diversity User Guide](docs/source/user_guide/diversity.rst)
+- Covers answer novelty requirements and DSPy question paraphrasing
+
+---
+
+*Last Updated: November 9, 2025*
