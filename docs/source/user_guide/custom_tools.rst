@@ -871,7 +871,7 @@ For users with **any model** (gpt-4.1, gpt-4o, gemini-2.5-flash, etc.):
    * ``massgen/tool/_computer_use/README.md`` - Technical implementation details
    * ``massgen/tool/_computer_use/QUICKSTART.md`` - Quick start guide
 
-For docker installation, we have a script <https://github.com/Leezekun/MassGen/scripts/computer_use_setup.md> for you as a guideline.
+For docker installation, we have prepared a script and a `guideline <https://github.com/massgen/MassGen/blob/main/scripts/computer_use_setup.md>` for you.
 
 Available Example Configs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
