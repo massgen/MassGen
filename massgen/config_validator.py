@@ -136,7 +136,7 @@ class ConfigValidator:
     VALID_PERMISSION_MODES = {"default", "acceptEdits", "bypassPermissions", "plan"}
 
     # Valid display types for UI
-    VALID_DISPLAY_TYPES = {"rich_terminal", "simple"}
+    VALID_DISPLAY_TYPES = {"rich_terminal", "simple", "textual_terminal"}
 
     # Valid voting sensitivity levels
     VALID_VOTING_SENSITIVITY = {"lenient", "balanced", "strict"}
