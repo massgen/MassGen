@@ -344,6 +344,21 @@ class DockerManager:
             return True  # Nothing to install
 
         logger.info(f"📦 [Docker] Pre-installing user-specified packages for agent {agent_id}")
+        print(f"📦 [Docker] Pre-installing user-specified packages for agent {agent_id}", flush=True)
+
+        # Log what will be installed
+        if self.preinstall_system:
+            logger.info(f"    • System: {', '.join(self.preinstall_system)}")
+            print(f"    • System: {', '.join(self.preinstall_system)}", flush=True)
+        if self.preinstall_python:
+            logger.info(f"    • Python: {', '.join(self.preinstall_python)}")
+            print(f"    • Python: {', '.join(self.preinstall_python)}", flush=True)
+        if self.preinstall_npm:
+            logger.info(f"    • npm: {', '.join(self.preinstall_npm)}")
+            print(f"    • npm: {', '.join(self.preinstall_npm)}", flush=True)
+
+        logger.info("⏳ [Docker] Installing packages (this may take a few minutes)...")
+        print("⏳ [Docker] Installing packages (this may take a few minutes)...", flush=True)
         success = True
 
         # Install system packages first (may be needed by Python/npm packages)
@@ -363,9 +378,11 @@ class DockerManager:
                     )
                     if result["success"]:
                         logger.info("✅ [Docker] System packages installed successfully")
+                        print("✅ [Docker] System packages installed successfully", flush=True)
                     else:
                         logger.warning("⚠️ [Docker] System package installation failed")
                         logger.warning(f"    Exit code: {result['exit_code']}")
+                        print(f"⚠️ [Docker] System package installation failed (exit code: {result['exit_code']})", flush=True)
                         success = False
                 except Exception as e:
                     logger.error(f"❌ [Docker] Error installing system packages: {e}")
@@ -385,10 +402,12 @@ class DockerManager:
                 )
                 if result["success"]:
                     logger.info("✅ [Docker] Python packages installed successfully")
+                    print("✅ [Docker] Python packages installed successfully", flush=True)
                 else:
                     logger.warning("⚠️ [Docker] Python package installation failed")
                     logger.warning(f"    Exit code: {result['exit_code']}")
                     logger.warning(f"    Output: {result.get('stdout', '')[:500]}")
+                    print(f"⚠️ [Docker] Python package installation failed (exit code: {result['exit_code']})", flush=True)
                     success = False
             except Exception as e:
                 logger.error(f"❌ [Docker] Error installing Python packages: {e}")
@@ -411,10 +430,12 @@ class DockerManager:
                 )
                 if result["success"]:
                     logger.info("✅ [Docker] npm packages installed successfully")
+                    print("✅ [Docker] npm packages installed successfully", flush=True)
                 else:
                     logger.warning("⚠️ [Docker] npm package installation failed")
                     logger.warning(f"    Exit code: {result['exit_code']}")
                     logger.warning(f"    Output: {result.get('stdout', '')[:500]}")
+                    print(f"⚠️ [Docker] npm package installation failed (exit code: {result['exit_code']})", flush=True)
                     success = False
             except Exception as e:
                 logger.error(f"❌ [Docker] Error installing npm packages: {e}")
@@ -423,8 +444,10 @@ class DockerManager:
 
         if success:
             logger.info("✅ [Docker] All pre-install packages installed successfully")
+            print("✅ [Docker] All pre-install packages installed successfully", flush=True)
         else:
             logger.warning("⚠️ [Docker] Some pre-install packages failed (continuing anyway)")
+            print("⚠️ [Docker] Some pre-install packages failed (continuing anyway)", flush=True)
 
         return success
 

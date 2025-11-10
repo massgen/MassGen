@@ -92,22 +92,30 @@ Mount credential files from your host into the container (all mounted read-only)
 
 **2. Pass Environment Variables**
 
-Three methods to pass environment variables:
+Multiple methods to pass environment variables:
 
 .. code-block:: yaml
 
-   # Option 1: From .env file (recommended for multiple secrets)
+   # Option 1: From .env file - load ALL variables
    command_line_docker_credentials:
      env_file: ".env"
 
-   # Option 2: Specific variables from host
+   # Option 2: From .env file - load ONLY specific variables (recommended)
+   command_line_docker_credentials:
+     env_file: ".env"
+     env_vars_from_file:  # Only pass these from .env
+       - "GITHUB_TOKEN"
+       - "NPM_TOKEN"
+     # Other secrets in .env won't be passed to container
+
+   # Option 3: Specific variables from host environment
    command_line_docker_credentials:
      env_vars:
        - "GITHUB_TOKEN"
        - "NPM_TOKEN"
        - "ANTHROPIC_API_KEY"
 
-   # Option 3: All environment variables (dangerous, use with caution)
+   # Option 4: All environment variables (dangerous, use with caution)
    command_line_docker_credentials:
      pass_all_env: true
 
@@ -263,6 +271,7 @@ Complete Example Configurations
 **Security best practices:**
 
 - Use ``.env`` files for credentials (add to ``.gitignore``)
+- Use ``env_vars_from_file`` to only pass needed secrets from .env (recommended)
 - Mount only needed credentials (opt-in by default)
 - Use ``command_line_docker_network_mode: "none"`` unless network is required
 - All credential files are mounted **read-only**
