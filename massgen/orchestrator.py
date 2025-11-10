@@ -128,6 +128,8 @@ class Orchestrator(ChatAgent):
         winning_agents_history: Optional[List[Dict[str, Any]]] = None,
         shared_conversation_memory: Optional[ConversationMemory] = None,
         shared_persistent_memory: Optional[PersistentMemoryBase] = None,
+        enable_nlip: bool = False,
+        nlip_config: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize MassGen orchestrator.
@@ -146,6 +148,8 @@ class Orchestrator(ChatAgent):
                                    Loaded from session storage to persist across orchestrator recreations
             shared_conversation_memory: Optional shared conversation memory for all agents
             shared_persistent_memory: Optional shared persistent memory for all agents
+            enable_nlip: Enable NLIP (Natural Language Interaction Protocol) support
+            nlip_config: Optional NLIP configuration
         """
         super().__init__(session_id, shared_conversation_memory, shared_persistent_memory)
         self.orchestrator_id = orchestrator_id
@@ -251,6 +255,30 @@ class Orchestrator(ChatAgent):
                 logger.info("[Orchestrator] Planning tools injection complete")
         else:
             logger.info("[Orchestrator] Planning config not found or disabled")
+
+        # NLIP Configuration
+        self.enable_nlip = enable_nlip
+        self.nlip_config = nlip_config or {}
+
+        # Initialize NLIP routers for agents if enabled
+        if self.enable_nlip:
+            self._init_nlip_routing()
+
+    def _init_nlip_routing(self) -> None:
+        """Initialize NLIP routing for all agents."""
+        logger.info(f"[Orchestrator] Initializing NLIP routing for {len(self.agents)} agents")
+
+        for agent_id, agent in self.agents.items():
+            # Check if agent is a ConfigurableAgent with NLIP config
+            if hasattr(agent, 'config'):
+                agent.config.enable_nlip = True
+                agent.config.nlip_config = self.nlip_config
+
+                # Initialize NLIP router for the agent
+                tool_manager = getattr(agent, '_tool_manager', None)
+                agent.config.init_nlip_router(tool_manager=tool_manager)
+
+                logger.info(f"[Orchestrator] NLIP routing enabled for agent: {agent_id}")
 
     async def _prepare_paraphrases_for_agents(self, question: str) -> None:
         """Generate and assign DSPy paraphrases for the current question."""

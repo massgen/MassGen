@@ -102,6 +102,11 @@ class AgentConfig:
     # Debug mode for restart feature - override final answer on attempt 1 only
     debug_final_answer: Optional[str] = None
 
+    # NLIP (Natural Language Interaction Protocol) Configuration
+    enable_nlip: bool = False
+    nlip_config: Optional[Dict[str, Any]] = None
+    _nlip_router: Any = field(default=None, init=False, repr=False)
+
     @property
     def custom_system_instruction(self) -> Optional[str]:
         """
@@ -127,6 +132,26 @@ class AgentConfig:
                 stacklevel=2,
             )
         self._custom_system_instruction = value
+
+    def init_nlip_router(self, tool_manager: Optional[Any] = None) -> None:
+        """Initialize NLIP router if NLIP is enabled.
+
+        Args:
+            tool_manager: Optional tool manager instance to use with router
+        """
+        if self.enable_nlip and self._nlip_router is None:
+            from .nlip.router import NLIPRouter
+
+            self._nlip_router = NLIPRouter(
+                tool_manager=tool_manager,
+                enable_nlip=True,
+                config=self.nlip_config or {}
+            )
+
+    @property
+    def nlip_router(self) -> Optional[Any]:
+        """Get NLIP router instance."""
+        return self._nlip_router
 
     @classmethod
     def create_chatcompletion_config(

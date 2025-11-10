@@ -805,6 +805,11 @@ class ConfigurableAgent(SingleAgent):
 
         # ConfigurableAgent relies on backend_params for model configuration
 
+        # Initialize NLIP router if enabled
+        if hasattr(config, 'enable_nlip') and config.enable_nlip:
+            tool_manager = getattr(self, '_tool_manager', None)
+            config.init_nlip_router(tool_manager=tool_manager)
+
     def _get_backend_params(self) -> Dict[str, Any]:
         """Get backend parameters from config."""
         return self.config.get_backend_params()

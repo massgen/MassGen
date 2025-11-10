@@ -1,0 +1,54 @@
+# NLIP (Natural Language Interaction Protocol) Basic Configuration Example
+#
+# This example demonstrates how to enable NLIP support in MassGen for
+# standardized agent-to-agent communication following the Ecma TC56 specification.
+
+# Enable NLIP protocol support (default: false)
+nlip:
+  enabled: true
+  schema_version: "1.0"
+
+  # Router configuration
+  router:
+    enable_message_tracking: true
+    enable_state_management: true
+    session_timeout_hours: 24
+
+  # Protocol translation settings
+  translation:
+    mcp_enabled: true
+    custom_tools_enabled: true
+    builtin_tools_enabled: true
+
+  # Token management
+  tokens:
+    auto_generate_sessions: true
+    track_conversation_turns: true
+    persist_context_tokens: false
+
+# Agent configuration
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+
+    # Enable NLIP for this agent
+    nlip:
+      enabled: true
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+
+    # Enable NLIP for this agent
+    nlip:
+      enabled: true
+
+# Orchestrator settings
+orchestrator:
+  # Enable NLIP at orchestrator level
+  nlip:
+    enabled: true
+    coordinate_via_nlip: true
