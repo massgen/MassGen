@@ -11,7 +11,7 @@
 # 5. Git config (~/.gitconfig)
 #
 # Usage:
-#   uv run massgen --config massgen/configs/tools/code-execution/docker_full_dev_setup.yaml "Demonstrate full dev environment: check gh auth, verify pre-installed massgen, verify typescript installed, create Flask app with requirements.txt, show git config"
+#   uv run massgen --config @examples/configs/tools/code-execution/docker_full_dev_setup.yaml "Demonstrate full dev environment: check gh auth, verify pre-installed massgen, verify typescript installed, create Flask app with requirements.txt, show git config"
 
 agent:
   id: "fullstack_agent"
@@ -35,7 +35,6 @@ agent:
 
     # Package management
     command_line_docker_packages:
-      auto_install_deps: true
       preinstall:
         python:
           - "massgen"

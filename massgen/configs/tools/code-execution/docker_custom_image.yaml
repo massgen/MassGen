@@ -5,18 +5,11 @@
 #
 # Prerequisites:
 # 1. Docker daemon running
-# 2. Create and build a custom image (see instructions below)
-#
-# Create a custom Dockerfile:
-#   FROM massgen/mcp-runtime:latest
-#   RUN pip install --no-cache-dir tensorflow scikit-learn jupyter
-#   RUN apt-get update && apt-get install -y vim htop && rm -rf /var/lib/apt/lists/*
-#
-# Build it:
-#   docker build -t my-massgen-ml:v1 -f Dockerfile.custom .
+# 2. Build the example custom image:
+#      docker build -t massgen-custom-test:v1 -f massgen/docker/Dockerfile.custom-example .
 #
 # Usage:
-#   uv run massgen massgen/configs/tools/code-execution/docker_custom_image.yaml "Verify custom image packages: check for tensorflow, scikit-learn, jupyter, vim, and htop"
+#   uv run massgen --config @examples/configs/tools/code-execution/docker_custom_image.yaml "Verify custom packages: sklearn, matplotlib, seaborn, ipython, black, vim, htop, tree"
 
 agent:
   id: "custom_image_agent"
@@ -28,7 +21,7 @@ agent:
 
     # Docker configuration with CUSTOM IMAGE
     command_line_execution_mode: "docker"
-    command_line_docker_image: "my-massgen-ml:v1"  # Your custom image
+    command_line_docker_image: "massgen-custom-test:v1"  # Built from Dockerfile.test-custom
 
 orchestrator:
   snapshot_storage: "snapshots"

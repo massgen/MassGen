@@ -1,276 +1,109 @@
 # Docker Credential Management Examples
 
-This directory contains practical examples for using Docker code execution with credential management, dependency installation, and environment setup.
+This directory now ships with three canonical configurations. Use them as-is or treat them as templates when tailoring Docker code execution for your own workflows.
 
-## Quick Start
+| Config | Purpose | When to use it |
+|--------|---------|----------------|
+| `docker_full_dev_setup.yaml` | Comprehensive environment with credentials and preinstalls | Default starting point for real development work |
+| `docker_github_readonly.yaml` | Read-only GitHub operations with command blocking | Safe exploration when you do not want push/create access |
+| `docker_custom_image.yaml` | Bring your own Docker image | You maintain a bespoke runtime image |
 
-All examples require:
-1. **Docker daemon running**
-2. **MassGen Docker image built**: `bash massgen/docker/build.sh`
-   - For sudo examples: `bash massgen/docker/build.sh --sudo`
+All other scenarios (token-only auth, SSH without preinstalls, etc.) can be reproduced by trimming the full template rather than maintaining many near-duplicate config files.
 
-## Examples Overview
+## Prerequisites
 
-### 1. GitHub CLI Authentication (`docker_github_cli_auth.yaml`)
+1. Docker daemon running
+2. MassGen Docker image built:
+   ```bash
+   bash massgen/docker/build.sh          # base image
+   bash massgen/docker/build.sh --sudo   # required for sudo-enabled runs
+   ```
 
-Test GitHub CLI with token authentication.
+## Config Details
 
-**Setup**:
-```bash
-export GITHUB_TOKEN=ghp_your_token_here
-```
+### Full Development Setup (`docker_full_dev_setup.yaml`)
 
-**Run**:
-```bash
-uv run massgen massgen/configs/tools/code-execution/docker_github_cli_auth.yaml
-```
+Everything enabled by default: `.env` loading, SSH/git mounts, and package preinstalls.
 
-**What it does**: Runs `gh auth status` and `gh api user` to verify GitHub CLI authentication.
-
----
-
-### 2. Pre-Install Packages (`docker_preinstall_packages.yaml`)
-
-Install base packages that are always available in containers.
-
-**Setup**: Build with sudo support
 ```bash
 bash massgen/docker/build.sh --sudo
-```
-
-**Run**:
-```bash
-uv run massgen massgen/configs/tools/code-execution/docker_preinstall_packages.yaml
-```
-
-**What it does**: Pre-installs Python (requests, numpy, pytest), npm (typescript), and system packages (curl, vim), then verifies they're available.
-
-**Key feature**: Packages install BEFORE workspace scanning, giving you a consistent base environment.
-
----
-
-### 3. Private Repository Clone (`docker_private_repo_clone.yaml`)
-
-Clone private GitHub repos using SSH keys.
-
-**Setup**:
-```bash
-# Ensure SSH keys exist and have correct permissions
-chmod 700 ~/.ssh
-chmod 600 ~/.ssh/id_rsa
-
-# Add SSH key to GitHub account (if not already done)
-# https://github.com/settings/keys
-```
-
-**Run**:
-```bash
-uv run massgen massgen/configs/tools/code-execution/docker_private_repo_clone.yaml
-```
-
-**What it does**: Mounts your SSH keys and git config, tests SSH connection, attempts to clone a private repo.
-
-**Note**: Edit the config to replace `yourorg/private-repo` with a real private repo you have access to.
-
----
-
-### 4. Auto-Dependency Installation (`docker_autodeps_install.yaml`)
-
-Automatically detect and install dependencies from `requirements.txt`, `package.json`, etc.
-
-**Run**:
-```bash
-uv run massgen massgen/configs/tools/code-execution/docker_autodeps_install.yaml
-```
-
-**What it does**: Agent creates dependency files, auto-install detects and installs them, then verifies installation.
-
-**Key feature**: Dependencies in workspace are automatically detected and installed on container creation.
-
----
-
-### 5. Environment File (.env) (`docker_env_file.yaml`)
-
-Pass credentials via .env file (recommended for multiple secrets).
-
-**Setup**:
-```bash
-cat > .env <<EOF
-GITHUB_TOKEN=ghp_your_token
-ANTHROPIC_API_KEY=sk-ant-your_key
-CUSTOM_VAR=test_value
-EOF
-```
-
-**Run**:
-```bash
-uv run massgen massgen/configs/tools/code-execution/docker_env_file.yaml
-```
-
-**What it does**: Loads environment variables from .env file and verifies they're available in the container.
-
-**Best practice**: Use .env files for managing multiple credentials. Add `.env` to `.gitignore`.
-
----
-
-### 6. Full Development Setup (`docker_full_dev_setup.yaml`)
-
-Comprehensive example combining all features - use this as a production template.
-
-**Setup**:
-```bash
-# Build with sudo
-bash massgen/docker/build.sh --sudo
-
-# Create .env file
 echo "GITHUB_TOKEN=ghp_your_token" > .env
 
-# Ensure SSH keys and git config exist
+uv run massgen --config massgen/configs/tools/code-execution/docker_full_dev_setup.yaml \
+  "Demonstrate full dev environment: check gh auth, verify pre-installed packages, create Flask app with requirements.txt, show git config"
 ```
 
-**Run**:
-```bash
-uv run massgen massgen/configs/tools/code-execution/docker_full_dev_setup.yaml
+**Toggle features by editing the file:**
+
+```yaml
+command_line_docker_credentials:
+  env_file: ".env"          # remove to skip .env loading
+  env_vars:
+    - "GITHUB_TOKEN"        # uncomment to pass select env vars directly
+  mount:
+    - "ssh_keys"            # drop entries you do not need
+    - "git_config"
+
+command_line_docker_packages:
+  preinstall:               # delete block to skip base installs
+    python:
+      - "massgen"
+    npm:
+      - "typescript"
 ```
 
-**What it does**: Combines GitHub CLI, pre-install packages, auto-dependencies, SSH keys, git config, and .env file into a complete development environment.
+Keep this file in version control as your single source of truth, and adjust it per environment rather than relying on multiple standalone configs.
 
-**Features**:
-- GitHub CLI authentication
-- Pre-installed base packages (pytest, requests, numpy, typescript)
-- Auto-dependency detection and installation
-- SSH keys for private repos
-- Git config for commits
-- Resource limits (4GB RAM, 2 CPUs)
+### GitHub Read-Only (`docker_github_readonly.yaml`)
 
----
+Mounts the same credentials as the full template but blocks destructive commands (`git push`, `gh pr create`, etc.).
 
-### 7. Custom Docker Image (`docker_custom_image.yaml`)
-
-Use your own Docker image with custom tools and libraries.
-
-**Setup**:
 ```bash
-# Create Dockerfile.custom
-cat > Dockerfile.custom <<EOF
+uv run massgen --config massgen/configs/tools/code-execution/docker_github_readonly.yaml \
+  "Clone the MassGen repo, inspect recent commits, and summarize changes"
+```
+
+Use this when you want the agent to explore private repositories without any ability to mutate them.
+
+### Custom Docker Image (`docker_custom_image.yaml`)
+
+Points MassGen at a Docker image you manage.
+
+```bash
+cat > Dockerfile.custom <<'EOF'
 FROM massgen/mcp-runtime:latest
 RUN pip install --no-cache-dir tensorflow scikit-learn jupyter
 RUN apt-get update && apt-get install -y vim htop && rm -rf /var/lib/apt/lists/*
 EOF
 
-# Build your custom image
 docker build -t my-massgen-ml:v1 -f Dockerfile.custom .
+
+uv run massgen --config massgen/configs/tools/code-execution/docker_custom_image.yaml \
+  "Verify custom image packages: check for tensorflow, scikit-learn, jupyter, vim, and htop"
 ```
 
-**Run**:
-```bash
-uv run massgen massgen/configs/tools/code-execution/docker_custom_image.yaml
-```
+Swap in your own Dockerfile to bake shared tooling directly into the image.
 
-**What it does**: Uses your custom Docker image instead of the default MassGen image.
+## Re-creating Previous Scenarios
 
-**When to use**: When you need the same packages across all runs, or have complex system dependencies.
+The deleted sample configs mapped one-to-one with sections of the full template. Use these snippets to replicate them without additional files:
 
----
+- **Token-only GitHub auth:** comment out the `mount:` block and keep `env_vars: ["GITHUB_TOKEN"]`.
+- **SSH + git config only:** drop `env_file`, keep `mount: ["ssh_keys", "git_config"]`.
+- **.env only:** remove everything but `env_file: ".env"`.
+- **No preinstalls:** remove the entire `preinstall` mapping or individual lists under it.
 
-## Common Patterns
+Because every knob is opt-in, removing a key from the YAML immediately disables that behavior.
 
-### Pattern 1: GitHub Development
-Combine GitHub CLI + SSH keys + git config:
-```yaml
-command_line_docker_network_mode: "bridge"
-command_line_docker_pass_env_vars: ["GITHUB_TOKEN"]
-command_line_docker_mount_ssh_keys: true
-command_line_docker_mount_git_config: true
-```
 
-### Pattern 2: Private Package Development
-For npm/PyPI private packages:
-```yaml
-command_line_docker_network_mode: "bridge"
-command_line_docker_mount_npm_config: true
-command_line_docker_mount_pypi_config: true
-command_line_docker_pass_env_vars: ["NPM_TOKEN"]
-```
+## Troubleshooting & Tips
 
-### Pattern 3: Consistent Environment
-Pre-install + auto-detect:
-```yaml
-command_line_docker_preinstall_python: ["pytest", "requests"]
-command_line_docker_auto_install_deps: true
-```
+- **SSH permissions:** run `chmod 700 ~/.ssh` and `chmod 600 ~/.ssh/id_rsa` if mounts fail.
+- **GitHub CLI scopes:** ensure `GITHUB_TOKEN` includes `repo` and `workflow` if you rely on token auth.
+- **Custom images:** `docker images | grep massgen` confirms that your custom tag exists before launching.
 
-### Pattern 4: Multiple Secrets
-Use .env file:
-```yaml
-command_line_docker_env_file_path: ".env"
-```
+## Additional Documentation
 
-## Troubleshooting
-
-### SSH Keys Not Working
-```bash
-# Check permissions
-ls -la ~/.ssh/
-chmod 700 ~/.ssh
-chmod 600 ~/.ssh/id_rsa
-
-# Test SSH connection
-ssh -T git@github.com
-```
-
-### GitHub CLI Not Authenticating
-```bash
-# Check token is set
-echo $GITHUB_TOKEN
-
-# Verify token has correct scopes (repo, workflow)
-```
-
-### Dependencies Not Installing
-```bash
-# Check logs in .massgen/massgen_logs/
-# Look for installation errors
-
-# Try manual install in container
-docker exec -it massgen-agent_a /bin/bash
-pip install <package>
-```
-
-### Custom Image Not Found
-```bash
-# Verify image exists
-docker images | grep my-massgen
-
-# Build if needed
-docker build -t my-massgen-ml:v1 .
-```
-
-## Security Best Practices
-
-1. **Use .env files** for credentials, never hardcode in configs
-2. **Add .env to .gitignore** to prevent committing secrets
-3. **Use read-only mounts** for credential files (default behavior)
-4. **Enable only needed credentials** - opt-in by default
-5. **Use network isolation** (`network_mode: none`) unless network is required
-6. **Review logs** for any credential leakage before sharing
-
-## Documentation
-
-For complete documentation, see:
 - User Guide: `docs/source/user_guide/docker_authentication.rst`
 - Design Doc: `docs/dev_notes/CODE_EXECUTION_DESIGN.md`
 - PR Draft: `PR_DRAFT_436.md`
-
-## Feature Summary
-
-| Feature | Config Parameter | Example |
-|---------|-----------------|---------|
-| GitHub CLI | `pass_env_vars: ["GITHUB_TOKEN"]` | docker_github_cli_auth.yaml |
-| SSH Keys | `mount_ssh_keys: true` | docker_private_repo_clone.yaml |
-| Git Config | `mount_git_config: true` | docker_private_repo_clone.yaml |
-| .env File | `env_file_path: ".env"` | docker_env_file.yaml |
-| Pre-install | `preinstall_python: [...]` | docker_preinstall_packages.yaml |
-| Auto-deps | `auto_install_deps: true` | docker_autodeps_install.yaml |
-| Custom Image | `docker_image: "your-image"` | docker_custom_image.yaml |
-| Full Setup | (all combined) | docker_full_dev_setup.yaml |
