@@ -227,7 +227,62 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.9 - Latest
+### v0.1.10 - Latest
+**New Features:** Framework Interoperability Streaming & Docker Enhancements
+
+**Configuration Files:**
+- `docker_custom_image.yaml` - Custom Docker image with pre-installed packages
+- `docker_github_readonly.yaml` - Docker with read-only GitHub access via gh CLI and git
+- `docker_full_dev_setup.yaml` - Full development environment with authentication
+- `langgraph_lesson_planner_example.yaml` - LangGraph workflow streaming
+- `smolagent_lesson_planner_example.yaml` - SmoLAgent framework streaming
+- `Dockerfile.custom-example` - Example Dockerfile for extending MassGen base image
+
+**Key Features:**
+- **Framework Interoperability Streaming**: Real-time intermediate step streaming for LangGraph and SmoLAgent with log/output distinction
+- **Docker Authentication Restructuring**: Nested `command_line_docker_credentials` with separate `mount` array and `env_vars` array
+- **Docker Custom Image Support**: Extend MassGen base image with your own packages via custom Dockerfiles
+- **Docker Package Management**: Preinstall packages via `command_line_docker_packages` array before agent execution
+- **Parallel Execution Safety**: Instance ID generation for safe parallel execution across all modes
+- **MassGen Handbook**: Comprehensive contributor documentation at https://massgen.github.io/Handbook/
+
+**Try It:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# LangGraph streaming - watch state graph workflow execution in real-time
+# Prerequisites:
+#   1. pip install langgraph langchain-openai langchain-core
+#   2. OPENAI_API_KEY environment variable must be set
+massgen --config @examples/tools/custom_tools/interop/langgraph_lesson_planner_example.yaml \
+  "Create a lesson plan for photosynthesis"
+
+# SmoLAgent streaming - see HuggingFace agent reasoning steps live
+# Prerequisites:
+#   1. pip install smolagents
+#   2. OPENAI_API_KEY environment variable must be set
+massgen --config @examples/tools/custom_tools/interop/smolagent_lesson_planner_example.yaml \
+  "Create a lesson plan for photosynthesis"
+
+# Docker custom image - use your own Docker image with preinstalled packages
+# Prerequisites:
+#   1. Docker daemon running
+#   2. Build the example custom image:
+#      docker build -t massgen-custom-test:v1 -f massgen/docker/Dockerfile.custom-example .
+uv run massgen --config @examples/configs/tools/code-execution/docker_custom_image.yaml \
+  "Verify custom packages: sklearn, matplotlib, seaborn, ipython, black, vim, htop, tree"
+
+# Docker with GitHub authentication - read-only repository access
+# Prerequisites:
+#   1. Docker daemon running
+#   2. Already logged in: gh auth login (or set GITHUB_TOKEN)
+#   3. Build the Docker image: bash massgen/docker/build.sh
+uv run massgen --config @examples/configs/tools/code-execution/docker_github_readonly.yaml \
+  "Test to see the most recent issues in the massgen/MassGen repo with the github cli"
+```
+
+### v0.1.9
 **New Features:** Session Management & Computer Use Tools
 
 **Configuration Files:**
