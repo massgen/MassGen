@@ -9,8 +9,7 @@
 # 3. Build the Docker image: bash massgen/docker/build.sh
 #
 # Usage:
-#   uv run massgen massgen/configs/tools/code-execution/docker_github_readonly.yaml \
-#     "Clone the MassGen repo, examine recent commits, and summarize what changed"
+#   uv run massgen --config @examples/configs/tools/code-execution/docker_github_readonly.yaml "Test to see the most recent issues in the massgen/MassGen repo with the github cli"
 
 agent:
   id: "github_readonly_agent"

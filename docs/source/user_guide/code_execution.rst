@@ -250,7 +250,6 @@ Complete Example Configurations
        command_line_execution_mode: "docker"
        command_line_docker_enable_sudo: true
        command_line_docker_network_mode: "bridge"
-       command_line_docker_memory_limit: "4g"
 
        command_line_docker_credentials:
          env_file: ".env"
@@ -269,7 +268,35 @@ Complete Example Configurations
 - All credential files are mounted **read-only**
 - Use command filtering (``blocked_commands``) for additional safety
 
-**Example configs:** See ``massgen/configs/tools/code-execution/`` for 8+ ready-to-run examples.
+**Ready-to-run examples:**
+
+1. **GitHub read-only mode** (safe mode with credentials):
+
+   .. code-block:: bash
+
+      # Prerequisites: gh auth login or export GITHUB_TOKEN
+      uv run massgen --config @examples/configs/tools/code-execution/docker_github_readonly.yaml "Test to see the most recent issues in the massgen/MassGen repo with the github cli"
+
+2. **Full development setup** (all features combined):
+
+   .. code-block:: bash
+
+      # Prerequisites: Build sudo image, create .env file
+      bash massgen/docker/build.sh --sudo
+      echo "GITHUB_TOKEN=ghp_your_token" > .env
+
+      uv run massgen --config @examples/configs/tools/code-execution/docker_full_dev_setup.yaml "Demonstrate full dev environment: check gh auth, verify pre-installed massgen, verify typescript installed, create Flask app with requirements.txt, show git config"
+
+3. **Custom Docker image** (bring your own image):
+
+   .. code-block:: bash
+
+      # Prerequisites: Build custom image
+      docker build -t massgen-custom-test:v1 -f massgen/docker/Dockerfile.custom-example .
+
+      uv run massgen --config @examples/configs/tools/code-execution/docker_custom_image.yaml "Verify custom packages: sklearn, matplotlib, seaborn, ipython, black, vim, htop, tree"
+
+**More examples:** See ``massgen/configs/tools/code-execution/`` for additional configurations.
 
 Code Execution vs Backend Built-in Tools
 -----------------------------------------

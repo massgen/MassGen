@@ -29,6 +29,8 @@ agent:
     # Credentials
     command_line_docker_credentials:
       env_file: ".env"
+      env_vars_from_file:
+        - "GITHUB_TOKEN"
       mount:
         - "ssh_keys"
         - "git_config"

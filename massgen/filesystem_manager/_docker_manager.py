@@ -7,13 +7,12 @@ Provides strong filesystem isolation by executing commands inside containers
 while keeping MCP servers on the host.
 """
 
-import logging
 import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
+from ..logger_config import logger
 
 # Check if docker is available
 try:
@@ -64,6 +63,7 @@ class DockerManager:
                 additional_mounts: Custom volume mounts {host_path: {bind: container_path, mode: ro/rw}}
                 env_file: Path to .env file to load
                 env_vars: List of environment variables to pass from host
+                env_vars_from_file: List of specific variables to load from env_file (filters env_file)
                 pass_all_env: Pass all host environment variables (DANGEROUS)
             packages: Package management configuration:
                 preinstall: Dict with python/npm/system keys containing package lists
@@ -106,6 +106,7 @@ class DockerManager:
         self.additional_mounts = credentials.get("additional_mounts", {})
         self.env_file_path = credentials.get("env_file")
         self.pass_env_vars = credentials.get("env_vars", [])
+        self.env_vars_from_file = credentials.get("env_vars_from_file", [])
         self.pass_all_env = credentials.get("pass_all_env", False)
 
         # Extract package configuration from nested dict
@@ -227,7 +228,14 @@ class DockerManager:
         if self.env_file_path:
             try:
                 file_env = self._load_env_file(self.env_file_path)
-                env_vars.update(file_env)
+                # Filter to only specific vars if env_vars_from_file is specified
+                if self.env_vars_from_file:
+                    filtered_env = {k: v for k, v in file_env.items() if k in self.env_vars_from_file}
+                    logger.info(f"    Filtered to {len(filtered_env)} of {len(file_env)} variables from .env file")
+                    env_vars.update(filtered_env)
+                else:
+                    # Load all variables from file
+                    env_vars.update(file_env)
             except Exception as e:
                 logger.error(f"❌ [Docker] Failed to load env file: {e}")
                 raise
@@ -380,9 +388,11 @@ class DockerManager:
                 else:
                     logger.warning("⚠️ [Docker] Python package installation failed")
                     logger.warning(f"    Exit code: {result['exit_code']}")
+                    logger.warning(f"    Output: {result.get('stdout', '')[:500]}")
                     success = False
             except Exception as e:
                 logger.error(f"❌ [Docker] Error installing Python packages: {e}")
+                logger.exception("Full traceback:")
                 success = False
 
         # Install npm packages
@@ -404,9 +414,11 @@ class DockerManager:
                 else:
                     logger.warning("⚠️ [Docker] npm package installation failed")
                     logger.warning(f"    Exit code: {result['exit_code']}")
+                    logger.warning(f"    Output: {result.get('stdout', '')[:500]}")
                     success = False
             except Exception as e:
                 logger.error(f"❌ [Docker] Error installing npm packages: {e}")
+                logger.exception("Full traceback:")
                 success = False
 
         if success:
@@ -645,6 +657,8 @@ class DockerManager:
 
             # Handle timeout using threading
             if timeout:
+                import threading
+
                 result_container = {}
                 exception_container = {}
 
@@ -653,6 +667,17 @@ class DockerManager:
                         result_container["data"] = container.exec_run(**exec_config)
                     except Exception as e:
                         exception_container["error"] = e
+
+                thread = threading.Thread(target=run_exec)
+                thread.daemon = True
+                thread.start()
+                thread.join(timeout=timeout)
+
+                execution_time = time.time() - start_time
+
+                if thread.is_alive():
+                    # Thread is still running - timeout occurred
+                    logger.warning(f"⚠️ [Docker] Command timed out after {timeout} seconds")
                     return {
                         "success": False,
                         "exit_code": -1,
@@ -665,6 +690,9 @@ class DockerManager:
 
                 if "error" in exception_container:
                     raise exception_container["error"]
+
+                if "data" not in result_container:
+                    raise RuntimeError("Command execution failed - no result data")
 
                 exit_code, output = result_container["data"]
             else:
