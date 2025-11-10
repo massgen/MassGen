@@ -25,7 +25,9 @@ agent:
     command_line_docker_network_mode: "bridge"  # Need network for gh CLI
 
     # Mount GitHub CLI config directory (contains your gh auth login credentials)
-    command_line_docker_mount_gh_config: true  # Mounts ~/.config/gh (read-only)
+    command_line_docker_credentials:
+      mount:
+        - "gh_config"  # Mounts ~/.config/gh (read-only)
 
 orchestrator:
   snapshot_storage: "snapshots"

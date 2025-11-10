@@ -24,17 +24,17 @@ agent:
     command_line_docker_network_mode: "bridge"  # Required for package downloads
 
     # Pre-install base packages (runs FIRST, before workspace scanning)
-    command_line_docker_preinstall_python:
-      - "requests>=2.31.0"
-      - "numpy>=1.24.0"
-      - "pytest>=7.0.0"
-
-    command_line_docker_preinstall_npm:
-      - "typescript"
-
-    command_line_docker_preinstall_system:
-      - "curl"
-      - "vim"
+    command_line_docker_packages:
+      preinstall:
+        python:
+          - "requests>=2.31.0"
+          - "numpy>=1.24.0"
+          - "pytest>=7.0.0"
+        npm:
+          - "typescript"
+        system:
+          - "curl"
+          - "vim"
 
 orchestrator:
   snapshot_storage: "snapshots"

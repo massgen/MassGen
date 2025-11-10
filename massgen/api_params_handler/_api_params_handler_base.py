@@ -70,22 +70,9 @@ class APIParamsHandlerBase(ABC):
             "command_line_docker_cpu_limit",
             "command_line_docker_network_mode",
             "command_line_docker_enable_sudo",
-            # Docker credential management parameters
-            "command_line_docker_env_file_path",
-            "command_line_docker_pass_env_vars",
-            "command_line_docker_pass_all_env",
-            "command_line_docker_mount_ssh_keys",
-            "command_line_docker_mount_git_config",
-            "command_line_docker_mount_gh_config",
-            "command_line_docker_mount_npm_config",
-            "command_line_docker_mount_pypi_config",
-            "command_line_docker_additional_mounts",
-            # Docker dependency management parameters
-            "command_line_docker_auto_install_deps",
-            "command_line_docker_auto_install_on_clone",
-            "command_line_docker_preinstall_python",
-            "command_line_docker_preinstall_npm",
-            "command_line_docker_preinstall_system",
+            # Docker credential and package management (nested dicts)
+            "command_line_docker_credentials",
+            "command_line_docker_packages",
             # Backend identification (handled by orchestrator)
             "enable_audio_generation",  # Audio generation parameter
             "type",
@@ -93,6 +80,8 @@ class APIParamsHandlerBase(ABC):
             "session_id",
             # MCP configuration (handled by base class for MCP backends)
             "mcp_servers",
+            # Parallelization
+            "instance_id",
         }
 
     def build_base_api_params(

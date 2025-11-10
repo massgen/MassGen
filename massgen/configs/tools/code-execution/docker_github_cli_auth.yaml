@@ -25,8 +25,9 @@ agent:
     command_line_docker_network_mode: "bridge"  # Need network for gh CLI
 
     # GitHub CLI authentication via environment variable
-    command_line_docker_pass_env_vars:
-      - "GITHUB_TOKEN"  # Passed from host environment
+    command_line_docker_credentials:
+      env_vars:
+        - "GITHUB_TOKEN"  # Passed from host environment
 
 orchestrator:
   snapshot_storage: "snapshots"

@@ -11,7 +11,7 @@
 # 5. Git config (~/.gitconfig)
 #
 # Usage:
-#   uv run massgen massgen/configs/tools/code-execution/docker_full_dev_setup.yaml "Demonstrate full dev environment: check gh auth, verify pre-installed pytest, create Flask app with requirements.txt, show git config"
+#   uv run massgen --config massgen/configs/tools/code-execution/docker_full_dev_setup.yaml "Demonstrate full dev environment: check gh auth, verify pre-installed massgen, verify typescript installed, create Flask app with requirements.txt, show git config"
 
 agent:
   id: "fullstack_agent"
@@ -25,25 +25,22 @@ agent:
     command_line_execution_mode: "docker"
     command_line_docker_enable_sudo: true
     command_line_docker_network_mode: "bridge"
-    command_line_docker_memory_limit: "4g"
-    command_line_docker_cpu_limit: 2.0
 
     # Credentials
-    command_line_docker_env_file_path: ".env"
-    command_line_docker_mount_ssh_keys: true
-    command_line_docker_mount_git_config: true
+    command_line_docker_credentials:
+      env_file: ".env"
+      mount:
+        - "ssh_keys"
+        - "git_config"
 
-    # Pre-install base packages (always available)
-    command_line_docker_preinstall_python:
-      - "pytest>=7.0.0"
-      - "requests>=2.31.0"
-      - "numpy>=1.24.0"
-
-    command_line_docker_preinstall_npm:
-      - "typescript"
-
-    # Auto-install workspace dependencies
-    command_line_docker_auto_install_deps: true
+    # Package management
+    command_line_docker_packages:
+      auto_install_deps: true
+      preinstall:
+        python:
+          - "massgen"
+        npm:
+          - "typescript"
 
 orchestrator:
   snapshot_storage: "snapshots"

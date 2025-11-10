@@ -1,0 +1,83 @@
+# Example: Docker with Read-Only GitHub Access
+#
+# This config allows agents to use git and GitHub CLI to READ repositories,
+# but blocks all destructive write operations (push, create PR, merge, etc.)
+#
+# Prerequisites:
+# 1. Docker daemon running
+# 2. Already logged in: gh auth login (or set GITHUB_TOKEN)
+# 3. Build the Docker image: bash massgen/docker/build.sh
+#
+# Usage:
+#   uv run massgen massgen/configs/tools/code-execution/docker_github_readonly.yaml \
+#     "Clone the MassGen repo, examine recent commits, and summarize what changed"
+
+agent:
+  id: "github_readonly_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+
+    # Docker configuration
+    command_line_execution_mode: "docker"
+    command_line_docker_network_mode: "bridge"  # Need network for git/gh
+
+    # Mount credentials for read-only access
+    command_line_docker_credentials:
+      mount:
+        - "gh_config"    # GitHub CLI auth (from gh auth login)
+        - "ssh_keys"     # For git clone via SSH
+        - "git_config"   # For git user info
+      env_vars:
+        - "GITHUB_TOKEN"  # For git clone via HTTPS (optional if gh_config mounted)
+
+    # Block all destructive/write operations (regex patterns)
+    command_line_blocked_commands:
+      # Git write operations
+      - "git push"
+      - "git push --force"
+      - "git reset --hard"
+      - "git clean -fd"
+      - "git commit"
+      - "git rebase"
+      - "git merge"
+
+      # GitHub CLI write operations (precise patterns)
+      - "gh pr create"
+      - "gh issue create"
+      - "gh release create"
+      - "gh repo create"
+      - "gh secret create"
+      - "gh pr merge"
+      - "gh pr close"
+      - "gh issue close"
+      - "gh pr edit"
+      - "gh issue edit"
+      - "gh pr comment"
+      - "gh issue comment"
+      - "gh repo delete"
+      - "gh issue delete"
+      - "gh pr lock"
+      - "gh pr unlock"
+      - "gh repo fork"
+      - "gh repo archive"
+      - "gh workflow run"
+      - "gh secret set"
+      - "gh label set"
+
+      # Destructive system operations
+      - "rm -rf"
+      - "sudo"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 180
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

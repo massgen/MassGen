@@ -28,7 +28,8 @@ agent:
     command_line_execution_mode: "docker"
 
     # Load environment variables from .env file
-    command_line_docker_env_file_path: ".env"
+    command_line_docker_credentials:
+      env_file: ".env"
 
 orchestrator:
   snapshot_storage: "snapshots"

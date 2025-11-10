@@ -47,7 +47,8 @@ MassGen supports three methods for passing environment variables to Docker conta
         backend:
           enable_mcp_command_line: true
           command_line_execution_mode: "docker"
-          command_line_docker_env_file_path: ".env"
+          command_line_docker_credentials:
+            env_file: ".env"
 
 2. **Pass Specific Variables**
 
@@ -59,10 +60,11 @@ MassGen supports three methods for passing environment variables to Docker conta
         backend:
           enable_mcp_command_line: true
           command_line_execution_mode: "docker"
-          command_line_docker_pass_env_vars:
-            - "GITHUB_TOKEN"
-            - "NPM_TOKEN"
-            - "ANTHROPIC_API_KEY"
+          command_line_docker_credentials:
+            env_vars:
+              - "GITHUB_TOKEN"
+              - "NPM_TOKEN"
+              - "ANTHROPIC_API_KEY"
 
 3. **Pass All Environment Variables (Dangerous)**
 
@@ -75,7 +77,8 @@ MassGen supports three methods for passing environment variables to Docker conta
         backend:
           enable_mcp_command_line: true
           command_line_execution_mode: "docker"
-          command_line_docker_pass_all_env: true
+          command_line_docker_credentials:
+            pass_all_env: true
 
 Credential File Mounting
 -------------------------
@@ -91,7 +94,9 @@ Mount your SSH keys to clone private repositories via SSH:
      backend:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
-       command_line_docker_mount_ssh_keys: true
+       command_line_docker_credentials:
+         mount:
+           - "ssh_keys"
 
 This mounts ``~/.ssh`` as **read-only** at ``/home/massgen/.ssh`` inside the container.
 
@@ -113,7 +118,9 @@ Mount your ``.gitconfig`` for user name, email, and other git settings:
      backend:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
-       command_line_docker_mount_git_config: true
+       command_line_docker_credentials:
+         mount:
+           - "git_config"
 
 This mounts ``~/.gitconfig`` as **read-only** at ``/home/massgen/.gitconfig``.
 
@@ -128,7 +135,9 @@ Mount your ``.npmrc`` for private npm packages:
      backend:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
-       command_line_docker_mount_npm_config: true
+       command_line_docker_credentials:
+         mount:
+           - "npm_config"
 
 This mounts ``~/.npmrc`` as **read-only** at ``/home/massgen/.npmrc``.
 
@@ -150,7 +159,9 @@ Mount your ``.pypirc`` for private PyPI packages:
      backend:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
-       command_line_docker_mount_pypi_config: true
+       command_line_docker_credentials:
+         mount:
+           - "pypi_config"
 
 This mounts ``~/.pypirc`` as **read-only** at ``/home/massgen/.pypirc``.
 
@@ -183,13 +194,14 @@ Mount additional files or directories:
      backend:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
-       command_line_docker_additional_mounts:
-         "/path/on/host/credentials.json":
-           bind: "/home/massgen/.config/gcloud/credentials.json"
-           mode: "ro"
-         "/path/on/host/.aws":
-           bind: "/home/massgen/.aws"
-           mode: "ro"
+       command_line_docker_credentials:
+         additional_mounts:
+           "/path/on/host/credentials.json":
+             bind: "/home/massgen/.config/gcloud/credentials.json"
+             mode: "ro"
+           "/path/on/host/.aws":
+             bind: "/home/massgen/.aws"
+             mode: "ro"
 
 GitHub CLI Authentication
 -------------------------
@@ -207,8 +219,9 @@ To authenticate, pass your GitHub token via environment variables:
      backend:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
-       command_line_docker_pass_env_vars:
-         - "GITHUB_TOKEN"  # or GH_TOKEN
+       command_line_docker_credentials:
+         env_vars:
+           - "GITHUB_TOKEN"  # or GH_TOKEN
 
 Then in your orchestration, the agent can use ``gh`` commands:
 
@@ -235,11 +248,14 @@ Here's a complete config for working with GitHub repositories:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
        command_line_docker_network_mode: "bridge"  # Enable network access
-       command_line_docker_mount_ssh_keys: true     # For git SSH operations
-       command_line_docker_mount_git_config: true   # For git user config
-       command_line_docker_pass_env_vars:
-         - "GITHUB_TOKEN"                            # For gh CLI
-       command_line_docker_auto_install_deps: true  # Auto-install dependencies
+       command_line_docker_credentials:
+         mount:
+           - "ssh_keys"      # For git SSH operations
+           - "git_config"    # For git user config
+         env_vars:
+           - "GITHUB_TOKEN"  # For gh CLI
+       command_line_docker_packages:
+         auto_install_deps: true  # Auto-install dependencies
 
 **What this enables:**
 
@@ -263,7 +279,8 @@ MassGen can automatically detect and install dependencies when agents work with 
      backend:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
-       command_line_docker_auto_install_deps: true
+       command_line_docker_packages:
+         auto_install_deps: true
 
 **Supported dependency files:**
 
@@ -282,10 +299,39 @@ If you only want dependencies installed for newly cloned repos:
      backend:
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
-       command_line_docker_auto_install_on_clone: true
+       command_line_docker_packages:
+         auto_install_on_clone: true
 
 .. note::
    This requires integration with the git clone detection mechanism. Currently, auto-install runs when containers are created. Full clone detection coming in a future release.
+
+Pre-Install Packages
+~~~~~~~~~~~~~~~~~~~~
+
+You can specify base packages to pre-install in every container (runs before auto-detect):
+
+.. code-block:: yaml
+
+   agent:
+     backend:
+       enable_mcp_command_line: true
+       command_line_execution_mode: "docker"
+       command_line_docker_enable_sudo: true  # Required for system packages
+       command_line_docker_network_mode: "bridge"  # Required for downloads
+       command_line_docker_packages:
+         preinstall:
+           python:
+             - "requests>=2.31.0"
+             - "numpy>=1.24.0"
+             - "pytest>=7.0.0"
+           npm:
+             - "typescript"
+             - "@types/node"
+           system:
+             - "vim"
+             - "htop"
+
+**Installation order**: System → Python → npm packages, then auto-detect runs.
 
 Installation Process
 ~~~~~~~~~~~~~~~~~~~~
@@ -500,8 +546,10 @@ Pre-install vs Custom Images
 
 .. code-block:: yaml
 
-   command_line_docker_preinstall_python:
-     - "requests>=2.31.0"
+   command_line_docker_packages:
+     preinstall:
+       python:
+         - "requests>=2.31.0"
 
 - Quick testing and iteration
 - Different package sets per configuration
@@ -533,8 +581,9 @@ Example 1: Minimal GitHub CLI Setup
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
        command_line_docker_network_mode: "bridge"
-       command_line_docker_pass_env_vars:
-         - "GITHUB_TOKEN"
+       command_line_docker_credentials:
+         env_vars:
+           - "GITHUB_TOKEN"
 
 Example 2: Full GitHub Development Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -549,10 +598,13 @@ Example 2: Full GitHub Development Setup
        command_line_docker_network_mode: "bridge"
        command_line_docker_memory_limit: "4g"
        command_line_docker_cpu_limit: 2.0
-       command_line_docker_env_file_path: ".env"
-       command_line_docker_mount_ssh_keys: true
-       command_line_docker_mount_git_config: true
-       command_line_docker_auto_install_deps: true
+       command_line_docker_credentials:
+         env_file: ".env"
+         mount:
+           - "ssh_keys"
+           - "git_config"
+       command_line_docker_packages:
+         auto_install_deps: true
 
 Example 3: Private Package Development
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -564,11 +616,14 @@ Example 3: Private Package Development
        enable_mcp_command_line: true
        command_line_execution_mode: "docker"
        command_line_docker_network_mode: "bridge"
-       command_line_docker_mount_npm_config: true
-       command_line_docker_mount_pypi_config: true
-       command_line_docker_pass_env_vars:
-         - "NPM_TOKEN"
-       command_line_docker_auto_install_deps: true
+       command_line_docker_credentials:
+         mount:
+           - "npm_config"
+           - "pypi_config"
+         env_vars:
+           - "NPM_TOKEN"
+       command_line_docker_packages:
+         auto_install_deps: true
 
 Further Reading
 ---------------

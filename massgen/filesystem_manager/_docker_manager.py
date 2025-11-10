@@ -49,20 +49,9 @@ class DockerManager:
         memory_limit: Optional[str] = None,
         cpu_limit: Optional[float] = None,
         enable_sudo: bool = False,
-        env_file_path: Optional[str] = None,
-        pass_env_vars: Optional[List[str]] = None,
-        pass_all_env: bool = False,
-        mount_ssh_keys: bool = False,
-        mount_git_config: bool = False,
-        mount_gh_config: bool = False,
-        mount_npm_config: bool = False,
-        mount_pypi_config: bool = False,
-        additional_mounts: Optional[Dict[str, Dict[str, str]]] = None,
-        auto_install_deps: bool = False,
-        auto_install_on_clone: bool = False,
-        preinstall_python: Optional[List[str]] = None,
-        preinstall_npm: Optional[List[str]] = None,
-        preinstall_system: Optional[List[str]] = None,
+        credentials: Optional[Dict[str, Any]] = None,
+        packages: Optional[Dict[str, Any]] = None,
+        instance_id: Optional[str] = None,
     ):
         """
         Initialize Docker manager.
@@ -73,26 +62,25 @@ class DockerManager:
             memory_limit: Memory limit (e.g., "2g", "512m")
             cpu_limit: CPU limit (e.g., 2.0 for 2 CPUs)
             enable_sudo: Enable sudo access in containers (isolated from host system)
-            env_file_path: Path to .env file to load into containers
-            pass_env_vars: List of specific environment variables to pass from host
-            pass_all_env: Pass all host environment variables (DANGEROUS, use with caution)
-            mount_ssh_keys: Mount ~/.ssh directory (read-only) for git SSH authentication
-            mount_git_config: Mount ~/.gitconfig for git configuration
-            mount_gh_config: Mount ~/.config/gh for GitHub CLI authentication
-            mount_npm_config: Mount ~/.npmrc for npm private packages
-            mount_pypi_config: Mount ~/.pypirc for PyPI private packages
-            additional_mounts: Additional volume mounts {host_path: {bind: container_path, mode: ro/rw}}
-            auto_install_deps: Automatically detect and install dependencies in workspace
-            auto_install_on_clone: Auto-install dependencies only for newly cloned repos
-            preinstall_python: List of Python packages to pre-install (e.g., ["requests>=2.31.0", "pytest"])
-            preinstall_npm: List of npm packages to pre-install (e.g., ["typescript", "@types/node"])
-            preinstall_system: List of system packages to pre-install via apt (requires sudo)
+            credentials: Credential management configuration:
+                mount: List of credential types to mount ["ssh_keys", "git_config", "gh_config", "npm_config", "pypi_config"]
+                additional_mounts: Custom volume mounts {host_path: {bind: container_path, mode: ro/rw}}
+                env_file: Path to .env file to load
+                env_vars: List of environment variables to pass from host
+                pass_all_env: Pass all host environment variables (DANGEROUS)
+            packages: Package management configuration:
+                auto_install_deps: Auto-detect and install dependencies from workspace
+                auto_install_on_clone: Auto-install only for newly cloned repos
+                preinstall: Dict with python/npm/system keys containing package lists
+            instance_id: Optional unique instance ID for parallel execution (prevents container name collisions)
 
         Raises:
             RuntimeError: If Docker is not available or cannot connect
         """
         if not DOCKER_AVAILABLE:
             raise RuntimeError("Docker Python library not available. Install with: pip install docker")
+
+        self.instance_id = instance_id  # Unique instance ID for parallel execution
 
         # If sudo is enabled and user is using default image, switch to sudo variant
         self.enable_sudo = enable_sudo
@@ -112,21 +100,27 @@ class DockerManager:
         self.memory_limit = memory_limit
         self.cpu_limit = cpu_limit
 
-        # Credential and environment configuration
-        self.env_file_path = env_file_path
-        self.pass_env_vars = pass_env_vars or []
-        self.pass_all_env = pass_all_env
-        self.mount_ssh_keys = mount_ssh_keys
-        self.mount_git_config = mount_git_config
-        self.mount_gh_config = mount_gh_config
-        self.mount_npm_config = mount_npm_config
-        self.mount_pypi_config = mount_pypi_config
-        self.additional_mounts = additional_mounts or {}
-        self.auto_install_deps = auto_install_deps
-        self.auto_install_on_clone = auto_install_on_clone
-        self.preinstall_python = preinstall_python or []
-        self.preinstall_npm = preinstall_npm or []
-        self.preinstall_system = preinstall_system or []
+        # Extract credential configuration from nested dict
+        credentials = credentials or {}
+        mount_list = credentials.get("mount", [])
+        self.mount_ssh_keys = "ssh_keys" in mount_list
+        self.mount_git_config = "git_config" in mount_list
+        self.mount_gh_config = "gh_config" in mount_list
+        self.mount_npm_config = "npm_config" in mount_list
+        self.mount_pypi_config = "pypi_config" in mount_list
+        self.additional_mounts = credentials.get("additional_mounts", {})
+        self.env_file_path = credentials.get("env_file")
+        self.pass_env_vars = credentials.get("env_vars", [])
+        self.pass_all_env = credentials.get("pass_all_env", False)
+
+        # Extract package configuration from nested dict
+        packages = packages or {}
+        self.auto_install_deps = packages.get("auto_install_deps", False)
+        self.auto_install_on_clone = packages.get("auto_install_on_clone", False)
+        preinstall = packages.get("preinstall", {})
+        self.preinstall_python = preinstall.get("python", [])
+        self.preinstall_npm = preinstall.get("npm", [])
+        self.preinstall_system = preinstall.get("system", [])
 
         # Warning for dangerous options
         if self.pass_all_env:
@@ -543,7 +537,11 @@ class DockerManager:
         self.ensure_image_exists()
 
         # Check for and remove any existing container with the same name
-        container_name = f"massgen-{agent_id}"
+        # Include instance_id to prevent collisions when running parallel instances
+        if self.instance_id:
+            container_name = f"massgen-{agent_id}-{self.instance_id}"
+        else:
+            container_name = f"massgen-{agent_id}"
         try:
             existing = self.client.containers.get(container_name)
             logger.warning(

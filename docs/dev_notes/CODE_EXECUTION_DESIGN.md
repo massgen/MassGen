@@ -697,55 +697,42 @@ Docker containers can now access host credentials for authenticated operations (
 - Custom volume mounts for additional credentials
 - All credential mounting is **opt-in** for security
 
-**Environment Variables:**
+**Configuration (2 Nested Dictionaries):**
 
 ```yaml
 agent:
   backend:
     command_line_execution_mode: "docker"
+    command_line_docker_network_mode: "bridge"
 
-    # Option 1: Load from .env file (recommended)
-    command_line_docker_env_file_path: ".env"
+    # Credential management
+    command_line_docker_credentials:
+      # Mount credential files (all read-only)
+      mount:
+        - "ssh_keys"     # ~/.ssh → /home/massgen/.ssh
+        - "git_config"   # ~/.gitconfig → /home/massgen/.gitconfig
+        - "gh_config"    # ~/.config/gh → /home/massgen/.config/gh
+        - "npm_config"   # ~/.npmrc → /home/massgen/.npmrc
+        - "pypi_config"  # ~/.pypirc → /home/massgen/.pypirc
 
-    # Option 2: Pass specific variables
-    command_line_docker_pass_env_vars:
-      - "GITHUB_TOKEN"
-      - "NPM_TOKEN"
-      - "ANTHROPIC_API_KEY"
+      # Custom mounts
+      additional_mounts:
+        "/path/to/credentials.json":
+          bind: "/home/massgen/.config/app/credentials.json"
+          mode: "ro"
 
-    # Option 3: Pass all env vars (dangerous, use with caution)
-    command_line_docker_pass_all_env: false
-```
+      # Environment variables
+      env_file: ".env"                    # Load from .env file
+      env_vars: ["GITHUB_TOKEN", "NPM_TOKEN"]  # Or pass specific vars
+      pass_all_env: false                 # Or pass all (dangerous)
 
-**Credential File Mounting:**
-
-```yaml
-agent:
-  backend:
-    command_line_execution_mode: "docker"
-
-    # Mount credential files (all read-only)
-    command_line_docker_mount_ssh_keys: true     # ~/.ssh → /home/massgen/.ssh
-    command_line_docker_mount_git_config: true   # ~/.gitconfig → /home/massgen/.gitconfig
-    command_line_docker_mount_npm_config: true   # ~/.npmrc → /home/massgen/.npmrc
-    command_line_docker_mount_pypi_config: true  # ~/.pypirc → /home/massgen/.pypirc
-
-    # Custom mounts
-    command_line_docker_additional_mounts:
-      "/path/to/credentials.json":
-        bind: "/home/massgen/.config/app/credentials.json"
-        mode: "ro"
-```
-
-**GitHub CLI Authentication:**
-
-```yaml
-agent:
-  backend:
-    command_line_execution_mode: "docker"
-    command_line_docker_network_mode: "bridge"  # Enable network
-    command_line_docker_pass_env_vars:
-      - "GITHUB_TOKEN"
+    # Package management
+    command_line_docker_packages:
+      auto_install_deps: true
+      preinstall:
+        python: ["pytest", "requests"]
+        npm: ["typescript"]
+        system: ["vim"]
 ```
 
 Agents can now use `gh` commands:
@@ -784,11 +771,18 @@ agent:
   backend:
     command_line_execution_mode: "docker"
 
-    # Auto-install all detected dependencies
-    command_line_docker_auto_install_deps: true
+    command_line_docker_packages:
+      # Auto-install all detected dependencies
+      auto_install_deps: true
 
-    # Or install only for newly cloned repos
-    command_line_docker_auto_install_on_clone: true
+      # Or install only for newly cloned repos
+      auto_install_on_clone: true
+
+      # Pre-install base packages
+      preinstall:
+        python: ["pytest", "requests"]
+        npm: ["typescript"]
+        system: ["vim"]
 ```
 
 **Supported Dependency Files:**

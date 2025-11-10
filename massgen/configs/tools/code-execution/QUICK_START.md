@@ -38,7 +38,18 @@ uv run massgen massgen/configs/tools/code-execution/docker_github_cli_auth.yaml 
   "Use gh CLI to check auth status and show my GitHub user info"
 ```
 
-**Recommendation**: Use Option A if you've already run `gh auth login` on your machine.
+**Option C: Read-Only GitHub Access** (SAFE - blocks push, create, merge, delete)
+
+```bash
+# Check you're logged in
+gh auth status
+
+# Run - can read/clone but not write/push
+uv run massgen massgen/configs/tools/code-execution/docker_github_readonly.yaml \
+  "Clone the MassGen repo and examine recent commits"
+```
+
+**Recommendation**: Use Option A for full access, Option C for safe read-only browsing.
 
 ---
 
@@ -200,13 +211,15 @@ chmod 644 ~/.ssh/id_rsa.pub
 
 | Example | New Features | Command |
 |---------|-------------|---------|
-| 1. GitHub CLI Auth | Env var passing, GitHub CLI | `docker_github_cli_auth.yaml` |
-| 2. Pre-Install | **Pre-install packages in config** | `docker_preinstall_packages.yaml` |
-| 3. Private Repo | SSH keys, git config mounting | `docker_private_repo_clone.yaml` |
+| 1a. GitHub CLI (token) | Env var passing | `docker_github_cli_auth.yaml` |
+| 1b. GitHub CLI (existing) | Mount gh_config | `docker_github_cli_existing_auth.yaml` |
+| 1c. GitHub (read-only) | **Command filtering for safety** | `docker_github_readonly.yaml` |
+| 2. Pre-Install | **Pre-install packages** | `docker_preinstall_packages.yaml` |
+| 3. Private Repo | SSH keys, git config | `docker_private_repo_clone.yaml` |
 | 4. Auto-Deps | **Auto-detect dependencies** | `docker_autodeps_install.yaml` |
 | 5. Env File | .env file loading | `docker_env_file.yaml` |
 | 6. Full Setup | All features combined | `docker_full_dev_setup.yaml` |
-| 7. Custom Image | **Bring your own Docker image** | `docker_custom_image.yaml` |
+| 7. Custom Image | **Bring your own image** | `docker_custom_image.yaml` |
 
 ---
 

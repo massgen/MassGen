@@ -22,7 +22,8 @@ agent:
     command_line_execution_mode: "docker"
 
     # Auto-detect and install dependencies from workspace
-    command_line_docker_auto_install_deps: true
+    command_line_docker_packages:
+      auto_install_deps: true
 
 orchestrator:
   snapshot_storage: "snapshots"

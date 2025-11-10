@@ -54,6 +54,10 @@ class LLMBackend(ABC):
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self.api_key = api_key
+
+        # Extract and remove instance_id before storing config (used only for Docker, not for API calls)
+        self._instance_id = kwargs.pop("instance_id", None)
+
         self.config = kwargs
 
         # Initialize utility classes
@@ -113,23 +117,12 @@ class LLMBackend(ABC):
                     "command_line_docker_cpu_limit": kwargs.get("command_line_docker_cpu_limit"),
                     "command_line_docker_network_mode": network_mode,
                     "command_line_docker_enable_sudo": kwargs.get("command_line_docker_enable_sudo", False),
-                    # Credential management parameters
-                    "command_line_docker_env_file_path": kwargs.get("command_line_docker_env_file_path"),
-                    "command_line_docker_pass_env_vars": kwargs.get("command_line_docker_pass_env_vars"),
-                    "command_line_docker_pass_all_env": kwargs.get("command_line_docker_pass_all_env", False),
-                    "command_line_docker_mount_ssh_keys": kwargs.get("command_line_docker_mount_ssh_keys", False),
-                    "command_line_docker_mount_git_config": kwargs.get("command_line_docker_mount_git_config", False),
-                    "command_line_docker_mount_gh_config": kwargs.get("command_line_docker_mount_gh_config", False),
-                    "command_line_docker_mount_npm_config": kwargs.get("command_line_docker_mount_npm_config", False),
-                    "command_line_docker_mount_pypi_config": kwargs.get("command_line_docker_mount_pypi_config", False),
-                    "command_line_docker_additional_mounts": kwargs.get("command_line_docker_additional_mounts"),
-                    # Dependency management parameters
-                    "command_line_docker_auto_install_deps": kwargs.get("command_line_docker_auto_install_deps", False),
-                    "command_line_docker_auto_install_on_clone": kwargs.get("command_line_docker_auto_install_on_clone", False),
-                    "command_line_docker_preinstall_python": kwargs.get("command_line_docker_preinstall_python"),
-                    "command_line_docker_preinstall_npm": kwargs.get("command_line_docker_preinstall_npm"),
-                    "command_line_docker_preinstall_system": kwargs.get("command_line_docker_preinstall_system"),
+                    # Nested credential and package management
+                    "command_line_docker_credentials": kwargs.get("command_line_docker_credentials"),
+                    "command_line_docker_packages": kwargs.get("command_line_docker_packages"),
                     "enable_audio_generation": kwargs.get("enable_audio_generation", False),
+                    # Instance ID for parallel execution (Docker container naming)
+                    "instance_id": self._instance_id,
                 }
 
                 # Create FilesystemManager
@@ -219,22 +212,9 @@ class LLMBackend(ABC):
             "command_line_docker_cpu_limit",
             "command_line_docker_network_mode",
             "command_line_docker_enable_sudo",
-            # Docker credential management parameters
-            "command_line_docker_env_file_path",
-            "command_line_docker_pass_env_vars",
-            "command_line_docker_pass_all_env",
-            "command_line_docker_mount_ssh_keys",
-            "command_line_docker_mount_git_config",
-            "command_line_docker_mount_gh_config",
-            "command_line_docker_mount_npm_config",
-            "command_line_docker_mount_pypi_config",
-            "command_line_docker_additional_mounts",
-            # Docker dependency management parameters
-            "command_line_docker_auto_install_deps",
-            "command_line_docker_auto_install_on_clone",
-            "command_line_docker_preinstall_python",
-            "command_line_docker_preinstall_npm",
-            "command_line_docker_preinstall_system",
+            # Docker credential and package management (nested dicts)
+            "command_line_docker_credentials",
+            "command_line_docker_packages",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",
