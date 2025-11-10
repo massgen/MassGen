@@ -60,6 +60,217 @@ Commands execute inside isolated Docker containers:
 
 See :ref:`docker-mode-setup` for setup instructions.
 
+Docker Credentials & Package Management
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Docker mode supports comprehensive credential management and package preinstallation through two nested configuration dictionaries: ``command_line_docker_credentials`` and ``command_line_docker_packages``.
+
+Credential Management
+"""""""""""""""""""""
+
+**1. Mount Credential Files**
+
+Mount credential files from your host into the container (all mounted read-only):
+
+.. code-block:: yaml
+
+   command_line_docker_credentials:
+     mount:
+       - "ssh_keys"     # ~/.ssh → /home/massgen/.ssh
+       - "git_config"   # ~/.gitconfig → /home/massgen/.gitconfig
+       - "gh_config"    # ~/.config/gh → /home/massgen/.config/gh
+       - "npm_config"   # ~/.npmrc → /home/massgen/.npmrc
+       - "pypi_config"  # ~/.pypirc → /home/massgen/.pypirc
+
+**Available mount types:**
+
+- ``ssh_keys`` - Clone private repos via SSH (``git clone git@github.com:org/repo.git``)
+- ``git_config`` - Git user name/email for commits
+- ``gh_config`` - GitHub CLI authentication (use if you've run ``gh auth login``)
+- ``npm_config`` - Private npm package authentication
+- ``pypi_config`` - Private PyPI package authentication
+
+**2. Pass Environment Variables**
+
+Three methods to pass environment variables:
+
+.. code-block:: yaml
+
+   # Option 1: From .env file (recommended for multiple secrets)
+   command_line_docker_credentials:
+     env_file: ".env"
+
+   # Option 2: Specific variables from host
+   command_line_docker_credentials:
+     env_vars:
+       - "GITHUB_TOKEN"
+       - "NPM_TOKEN"
+       - "ANTHROPIC_API_KEY"
+
+   # Option 3: All environment variables (dangerous, use with caution)
+   command_line_docker_credentials:
+     pass_all_env: true
+
+**3. Custom Volume Mounts**
+
+Mount additional files or directories:
+
+.. code-block:: yaml
+
+   command_line_docker_credentials:
+     additional_mounts:
+       "/path/on/host/.aws":
+         bind: "/home/massgen/.aws"
+         mode: "ro"
+
+GitHub CLI Authentication
+"""""""""""""""""""""""""
+
+GitHub CLI (``gh``) is pre-installed in MassGen Docker images. Two authentication methods:
+
+**Method 1: Use Existing Login** (recommended if you've run ``gh auth login``):
+
+.. code-block:: yaml
+
+   command_line_docker_credentials:
+     mount:
+       - "gh_config"  # Mounts ~/.config/gh with your credentials
+
+**Method 2: Pass Token**:
+
+.. code-block:: yaml
+
+   command_line_docker_credentials:
+     env_vars:
+       - "GITHUB_TOKEN"  # Set: export GITHUB_TOKEN=ghp_your_token
+
+**For HTTPS git clones**, also add the token so git can authenticate:
+
+.. code-block:: yaml
+
+   command_line_docker_credentials:
+     mount: ["gh_config", "ssh_keys", "git_config"]
+     env_vars: ["GITHUB_TOKEN"]  # Enables both gh CLI and HTTPS git
+
+Agents can then use ``gh`` commands:
+
+.. code-block:: bash
+
+   gh auth status
+   gh api user
+   gh repo clone user/repo
+   gh issue list
+   gh pr list
+
+Package Preinstall
+""""""""""""""""""
+
+Specify base packages to pre-install in every container. These install when the container is created, before agents start working:
+
+.. code-block:: yaml
+
+   command_line_docker_packages:
+     preinstall:
+       python:
+         - "requests>=2.31.0"
+         - "numpy>=1.24.0"
+         - "pytest>=7.0.0"
+       npm:
+         - "typescript"
+         - "@types/node"
+       system:
+         - "vim"
+         - "htop"
+
+**Installation order**: System packages → Python packages → npm packages (all with sudo if enabled).
+
+**When to use**:
+
+- Consistent base environment across all runs
+- Different package sets per configuration
+- Quick iteration without rebuilding Docker images
+
+**Requirements**:
+
+- npm/system packages require: ``command_line_docker_enable_sudo: true``
+- All packages require: ``command_line_docker_network_mode: "bridge"``
+
+Custom Docker Images
+""""""""""""""""""""
+
+For stable dependencies or complex environments, create a custom Docker image:
+
+.. code-block:: yaml
+
+   command_line_docker_image: "your-username/custom-image:tag"
+
+**Example custom Dockerfile** (see ``massgen/docker/Dockerfile.custom-example``):
+
+.. code-block:: dockerfile
+
+   FROM massgen/mcp-runtime:latest
+   RUN pip install --no-cache-dir scikit-learn matplotlib seaborn
+   RUN apt-get update && apt-get install -y vim htop && rm -rf /var/lib/apt/lists/*
+
+Build and use:
+
+.. code-block:: bash
+
+   docker build -t my-custom-image:v1 -f Dockerfile.custom .
+
+**Key requirements for custom images:**
+
+1. Must have ``massgen`` user with UID 1000
+2. Must create ``/workspace``, ``/context``, ``/temp_workspaces`` directories
+3. Must set appropriate permissions
+4. CMD should keep container running (``tail -f /dev/null``)
+
+Complete Example Configurations
+""""""""""""""""""""""""""""""""
+
+**Minimal GitHub access:**
+
+.. code-block:: yaml
+
+   agent:
+     backend:
+       enable_mcp_command_line: true
+       command_line_execution_mode: "docker"
+       command_line_docker_network_mode: "bridge"
+       command_line_docker_credentials:
+         env_vars: ["GITHUB_TOKEN"]
+
+**Full development setup:**
+
+.. code-block:: yaml
+
+   agent:
+     backend:
+       enable_mcp_command_line: true
+       command_line_execution_mode: "docker"
+       command_line_docker_enable_sudo: true
+       command_line_docker_network_mode: "bridge"
+       command_line_docker_memory_limit: "4g"
+
+       command_line_docker_credentials:
+         env_file: ".env"
+         mount: ["ssh_keys", "git_config"]
+
+       command_line_docker_packages:
+         preinstall:
+           python: ["pytest", "requests", "numpy"]
+           npm: ["typescript"]
+
+**Security best practices:**
+
+- Use ``.env`` files for credentials (add to ``.gitignore``)
+- Mount only needed credentials (opt-in by default)
+- Use ``command_line_docker_network_mode: "none"`` unless network is required
+- All credential files are mounted **read-only**
+- Use command filtering (``blocked_commands``) for additional safety
+
+**Example configs:** See ``massgen/configs/tools/code-execution/`` for 8+ ready-to-run examples.
+
 Code Execution vs Backend Built-in Tools
 -----------------------------------------
 

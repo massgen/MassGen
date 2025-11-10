@@ -2,8 +2,8 @@
 
 **Issues:** #295, #304, #436
 **Author:** MassGen Team
-**Date:** 2025-10-13 (Updated: 2025-11-03 for credential management)
-**Status:** Complete (Local + Docker Execution + Credentials + Auto-Dependencies)
+**Date:** 2025-10-13 (Updated: 2025-11-09 for v0.1.10 credential management)
+**Status:** Complete (Local + Docker Execution + Credentials + Package Preinstall)
 
 ## Overview
 
@@ -686,7 +686,7 @@ docker exec massgen-{agent_id} {command}
 
 For more details, see `docs/dev_notes/DOCKER_CODE_EXECUTION_DESIGN.md`
 
-### Credential Management (✅ ADDED in v0.1.8)
+### Credential Management (✅ ADDED in v0.1.10)
 
 Docker containers can now access host credentials for authenticated operations (git, npm, PyPI, APIs, etc.).
 
@@ -754,15 +754,9 @@ gh issue list
 - Credential files mounted via Docker SDK's `volumes` parameter
 - Validation ensures paths exist before mounting
 
-### Automatic Dependency Detection (✅ ADDED in v0.1.8)
+### Package Preinstall (✅ ADDED in v0.1.10)
 
-MassGen can automatically detect and install dependencies when working with repositories.
-
-**Features:**
-- Auto-detects Python, Node.js, and system package files
-- Installs dependencies automatically on container creation
-- Option to install only for newly cloned repos (coming soon)
-- Graceful failure handling (logs errors but continues)
+Specify base packages to pre-install in every container via config.
 
 **Configuration:**
 
@@ -770,69 +764,39 @@ MassGen can automatically detect and install dependencies when working with repo
 agent:
   backend:
     command_line_execution_mode: "docker"
+    command_line_docker_enable_sudo: true  # Required for npm/system packages
+    command_line_docker_network_mode: "bridge"  # Required for downloads
 
     command_line_docker_packages:
-      # Auto-install all detected dependencies
-      auto_install_deps: true
-
-      # Or install only for newly cloned repos
-      auto_install_on_clone: true
-
-      # Pre-install base packages
+      # Pre-install base packages (always available)
       preinstall:
-        python: ["pytest", "requests"]
+        python: ["pytest>=7.0.0", "requests>=2.31.0"]
         npm: ["typescript"]
-        system: ["vim"]
+        system: ["vim", "curl"]
 ```
-
-**Supported Dependency Files:**
-
-| Language | Files Detected | Install Command |
-|----------|---------------|-----------------|
-| Python   | requirements.txt | `pip install -r requirements.txt` |
-| Python   | pyproject.toml | `pip install -e .` |
-| Python   | setup.py | `pip install -e .` |
-| Python   | Pipfile | `pip install pipenv && pipenv install` |
-| Node.js  | package.json | `npm install` |
-| Node.js  | yarn.lock | `yarn install` |
-| System   | apt-packages.txt | `sudo apt-get install ...` (requires sudo mode) |
 
 **Installation Process:**
 
 1. Container created and started
-2. DependencyDetector scans workspace for dependency files
-3. Installation commands generated in order: system → Python → Node.js
-4. Commands executed with 5-minute timeout each
-5. Success/failure logged for each installation
-6. Container setup continues even if some installations fail
+2. `preinstall_packages()` runs
+3. Installs in order: system → Python → npm
+4. Each uses appropriate package manager with sudo if needed
+5. Success/failure logged for each
+6. Container ready with base environment
 
-**Example Log Output:**
-
-```
-📋 [Docker] Found 2 dependency file(s) in myproject
-    python: requirements.txt
-    nodejs: package.json
-📦 [Docker] Auto-installing 2 dependency file(s) for agent agent_a
-    Running: cd /workspace/myproject && pip install -r requirements.txt
-✅ [Docker] Successfully installed dependencies from command
-    Running: cd /workspace/myproject && npm install
-✅ [Docker] Successfully installed dependencies from command
-✅ [Docker] All dependencies installed successfully
-```
+**When to use**:
+- Consistent base packages across all runs
+- Different package sets per configuration
+- Quick iteration without rebuilding Docker images
 
 **Implementation:**
-- `_dependency_detector.py`: New module for detecting dependency files
-- `DependencyDetector` class with methods:
-  - `detect_python_dependencies()`: Scans for Python dep files
-  - `detect_nodejs_dependencies()`: Scans for Node.js dep files
-  - `detect_system_dependencies()`: Scans for system packages (requires sudo)
-  - `detect_all_dependencies()`: Returns all detected deps
-  - `generate_install_commands()`: Converts detections to shell commands
-- `_docker_manager.py`: `auto_install_dependencies()` method
-  - Called after container creation if enabled
-  - Executes installation commands via `exec_command()`
-  - Timeout: 300 seconds per installation
+- `_docker_manager.py`: `preinstall_packages()` method
+  - System: `sudo apt-get update && sudo apt-get install -y {packages}`
+  - Python: `pip install {packages}`
+  - npm: `sudo npm install -g {packages}` (requires sudo for global install)
+  - Timeout: 600 seconds per package type
   - Graceful error handling
+
 
 ## Future Enhancements
 

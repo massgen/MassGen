@@ -9,12 +9,9 @@ while keeping MCP servers on the host.
 
 import logging
 import os
-import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
-from ._dependency_detector import DependencyDetector
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +66,6 @@ class DockerManager:
                 env_vars: List of environment variables to pass from host
                 pass_all_env: Pass all host environment variables (DANGEROUS)
             packages: Package management configuration:
-                auto_install_deps: Auto-detect and install dependencies from workspace
-                auto_install_on_clone: Auto-install only for newly cloned repos
                 preinstall: Dict with python/npm/system keys containing package lists
             instance_id: Optional unique instance ID for parallel execution (prevents container name collisions)
 
@@ -115,8 +110,6 @@ class DockerManager:
 
         # Extract package configuration from nested dict
         packages = packages or {}
-        self.auto_install_deps = packages.get("auto_install_deps", False)
-        self.auto_install_on_clone = packages.get("auto_install_on_clone", False)
         preinstall = packages.get("preinstall", {})
         self.preinstall_python = preinstall.get("python", [])
         self.preinstall_npm = preinstall.get("npm", [])
@@ -423,83 +416,6 @@ class DockerManager:
 
         return success
 
-    def auto_install_dependencies(
-        self,
-        agent_id: str,
-        workspace_path: Path,
-        is_newly_cloned: bool = False,
-    ) -> bool:
-        """
-        Auto-detect and install dependencies in the workspace.
-
-        Args:
-            agent_id: Agent identifier
-            workspace_path: Path to workspace to scan for dependencies
-            is_newly_cloned: Whether this workspace was just cloned
-
-        Returns:
-            True if dependencies were installed successfully, False otherwise
-        """
-        detector = DependencyDetector(workspace_path)
-
-        # Check if we should auto-install
-        if not detector.should_auto_install(
-            auto_install_deps=self.auto_install_deps,
-            auto_install_on_clone=self.auto_install_on_clone,
-            is_newly_cloned=is_newly_cloned,
-        ):
-            return False
-
-        # Detect all dependencies
-        dependencies = detector.detect_all_dependencies(enable_sudo=self.enable_sudo)
-
-        # Check if any dependencies were found
-        total_deps = sum(len(deps) for deps in dependencies.values())
-        if total_deps == 0:
-            logger.debug(f"📋 [Docker] No dependencies found in {workspace_path.name}")
-            return False
-
-        # Generate installation commands
-        install_commands = detector.generate_install_commands(
-            dependencies,
-            working_dir=str(workspace_path),
-        )
-
-        if not install_commands:
-            return False
-
-        logger.info(f"📦 [Docker] Auto-installing {total_deps} dependency file(s) for agent {agent_id}")
-
-        # Execute installation commands
-        success = True
-        for cmd in install_commands:
-            logger.info(f"    Running: {cmd}")
-            try:
-                result = self.exec_command(
-                    agent_id=agent_id,
-                    command=cmd,
-                    workdir=str(workspace_path),
-                    timeout=300,  # 5 minute timeout for installs
-                )
-
-                if not result["success"]:
-                    logger.warning(f"⚠️ [Docker] Dependency installation command failed: {cmd}")
-                    logger.warning(f"    Exit code: {result['exit_code']}")
-                    logger.warning(f"    Output: {result['stdout'][:500]}")  # First 500 chars
-                    success = False
-                else:
-                    logger.info("✅ [Docker] Successfully installed dependencies from command")
-            except Exception as e:
-                logger.error(f"❌ [Docker] Error installing dependencies: {e}")
-                success = False
-
-        if success:
-            logger.info("✅ [Docker] All dependencies installed successfully")
-        else:
-            logger.warning("⚠️ [Docker] Some dependency installations failed (continuing anyway)")
-
-        return success
-
     def create_container(
         self,
         agent_id: str,
@@ -649,25 +565,13 @@ class DockerManager:
             logger.debug(f"💡 [Docker] View logs: docker logs {container.short_id}")
             logger.debug(f"💡 [Docker] Execute commands: docker exec -it {container.short_id} /bin/bash")
 
-            # Pre-install user-specified packages FIRST (base environment)
+            # Pre-install user-specified packages (base environment)
             if self.preinstall_python or self.preinstall_npm or self.preinstall_system:
                 try:
                     self.preinstall_packages(agent_id=agent_id)
                 except Exception as e:
                     logger.warning(f"⚠️ [Docker] Failed to pre-install packages: {e}")
                     # Don't fail container creation if pre-install fails
-
-            # Auto-install dependencies from workspace SECOND (project-specific)
-            if self.auto_install_deps or self.auto_install_on_clone:
-                try:
-                    self.auto_install_dependencies(
-                        agent_id=agent_id,
-                        workspace_path=workspace_path,
-                        is_newly_cloned=False,  # Can't detect this from create_container
-                    )
-                except Exception as e:
-                    logger.warning(f"⚠️ [Docker] Failed to auto-install dependencies: {e}")
-                    # Don't fail container creation if dependency installation fails
 
             return container.id
 
@@ -749,17 +653,6 @@ class DockerManager:
                         result_container["data"] = container.exec_run(**exec_config)
                     except Exception as e:
                         exception_container["error"] = e
-
-                thread = threading.Thread(target=run_exec)
-                thread.daemon = True
-                thread.start()
-                thread.join(timeout=timeout)
-
-                execution_time = time.time() - start_time
-
-                if thread.is_alive():
-                    # Timeout occurred
-                    logger.warning(f"⚠️ [Docker] Command timed out after {timeout}s: {command}")
                     return {
                         "success": False,
                         "exit_code": -1,
