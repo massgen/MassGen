@@ -75,11 +75,6 @@ Complete automation infrastructure for LLM agents with real-time status tracking
   - `massgen/configs/tools/code-execution/docker_full_dev_setup.yaml`: Complete development environment setup
   - `massgen/configs/tools/code-execution/docker_github_readonly.yaml`: Read-only GitHub access configuration
 
-- **Docker Authentication Documentation**: Complete rewrite of authentication guide
-  - Updated `docs/source/user_guide/docker_authentication.rst` with new nested configuration structure
-  - Examples showing migration from flat to nested format
-  - Comprehensive guide for all credential types and environment variable methods
-
 - **Automation Documentation**: Enhanced parallel execution section
   - Updated `docs/source/user_guide/automation.rst` clarifying automatic isolation works in all modes
   - Added Docker container isolation examples with unique container naming
@@ -89,11 +84,6 @@ Complete automation infrastructure for LLM agents with real-time status tracking
   - Enhanced `docs/dev_notes/CODE_EXECUTION_DESIGN.md` (90 lines revised)
   - New credential and package management configuration examples
   - Architecture diagrams for nested configuration structures
-
-- **Custom Tools Documentation**: Enhanced framework interoperability guide
-  - Updated `docs/source/user_guide/custom_tools.rst` (+230 lines)
-  - Added comprehensive streaming examples for LangGraph and SmoLAgent
-  - Best practices for implementing streaming in custom tools
 
 - **Computer Use Tools Documentation**: Clarified Docker usage requirements
   - Updated `massgen/tool/_computer_use/README.md` and `QUICKSTART.md`
