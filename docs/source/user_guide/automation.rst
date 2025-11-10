@@ -97,11 +97,11 @@ Parallel Execution
 Parallel Execution Safety
 --------------------------
 
-**✅ Parallel execution is AUTOMATIC and SAFE in automation mode!**
+**✅ Parallel execution is AUTOMATIC and SAFE in ALL modes!**
 
-When you use ``--automation`` flag, MassGen automatically:
+MassGen automatically isolates all resources when running multiple instances:
 
-1. **Generates unique workspace suffixes** - Appends random 8-character ID to each workspace path
+1. **Generates unique instance IDs** - Appends random 8-character ID to prevent conflicts
 
    Example: ``workspace1`` → ``workspace1_a1b2c3d4``
 
@@ -113,32 +113,34 @@ When you use ``--automation`` flag, MassGen automatically:
 
    ✅ **Snapshot storage** - Per-agent subdirectories
 
-   *Note on use of Docker for code execution: Per-agent container naming is implemented but Docker execution for parallel instances has not been tested; this will be for a future version.*
+   ✅ **Docker containers** - Auto-generated unique container names (includes instance ID suffix)
 
 **No manual configuration needed!** Just use the same config multiple times:
 
 .. code-block:: bash
 
-   # ✅ SAFE - Run the same config 5 times in parallel
+   # ✅ SAFE - Run the same config 5 times in parallel (with or without --automation)
    for i in {1..5}; do
-       uv run massgen --automation --config my_config.yaml "Task $i" &
+       uv run massgen --config my_config.yaml "Task $i" &
    done
    wait
 
-**Each instance automatically gets unique workspace paths:**
+**Each instance automatically gets unique workspace paths and Docker containers:**
 
 .. code-block:: text
 
-   Instance 1: workspace1_a1b2c3d4
-   Instance 2: workspace1_e5f6a7b8
-   Instance 3: workspace1_c9d0e1f2
+   Instance 1: workspace1_a1b2c3d4, massgen-agent_a-a1b2c3d4
+   Instance 2: workspace1_e5f6a7b8, massgen-agent_a-e5f6a7b8
+   Instance 3: workspace1_c9d0e1f2, massgen-agent_a-c9d0e1f2
 
-**Note:** Without ``--automation`` flag, you must manually ensure unique workspace names to avoid conflicts.
+**Note:** This works in both automation mode (``--automation``) and normal mode. The difference is that automation mode provides silent output and status.json tracking, while normal mode shows the full UI.
 
 Running Multiple Experiments Simultaneously
 -------------------------------------------
 
-Once you ensure unique workspace names, parallel execution is safe and efficient:
+**Programmatic Parallel Execution:**
+
+Use the BackgroundShellManager for robust programmatic parallel execution:
 
 .. code-block:: python
 
@@ -198,17 +200,17 @@ Once you ensure unique workspace names, parallel execution is safe and efficient
        return results
 
 
-   # Example: Test 3 different configs
+   # Example: Run the SAME config with different questions (parallel isolation is automatic!)
    experiments = [
-       ("config_fast.yaml", "Simple task 1"),
-       ("config_thorough.yaml", "Complex task 2"),
-       ("config_creative.yaml", "Creative task 3"),
+       ("my_config.yaml", "Create a webpage about Bob Dylan"),
+       ("my_config.yaml", "Write a Python script to analyze data"),
+       ("my_config.yaml", "Design a REST API for a blog"),
    ]
 
    results = run_experiments_in_parallel(experiments)
 
    for result in results:
-       print(f"{result['config']}: {result['status']} in {result['duration']}s")
+       print(f"{result['question']}: {result['status']} in {result['duration']}s")
 
 Status File Overview
 ====================

@@ -1,0 +1,35 @@
+# Example: Using a Custom Docker Image
+#
+# This example shows how to use your own Docker image instead of the default.
+# Useful when you need specific tools, libraries, or configurations.
+#
+# Prerequisites:
+# 1. Docker daemon running
+# 2. Build the example custom image:
+#      docker build -t massgen-custom-test:v1 -f massgen/docker/Dockerfile.custom-example .
+#
+# Usage:
+#   uv run massgen --config @examples/configs/tools/code-execution/docker_custom_image.yaml "Verify custom packages: sklearn, matplotlib, seaborn, ipython, black, vim, htop, tree"
+
+agent:
+  id: "custom_image_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+
+    # Docker configuration with CUSTOM IMAGE
+    command_line_execution_mode: "docker"
+    command_line_docker_image: "massgen-custom-test:v1"  # Built from Dockerfile.test-custom
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 180
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

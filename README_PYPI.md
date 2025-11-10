@@ -64,7 +64,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.9 Features](#-latest-features-v019)
+- [v0.1.10 Features](#-latest-features-v0110)
 </details>
 
 <details open>
@@ -118,15 +118,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.9](#recent-achievements-v019)
-  - [v0.0.3 - v0.1.8](#previous-achievements-v003---v018)
+  - [v0.1.10](#recent-achievements-v0110)
+  - [v0.0.3 - v0.1.9](#previous-achievements-v003---v019)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.10 Roadmap](#v0110-roadmap)
+- [v0.1.11 Roadmap](#v0111-roadmap)
 </details>
 
 <details open>
@@ -151,45 +151,57 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.9)
+## 🆕 Latest Features (v0.1.10)
 
-**🎉 Released: November 7, 2025**
+**🎉 Released: November 10, 2025**
 
-**What's New in v0.1.9:**
-- **💾 Session Management System** - Resume conversations with complete state restoration
-- **🖥️ Computer Use Tools** - Automate browsers and desktop with Claude and Gemini
-- **🔍 Fuzzy Model Matching** - Type approximate model names to find exact matches
-- **🌐 Expanded Backend Support** - Six new providers for more model choices
+**What's New in v0.1.10:**
+- **⚡ Framework Interoperability Streaming** - Real-time intermediate step streaming for LangGraph and SmoLAgent
+- **🐳 Docker Configuration Enhancements** - Restructured authentication with custom image support
+- **🔒 Parallel Execution Safety** - Universal workspace isolation for concurrent executions
+- **📚 MassGen Handbook** - Comprehensive contributor documentation and development policies
 
 **Key Improvements:**
-- Multi-turn conversations with automatic session restoration across CLI invocations
-- Browser and desktop automation using Claude and Gemini APIs with Playwright integration
-- Intelligent model search with fuzzy matching (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
-- New backends: Cerebras AI, Together AI, Fireworks AI, Groq, OpenRouter, Moonshot (Kimi)
-- Enhanced memory update logic for better multi-agent coordination patterns
+- Real-time visibility into LangGraph and SmoLAgent reasoning steps with log/output distinction
+- Nested Docker authentication with separate mount arrays and environment variable arrays
+- Custom Docker image support via `Dockerfile.custom-example` for package extensions
+- Instance ID generation ensuring safe parallel execution across all modes
+- Complete contributor handbook at https://massgen.github.io/Handbook/
 
-**Try v0.1.9 Features:**
+**Try v0.1.10 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Browser automation with Claude
+# LangGraph streaming - watch workflow execution in real-time
 # Prerequisites:
-#   1. Set ANTHROPIC_API_KEY environment variable
-#   2. Playwright installed: pip install playwright && playwright install
-#   3. Virtual display setup (Xvfb) for desktop control
-massgen --config @examples/tools/custom_tools/claude_computer_use_example "Search for Python documentation on the web"
+#   1. pip install langgraph langchain-openai langchain-core
+#   2. OPENAI_API_KEY environment variable must be set
+massgen --config @examples/tools/custom_tools/interop/langgraph_lesson_planner_example.yaml \
+  "Create a lesson plan for photosynthesis"
 
-# Browser automation with Gemini
+# SmoLAgent streaming - see agent reasoning steps live
 # Prerequisites:
-#   1. Set GOOGLE_API_KEY in your .env file
-#   2. Install Playwright: pip install playwright
-#   3. Install browsers: playwright install
-#   4. Install Google GenAI SDK: pip install google-genai
-massgen --config @examples/tools/custom_tools/gemini_computer_use_example "Navigate to GitHub and search for MassGen repository"
+#   1. pip install smolagents
+#   2. OPENAI_API_KEY environment variable must be set
+massgen --config @examples/tools/custom_tools/interop/smolagent_lesson_planner_example.yaml \
+  "Create a lesson plan for photosynthesis"
 
-# Interactive model selection with fuzzy matching
-massgen  # Run the interactive config builder with smart model search
+# Docker custom image - use your own Docker image with preinstalled packages
+# Prerequisites:
+#   1. Docker daemon running
+#   2. Build the example custom image:
+#      docker build -t massgen-custom-test:v1 -f massgen/docker/Dockerfile.custom-example .
+uv run massgen --config @examples/configs/tools/code-execution/docker_custom_image.yaml \
+  "Verify custom packages: sklearn, matplotlib, seaborn, ipython, black, vim, htop, tree"
+
+# Docker with GitHub authentication - read-only repository access
+# Prerequisites:
+#   1. Docker daemon running
+#   2. Already logged in: gh auth login (or set GITHUB_TOKEN)
+#   3. Build the Docker image: bash massgen/docker/build.sh
+uv run massgen --config @examples/configs/tools/code-execution/docker_github_readonly.yaml \
+  "Test to see the most recent issues in the massgen/MassGen repo with the github cli"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1058,38 +1070,37 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.9)
+### Recent Achievements (v0.1.10)
 
-**🎉 Released: November 7, 2025**
+**🎉 Released: November 10, 2025**
 
-#### Session Management System
-- **Session State Module**: Complete session tracking and restoration (`massgen/session/` module, 530 lines total)
-- **SessionState Dataclass**: Stores conversation history, workspace paths, and turn metadata with winning agents tracking
-- **SessionRegistry**: Manages session lifecycle with listing, restoration, and metadata retrieval capabilities
-- **Multi-Turn Persistence**: Seamless session continuation across CLI invocations with automatic state restoration
-- **Workspace Continuity**: Preserves agent workspace states, orchestrator data, and coordination history between turns
+#### Framework Interoperability Streaming
+- **LangGraph Streaming**: Real-time intermediate step streaming with `is_log=True` flag distinguishing logs from final output (`massgen/tool/_extraframework_agents/langgraph_*`)
+- **SmoLAgent Streaming**: Streams `ActionStep` and `PlanningStep` outputs as logs for better debugging and monitoring
+- **Enhanced Debugging**: Real-time visibility into external framework reasoning steps during multi-agent coordination
 
-#### Computer Use Tools
-- **Claude Computer Use Tool**: Native Anthropic Claude Computer Use API integration for browser and desktop automation with safety confirmations
-- **Gemini Computer Use Tool**: Google Gemini-based computer control with screenshot analysis and action generation
-- **Browser Automation Tool**: Lightweight browser automation focused on specific tasks without full computer use overhead
+#### Docker Configuration Enhancements
+- **Authentication Restructuring**: Nested dictionary format with `command_line_docker_credentials` containing separate `mount` array and `env_vars` array (`docker_github_readonly.yaml`, `docker_full_dev_setup.yaml`)
+- **Custom Image Support**: Example Dockerfile (`Dockerfile.custom-example`) for extending MassGen base image with custom packages
+- **Package Management**: Preinstall capability via `command_line_docker_packages` array for automatic package installation before agent execution
 
-#### Config Builder Enhancement
-- **Fuzzy Model Matching**: Intelligent model name search allowing approximate inputs (e.g., "sonnet" → "claude-sonnet-4-5-20250929")
-- **Model Catalog System**: Curated lists of common models across providers with automatic discovery (`massgen/utils/model_catalog.py`)
-- **Smart Suggestions**: Enhanced config builder with automatic model search and recommendations
-- **Provider Integration**: Support for partial model names with intelligent completion across all backends
+#### Parallel Execution Safety
+- **Universal Instance IDs**: Extended workspace isolation to all execution modes (not just automation) via instance ID generation in `massgen/filesystem_manager/_filesystem_manager.py`
+- **Parallel Workspace Support**: Enhanced `_generate_instance_id()` method ensures unique workspace paths across concurrent executions
 
-#### Backend Capabilities Expansion
-- **Comprehensive Registry**: Updated `massgen/backend/capabilities.py` with detailed specifications for all providers
-- **Enhanced Features**: Audio/video support, hardware acceleration, and unified access across diverse model families
+#### Session Management & Documentation
+- **Session Fixes**: Improved session restoration reliability with better workspace path handling
+- **MassGen Contributor Handbook**: Comprehensive documentation at https://massgen.github.io/Handbook/ with development policies and best practices
 
-#### Memory & Coordination Improvements
-- **Memory Update Logic**: Enhanced memory update prompts focusing on actionable patterns and technical insights (`massgen/memory/_update_prompts.py`)
-- **Chat Agent Enhancement**: Session restoration with improved orchestrator restart handling and turn tracking
-- **CLI Extension**: Session listing, restoration commands, and enhanced display selection with automatic state restoration
+### Previous Achievements (v0.0.3 - v0.1.9)
 
-### Previous Achievements (v0.0.3 - v0.1.8)
+✅ **Session Management System (v0.1.9)**: Complete session state tracking and restoration with SessionState dataclass and SessionRegistry for multi-turn persistence across CLI invocations, workspace continuity preserving agent states and coordination history between turns
+
+✅ **Computer Use Tools (v0.1.9)**: Native Claude and Gemini computer use API integration for browser and desktop automation with screenshot analysis and action generation, lightweight browser automation for specific tasks without full computer use overhead
+
+✅ **Fuzzy Model Matching (v0.1.9)**: Intelligent model name search with approximate inputs (e.g., "sonnet" → "claude-sonnet-4-5-20250929"), model catalog system with curated lists across providers, enhanced config builder with automatic model search
+
+✅ **Backend Capabilities Expansion (v0.1.9)**: Comprehensive backend registry with detailed specifications for all providers, audio/video support, hardware acceleration, unified access across diverse model families, enhanced memory update logic focusing on actionable patterns
 
 ✅ **Automation Mode for LLM Agents (v0.1.8)**: Complete infrastructure for running MassGen inside LLM agents with SilentDisplay class for minimal output (~10 lines vs 250-3,000+), real-time status.json monitoring updated every 2 seconds, meaningful exit codes (0=success, 1=config error, 2=execution error, 3=timeout, 4=interrupted), automatic workspace isolation for parallel execution, meta-coordination capabilities allowing MassGen to run MassGen
 
@@ -1229,21 +1240,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.10 Roadmap
+### v0.1.11 Roadmap
 
-Version 0.1.10 focuses on framework streaming improvements and comprehensive documentation:
+Version 0.1.11 focuses on rate limiting and intelligent tool selection:
 
 #### Planned Features
-- **Stream LangGraph & SmoLAgent Steps**: Real-time intermediate step streaming for external framework tools with enhanced debugging capabilities
-- **MassGen Handbook**: Comprehensive user documentation and centralized policies for development and research teams
+- **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs
+- **Automatic MCP Tool Selection**: Intelligent selection of MCP tools based on task requirements to improve performance
 
 Key technical approach:
-- **Framework Streaming**: Real-time streaming of LangGraph and SmoLAgent intermediate steps, unified streaming interface, buffering and flow control, performance optimization
-- **Documentation**: Installation guides, configuration patterns, best practices, troubleshooting, case studies, and integration examples
+- **Rate Limiting**: Sliding window tracking, model-specific limits (Flash 9 RPM, Pro 2 RPM), YAML configuration, CLI flag support
+- **Tool Selection**: Pre-execution tool selection based on prompts, dynamic tool refinement during execution, filesystem-first approach to reduce context pollution
 
-**Target Release**: November 10, 2025 (Monday @ 9am PT)
+**Target Release**: November 12, 2025 (Wednesday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.10 roadmap](ROADMAP_v0.1.10.md).
+For detailed milestones and technical specifications, see the [full v0.1.11 roadmap](ROADMAP_v0.1.11.md).
 
 ---
 
