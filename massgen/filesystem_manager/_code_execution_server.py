@@ -220,6 +220,12 @@ async def create_server() -> fastmcp.FastMCP:
         help="Agent ID (required for Docker mode to identify container)",
     )
     parser.add_argument(
+        "--instance-id",
+        type=str,
+        default=None,
+        help="Instance ID for parallel execution (appended to container name)",
+    )
+    parser.add_argument(
         "--enable-sudo",
         action="store_true",
         default=False,
@@ -238,6 +244,7 @@ async def create_server() -> fastmcp.FastMCP:
     mcp.blocked_commands = args.blocked_commands  # Blacklist patterns
     mcp.execution_mode = args.execution_mode
     mcp.agent_id = args.agent_id
+    mcp.instance_id = args.instance_id
     mcp.enable_sudo = args.enable_sudo
 
     # Initialize Docker client if Docker mode
@@ -411,8 +418,11 @@ async def create_server() -> fastmcp.FastMCP:
                     }
 
                 try:
-                    # Get container by name
-                    container_name = f"massgen-{mcp.agent_id}"
+                    # Get container by name (include instance_id if set for parallel execution)
+                    if mcp.instance_id:
+                        container_name = f"massgen-{mcp.agent_id}-{mcp.instance_id}"
+                    else:
+                        container_name = f"massgen-{mcp.agent_id}"
                     container = mcp.docker_client.containers.get(container_name)
 
                     # IMPORTANT: Use host paths directly in container
@@ -770,6 +780,8 @@ async def create_server() -> fastmcp.FastMCP:
     print(f"Execution mode: {mcp.execution_mode}")
     if mcp.execution_mode == "docker":
         print(f"Agent ID: {mcp.agent_id}")
+        if mcp.instance_id:
+            print(f"Instance ID: {mcp.instance_id}")
     print(f"Default timeout: {mcp.default_timeout}s")
     print(f"Max output size: {mcp.max_output_size} bytes")
     print(f"Allowed paths: {[str(p) for p in mcp.allowed_paths]}")

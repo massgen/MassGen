@@ -2905,6 +2905,26 @@ async def main(args):
         # Relocate all filesystem paths to .massgen/ directory
         relocate_filesystem_paths(config)
 
+        # Generate unique instance ID for parallel execution safety
+        # This prevents Docker container naming and workspace conflicts when running multiple instances
+        import uuid
+
+        instance_id = uuid.uuid4().hex[:8]
+
+        # Inject instance_id and apply workspace suffixes to all agent backend configs
+        agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
+        for agent_data in agent_entries:
+            backend_config = agent_data.get("backend", {})
+            # Set instance_id for Docker container naming
+            backend_config["instance_id"] = instance_id
+            # Apply unique suffix to workspace paths to prevent filesystem conflicts
+            if "cwd" in backend_config:
+                original_cwd = backend_config["cwd"]
+                # Append unique suffix to workspace path
+                # e.g., ".massgen/workspaces/workspace1" -> ".massgen/workspaces/workspace1_a1b2c3d4"
+                backend_config["cwd"] = f"{original_cwd}_{instance_id}"
+                logger.debug(f"Auto-generated unique workspace: {original_cwd} -> {backend_config['cwd']}")
+
         # Apply command-line overrides
         ui_config = config.get("ui", {})
         if args.automation:
@@ -2912,22 +2932,6 @@ async def main(args):
             ui_config["display_type"] = "silent"
             ui_config["logging_enabled"] = True
             ui_config["automation_mode"] = True
-
-            # Auto-generate unique workspace suffixes for parallel execution safety
-            # This prevents conflicts when running multiple instances with the same config
-            import uuid
-
-            unique_suffix = uuid.uuid4().hex[:8]
-
-            agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
-            for agent_data in agent_entries:
-                backend_config = agent_data.get("backend", {})
-                if "cwd" in backend_config:
-                    original_cwd = backend_config["cwd"]
-                    # Append unique suffix to workspace path
-                    # e.g., ".massgen/workspaces/workspace1" -> ".massgen/workspaces/workspace1_a1b2c3d4"
-                    backend_config["cwd"] = f"{original_cwd}_{unique_suffix}"
-                    logger.debug(f"[Automation] Auto-generated unique workspace: {original_cwd} -> {backend_config['cwd']}")
         if args.no_display:
             ui_config["display_type"] = "simple"
         if args.no_logs:

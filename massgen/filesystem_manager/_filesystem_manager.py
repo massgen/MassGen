@@ -56,8 +56,11 @@ class FilesystemManager:
         command_line_docker_cpu_limit: Optional[float] = None,
         command_line_docker_network_mode: str = "none",
         command_line_docker_enable_sudo: bool = False,
+        command_line_docker_credentials: Optional[Dict[str, Any]] = None,
+        command_line_docker_packages: Optional[Dict[str, Any]] = None,
         enable_audio_generation: bool = False,
         enable_file_generation: bool = False,
+        instance_id: Optional[str] = None,
     ):
         """
         Initialize FilesystemManager.
@@ -78,8 +81,12 @@ class FilesystemManager:
             command_line_docker_cpu_limit: CPU limit for Docker containers (e.g., 2.0 for 2 CPUs)
             command_line_docker_network_mode: Network mode for Docker containers (none/bridge/host)
             command_line_docker_enable_sudo: Enable sudo access in Docker containers (isolated from host system)
+            command_line_docker_credentials: Credential management configuration dict
+            command_line_docker_packages: Package management configuration dict
+            instance_id: Optional unique instance ID for parallel execution (used in Docker container naming)
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
+        self.instance_id = instance_id  # Unique instance ID for parallel execution
         self.enable_image_generation = enable_image_generation
         self.enable_mcp_command_line = enable_mcp_command_line
         self.command_line_allowed_commands = command_line_allowed_commands
@@ -90,6 +97,8 @@ class FilesystemManager:
         self.command_line_docker_cpu_limit = command_line_docker_cpu_limit
         self.command_line_docker_network_mode = command_line_docker_network_mode
         self.command_line_docker_enable_sudo = command_line_docker_enable_sudo
+        self.command_line_docker_credentials = command_line_docker_credentials
+        self.command_line_docker_packages = command_line_docker_packages
 
         # Initialize Docker manager if Docker mode enabled
         self.docker_manager = None
@@ -102,6 +111,9 @@ class FilesystemManager:
                 memory_limit=command_line_docker_memory_limit,
                 cpu_limit=command_line_docker_cpu_limit,
                 enable_sudo=command_line_docker_enable_sudo,
+                credentials=command_line_docker_credentials,
+                packages=command_line_docker_packages,
+                instance_id=instance_id,
             )
         self.enable_audio_generation = enable_audio_generation
 
@@ -207,7 +219,7 @@ class FilesystemManager:
             logger.warning("[FilesystemManager] agent_id not set, cannot update MCP config for Docker mode")
             return backend_config
 
-        # Update command_line MCP server config to include --agent-id
+        # Update command_line MCP server config to include --agent-id and --instance-id
         mcp_servers = backend_config.get("mcp_servers", [])
         for server in mcp_servers:
             if isinstance(server, dict) and server.get("name") == "command_line":
@@ -217,6 +229,11 @@ class FilesystemManager:
                     args.extend(["--agent-id", self.agent_id])
                     server["args"] = args
                     logger.info(f"[FilesystemManager] Updated command_line MCP server config with agent_id: {self.agent_id}")
+                # Add instance-id if set (for Docker parallel execution)
+                if self.instance_id and "--instance-id" not in args:
+                    args.extend(["--instance-id", self.instance_id])
+                    server["args"] = args
+                    logger.info(f"[FilesystemManager] Updated command_line MCP server config with instance_id: {self.instance_id}")
                 break
 
         return backend_config
@@ -361,6 +378,10 @@ class FilesystemManager:
         # Add agent ID for Docker mode
         if self.command_line_execution_mode == "docker" and self.agent_id:
             config["args"].extend(["--agent-id", self.agent_id])
+
+        # Add instance ID for Docker parallel execution
+        if self.command_line_execution_mode == "docker" and self.instance_id:
+            config["args"].extend(["--instance-id", self.instance_id])
 
         # Add sudo flag for Docker mode
         if self.command_line_execution_mode == "docker" and self.command_line_docker_enable_sudo:

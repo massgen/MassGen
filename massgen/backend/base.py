@@ -54,6 +54,10 @@ class LLMBackend(ABC):
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self.api_key = api_key
+
+        # Extract and remove instance_id before storing config (used only for Docker, not for API calls)
+        self._instance_id = kwargs.pop("instance_id", None)
+
         self.config = kwargs
 
         # Initialize utility classes
@@ -113,7 +117,12 @@ class LLMBackend(ABC):
                     "command_line_docker_cpu_limit": kwargs.get("command_line_docker_cpu_limit"),
                     "command_line_docker_network_mode": network_mode,
                     "command_line_docker_enable_sudo": kwargs.get("command_line_docker_enable_sudo", False),
+                    # Nested credential and package management
+                    "command_line_docker_credentials": kwargs.get("command_line_docker_credentials"),
+                    "command_line_docker_packages": kwargs.get("command_line_docker_packages"),
                     "enable_audio_generation": kwargs.get("enable_audio_generation", False),
+                    # Instance ID for parallel execution (Docker container naming)
+                    "instance_id": self._instance_id,
                 }
 
                 # Create FilesystemManager
@@ -203,6 +212,9 @@ class LLMBackend(ABC):
             "command_line_docker_cpu_limit",
             "command_line_docker_network_mode",
             "command_line_docker_enable_sudo",
+            # Docker credential and package management (nested dicts)
+            "command_line_docker_credentials",
+            "command_line_docker_packages",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",

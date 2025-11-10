@@ -70,6 +70,9 @@ class APIParamsHandlerBase(ABC):
             "command_line_docker_cpu_limit",
             "command_line_docker_network_mode",
             "command_line_docker_enable_sudo",
+            # Docker credential and package management (nested dicts)
+            "command_line_docker_credentials",
+            "command_line_docker_packages",
             # Backend identification (handled by orchestrator)
             "enable_audio_generation",  # Audio generation parameter
             "type",
@@ -77,6 +80,8 @@ class APIParamsHandlerBase(ABC):
             "session_id",
             # MCP configuration (handled by base class for MCP backends)
             "mcp_servers",
+            # Parallelization
+            "instance_id",
         }
 
     def build_base_api_params(
