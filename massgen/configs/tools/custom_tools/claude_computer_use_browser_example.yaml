@@ -7,16 +7,6 @@
 # data extraction tasks, use the browser_automation tool instead (see
 # simple_browser_automation_example.yaml), which is much faster and more efficient.
 #
-# ✅ Use Claude Computer Use for:
-#   - Complex multi-step workflows requiring decision-making
-#   - Tasks where you need to interact with dynamic/changing UIs
-#   - Scenarios where the exact steps aren't known in advance
-#
-# ❌ Don't use Claude Computer Use for:
-#   - Simple web page navigation and data extraction (use browser_automation)
-#   - Repetitive tasks with known steps (write a script instead)
-#   - Tasks requiring speed (Computer Use is slow, ~2-5 seconds per action)
-#
 # The Claude Computer Use API requires:
 # 1. Beta header: "computer-use-2025-01-24"
 # 2. Anthropic-defined tools: computer_20250124, text_editor_20250124, bash_20250124
@@ -24,7 +14,7 @@
 # 4. A sandboxed computing environment (Docker/VM recommended)
 #
 # Usage:
-#   massgen --config claude_computer_use_example.yaml
+#   massgen --config claude_computer_use_browser_example.yaml
 #
 # Prerequisites:
 #   1. Set ANTHROPIC_API_KEY environment variable
@@ -58,12 +48,13 @@ agents:
           description: >
             Automate browser and desktop tasks using Claude's Computer Use capabilities.
             Can control browser, take screenshots, click, type, scroll, and navigate.
+          preset_args:
+            environment: "browser"
+            headless: true
           default_params:
-            environment: "browser"  # or "linux", "mac", "windows" (only browser currently supported)
             display_width: 1024
             display_height: 768
             max_iterations: 25
-            headless: true
             browser_type: "chromium"
         - name: ["understand_image"]
           category: "multimodal"

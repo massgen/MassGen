@@ -104,7 +104,7 @@ massgen --config @massgen/configs/tools/custom_tools/computer_use_browser_exampl
 
 #### With Vision Capabilities
 ```bash
-massgen --config @massgen/configs/tools/custom_tools/computer_use_with_vision.yaml \
+massgen --config @massgen/configs/tools/custom_tools/claude_computer_use_docker_example.yaml \
     "Search for cats on Google Images and describe what you see"
 ```
 
@@ -458,18 +458,6 @@ result = await computer_use(
 )
 ```
 
-### Example 3: With Vision Verification
-
-```yaml
-# Use computer_use_with_vision.yaml config
-# The agent will automatically verify actions using understand_image
-```
-
-```bash
-massgen --config @massgen/configs/tools/custom_tools/computer_use_with_vision.yaml \
-    "Go to Wikipedia, search for 'Machine Learning', and describe the main image on the page"
-```
-
 ## API Reference
 
 ### `computer_use()`
@@ -521,8 +509,8 @@ This tool is part of MassGen and follows the same license.
 
 ## References
 
-- [OpenAI Computer Use Documentation](https://platform.openai.com/docs/guides/computer-use)
-- [OpenAI System Card](https://openai.com/system-card)
-- [MassGen Documentation](../../docs/README.md)
+- [OpenAI Computer Use Documentation](https://platform.openai.com/docs/guides/tools-computer-use)
+- [Gemini Computer Use Documentation](https://blog.google/technology/google-deepmind/gemini-computer-use-model/)
+- [Claude Computer Use Documentation](https://docs.claude.com/en/docs/agents-and-tools/tool-use/computer-use-tool)
 - [Playwright Documentation](https://playwright.dev/python/)
 - [Docker SDK for Python](https://docker-py.readthedocs.io/)
