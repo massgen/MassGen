@@ -7,16 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.10 (November 10, 2025)** - Docker Configuration, Framework Streaming & Contributor Handbook
+Enhanced Docker configuration with nested credential and package management structures, framework interoperability streaming for LangGraph and SmoLAgent, improved parallel execution safety across all modes, and comprehensive contributor handbook at https://massgen.github.io/Handbook/.
+
 **v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
 Complete session management system with conversation restoration, computer use automation tools for browser and desktop control, enhanced config builder with fuzzy model matching, and expanded backend support.
 
 **v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
 Complete automation infrastructure for LLM agents with real-time status tracking, silent execution mode, and DSPy-powered question paraphrasing for enhanced multi-agent diversity.
 
-**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
-Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
-
 ---
+
+## [0.1.10] - 2025-11-10
+
+### Added
+- **Docker Custom Image Support**: Example Dockerfile for extending MassGen base image with custom packages
+  - New `massgen/docker/Dockerfile.custom-example` demonstrating how to add ML/data science packages, development tools, and system utilities
+  - Template for creating specialized Docker images for specific project needs
+
+### Changed
+- **Docker Authentication Configuration**: Restructured to nested dictionary format for better organization
+  - New `command_line_docker_credentials` structure consolidating all credential-related settings
+  - Nested `mount` array for credential file mounting (`ssh_keys`, `git_config`, `gh_config`, `npm_config`, `pypi_config`)
+  - Nested `env_file`, `env_vars`, and `pass_all_env` for environment variable management
+  - Nested `additional_mounts` for custom volume mounting
+  - Migration from flat parameters (`command_line_docker_mount_ssh_keys`, `command_line_docker_pass_env_vars`, etc.) to organized nested structure
+  - Enhanced `massgen/filesystem_manager/_docker_manager.py` and `_filesystem_manager.py` with new configuration parsing
+
+- **Docker Package Management**: New nested configuration structure for dependency installation
+  - New `command_line_docker_packages` structure with `auto_install_deps`, `auto_install_on_clone`, and `preinstall` settings
+  - Support for pre-installing Python, npm, and system packages before agent execution
+  - Improved dependency detection and installation workflow
+
+- **Framework Interoperability Streaming**: Real-time intermediate step streaming for external framework agents
+  - **LangGraph Streaming**: Updated `massgen/tool/_extraframework_agents/langgraph_lesson_planner_tool.py` (78 lines changed)
+    - Now yields intermediate updates from each workflow node (standards, lesson_plan, reviewed_plan)
+    - Distinguishes between logs (`is_log=True`) and final output using result type
+    - Enables real-time progress tracking during LangGraph workflow execution
+  - **SmoLAgent Streaming**: Updated `massgen/tool/_extraframework_agents/smolagent_lesson_planner_tool.py` (60 lines changed)
+    - Streams ActionStep and PlanningStep outputs as logs during agent execution
+    - FinalAnswerStep yielded as final output
+    - Set verbosity_level=0 to prevent duplicate console output
+  - Both frameworks now provide visibility into multi-step reasoning processes
+
+- **Parallel Execution Safety**: Extended automatic workspace isolation to all execution modes
+  - Parallel execution safety now works in both `--automation` and normal modes (previously automation-only)
+  - Automatic Docker container naming with unique instance ID suffixes (e.g., `massgen-agent_a-a1b2c3d4`)
+  - Enhanced `massgen/filesystem_manager/_filesystem_manager.py` with instance ID generation for all modes
+
+### Fixed
+- **Session Management**: Resolved CLI session handling issues
+  - Fixed session restoration edge cases in `massgen/cli.py`
+  - Improved error handling for session state loading
+
+### Documentations, Configurations and Resources
+
+- **MassGen Contributor Handbook**: Comprehensive contributor guide addressing issue #387
+  - New handbook website at https://massgen.github.io/Handbook/
+  - Eight major sections: Case Studies, Issues, Development, Documentation, Release, Announcements, Marketing, and Resources
+  - Workflow diagrams illustrating contribution pipeline from research to release
+  - Seven contribution tracks with assigned track owners
+  - Communication channels and meeting schedules (daily sync 5:30pm PST, research 6:00pm PST)
+  - Getting started guide for new contributors
+
+- **Docker Configuration Examples**: Three new YAML configurations for advanced Docker workflows
+  - `massgen/configs/tools/code-execution/docker_custom_image.yaml`: Using custom Docker images
+  - `massgen/configs/tools/code-execution/docker_full_dev_setup.yaml`: Complete development environment setup
+  - `massgen/configs/tools/code-execution/docker_github_readonly.yaml`: Read-only GitHub access configuration
+
+- **Automation Documentation**: Enhanced parallel execution section
+  - Updated `docs/source/user_guide/automation.rst` clarifying automatic isolation works in all modes
+  - Added Docker container isolation examples with unique container naming
+  - Clarified that `--automation` flag is for output control, not parallel safety
+
+- **Code Execution Design Documentation**: Updated Docker configuration architecture
+  - Enhanced `docs/dev_notes/CODE_EXECUTION_DESIGN.md` (90 lines revised)
+  - New credential and package management configuration examples
+  - Architecture diagrams for nested configuration structures
+
+- **Computer Use Tools Documentation**: Clarified Docker usage requirements
+  - Updated `massgen/tool/_computer_use/README.md` and `QUICKSTART.md`
+  - Specified Docker requirements for Claude computer use
+  - Added troubleshooting guide for computer use setup
+
+### Technical Details
+- **Major Focus**: Docker configuration improvements with nested structures for credentials and packages, framework interoperability streaming enhancements, parallel execution safety across all modes, contributor handbook
+- **Contributors**: @ncrispino @Eric-Shang @franklinnwren and the MassGen team
 
 ## [0.1.9] - 2025-11-07
 
