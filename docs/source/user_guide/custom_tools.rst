@@ -718,10 +718,10 @@ For users with access to Claude 3.7 Sonnet or newer:
 .. code-block:: bash
 
    massgen \
-     --config massgen/configs/tools/custom_tools/claude_computer_use_example.yaml \
+     --config massgen/configs/tools/custom_tools/claude_computer_use_docker_example.yaml \
      "Navigate to Wikipedia and search for 'Artificial Intelligence'"
 
-**Config:** ``claude_computer_use_example.yaml``
+**Config:** ``claude_computer_use_docker_example.yaml``
 
 .. code-block:: yaml
 
@@ -729,16 +729,17 @@ For users with access to Claude 3.7 Sonnet or newer:
      - id: "claude_automation_agent"
        backend:
          type: "anthropic"
-         model: "claude-3-7-sonnet-20250219"  # Recommended!
+         model: "claude-sonnet-4-5"  # Recommended!
+         betas: ["computer-use-2025-01-24"]
          custom_tools:
            - name: ["claude_computer_use"]
              path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
              function: ["claude_computer_use"]
-             default_params:
-               environment: "browser"
-               display_width: 1280
-               display_height: 800
-               max_iterations: 100
+             preset_args:
+               environment: "linux"
+               environment_config:
+                 container_name: "cua-container"
+                 display: ":99"
 
    ui:
      display_type: "rich_terminal"
@@ -870,6 +871,8 @@ For users with **any model** (gpt-4.1, gpt-4o, gemini-2.5-flash, etc.):
    * ``massgen/tool/_computer_use/README.md`` - Technical implementation details
    * ``massgen/tool/_computer_use/QUICKSTART.md`` - Quick start guide
 
+For docker installation, we have prepared a script and a `guideline <https://github.com/massgen/MassGen/blob/main/scripts/computer_use_setup.md>` for you.
+
 Available Example Configs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -899,7 +902,7 @@ The ``massgen/configs/tools/custom_tools/`` directory contains examples for all 
 **Computer Use Tools:**
 
 * ``gemini_computer_use_example.yaml`` - Google Gemini computer use automation
-* ``claude_computer_use_example.yaml`` - Anthropic Claude computer use automation
+* ``claude_computer_use_docker_example.yaml`` - Anthropic Claude computer use automation
 * ``simple_browser_automation_example.yaml`` - Simple browser automation for any model
 
 Backend Support

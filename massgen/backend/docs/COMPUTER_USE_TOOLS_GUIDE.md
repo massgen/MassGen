@@ -162,7 +162,8 @@ Full implementation of Anthropic's Claude Computer Use API that allows the model
 - Will NOT work with older Claude models
 
 ### Configuration File
-- `claude_computer_use_example.yaml` - Uses Claude 3.7 Sonnet
+- `claude_computer_use_docker_example.yaml` - Uses Claude 3.7 Sonnet
+- `claude_computer_use_browser_example.yaml` - Uses Claude 3.7 Sonnet
 
 ### Example YAML Config
 ```yaml
@@ -175,11 +176,20 @@ agents:
         - name: ["claude_computer_use"]
           path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
           function: ["claude_computer_use"]
-          default_params:
-            environment: "browser"
-            display_width: 1280
-            display_height: 800
-            max_iterations: 100
+          preset_args:
+            environment: "linux"
+            environment_config:
+              container_name: "cua-container"
+              display: ":99"
+            # For browser environment:
+            # environment: "linux"
+            # preset_args:
+            #   environment: "browser"
+            #   headless: true
+            # default_params:
+            #   display_width: 1024
+            #   display_height: 768
+            #   max_iterations: 25
 ```
 
 ### How It Works
@@ -191,7 +201,7 @@ agents:
 
 ### Supported Environments
 - **Browser** - Playwright-based web automation (Chromium)
-- **Linux** - Desktop automation support
+- **Linux** - Docker container with desktop (xdotool, similar to OpenAI implementation)
 
 ### Supported Actions
 
@@ -406,7 +416,7 @@ If you're currently blocked by model availability:
 
 **Have access to Claude but not OpenAI/Gemini?**
 1. **Use `claude_computer_use`** for thorough autonomous workflows
-2. **Use `claude_computer_use_example.yaml`** as your config
+2. **Use `claude_computer_use_docker_example.yaml`** as your config
 3. **Set ANTHROPIC_API_KEY** in your environment
 4. **Plan for 2-5x longer execution time** vs other tools
 
@@ -445,7 +455,8 @@ massgen/
     ├── computer_use_docker_example.yaml         # OpenAI computer-use-preview
     ├── computer_use_with_vision.yaml            # OpenAI computer-use-preview
     ├── gemini_computer_use_example.yaml         # Google Gemini 2.5 ⭐
-    ├── claude_computer_use_example.yaml         # Anthropic Claude 3.7+ ⭐
+    ├── claude_computer_use_docker_example.yaml         # Anthropic Claude 3.7+ ⭐
+    ├── claude_computer_use_browser_example.yaml         # Anthropic Claude 3.7+ ⭐
     └── simple_browser_automation_example.yaml   # Any model (gpt-4.1) ⭐
 ```
 
@@ -474,7 +485,7 @@ massgen --config gemini_computer_use_example.yaml
 ### Quick Start with claude_computer_use (Claude 3.7)
 ```bash
 export ANTHROPIC_API_KEY="your-api-key"
-massgen --config claude_computer_use_example.yaml
+massgen --config claude_computer_use_docker_example.yaml
 ```
 
 ### Quick Start with computer_use (computer-use-preview)

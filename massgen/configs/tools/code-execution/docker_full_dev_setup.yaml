@@ -1,0 +1,55 @@
+# Example: Full Docker Development Setup
+#
+# This is a comprehensive example combining all credential and dependency features.
+# Use this as a template for real-world development workflows.
+#
+# Prerequisites:
+# 1. Docker daemon running
+# 2. Build the Docker image: bash massgen/docker/build.sh --sudo
+# 3. Create .env file with: GITHUB_TOKEN=ghp_your_token
+# 4. SSH keys set up (~/.ssh/)
+# 5. Git config (~/.gitconfig)
+#
+# Usage:
+#   uv run massgen --config @examples/configs/tools/code-execution/docker_full_dev_setup.yaml "Demonstrate full dev environment: check gh auth, verify pre-installed massgen, verify typescript installed, create Flask app with requirements.txt, show git config"
+
+agent:
+  id: "fullstack_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+
+    # Docker configuration
+    command_line_execution_mode: "docker"
+    command_line_docker_enable_sudo: true
+    command_line_docker_network_mode: "bridge"
+
+    # Credentials
+    command_line_docker_credentials:
+      env_file: ".env"
+      env_vars_from_file:
+        - "GITHUB_TOKEN"
+      mount:
+        - "ssh_keys"
+        - "git_config"
+
+    # Package management
+    command_line_docker_packages:
+      preinstall:
+        python:
+          - "massgen"
+        npm:
+          - "typescript"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 400  # Longer for all the installs
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
