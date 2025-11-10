@@ -42,11 +42,11 @@ def sync_readme_pypi(readme_path: Path, readme_pypi_path: Path, dry_run: bool = 
         # Demo GIF → Thumbnail for PyPI (replace GIF with static thumbnail from assets)
         (
             "assets/massgen-demo.gif",
-            "assets/thumbnail.png",
+            "https://raw.githubusercontent.com/Leezekun/MassGen/main/assets/thumbnail.png",
         ),
         (
             "docs/source/_static/images/readme.gif",
-            "docs/source/_static/images/thumbnail.png",
+            "https://raw.githubusercontent.com/Leezekun/MassGen/main/docs/source/_static/images/thumbnail.png",
         ),
     ]
 

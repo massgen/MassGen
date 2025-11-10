@@ -62,6 +62,10 @@ from .logger_config import _DEBUG_MODE, logger, save_execution_metadata, setup_l
 from .orchestrator import Orchestrator
 from .utils import get_backend_type_from_model
 
+# Session storage is internal state management - HARDCODED, NOT CONFIGURABLE
+# Old configs with orchestrator.session_storage are backwards compatible (value ignored)
+SESSION_STORAGE = ".massgen/sessions"
+
 
 # Load environment variables from .env files
 def load_env_file():
@@ -463,6 +467,86 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             )
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
+    elif backend_type == "cerebras":
+        # Cerebras AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("CEREBRAS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Cerebras AI", "CEREBRAS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.cerebras.ai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "together":
+        # Together AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("TOGETHER_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Together AI", "TOGETHER_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.together.xyz/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "fireworks":
+        # Fireworks AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("FIREWORKS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Fireworks AI", "FIREWORKS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.fireworks.ai/inference/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "groq":
+        # Groq uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Groq", "GROQ_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.groq.com/openai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "openrouter":
+        # OpenRouter uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("OpenRouter", "OPENROUTER_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://openrouter.ai/api/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "moonshot":
+        # Kimi/Moonshot AI uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("MOONSHOT_API_KEY") or os.getenv("KIMI_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Moonshot AI", "MOONSHOT_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.moonshot.cn/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "nebius":
+        # Nebius AI Studio uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("NEBIUS_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Nebius AI Studio", "NEBIUS_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://api.studio.nebius.ai/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "poe":
+        # POE uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("POE_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("POE", "POE_API_KEY", config_path))
+        # base_url must be provided in config as it's platform-specific
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "qwen":
+        # Qwen uses OpenAI-compatible Chat Completions API
+        api_key = kwargs.get("api_key") or os.getenv("QWEN_API_KEY")
+        if not api_key:
+            raise ConfigurationError(_api_key_error_message("Qwen", "QWEN_API_KEY", config_path))
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
     elif backend_type == "lmstudio":
         # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
         return LMStudioBackend(**kwargs)
@@ -505,6 +589,7 @@ def create_agents_from_config(
     orchestrator_config: Optional[Dict[str, Any]] = None,
     config_path: Optional[str] = None,
     memory_session_id: Optional[str] = None,
+    debug: bool = False,
 ) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration.
 
@@ -608,6 +693,8 @@ def create_agents_from_config(
         elif backend_type_lower == "zai":
             agent_config = AgentConfig.create_zai_config(**backend_params)
         elif backend_type_lower == "chatcompletion":
+            agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
+        elif backend_type_lower in ["cerebras", "together", "fireworks", "groq", "openrouter", "moonshot", "nebius", "poe", "qwen"]:
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
         elif backend_type_lower == "lmstudio":
             agent_config = AgentConfig.create_lmstudio_config(**backend_params)
@@ -767,6 +854,7 @@ def create_agents_from_config(
                             llm_config=llm_cfg,  # Use native mem0 LLM
                             embedding_config=embedding_cfg,  # Use native mem0 embedder
                             qdrant_client=shared_qdrant_client,  # Share ONE client from server
+                            debug=debug,  # Enable memory debug mode if --debug flag used
                             on_disk=on_disk,
                         )
                         logger.info(
@@ -793,6 +881,7 @@ def create_agents_from_config(
                             llm_config=llm_cfg,  # Use native mem0 LLM
                             embedding_config=embedding_cfg,  # Use native mem0 embedder
                             vector_store_config=vector_store_config,
+                            debug=debug,  # Enable memory debug mode if --debug flag used
                             on_disk=on_disk,
                         )
                         logger.info(
@@ -807,6 +896,11 @@ def create_agents_from_config(
                     )
                     persistent_memory = None
 
+        # Get memory recording settings
+        recording_config = memory_config.get("recording", {})
+        record_all_tool_calls = recording_config.get("record_all_tool_calls", False)
+        record_reasoning = recording_config.get("record_reasoning", False)
+
         # Create agent
         agent = ConfigurableAgent(
             config=agent_config,
@@ -814,6 +908,8 @@ def create_agents_from_config(
             conversation_memory=conversation_memory,
             persistent_memory=persistent_memory,
             context_monitor=context_monitor,
+            record_all_tool_calls=record_all_tool_calls,
+            record_reasoning=record_reasoning,
         )
 
         # Configure retrieval settings from YAML (if memory is enabled)
@@ -822,10 +918,13 @@ def create_agents_from_config(
             agent._retrieval_limit = retrieval_config.get("limit", 5)
             agent._retrieval_exclude_recent = retrieval_config.get("exclude_recent", True)
 
-            if retrieval_config:  # Only log if custom config provided
-                logger.info(
-                    f"🔧 Retrieval configured for {agent_config.agent_id}: " f"limit={agent._retrieval_limit}, exclude_recent={agent._retrieval_exclude_recent}",
-                )
+            if retrieval_config or recording_config:  # Log if custom config provided
+                config_info = []
+                if retrieval_config:
+                    config_info.append(f"retrieval(limit={agent._retrieval_limit}, exclude_recent={agent._retrieval_exclude_recent})")
+                if recording_config:
+                    config_info.append(f"recording(all_tools={record_all_tool_calls}, reasoning={record_reasoning})")
+                logger.info(f"🔧 Memory configured for {agent_config.agent_id}: {', '.join(config_info)}")
 
         agents[agent.config.agent_id] = agent
 
@@ -936,7 +1035,7 @@ def create_simple_config(
         config["orchestrator"] = {
             "snapshot_storage": ".massgen/snapshots",
             "agent_temporary_workspace": ".massgen/temp_workspaces",
-            "session_storage": ".massgen/sessions",
+            # Note: session_storage is hardcoded to .massgen/sessions (not configurable)
         }
 
     return config
@@ -988,7 +1087,8 @@ def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
         path_fields = [
             "snapshot_storage",
             "agent_temporary_workspace",
-            "session_storage",
+            # Note: session_storage is not in this list - it's hardcoded to .massgen/sessions
+            # Old configs with session_storage are backwards compatible (value is ignored)
         ]
 
         for field in path_fields:
@@ -1025,70 +1125,18 @@ def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
             workspace_paths.append(cwd)
 
 
-def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
-    Load previous turns and winning agents history from session storage.
-
-    Returns:
-        tuple: (previous_turns, winning_agents_history)
-            - previous_turns: List of previous turn metadata dicts
-            - winning_agents_history: List of winning agents for memory sharing
-                                     Format: [{"agent_id": "agent_b", "turn": 1}, ...]
-    """
-    session_id = session_info.get("session_id")
-    if not session_id:
-        return [], []
-
-    session_dir = Path(session_storage) / session_id
-    if not session_dir.exists():
-        return [], []
-
-    # Load previous turns
-    previous_turns = []
-    turn_num = 1
-
-    while True:
-        turn_dir = session_dir / f"turn_{turn_num}"
-        if not turn_dir.exists():
-            break
-
-        metadata_file = turn_dir / "metadata.json"
-        if metadata_file.exists():
-            metadata = json.loads(metadata_file.read_text(encoding="utf-8"))
-            # Use absolute path for workspace
-            workspace_path = (turn_dir / "workspace").resolve()
-            previous_turns.append(
-                {
-                    "turn": turn_num,
-                    "path": str(workspace_path),
-                    "task": metadata.get("task", ""),
-                    "winning_agent": metadata.get("winning_agent", ""),
-                },
-            )
-
-        turn_num += 1
-
-    # Load winning agents history for memory sharing across turns
-    winning_agents_history = []
-    winning_agents_file = session_dir / "winning_agents_history.json"
-    if winning_agents_file.exists():
-        try:
-            winning_agents_history = json.loads(winning_agents_file.read_text(encoding="utf-8"))
-            logger.info(f"📚 Loaded {len(winning_agents_history)} winning agent(s) from session storage: {winning_agents_history}")
-        except Exception as e:
-            logger.warning(f"⚠️  Failed to load winning agents history: {e}")
-
-    return previous_turns, winning_agents_history
-
-
 async def handle_session_persistence(
     orchestrator,
     question: str,
     session_info: Dict[str, Any],
-    session_storage: str,
+    config_path: Optional[str] = None,
+    model: Optional[str] = None,
+    log_directory: Optional[str] = None,
 ) -> tuple[Optional[str], int, Optional[str]]:
     """
     Handle session persistence after orchestrator completes.
+
+    Also registers session in registry on first successful turn.
 
     Returns:
         tuple: (session_id, updated_turn_number, normalized_answer)
@@ -1108,7 +1156,7 @@ async def handle_session_persistence(
     current_turn = session_info.get("current_turn", 0) + 1
 
     # Create turn directory
-    session_dir = Path(session_storage) / session_id
+    session_dir = Path(SESSION_STORAGE) / session_id
     turn_dir = session_dir / f"turn_{current_turn}"
     turn_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1178,6 +1226,9 @@ async def handle_session_persistence(
     if workspace_path and Path(workspace_path).exists():
         shutil.copytree(workspace_path, turn_workspace_path, dirs_exist_ok=True)
 
+    # Note: Session is already registered when created (before first turn runs)
+    # No need to register here
+
     return (session_id, current_turn, normalized_answer)
 
 
@@ -1226,7 +1277,6 @@ async def run_question_with_history(
     # Get context sharing parameters
     snapshot_storage = orchestrator_cfg.get("snapshot_storage")
     agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
-    session_storage = orchestrator_cfg.get("session_storage", "sessions")  # Default to "sessions"
 
     # Get debug/test parameters
     if orchestrator_cfg.get("skip_coordination_rounds", False):
@@ -1251,8 +1301,23 @@ async def run_question_with_history(
             max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
         )
 
-    # Load previous turns and winning agents history from session storage for multi-turn conversations
-    previous_turns, winning_agents_history = load_previous_turns(session_info, session_storage)
+    # Get previous turns and winning agents history from session_info if already loaded,
+    # otherwise restore from session storage for multi-turn conversations
+    previous_turns = session_info.get("previous_turns", [])
+    winning_agents_history = session_info.get("winning_agents_history", [])
+
+    # If not provided in session_info but session_id exists, restore from storage
+    if not previous_turns and not winning_agents_history and session_info.get("session_id"):
+        from massgen.session import restore_session
+
+        try:
+            session_state = restore_session(session_info["session_id"], SESSION_STORAGE)
+            if session_state:
+                previous_turns = session_state.previous_turns
+                winning_agents_history = session_state.winning_agents_history
+        except (ValueError, Exception) as e:
+            # Session doesn't exist yet or has no turns - that's ok for new sessions
+            logger.debug(f"Could not restore session for previous turns: {e}")
 
     orchestrator = Orchestrator(
         agents=agents,
@@ -1327,7 +1392,12 @@ async def run_question_with_history(
             for agent_id, agent in orchestrator.agents.items():
                 if hasattr(agent.backend, "reset_state"):
                     try:
-                        await agent.backend.reset_state()
+                        import inspect
+
+                        result = agent.backend.reset_state()
+                        # Handle both sync and async reset_state
+                        if inspect.iscoroutine(result):
+                            await result
                         logger.info(f"Reset backend state for {agent_id}")
                     except Exception as e:
                         logger.warning(f"Failed to reset backend for {agent_id}: {e}")
@@ -1345,45 +1415,125 @@ async def run_question_with_history(
             # Coordination complete - exit loop
             break
 
-    # Copy final results to root level for convenience
+    # Copy final results from attempt to turn root (turn_N/final/)
+    # Only copy if we're in an attempt subdirectory
     try:
         import shutil
 
         from massgen.logger_config import get_log_session_dir, get_log_session_dir_base
 
-        # Get the current attempt's final directory
+        # Get the current attempt's final directory (e.g., turn_1/attempt_2/final/)
         attempt_final_dir = get_log_session_dir() / "final"
 
-        # Get the base directory (without attempt subdirectory)
-        base_dir = get_log_session_dir_base()
-        root_final_dir = base_dir / "final"
+        # Get the turn-level directory (e.g., turn_1/)
+        turn_dir = get_log_session_dir_base()
+        turn_final_dir = turn_dir / "final"
 
-        # Only copy if source and destination are different (i.e., we're using attempt tracking)
-        if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
-            # Remove root final dir if it already exists
-            if root_final_dir.exists():
-                shutil.rmtree(root_final_dir)
+        # Only copy if we're in an attempt subdirectory and final exists
+        if attempt_final_dir.exists() and attempt_final_dir != turn_final_dir:
+            # Remove turn final dir if it already exists
+            if turn_final_dir.exists():
+                shutil.rmtree(turn_final_dir)
 
-            # Copy attempt's final to root final
-            shutil.copytree(attempt_final_dir, root_final_dir)
-            logger.info(f"Copied final results from {attempt_final_dir} to {root_final_dir}")
+            # Copy attempt's final to turn root
+            shutil.copytree(attempt_final_dir, turn_final_dir)
+            logger.info(f"Copied final results from {attempt_final_dir} to {turn_final_dir}")
     except Exception as e:
-        logger.warning(f"Failed to copy final results to root: {e}")
+        logger.warning(f"Failed to copy final results to turn root: {e}")
 
     # Handle session persistence if applicable
+    # Get metadata for session registration (on first turn)
+    from massgen.logger_config import get_log_session_root
+
+    config_path = kwargs.get("config_path")
+    model_name = kwargs.get("model_name")
+    log_dir = get_log_session_root()
+    log_dir_name = log_dir.name  # Get log_YYYYMMDD_HHMMSS from path
+
     session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
         orchestrator,
         question,
         session_info,
-        session_storage,
+        config_path=config_path,
+        model=model_name,
+        log_directory=log_dir_name,
     )
 
     # Return normalized response so conversation history has correct paths
     return (normalized_response or response_content, session_id_to_use, updated_turn)
 
 
-async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs) -> str:
-    """Run MassGen with a single question."""
+async def run_single_question(
+    question: str,
+    agents: Dict[str, SingleAgent],
+    ui_config: Dict[str, Any],
+    session_id: Optional[str] = None,
+    restore_session_if_exists: bool = False,
+    **kwargs,
+) -> str:
+    """Run MassGen with a single question.
+
+    Args:
+        question: The question to ask
+        agents: Dictionary of agents
+        ui_config: UI configuration
+        session_id: Optional session ID for persistence
+        restore_session_if_exists: If True, attempt to restore previous session data
+        **kwargs: Additional arguments
+
+    Returns:
+        The final response text
+    """
+    # Restore previous session ONLY if explicitly requested (not for new sessions)
+    conversation_history = []
+    previous_turns = []
+    winning_agents_history = []
+    current_turn = 0
+
+    if session_id and restore_session_if_exists:
+        from massgen.logger_config import set_log_turn
+        from massgen.session import restore_session
+
+        try:
+            session_state = restore_session(session_id, SESSION_STORAGE)
+            conversation_history = session_state.conversation_history
+            previous_turns = session_state.previous_turns
+            winning_agents_history = session_state.winning_agents_history
+            current_turn = session_state.current_turn
+
+            # Set turn number for logger (next turn after last completed)
+            next_turn = current_turn + 1
+            set_log_turn(next_turn)
+
+            print(
+                f"📚 Restored {current_turn} previous turn(s) ({len(conversation_history)} messages) from session '{session_id}'",
+                flush=True,
+            )
+            print(f"   Starting turn {next_turn}", flush=True)
+
+            # Use run_question_with_history to include conversation context
+            session_info = {
+                "session_id": session_id,
+                "current_turn": current_turn,
+                "previous_turns": previous_turns,
+                "winning_agents_history": winning_agents_history,
+            }
+            response_text, _, _ = await run_question_with_history(
+                question,
+                agents,
+                ui_config,
+                conversation_history,
+                session_info,
+                **kwargs,
+            )
+            return response_text
+
+        except ValueError as e:
+            # restore_session failed - no turns found
+            print(f"❌ Session error: {e}", flush=True)
+            print("Run 'massgen --list-sessions' to see available sessions", flush=True)
+            sys.exit(1)
+
     # Check if we should use orchestrator for single agents (default: False for backward compatibility)
     use_orchestrator_for_single = ui_config.get("use_orchestrator_for_single_agent", True)
 
@@ -1516,7 +1666,12 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 for agent_id, agent in orchestrator.agents.items():
                     if hasattr(agent.backend, "reset_state"):
                         try:
-                            await agent.backend.reset_state()
+                            import inspect
+
+                            result = agent.backend.reset_state()
+                            # Handle both sync and async reset_state
+                            if inspect.iscoroutine(result):
+                                await result
                             logger.info(f"Reset backend state for {agent_id}")
                         except Exception as e:
                             logger.warning(f"Failed to reset backend for {agent_id}: {e}")
@@ -1534,7 +1689,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 # Coordination complete - exit loop
                 break
 
-        # Copy final results to root level for convenience
+        # Copy final results from attempt to turn root (turn_N/final/)
+        # Only copy if we're in an attempt subdirectory
         try:
             import shutil
 
@@ -1543,24 +1699,51 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 get_log_session_dir_base,
             )
 
-            # Get the current attempt's final directory
+            # Get the current attempt's final directory (e.g., turn_1/attempt_2/final/)
             attempt_final_dir = get_log_session_dir() / "final"
 
-            # Get the base directory (without attempt subdirectory)
-            base_dir = get_log_session_dir_base()
-            root_final_dir = base_dir / "final"
+            # Get the turn-level directory (e.g., turn_1/)
+            turn_dir = get_log_session_dir_base()
+            turn_final_dir = turn_dir / "final"
 
-            # Only copy if source and destination are different (i.e., we're using attempt tracking)
-            if attempt_final_dir != root_final_dir and attempt_final_dir.exists():
-                # Remove root final dir if it already exists
-                if root_final_dir.exists():
-                    shutil.rmtree(root_final_dir)
+            # Only copy if we're in an attempt subdirectory and final exists
+            if attempt_final_dir.exists() and attempt_final_dir != turn_final_dir:
+                # Remove turn final dir if it already exists
+                if turn_final_dir.exists():
+                    shutil.rmtree(turn_final_dir)
 
-                # Copy attempt's final to root final
-                shutil.copytree(attempt_final_dir, root_final_dir)
-                logger.info(f"Copied final results from {attempt_final_dir} to {root_final_dir}")
+                # Copy attempt's final to turn root
+                shutil.copytree(attempt_final_dir, turn_final_dir)
+                logger.info(f"Copied final results from {attempt_final_dir} to {turn_final_dir}")
         except Exception as e:
-            logger.warning(f"Failed to copy final results to root: {e}")
+            logger.warning(f"Failed to copy final results to turn root: {e}")
+
+        # Handle session persistence for single-question runs
+        if session_id:
+            try:
+                from massgen.logger_config import get_log_session_root
+
+                # Get metadata for session registration
+                config_path_for_session = kwargs.get("config_path")
+                model_for_session = kwargs.get("model_name")
+                log_dir = get_log_session_root()
+                log_dir_name = log_dir.name
+
+                session_info = {
+                    "session_id": session_id,
+                    "current_turn": 0,  # First turn
+                }
+                await handle_session_persistence(
+                    orchestrator,
+                    question,
+                    session_info,
+                    config_path=config_path_for_session,
+                    model=model_for_session,
+                    log_directory=log_dir_name,
+                )
+                logger.info(f"Saved session data for single-question run: {session_id}")
+            except Exception as e:
+                logger.warning(f"Failed to save session persistence: {e}")
 
         return final_response
 
@@ -2248,9 +2431,16 @@ async def run_interactive_mode(
     orchestrator_cfg: Dict[str, Any] = None,
     config_path: Optional[str] = None,
     memory_session_id: Optional[str] = None,
+    initial_question: Optional[str] = None,
+    restore_session_if_exists: bool = False,
+    debug: bool = False,
     **kwargs,
 ):
-    """Run MassGen in interactive mode with conversation history."""
+    """Run MassGen in interactive mode with conversation history.
+
+    Args:
+        initial_question: Optional first question to auto-submit when entering interactive mode
+    """
 
     # Use Rich console for better display
     rich_console = Console()
@@ -2340,6 +2530,7 @@ async def run_interactive_mode(
             agents = create_agents_from_config(
                 original_config,
                 orchestrator_cfg,
+                debug=debug,
                 config_path=config_path,
                 memory_session_id=memory_session_id,
             )
@@ -2348,14 +2539,40 @@ async def run_interactive_mode(
 
     print_help_messages()
 
-    # Maintain conversation history
-    conversation_history = []
-
     # Session management for multi-turn filesystem support
     # Use memory_session_id (unified with memory system) if provided, otherwise create later
     session_id = memory_session_id
     current_turn = 0
-    session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")
+
+    # Restore session state ONLY if explicitly requested (not for new sessions)
+    conversation_history = []
+    previous_turns = []
+    winning_agents_history = []
+    if memory_session_id and restore_session_if_exists:
+        from massgen.logger_config import set_log_turn
+        from massgen.session import restore_session
+
+        try:
+            session_state = restore_session(memory_session_id, SESSION_STORAGE)
+            conversation_history = session_state.conversation_history
+            current_turn = session_state.current_turn
+            previous_turns = session_state.previous_turns
+            winning_agents_history = session_state.winning_agents_history
+
+            # Set turn number for logger (next turn after last completed)
+            next_turn = current_turn + 1
+            set_log_turn(next_turn)
+
+            print(
+                f"📚 Restored session with {current_turn} previous turn(s) " f"({len(conversation_history)} messages) from {SESSION_STORAGE}",
+                flush=True,
+            )
+            print(f"   Starting turn {next_turn}", flush=True)
+        except ValueError as e:
+            # restore_session failed - no turns found
+            print(f"❌ Session error: {e}", flush=True)
+            print("Run 'massgen --list-sessions' to see available sessions", flush=True)
+            sys.exit(1)
 
     try:
         while True:
@@ -2368,7 +2585,7 @@ async def run_interactive_mode(
                 # TODO: We may want to avoid full recreation if possible in the future, conditioned on being able to easily reset MCPs.
                 if current_turn > 0 and original_config and orchestrator_cfg:
                     # Get the most recent turn path (the one just completed)
-                    session_dir = Path(session_storage) / session_id
+                    session_dir = Path(SESSION_STORAGE) / session_id
                     latest_turn_dir = session_dir / f"turn_{current_turn}"
                     latest_turn_workspace = latest_turn_dir / "workspace"
 
@@ -2404,12 +2621,19 @@ async def run_interactive_mode(
                         agents = create_agents_from_config(
                             modified_config,
                             orchestrator_cfg,
+                            debug=debug,
                             config_path=config_path,
                             memory_session_id=session_id,
                         )
                         logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
 
-                question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
+                # Use initial_question for first turn if provided, otherwise prompt
+                if initial_question and current_turn == 0:
+                    question = initial_question
+                    rich_console.print(f"\n[bold blue]👤 User:[/bold blue] {question}")
+                    initial_question = None  # Clear so we prompt on subsequent turns
+                else:
+                    question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
 
                 # Handle slash commands
                 if question.startswith("/"):
@@ -2530,7 +2754,8 @@ async def run_interactive_mode(
                 session_info = {
                     "session_id": session_id,
                     "current_turn": current_turn,  # Pass CURRENT turn (for looking up previous turns)
-                    "session_storage": session_storage,
+                    "previous_turns": previous_turns,
+                    "winning_agents_history": winning_agents_history,
                 }
                 response, updated_session_id, updated_turn = await run_question_with_history(
                     question,
@@ -2572,6 +2797,13 @@ async def run_interactive_mode(
 
 async def main(args):
     """Main CLI entry point (async operations only)."""
+    # Setup logging (only for actual agent runs, not special commands)
+    setup_logging(debug=args.debug)
+
+    if args.debug:
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
+
     # Check if bare `massgen` with no args - use default config if it exists
     if not args.backend and not args.model and not args.config:
         # Use resolve_config_path to check project-level then global config
@@ -2588,6 +2820,19 @@ async def main(args):
                 sys.exit(EXIT_CONFIG_ERROR)
             # No question and no config - wizard will be triggered in cli_main()
             return
+
+    # Session config was already loaded in cli_main() if --session-id or --continue was used
+    # Try to use config from session if it was set
+    if args.session_id and not args.config and not args.model and not args.backend:
+        from massgen.session import SessionRegistry
+
+        registry = SessionRegistry()
+        session_metadata = registry.get_session(args.session_id)
+        if session_metadata:
+            session_config_path = session_metadata.get("config_path")
+            if session_config_path:
+                args.config = session_config_path
+                print(f"   Using config from session: {Path(session_config_path).name}", flush=True)
 
     # Validate arguments (only if we didn't auto-set config above)
     if not args.backend:
@@ -2743,24 +2988,58 @@ async def main(args):
         # Create unified session ID for memory system (before creating agents)
         # This ensures memory is isolated per session and unifies orchestrator + memory sessions
         memory_session_id = None
-        if args.question:
-            # Single question mode: Create temp session per run
-            from datetime import datetime
+        restore_existing_session = False  # Flag to indicate if we should restore session data
 
-            memory_session_id = f"temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            logger.info(f"📝 Created temp session for single-question mode: {memory_session_id}")
+        # Determine model name for metadata (used in session registration and kwargs)
+        model_name = None
+        if "agent" in config:
+            model_name = config["agent"].get("backend", {}).get("model")
+        elif "agents" in config and config["agents"]:
+            model_name = config["agents"][0].get("backend", {}).get("model")
+
+        # Priority order: CLI arg > config file > generate new
+        if args.session_id:
+            # Use session_id from CLI argument (already validated) - RESTORE existing
+            memory_session_id = args.session_id
+            restore_existing_session = True
+            logger.info(f"📚 Using session from CLI: {memory_session_id}")
+        elif "session_id" in config:
+            # Use session_id from YAML config - RESTORE existing
+            memory_session_id = config["session_id"]
+            restore_existing_session = True
+            logger.info(f"📚 Using session from config: {memory_session_id}")
         else:
-            # Interactive mode: Create session now (will be reused by orchestrator)
+            # Generate new session for both interactive and single-question modes - DON'T restore
             from datetime import datetime
 
             memory_session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            logger.info(f"📝 Created session for interactive mode: {memory_session_id}")
+            restore_existing_session = False
+            mode = "single-question" if args.question else "interactive"
+            logger.info(f"📝 Created session for {mode} mode: {memory_session_id}")
+
+            # Register new session immediately (before first turn runs)
+            # Get log directory for session metadata
+            from massgen.logger_config import get_log_session_root
+            from massgen.session import SessionRegistry
+
+            log_dir = get_log_session_root()
+            log_dir_name = log_dir.name
+
+            registry = SessionRegistry()
+            registry.register_session(
+                session_id=memory_session_id,
+                config_path=str(resolved_path) if resolved_path else None,
+                model=model_name,
+                log_directory=log_dir_name,
+            )
+            logger.info(f"📝 Registered new session in registry: {memory_session_id}")
 
         agents = create_agents_from_config(
             config,
             orchestrator_cfg,
             config_path=str(resolved_path) if resolved_path else None,
             memory_session_id=memory_session_id,
+            debug=args.debug,
         )
 
         if not agents:
@@ -2773,7 +3052,11 @@ async def main(args):
         timeout_settings = config.get("timeout_settings", {})
         timeout_config = TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
 
-        kwargs = {"timeout_config": timeout_config}
+        kwargs = {
+            "timeout_config": timeout_config,
+            "model_name": model_name,  # For session registration
+            "config_path": str(resolved_path) if resolved_path else None,  # For session registration
+        }
 
         # Add orchestrator configuration if present
         if "orchestrator" in config:
@@ -2800,13 +3083,24 @@ async def main(args):
         # Run mode based on whether question was provided
         try:
             if args.question:
-                await run_single_question(args.question, agents, ui_config, **kwargs)
+                await run_single_question(
+                    args.question,
+                    agents,
+                    ui_config,
+                    session_id=memory_session_id,
+                    restore_session_if_exists=restore_existing_session,
+                    **kwargs,
+                )
                 # if response:
                 #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
                 #     print(f"{response}", flush=True)
             else:
                 # Pass the config path and session_id to interactive mode
                 config_file_path = str(resolved_path) if args.config and resolved_path else None
+                # Check if we have an initial question from config builder
+                initial_q = getattr(args, "interactive_with_initial_question", None)
+                # Remove config_path from kwargs to avoid duplicate argument
+                interactive_kwargs = {k: v for k, v in kwargs.items() if k != "config_path"}
                 await run_interactive_mode(
                     agents,
                     ui_config,
@@ -2814,9 +3108,21 @@ async def main(args):
                     orchestrator_cfg=orchestrator_cfg,
                     config_path=config_file_path,
                     memory_session_id=memory_session_id,
-                    **kwargs,
+                    initial_question=initial_q,
+                    restore_session_if_exists=restore_existing_session,
+                    debug=args.debug,
+                    **interactive_kwargs,
                 )
         finally:
+            # Mark ALL sessions as completed
+            if memory_session_id:
+                from massgen.session import SessionRegistry
+
+                registry = SessionRegistry()
+                registry.complete_session(memory_session_id)
+                if args.debug:
+                    logger.debug(f"Marked session as completed: {memory_session_id}")
+
             # Cleanup all agents' filesystem managers (including Docker containers)
             for agent_id, agent in agents.items():
                 if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager"):
@@ -3011,6 +3317,31 @@ Environment Variables:
         help="Treat config warnings as errors and abort execution",
     )
 
+    # Session options
+    session_group = parser.add_argument_group("session management", "Load or list memory sessions")
+    session_group.add_argument(
+        "--session-id",
+        type=str,
+        help="Load memory from a previous session by ID (e.g., chat_session_a1b2c3d4)",
+    )
+    session_group.add_argument(
+        "--continue",
+        action="store_true",
+        dest="continue_session",
+        help="Continue the most recent session (shortcut for loading last session)",
+    )
+    session_group.add_argument(
+        "--list-sessions",
+        action="store_true",
+        help="List recent memory sessions (default: 10 most recent)",
+    )
+    session_group.add_argument(
+        "--all",
+        action="store_true",
+        dest="list_all_sessions",
+        help="Show all sessions (use with --list-sessions for detailed view)",
+    )
+
     # Timeout options
     timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
     timeout_group.add_argument(
@@ -3021,7 +3352,65 @@ Environment Variables:
 
     args = parser.parse_args()
 
+    # Handle --continue flag BEFORE setup_logging so we can reuse log directory
+    if args.continue_session:
+        from massgen.session import SessionRegistry
+
+        registry = SessionRegistry()
+        recent_session = registry.get_most_recent_session()
+        if not recent_session:
+            print("❌ No sessions found to continue")
+            print("Run 'massgen --list-sessions' to see available sessions")
+            sys.exit(1)
+        args.session_id = recent_session["session_id"]
+        print(f"🔄 Continuing most recent session: {args.session_id}")
+
+    # Restore log directory from session if loading existing session
+    if args.session_id:
+        from massgen.logger_config import set_log_base_session_dir
+        from massgen.session import SessionRegistry
+
+        registry = SessionRegistry()
+        if not registry.session_exists(args.session_id):
+            print(f"❌ Session error: Session '{args.session_id}' not found in registry")
+            print("Run 'massgen --list-sessions' to see available sessions")
+            sys.exit(1)
+
+        session_metadata = registry.get_session(args.session_id)
+        log_directory = session_metadata.get("log_directory")
+        if log_directory:
+            # Reuse the original log directory for this session
+            set_log_base_session_dir(log_directory)
+            print(f"📚 Loading session: {args.session_id} (log: {log_directory})")
+
+        # Restore config from session if not explicitly provided
+        session_config_path = session_metadata.get("config_path")
+        if args.config and session_config_path:
+            # Resolve both paths to compare actual files (handles @examples aliases)
+            current_resolved = resolve_config_path(args.config)
+            session_resolved = Path(session_config_path).resolve() if session_config_path else None
+
+            if current_resolved and session_resolved and current_resolved.resolve() != session_resolved:
+                # User is overriding with a different config - warn them
+                print("⚠️  Warning: Using different config than original session")
+                print(f"   Original: {session_config_path}")
+                print(f"   Current:  {args.config}")
+        elif not args.config and session_config_path:
+            # Automatically load config from session
+            args.config = session_config_path
+            print(f"📄 Using config from session: {session_config_path}")
+
     # Handle special commands first (before logging setup to avoid creating log dirs)
+    if args.list_sessions:
+        from massgen.session import SessionRegistry, format_session_list
+
+        registry = SessionRegistry()
+        # Show all sessions if --all flag is provided, otherwise show recent 10
+        limit = None if args.list_all_sessions else 10
+        sessions = registry.list_sessions(limit=limit)
+        print(format_session_list(sessions, show_all=args.list_all_sessions))
+        return
+
     if args.validate:
         from .config_validator import ConfigValidator
 
@@ -3094,9 +3483,12 @@ Environment Variables:
         if result and len(result) == 2:
             filepath, question = result
             if filepath and question:
-                # Update args to use the newly created config
+                # Update args to use the newly created config and launch interactive mode with initial question
                 args.config = filepath
                 args.question = question
+                # Store initial question for interactive mode (don't run single-question mode)
+                args.interactive_with_initial_question = question
+                args.question = None  # Clear to trigger interactive mode instead of single-question
             elif filepath:
                 # Config created but user chose not to run
                 print(f"\n✅ Configuration saved to: {filepath}")

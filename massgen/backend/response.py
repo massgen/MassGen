@@ -18,7 +18,10 @@ import httpx
 import openai
 from openai import AsyncOpenAI
 
-from ..api_params_handler import ResponseAPIParamsHandler
+from ..api_params_handler import (
+    OpenAIOperatorAPIParamsHandler,
+    ResponseAPIParamsHandler,
+)
 from ..formatter import ResponseFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType, TextStreamChunk
@@ -40,7 +43,12 @@ class ResponseBackend(CustomToolAndMCPBackend):
         self.formatter = ResponseFormatter()
 
         # Initialize API params handler after custom_tool_manager
-        self.api_params_handler = ResponseAPIParamsHandler(self)
+        # Use OpenAIOperatorAPIParamsHandler for computer-use-preview model
+        model = kwargs.get("model", "")
+        if "computer-use-preview" in model:
+            self.api_params_handler = OpenAIOperatorAPIParamsHandler(self)
+        else:
+            self.api_params_handler = ResponseAPIParamsHandler(self)
 
         # Queue for pending image saves
         self._pending_image_saves = []

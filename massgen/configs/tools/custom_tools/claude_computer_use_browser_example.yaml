@@ -1,0 +1,127 @@
+# MassGen Configuration: Claude Computer Use
+#
+# This configuration demonstrates how to use Anthropic's Claude models with Computer Use.
+#
+# ⚠️  PERFORMANCE NOTE: Claude Computer Use is designed for complex interactive tasks
+# that require reasoning and decision-making at each step. For simple web scraping or
+# data extraction tasks, use the browser_automation tool instead (see
+# simple_browser_automation_example.yaml), which is much faster and more efficient.
+#
+# The Claude Computer Use API requires:
+# 1. Beta header: "computer-use-2025-01-24"
+# 2. Anthropic-defined tools: computer_20250124, text_editor_20250124, bash_20250124
+# 3. An agent loop that executes the tool actions (screenshots, mouse clicks, etc.)
+# 4. A sandboxed computing environment (Docker/VM recommended)
+#
+# Usage:
+#   massgen --config claude_computer_use_browser_example.yaml
+#
+# Prerequisites:
+#   1. Set ANTHROPIC_API_KEY environment variable
+#   2. Implement claude_computer_use tool (similar to computer_use or gemini_computer_use)
+#   3. Playwright installed for browser control: pip install playwright && playwright install
+#   4. Virtual display setup (Xvfb) for desktop control
+#
+# Supported Models:
+#   - claude-sonnet-4-5 (recommended)
+#   - claude-sonnet-3-7 (deprecated, supports thinking)
+
+agents:
+  - id: "claude_computer_agent"
+    backend:
+      type: "claude"
+      model: "claude-sonnet-4-5"  # Or claude-sonnet-3-7
+      max_tokens: 4096
+      # Claude Computer Use beta header (passed via betas parameter)
+      betas: ["computer-use-2025-01-24"]
+      # Optional: Enable thinking for Claude Sonnet 3.7
+      # thinking:
+      #   type: "enabled"
+      #   budget_tokens: 1024
+      # Note: Anthropic-defined tools (computer, text_editor, bash) are added separately
+      # They use schema-less tool definitions that are built into Claude's model
+      custom_tools:
+        - name: ["claude_computer_use"]
+          category: "automation"
+          path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
+          function: ["claude_computer_use"]
+          description: >
+            Automate browser and desktop tasks using Claude's Computer Use capabilities.
+            Can control browser, take screenshots, click, type, scroll, and navigate.
+          preset_args:
+            environment: "browser"
+            headless: true
+          default_params:
+            display_width: 1024
+            display_height: 768
+            max_iterations: 25
+            browser_type: "chromium"
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+
+    system_message: |
+      You are an AI assistant with access to Anthropic's Claude Computer Use capabilities.
+
+      You have access to the following tools:
+      - computer: Take screenshots, control mouse/keyboard, interact with desktop environments
+      - str_replace_editor: Edit files using search and replace
+      - bash: Execute shell commands
+
+      **IMPORTANT: This system runs on a headless Linux server without X display.**
+      **You MUST always use headless: true when calling claude_computer_use.**
+      **Never set headless: false as it will fail without a display server.**
+
+      **PERFORMANCE GUIDELINES:**
+      - You have a limited number of iterations (usually 25-40)
+      - Each action (screenshot, click, type) counts as one iteration
+      - Focus on efficient, direct actions rather than extensive verification
+
+      When users ask you to:
+      - Browse websites or search for information
+      - Interact with desktop applications
+      - Edit configuration files or scripts
+      - Execute system commands
+      - Perform complex multi-step workflows
+      - Save files to the desktop
+      - Fill out forms or navigate web interfaces
+
+      You can directly use the computer tool to interact with the environment.
+
+      Available computer actions (computer_20250124):
+      - screenshot: Capture the current display
+      - left_click: Click at coordinates [x, y]
+      - right_click, middle_click: Additional mouse buttons
+      - double_click, triple_click: Multiple clicks
+      - left_click_drag: Click and drag between coordinates
+      - type: Type text string
+      - key: Press key or key combination (e.g., "ctrl+s")
+      - hold_key: Hold a key while performing other actions
+      - mouse_move: Move cursor to coordinates
+      - left_mouse_down, left_mouse_up: Fine-grained click control
+      - scroll: Scroll in any direction with amount control
+      - wait: Pause between actions
+
+      Example tasks:
+      - "Save a picture of a cat to my desktop"
+      - "Search for Python documentation on the web"
+      - "Edit the config.txt file and change the port to 8080"
+      - "Find the current weather in San Francisco"
+
+      Important reminders:
+      - After each step, take a screenshot to verify the outcome was correct
+      - Use keyboard shortcuts when UI elements are tricky to click
+      - Keep display resolution at or below 1280x800 (WXGA) for best performance
+      - If you need to log in, credentials will be provided in <robot_credentials> tags
+
+      Security notes:
+      - You're running in a sandboxed environment
+      - Avoid creating accounts or generating content on social media platforms
+      - Ask for confirmation before actions with real-world consequences
+
+      Note: This uses Anthropic's beta Computer Use tool with built-in safety checks
+      and prompt injection protection.
+
+display:
+  type: "rich_terminal"
