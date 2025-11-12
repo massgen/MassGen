@@ -37,7 +37,7 @@ orchestrator:
     # This creates the necessary workspace directories
     massgen_skills:
       - memory      # Creates memory/ directory
-      - tasks       # Creates tasks/ directory
+      # - tasks       # Creates tasks/ directory
       # - file_search  # No directory needed
 
     # Skills directory (contains external skills from openskills)

@@ -138,22 +138,9 @@ cat > memory/code_analysis.md << 'EOF'
 EOF
 ```
 
-## Integration with MassGen
-
-When `organize_workspace: true` is set in your configuration, your workspace will have the `memory/` directory automatically created alongside `tasks/` and `workspace/`. This provides a clean separation of concerns:
-
-- `memory/` - Long-term context and decisions
-- `tasks/` - Current task plans and status
-- `workspace/` - Active working files and outputs
-
 ## Tips
 
 - **Multi-turn conversations**: Memory persists across turns in the shared reference path
 - **Collaboration**: Review other agents' memories to avoid duplicating work
 - **Incremental updates**: Update existing memory files rather than creating many small files
 - **Cleanup**: Remove outdated memories that are no longer relevant
-
-## See Also
-
-- `tasks` skill - For managing task plans and progress
-- `file_search` skill - For searching through code and memory files
