@@ -7,16 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.11 (November 12, 2025)** - Skills System, Memory MCP & Rate Limiting
+Modular skills system for enhanced agent prompting, MCP-based memory management with filesystem integration for advanced workflows, and multi-dimensional rate limiting for Gemini API calls.
+
 **v0.1.10 (November 10, 2025)** - Docker Configuration, Framework Streaming & Contributor Handbook
 Enhanced Docker configuration with nested credential and package management structures, framework interoperability streaming for LangGraph and SmoLAgent, improved parallel execution safety across all modes, and comprehensive contributor handbook at https://massgen.github.io/Handbook/.
 
 **v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
 Complete session management system with conversation restoration, computer use automation tools for browser and desktop control, enhanced config builder with fuzzy model matching, and expanded backend support.
 
-**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
-Complete automation infrastructure for LLM agents with real-time status tracking, silent execution mode, and DSPy-powered question paraphrasing for enhanced multi-agent diversity.
-
 ---
+
+## [0.1.11] - 2025-11-12
+
+### Added
+- **Skills System**: Modular prompting framework for enhancing agent capabilities
+  - New `SkillsManager` class in `massgen/filesystem_manager/skills_manager.py` for dynamic skill loading and injection (158 lines)
+  - **File Search Skill**: Always-available skill for searching files and code across workspace (`massgen/skills/always/file_search/SKILL.md`, 280 lines)
+  - Automatic skill discovery and loading from `massgen/skills/` directory structure
+  - Docker-compatible skill mounting and environment setup
+  - Skills organized into `always/` (auto-included) and `optional/` categories
+  - Flexible skill injection into agent system prompts via orchestrator
+  - Configuration examples in `massgen/configs/skills/` (skills_basic.yaml, skills_existing_filesystem.yaml, skills_with_memory.yaml)
+
+- **Memory MCP Tool & Filesystem Integration**: MCP server for agent memory management with filesystem persistence and combined workflows
+  - New `massgen/mcp_tools/memory/` module with memory MCP server implementation (513 lines total)
+  - **MemoryMCPServer** in `_memory_mcp_server.py` (352 lines) for memory CRUD operations with automatic filesystem sync
+  - **Memory data models** in `_memory_models.py` (161 lines) with short-term and long-term memory tiers
+  - Memory persistence to workspace under `memory/short_term/` and `memory/long_term/` directories
+  - Markdown-based memory storage format for human readability
+  - Integration with orchestrator for cross-agent memory sharing (+218 lines in orchestrator.py)
+  - Memory-specific message templates for memory operations (+95 lines in message_templates.py)
+  - **Combined workflows**: Simultaneous use of memory MCP tools and filesystem operations for advanced workflows
+  - Enables agents to maintain persistent memory while manipulating files
+  - Configuration examples demonstrating integrated workflows for long-running projects requiring both code changes and learned context
+  - Inspired by Letta's context hierarchy design pattern
+
+- **Rate Limiting System (Gemini)**: Multi-dimensional rate limiting for Gemini API calls and agent startup
+  - New `massgen/backend/rate_limiter.py` (321 lines) with comprehensive rate limiting infrastructure
+  - Support for multiple limit types: requests per minute (RPM), tokens per minute (TPM), requests per day (RPD)
+  - Model-specific rate limits with configurable thresholds for Gemini models
+  - Graceful cooldown periods with exponential backoff
+  - Agent startup rate limiting to prevent API quota exhaustion
+  - Test suite in `massgen/tests/test_rate_limiter.py` (122 lines)
+  - Configuration system in `massgen/configs/rate_limits/` with rate_limits.yaml and rate_limit_config.py (180 lines)
+  - CLI flag `--enable-rate-limiting` for opt-in rate limiting
+
+### Changed
+- **Claude Code Backend**: Improved Windows support for long system prompts
+  - Enhanced handling of long system prompts on Windows platforms
+  - Resolved command-line length limitations and encoding issues
+  - Updated `massgen/backend/claude_code.py` with more robust Windows compatibility (27 lines changed)
+
+- **Planning MCP Server**: Added filesystem task persistence within workspace
+  - Tasks now saved to agent workspace instead of separate tasks/ directory
+  - Improved task organization and workspace management
+  - Enhanced `massgen/mcp_tools/planning/_planning_mcp_server.py` (+84 lines)
+  - Removed standalone tasks/ skill in favor of integrated planning
+
+### Fixed
+- **Rate Limiter Asyncio Lock**: Resolved asyncio lock event loop error
+  - Fixed asyncio lock reuse across different event loops causing errors
+  - Improved rate limiter thread safety and event loop handling
+  - Updated `massgen/backend/rate_limiter.py` and added comprehensive tests
+
+### Documentations, Configurations and Resources
+
+- **Skills System Documentation**: Comprehensive guide for using and creating skills
+  - New `docs/source/user_guide/skills.rst` (473 lines)
+  - Covers skill structure, loading mechanisms, and best practices
+  - Examples of creating custom skills for specific agent capabilities
+
+- **Memory-Filesystem Mode Documentation**: Guide for integrated memory and filesystem workflows
+  - New `docs/source/user_guide/memory_filesystem_mode.rst` (883 lines)
+  - Demonstrates combining memory MCP tools with filesystem operations
+  - Configuration examples and use case scenarios
+
+- **Rate Limiting Documentation**: Complete rate limiting configuration guide
+  - New `docs/rate_limiting.md` (254 lines)
+  - Model-specific rate limits and configuration examples
+  - Best practices for managing API quotas
+  - New `massgen/configs/rate_limits/README.md` (108 lines)
+
+- **Skills Configuration Examples**: Three YAML configurations for skills usage
+  - `massgen/configs/skills/skills_basic.yaml`: Basic skills setup
+  - `massgen/configs/skills/skills_existing_filesystem.yaml`: Skills with filesystem integration
+  - `massgen/configs/skills/skills_with_memory.yaml`: Skills with memory MCP integration
+
+- **Filesystem Tool Discovery Design**: Comprehensive design document for new tool paradigm
+  - New `docs/dev_notes/filesystem_tool_discovery_design.md` (1,582 lines)
+  - Proposes shift from context-based to filesystem-based tool discovery
+  - Enables attaching 100+ MCP servers without context pollution
+  - Details progressive disclosure and code-based tool composition
+  - Includes implementation proposals and technical architecture
+
+### Technical Details
+- **Major Focus**: Skills system for modular agent prompting, memory MCP tool with filesystem persistence, multi-dimensional rate limiting, memory-filesystem integration mode
+- **Contributors**: @ncrispino @abhimanyuaryan @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.1.10] - 2025-11-10
 
