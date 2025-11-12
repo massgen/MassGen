@@ -248,6 +248,101 @@ Your task plans are automatically saved to `tasks/plan.json` in your workspace. 
 
         return base_guidance + filesystem_guidance
 
+    def get_memory_system_message(
+        self,
+        short_term_memories: List[Dict[str, Any]],
+        long_term_memories: List[Dict[str, Any]],
+    ) -> str:
+        """
+        Generate memory system prompt with cross-agent visibility.
+
+        Creates two sections:
+        1. Short-term memories: Full content auto-injected (always available)
+        2. Long-term memories: Summary table (load on-demand via load_memory)
+
+        Args:
+            short_term_memories: List of short-term memory dicts with keys:
+                - name, description, content, agent_id, created, updated
+            long_term_memories: List of long-term memory dicts with keys:
+                - name, description, agent_id, created, updated
+
+        Returns:
+            Formatted memory system message string
+
+        Note:
+            Inspired by Letta's context hierarchy (https://docs.letta.com/guides/agents/context-hierarchy)
+            Short-term memories are like Tier 1 (always in-context), long-term like Tier 2 (load on-demand).
+        """
+        if not short_term_memories and not long_term_memories:
+            return ""
+
+        message = "\n\n# Memory System\n\n"
+        message += "You have access to a two-tier memory system for storing and retrieving context.\n\n"
+
+        # Short-term: Full injection with all content
+        if short_term_memories:
+            message += "## Short-term Memory (Always Available)\n\n"
+            message += "These memories are always in your context. They contain critical information that should be immediately available.\n\n"
+
+            for mem in short_term_memories:
+                agent_label = f" [Agent: {mem['agent_id']}]" if mem.get("agent_id") else ""
+                message += f"### {mem['name']}{agent_label}\n\n"
+                if mem.get("description"):
+                    message += f"*{mem['description']}*\n\n"
+                message += mem["content"]
+                message += "\n\n---\n\n"
+
+        # Long-term: Summary table only
+        if long_term_memories:
+            message += "## Long-term Memory (Load as Needed)\n\n"
+            message += 'These memories are available but not loaded by default. Use `load_memory(name="...")` to retrieve full content.\n\n'
+
+            message += "| Agent | Memory Name | Description |\n"
+            message += "|-------|-------------|-------------|\n"
+
+            for mem in long_term_memories:
+                agent_id = mem.get("agent_id", "unknown")
+                name = mem["name"]
+                description = mem.get("description", "No description")
+                message += f"| {agent_id} | **{name}** | {description} |\n"
+
+            message += '\n**To load**: Use `load_memory(name="memory_name")` to retrieve full content of any long-term memory.\n\n'
+
+        # Add usage guidance and strong encouragement
+        message += "## Memory Management Tools\n\n"
+
+        message += "**IMPORTANT - Use Memory Proactively:**\n"
+        message += "You should **actively create memories** during your work to:\n"
+        message += "- Save important decisions and rationale for future reference\n"
+        message += "- Record user preferences, constraints, and requirements\n"
+        message += "- Document key findings, patterns, or insights discovered\n"
+        message += "- Store context that other agents (or future you) will need\n\n"
+
+        message += "**When to create memories:**\n"
+        message += "- ✅ After making design decisions → Save why you chose this approach\n"
+        message += "- ✅ When discovering user preferences → Save for consistency\n"
+        message += "- ✅ After completing analysis → Save key findings\n"
+        message += "- ✅ When establishing patterns/conventions → Save for future work\n"
+        message += "- ✅ After solving tricky problems → Save the solution approach\n\n"
+
+        message += "**Available operations:**\n"
+        message += '- `create_memory(name, description, content, tier)` - Create new memory (tier="short_term" or "long_term")\n'
+        message += "- `update_memory(name, content, description)` - Update existing memory\n"
+        message += "- `remove_memory(name)` - Delete a memory\n"
+        message += "- `load_memory(name)` - Load long-term memory into context\n\n"
+
+        message += "**Memory tier selection:**\n"
+        message += "- **Short-term** (auto-injected): Critical info needed immediately. Use for user prefs, key constraints, active context. Keep concise (<10 memories).\n"
+        message += "- **Long-term** (load on-demand): Reference info, detailed docs, historical context. Use for project history, technical details, less urgent data.\n\n"
+
+        message += "**Cross-agent coordination:**\n"
+        message += (
+            "All agents see all memories. When you create a memory, other agents will have access to it in their system prompt "
+            "(short-term) or can load it (long-term). Use clear names and descriptions so others can benefit from your knowledge.\n"
+        )
+
+        return message
+
     # =============================================================================
     # USER MESSAGE TEMPLATES
     # =============================================================================

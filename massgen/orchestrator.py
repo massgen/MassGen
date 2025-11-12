@@ -272,6 +272,13 @@ class Orchestrator(ChatAgent):
                 self._inject_planning_tools_for_all_agents()
                 logger.info("[Orchestrator] Planning tools injection complete")
 
+        # Inject memory tools if enabled
+        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_memory_filesystem_mode"):
+            if self.config.coordination_config.enable_memory_filesystem_mode:
+                logger.info(f"[Orchestrator] Injecting memory tools for {len(self.agents)} agents")
+                self._inject_memory_tools_for_all_agents()
+                logger.info("[Orchestrator] Memory tools injection complete")
+
     async def _prepare_paraphrases_for_agents(self, question: str) -> None:
         """Generate and assign DSPy paraphrases for the current question."""
 
@@ -502,6 +509,206 @@ class Orchestrator(ChatAgent):
         }
 
         return config
+
+    def _inject_memory_tools_for_all_agents(self) -> None:
+        """
+        Inject memory MCP tools into all agents.
+
+        This method adds the memory MCP server to each agent's backend
+        configuration, enabling them to create and manage memories.
+        """
+        for agent_id, agent in self.agents.items():
+            self._inject_memory_tools_for_agent(agent_id, agent)
+
+    def _inject_memory_tools_for_agent(self, agent_id: str, agent: Any) -> None:
+        """
+        Inject memory MCP tools into a specific agent.
+
+        Args:
+            agent_id: ID of the agent
+            agent: Agent instance
+        """
+        logger.info(f"[Orchestrator] Injecting memory tools for agent: {agent_id}")
+
+        # Create memory MCP config
+        memory_mcp_config = self._create_memory_mcp_config(agent_id, agent)
+        logger.info(f"[Orchestrator] Created memory MCP config: {memory_mcp_config['name']}")
+
+        # Get existing mcp_servers configuration
+        mcp_servers = agent.backend.config.get("mcp_servers", [])
+        logger.info(f"[Orchestrator] Existing MCP servers for {agent_id}: {type(mcp_servers)} with {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} entries")
+
+        # Handle both list format and dict format (Claude Code)
+        if isinstance(mcp_servers, dict):
+            # Claude Code dict format
+            logger.info("[Orchestrator] Using dict format for MCP servers")
+            mcp_servers[f"memory_{agent_id}"] = memory_mcp_config
+        else:
+            # Standard list format
+            logger.info("[Orchestrator] Using list format for MCP servers")
+            if not isinstance(mcp_servers, list):
+                mcp_servers = []
+            mcp_servers.append(memory_mcp_config)
+
+        # Update backend config
+        agent.backend.config["mcp_servers"] = mcp_servers
+        logger.info(f"[Orchestrator] Updated MCP servers for {agent_id}, now has {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} servers")
+
+    def _create_memory_mcp_config(self, agent_id: str, agent: Any) -> Dict[str, Any]:
+        """
+        Create MCP server configuration for memory tools.
+
+        Args:
+            agent_id: ID of the agent
+            agent: Agent instance (for accessing workspace path)
+
+        Returns:
+            MCP server configuration dictionary
+        """
+        from pathlib import Path as PathlibPath
+
+        import massgen.mcp_tools.memory._memory_mcp_server as memory_module
+
+        script_path = PathlibPath(memory_module.__file__).resolve()
+
+        args = [
+            "run",
+            f"{script_path}:create_server",
+            "--",
+            "--agent-id",
+            agent_id,
+            "--orchestrator-id",
+            self.orchestrator_id,
+        ]
+
+        # Add workspace path if filesystem mode is enabled
+        logger.info(f"[Orchestrator] Checking enable_memory_filesystem_mode for {agent_id}")
+
+        filesystem_mode_enabled = (
+            hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode
+        )
+
+        if filesystem_mode_enabled:
+            logger.info("[Orchestrator] enable_memory_filesystem_mode is enabled")
+            if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager") and agent.backend.filesystem_manager:
+                if agent.backend.filesystem_manager.cwd:
+                    workspace_path = str(agent.backend.filesystem_manager.cwd)
+                    args.extend(["--workspace-path", workspace_path])
+                    logger.info(f"[Orchestrator] Enabling filesystem mode for memory: {workspace_path}")
+                else:
+                    logger.warning(f"[Orchestrator] Agent {agent_id} filesystem_manager.cwd is None")
+            else:
+                logger.warning(f"[Orchestrator] Agent {agent_id} has no filesystem_manager")
+
+        config = {
+            "name": f"memory_{agent_id}",
+            "type": "stdio",
+            "command": "fastmcp",
+            "args": args,
+            "env": {
+                "FASTMCP_SHOW_CLI_BANNER": "false",
+            },
+        }
+
+        return config
+
+    def _get_all_memories(self) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """
+        Read all memories from all agents' workspaces.
+
+        Returns:
+            Tuple of (short_term_memories, long_term_memories)
+            Each is a list of memory dictionaries with keys:
+            - name, description, content, tier, agent_id, created, updated
+        """
+        from pathlib import Path
+
+        short_term_memories = []
+        long_term_memories = []
+
+        # Scan all agents' workspaces
+        for agent_id, agent in self.agents.items():
+            if not (hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager") and agent.backend.filesystem_manager):
+                continue
+
+            workspace = agent.backend.filesystem_manager.cwd
+            if not workspace:
+                continue
+
+            memory_dir = Path(workspace) / "memory"
+            if not memory_dir.exists():
+                continue
+
+            # Read short-term memories
+            short_term_dir = memory_dir / "short_term"
+            if short_term_dir.exists():
+                for mem_file in short_term_dir.glob("*.md"):
+                    try:
+                        memory_data = self._parse_memory_file(mem_file)
+                        if memory_data:
+                            short_term_memories.append(memory_data)
+                    except Exception as e:
+                        logger.warning(f"[Orchestrator] Failed to parse memory file {mem_file}: {e}")
+
+            # Read long-term memories
+            long_term_dir = memory_dir / "long_term"
+            if long_term_dir.exists():
+                for mem_file in long_term_dir.glob("*.md"):
+                    try:
+                        memory_data = self._parse_memory_file(mem_file)
+                        if memory_data:
+                            long_term_memories.append(memory_data)
+                    except Exception as e:
+                        logger.warning(f"[Orchestrator] Failed to parse memory file {mem_file}: {e}")
+
+        return short_term_memories, long_term_memories
+
+    @staticmethod
+    def _parse_memory_file(file_path: Path) -> Optional[Dict[str, Any]]:
+        """
+        Parse a memory markdown file with YAML frontmatter.
+
+        Args:
+            file_path: Path to the memory file
+
+        Returns:
+            Dictionary with memory data or None if parsing fails
+        """
+        try:
+            content = file_path.read_text()
+
+            # Split frontmatter from content
+            if not content.startswith("---"):
+                return None
+
+            parts = content.split("---", 2)
+            if len(parts) < 3:
+                return None
+
+            frontmatter_text = parts[1].strip()
+            memory_content = parts[2].strip()
+
+            # Parse frontmatter (simple key: value parser)
+            metadata = {}
+            for line in frontmatter_text.split("\n"):
+                line = line.strip()
+                if not line or ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                metadata[key.strip()] = value.strip()
+
+            return {
+                "name": metadata.get("name", file_path.stem),
+                "description": metadata.get("description", ""),
+                "content": memory_content,
+                "tier": metadata.get("tier", "short_term"),
+                "agent_id": metadata.get("agent_id", "unknown"),
+                "created": metadata.get("created", ""),
+                "updated": metadata.get("updated", ""),
+            }
+        except Exception as e:
+            logger.error(f"[Orchestrator] Error parsing memory file {file_path}: {e}")
+            return None
 
     @staticmethod
     def _get_chunk_type_value(chunk) -> str:
@@ -2432,6 +2639,17 @@ Your answer:"""
                 )
                 planning_guidance = self.message_templates.get_planning_guidance(filesystem_mode=filesystem_mode)
                 system_message = system_message + planning_guidance
+
+            # Add memory system message if enabled
+            if hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode:
+                short_term_memories, long_term_memories = self._get_all_memories()
+                if short_term_memories or long_term_memories:
+                    memory_message = self.message_templates.get_memory_system_message(
+                        short_term_memories=short_term_memories,
+                        long_term_memories=long_term_memories,
+                    )
+                    system_message = system_message + memory_message
+                    logger.info(f"[Orchestrator] Added {len(short_term_memories)} short-term and {len(long_term_memories)} long-term memories to system message")
 
             # Add skills system message if enabled
             if hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills:

@@ -1,0 +1,27 @@
+# Minimal config to test memory filesystem mode
+# Run with: uv run massgen --config massgen/configs/skills/test_memory.yaml "Create a website about Bob Dylan"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace1"  # Required for filesystem mode
+      enable_mcp_command_line: true
+      command_line_execution_mode: "local"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace2"  # Required for filesystem mode
+      enable_mcp_command_line: true
+      command_line_execution_mode: "local"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  coordination:
+    # Enable memory filesystem mode
+    enable_memory_filesystem_mode: true
