@@ -1,0 +1,58 @@
+# Skills with Memory and Task Planning (Filesystem Mode)
+# This example demonstrates the complete filesystem-based coordination setup
+#
+# Features enabled:
+# - Skills system (openskills)
+# - Task planning with filesystem mode (tasks/ directory)
+# - Memory with filesystem mode (memory/ directory)
+#
+# Run with:
+#   uv run massgen --config massgen/configs/skills/skills_with_memory.yaml "Research neural architectures and document findings"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"  # or "local"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  coordination:
+    # Skills System
+    # -------------
+    # Provides domain-specific knowledge and workflows
+    use_skills: true
+
+    # Skills are discovered from this directory (default: .agent/skills)
+    # Docker: Anthropic skills pre-installed
+    # Local: Run 'npm i -g openskills' then 'openskills install anthropics/skills --universal -y'
+    skills_directory: ".agent/skills"
+
+    # Task Planning (Filesystem Mode)
+    # --------------------------------
+    # Enables task planning MCP tools for breaking down complex work
+    # Tasks automatically saved to workspace/tasks/plan.json
+    enable_agent_task_planning: true
+    task_planning_filesystem_mode: true
+    max_tasks_per_plan: 10
+
+    # Memory (Filesystem Mode)
+    # -------------------------
+    # Enables two-tier memory system for storing context
+    # - Short-term: Auto-injected into system prompts (workspace/memory/short_term/)
+    # - Long-term: Load on-demand via load_memory() (workspace/memory/long_term/)
+    # Inspired by Letta's context hierarchy: https://docs.letta.com/guides/agents/context-hierarchy
+    enable_memory_filesystem_mode: true

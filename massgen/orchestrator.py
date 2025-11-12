@@ -36,6 +36,7 @@ from .coordination_tracker import CoordinationTracker
 
 if TYPE_CHECKING:
     from .dspy_paraphraser import QuestionParaphraser
+
 from .logger_config import get_log_session_dir  # Import to get log directory
 from .logger_config import logger  # Import logger directly for INFO logging
 from .logger_config import (
@@ -231,26 +232,52 @@ class Orchestrator(ChatAgent):
             snapshot_path.mkdir(parents=True, exist_ok=True)
 
         # Configure orchestration paths for each agent with filesystem support
+        # Get skills configuration if skills are enabled
+        skills_directory = None
+        massgen_skills = []
+        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "use_skills"):
+            if self.config.coordination_config.use_skills:
+                skills_directory = self.config.coordination_config.skills_directory
+                massgen_skills = self.config.coordination_config.massgen_skills
+
         for agent_id, agent in self.agents.items():
             if agent.backend.filesystem_manager:
                 agent.backend.filesystem_manager.setup_orchestration_paths(
                     agent_id=agent_id,
                     snapshot_storage=self._snapshot_storage,
                     agent_temporary_workspace=self._agent_temporary_workspace,
+                    skills_directory=skills_directory,
+                    massgen_skills=massgen_skills,
                 )
+                # Setup workspace directories for massgen skills
+                if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "massgen_skills"):
+                    if self.config.coordination_config.massgen_skills:
+                        agent.backend.filesystem_manager.setup_massgen_skill_directories(
+                            massgen_skills=self.config.coordination_config.massgen_skills,
+                        )
                 # Update MCP config with agent_id for Docker mode (must be after setup_orchestration_paths)
                 agent.backend.filesystem_manager.update_backend_mcp_config(agent.backend.config)
 
+        # Validate and setup skills if enabled
+        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "use_skills"):
+            if self.config.coordination_config.use_skills:
+                logger.info("[Orchestrator] Skills enabled, validating configuration")
+                self._validate_skills_config()
+                logger.info("[Orchestrator] Skills validation complete")
+
         # Inject planning tools if enabled
-        logger.info(f"[Orchestrator] Checking planning config: coordination_config exists={hasattr(self.config, 'coordination_config')}")
         if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_agent_task_planning"):
-            logger.info(f"[Orchestrator] enable_agent_task_planning={self.config.coordination_config.enable_agent_task_planning}")
             if self.config.coordination_config.enable_agent_task_planning:
                 logger.info(f"[Orchestrator] Injecting planning tools for {len(self.agents)} agents")
                 self._inject_planning_tools_for_all_agents()
                 logger.info("[Orchestrator] Planning tools injection complete")
-        else:
-            logger.info("[Orchestrator] Planning config not found or disabled")
+
+        # Inject memory tools if enabled
+        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_memory_filesystem_mode"):
+            if self.config.coordination_config.enable_memory_filesystem_mode:
+                logger.info(f"[Orchestrator] Injecting memory tools for {len(self.agents)} agents")
+                self._inject_memory_tools_for_all_agents()
+                logger.info("[Orchestrator] Memory tools injection complete")
 
     async def _prepare_paraphrases_for_agents(self, question: str) -> None:
         """Generate and assign DSPy paraphrases for the current question."""
@@ -317,6 +344,61 @@ class Orchestrator(ChatAgent):
 
         return status
 
+    def _validate_skills_config(self) -> None:
+        """
+        Validate skills configuration before orchestration.
+
+        Checks that:
+        1. Command line execution is enabled for at least one agent
+        2. Skills directory exists and is not empty
+
+        Raises:
+            RuntimeError: If skills requirements are not met
+        """
+        from pathlib import Path
+
+        # Check if command execution is available
+        has_command_execution = False
+        for agent_id, agent in self.agents.items():
+            if hasattr(agent, "config") and agent.config:
+                enable_cmd = agent.backend.config.get("enable_mcp_command_line", False)
+                if enable_cmd:
+                    has_command_execution = True
+                    logger.info(f"[Orchestrator] Agent {agent_id} has command execution enabled")
+                    break
+
+        if not has_command_execution:
+            raise RuntimeError(
+                "Skills require command line execution to be enabled. " "Set enable_mcp_command_line: true in at least one agent's backend config.",
+            )
+
+        # Check if skills directory exists and has skills
+        skills_dir = Path(self.config.coordination_config.skills_directory)
+        logger.info(f"[Orchestrator] Checking skills directory: {skills_dir}")
+
+        if not skills_dir.exists():
+            raise RuntimeError(
+                f"Skills directory '{skills_dir}' does not exist. "
+                f"Local users: Install openskills with 'npm i -g openskills', "
+                f"then run 'openskills install anthropics/skills --universal -y'. "
+                f"Docker users: Skills are pre-installed in the container.",
+            )
+
+        # Check if directory has any skills (allow both .agent/skills/ and built-in massgen/skills/)
+        has_external_skills = any(skills_dir.iterdir()) if skills_dir.is_dir() else False
+        builtin_skills_dir = Path(__file__).parent / "skills"
+        has_builtin_skills = builtin_skills_dir.exists() and builtin_skills_dir.is_dir()
+
+        if not has_external_skills and not has_builtin_skills:
+            raise RuntimeError(
+                f"Skills directory '{skills_dir}' is empty and no built-in skills found. "
+                f"Local users: Install openskills with 'npm i -g openskills', "
+                f"then run 'openskills install anthropics/skills --universal -y'. "
+                f"Docker users: Skills are pre-installed in the container.",
+            )
+
+        logger.info(f"[Orchestrator] Skills configuration valid (external: {has_external_skills}, builtin: {has_builtin_skills})")
+
     def _inject_planning_tools_for_all_agents(self) -> None:
         """
         Inject planning MCP tools into all agents.
@@ -338,7 +420,7 @@ class Orchestrator(ChatAgent):
         logger.info(f"[Orchestrator] Injecting planning tools for agent: {agent_id}")
 
         # Create planning MCP config
-        planning_mcp_config = self._create_planning_mcp_config(agent_id)
+        planning_mcp_config = self._create_planning_mcp_config(agent_id, agent)
         logger.info(f"[Orchestrator] Created planning MCP config: {planning_mcp_config['name']}")
 
         # Get existing mcp_servers configuration
@@ -361,12 +443,13 @@ class Orchestrator(ChatAgent):
         agent.backend.config["mcp_servers"] = mcp_servers
         logger.info(f"[Orchestrator] Updated MCP servers for {agent_id}, now has {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} servers")
 
-    def _create_planning_mcp_config(self, agent_id: str) -> Dict[str, Any]:
+    def _create_planning_mcp_config(self, agent_id: str, agent: Any) -> Dict[str, Any]:
         """
         Create MCP server configuration for planning tools.
 
         Args:
             agent_id: ID of the agent
+            agent: Agent instance (for accessing workspace path)
 
         Returns:
             MCP server configuration dictionary
@@ -377,25 +460,255 @@ class Orchestrator(ChatAgent):
 
         script_path = PathlibPath(planning_module.__file__).resolve()
 
+        args = [
+            "run",
+            f"{script_path}:create_server",
+            "--",
+            "--agent-id",
+            agent_id,
+            "--orchestrator-id",
+            self.orchestrator_id,
+        ]
+
+        # Add workspace path if filesystem mode is enabled
+        logger.info(f"[Orchestrator] Checking task_planning_filesystem_mode for {agent_id}")
+        has_coord_config = hasattr(self.config, "coordination_config")
+        logger.info(f"[Orchestrator] Has coordination_config: {has_coord_config}")
+
+        if has_coord_config:
+            has_filesystem_mode = hasattr(self.config.coordination_config, "task_planning_filesystem_mode")
+            logger.info(f"[Orchestrator] Has task_planning_filesystem_mode attr: {has_filesystem_mode}")
+            if has_filesystem_mode:
+                value = self.config.coordination_config.task_planning_filesystem_mode
+                logger.info(f"[Orchestrator] task_planning_filesystem_mode value: {value}")
+
+        filesystem_mode_enabled = (
+            hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "task_planning_filesystem_mode") and self.config.coordination_config.task_planning_filesystem_mode
+        )
+
+        if filesystem_mode_enabled:
+            logger.info("[Orchestrator] task_planning_filesystem_mode is enabled")
+            if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager") and agent.backend.filesystem_manager:
+                if agent.backend.filesystem_manager.cwd:
+                    workspace_path = str(agent.backend.filesystem_manager.cwd)
+                    args.extend(["--workspace-path", workspace_path])
+                    logger.info(f"[Orchestrator] Enabling filesystem mode for task planning: {workspace_path}")
+                else:
+                    logger.warning(f"[Orchestrator] Agent {agent_id} filesystem_manager.cwd is None")
+            else:
+                logger.warning(f"[Orchestrator] Agent {agent_id} has no filesystem_manager")
+
         config = {
             "name": f"planning_{agent_id}",
             "type": "stdio",
             "command": "fastmcp",
-            "args": [
-                "run",
-                f"{script_path}:create_server",
-                "--",
-                "--agent-id",
-                agent_id,
-                "--orchestrator-id",
-                self.orchestrator_id,
-            ],
+            "args": args,
             "env": {
                 "FASTMCP_SHOW_CLI_BANNER": "false",
             },
         }
 
         return config
+
+    def _inject_memory_tools_for_all_agents(self) -> None:
+        """
+        Inject memory MCP tools into all agents.
+
+        This method adds the memory MCP server to each agent's backend
+        configuration, enabling them to create and manage memories.
+        """
+        for agent_id, agent in self.agents.items():
+            self._inject_memory_tools_for_agent(agent_id, agent)
+
+    def _inject_memory_tools_for_agent(self, agent_id: str, agent: Any) -> None:
+        """
+        Inject memory MCP tools into a specific agent.
+
+        Args:
+            agent_id: ID of the agent
+            agent: Agent instance
+        """
+        logger.info(f"[Orchestrator] Injecting memory tools for agent: {agent_id}")
+
+        # Create memory MCP config
+        memory_mcp_config = self._create_memory_mcp_config(agent_id, agent)
+        logger.info(f"[Orchestrator] Created memory MCP config: {memory_mcp_config['name']}")
+
+        # Get existing mcp_servers configuration
+        mcp_servers = agent.backend.config.get("mcp_servers", [])
+        logger.info(f"[Orchestrator] Existing MCP servers for {agent_id}: {type(mcp_servers)} with {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} entries")
+
+        # Handle both list format and dict format (Claude Code)
+        if isinstance(mcp_servers, dict):
+            # Claude Code dict format
+            logger.info("[Orchestrator] Using dict format for MCP servers")
+            mcp_servers[f"memory_{agent_id}"] = memory_mcp_config
+        else:
+            # Standard list format
+            logger.info("[Orchestrator] Using list format for MCP servers")
+            if not isinstance(mcp_servers, list):
+                mcp_servers = []
+            mcp_servers.append(memory_mcp_config)
+
+        # Update backend config
+        agent.backend.config["mcp_servers"] = mcp_servers
+        logger.info(f"[Orchestrator] Updated MCP servers for {agent_id}, now has {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} servers")
+
+    def _create_memory_mcp_config(self, agent_id: str, agent: Any) -> Dict[str, Any]:
+        """
+        Create MCP server configuration for memory tools.
+
+        Args:
+            agent_id: ID of the agent
+            agent: Agent instance (for accessing workspace path)
+
+        Returns:
+            MCP server configuration dictionary
+        """
+        from pathlib import Path as PathlibPath
+
+        import massgen.mcp_tools.memory._memory_mcp_server as memory_module
+
+        script_path = PathlibPath(memory_module.__file__).resolve()
+
+        args = [
+            "run",
+            f"{script_path}:create_server",
+            "--",
+            "--agent-id",
+            agent_id,
+            "--orchestrator-id",
+            self.orchestrator_id,
+        ]
+
+        # Add workspace path if filesystem mode is enabled
+        logger.info(f"[Orchestrator] Checking enable_memory_filesystem_mode for {agent_id}")
+
+        filesystem_mode_enabled = (
+            hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode
+        )
+
+        if filesystem_mode_enabled:
+            logger.info("[Orchestrator] enable_memory_filesystem_mode is enabled")
+            if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager") and agent.backend.filesystem_manager:
+                if agent.backend.filesystem_manager.cwd:
+                    workspace_path = str(agent.backend.filesystem_manager.cwd)
+                    args.extend(["--workspace-path", workspace_path])
+                    logger.info(f"[Orchestrator] Enabling filesystem mode for memory: {workspace_path}")
+                else:
+                    logger.warning(f"[Orchestrator] Agent {agent_id} filesystem_manager.cwd is None")
+            else:
+                logger.warning(f"[Orchestrator] Agent {agent_id} has no filesystem_manager")
+
+        config = {
+            "name": f"memory_{agent_id}",
+            "type": "stdio",
+            "command": "fastmcp",
+            "args": args,
+            "env": {
+                "FASTMCP_SHOW_CLI_BANNER": "false",
+            },
+        }
+
+        return config
+
+    def _get_all_memories(self) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """
+        Read all memories from all agents' workspaces.
+
+        Returns:
+            Tuple of (short_term_memories, long_term_memories)
+            Each is a list of memory dictionaries with keys:
+            - name, description, content, tier, agent_id, created, updated
+        """
+        from pathlib import Path
+
+        short_term_memories = []
+        long_term_memories = []
+
+        # Scan all agents' workspaces
+        for agent_id, agent in self.agents.items():
+            if not (hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager") and agent.backend.filesystem_manager):
+                continue
+
+            workspace = agent.backend.filesystem_manager.cwd
+            if not workspace:
+                continue
+
+            memory_dir = Path(workspace) / "memory"
+            if not memory_dir.exists():
+                continue
+
+            # Read short-term memories
+            short_term_dir = memory_dir / "short_term"
+            if short_term_dir.exists():
+                for mem_file in short_term_dir.glob("*.md"):
+                    try:
+                        memory_data = self._parse_memory_file(mem_file)
+                        if memory_data:
+                            short_term_memories.append(memory_data)
+                    except Exception as e:
+                        logger.warning(f"[Orchestrator] Failed to parse memory file {mem_file}: {e}")
+
+            # Read long-term memories
+            long_term_dir = memory_dir / "long_term"
+            if long_term_dir.exists():
+                for mem_file in long_term_dir.glob("*.md"):
+                    try:
+                        memory_data = self._parse_memory_file(mem_file)
+                        if memory_data:
+                            long_term_memories.append(memory_data)
+                    except Exception as e:
+                        logger.warning(f"[Orchestrator] Failed to parse memory file {mem_file}: {e}")
+
+        return short_term_memories, long_term_memories
+
+    @staticmethod
+    def _parse_memory_file(file_path: Path) -> Optional[Dict[str, Any]]:
+        """
+        Parse a memory markdown file with YAML frontmatter.
+
+        Args:
+            file_path: Path to the memory file
+
+        Returns:
+            Dictionary with memory data or None if parsing fails
+        """
+        try:
+            content = file_path.read_text()
+
+            # Split frontmatter from content
+            if not content.startswith("---"):
+                return None
+
+            parts = content.split("---", 2)
+            if len(parts) < 3:
+                return None
+
+            frontmatter_text = parts[1].strip()
+            memory_content = parts[2].strip()
+
+            # Parse frontmatter (simple key: value parser)
+            metadata = {}
+            for line in frontmatter_text.split("\n"):
+                line = line.strip()
+                if not line or ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                metadata[key.strip()] = value.strip()
+
+            return {
+                "name": metadata.get("name", file_path.stem),
+                "description": metadata.get("description", ""),
+                "content": memory_content,
+                "tier": metadata.get("tier", "short_term"),
+                "agent_id": metadata.get("agent_id", "unknown"),
+                "created": metadata.get("created", ""),
+                "updated": metadata.get("updated", ""),
+            }
+        except Exception as e:
+            logger.error(f"[Orchestrator] Error parsing memory file {file_path}: {e}")
+            return None
 
     @staticmethod
     def _get_chunk_type_value(chunk) -> str:
@@ -2315,8 +2628,86 @@ Your answer:"""
             # Add planning guidance if enabled
             system_message = conversation["system_message"]
             if self.config.coordination_config.enable_agent_task_planning:
-                planning_guidance = self.message_templates.get_planning_guidance()
+                # Check if filesystem mode is enabled and agent has workspace
+                filesystem_mode = (
+                    hasattr(self.config.coordination_config, "task_planning_filesystem_mode")
+                    and self.config.coordination_config.task_planning_filesystem_mode
+                    and hasattr(agent, "backend")
+                    and hasattr(agent.backend, "filesystem_manager")
+                    and agent.backend.filesystem_manager
+                    and agent.backend.filesystem_manager.cwd
+                )
+                planning_guidance = self.message_templates.get_planning_guidance(filesystem_mode=filesystem_mode)
                 system_message = system_message + planning_guidance
+
+            # Add memory system message if enabled
+            if hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode:
+                short_term_memories, long_term_memories = self._get_all_memories()
+                if short_term_memories or long_term_memories:
+                    memory_message = self.message_templates.get_memory_system_message(
+                        short_term_memories=short_term_memories,
+                        long_term_memories=long_term_memories,
+                    )
+                    system_message = system_message + memory_message
+                    logger.info(f"[Orchestrator] Added {len(short_term_memories)} short-term and {len(long_term_memories)} long-term memories to system message")
+
+            # Add skills system message if enabled
+            if hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills:
+                from pathlib import Path
+
+                from massgen.filesystem_manager.skills_manager import scan_skills
+
+                # Scan all available skills (external + built-in)
+                skills_dir = Path(self.config.coordination_config.skills_directory)
+                all_skills = scan_skills(skills_dir)
+
+                # Log what we found
+                builtin_count = len([s for s in all_skills if s["location"] == "builtin"])
+                project_count = len([s for s in all_skills if s["location"] == "project"])
+                logger.info(f"[Orchestrator] Scanned skills: {builtin_count} builtin, {project_count} project")
+                logger.info(f"[Orchestrator] Built-in skills found: {[s['name'] for s in all_skills if s['location'] == 'builtin']}")
+
+                # Only include external/project skills in the skills table
+                # Built-in skills are auto-loaded directly instead
+                skills = [s for s in all_skills if s["location"] == "project"]
+
+                # Auto-load built-in skills (from always/ and configured optional/)
+                # These are injected directly into system prompt, not listed in skills table
+                builtin_skills_to_load = []
+                if hasattr(self.config.coordination_config, "massgen_skills") and self.config.coordination_config.massgen_skills:
+                    configured_massgen_skills = set(self.config.coordination_config.massgen_skills)
+                    logger.info(f"[Orchestrator] Configured massgen_skills: {configured_massgen_skills}")
+
+                    # Load configured optional skills
+                    for skill in all_skills:
+                        if skill["location"] == "builtin" and skill["name"] in configured_massgen_skills:
+                            builtin_skills_to_load.append(skill)
+                            logger.info(f"[Orchestrator] Auto-loading MassGen skill: {skill['name']}")
+
+                # Load built-in skills content and inject directly
+                if builtin_skills_to_load:
+                    builtin_skills_base = Path(__file__).parent / "skills"
+                    for skill in builtin_skills_to_load:
+                        # Check both always/ and optional/ subdirectories
+                        for subdir in ["always", "optional"]:
+                            skill_md_path = builtin_skills_base / subdir / skill["name"] / "SKILL.md"
+                            if skill_md_path.exists():
+                                skill_content = skill_md_path.read_text(encoding="utf-8")
+                                # Strip YAML frontmatter and inject just the markdown content
+                                if skill_content.startswith("---"):
+                                    parts = skill_content.split("---", 2)
+                                    if len(parts) >= 3:
+                                        skill_content = parts[2].strip()
+                                system_message += f"\n\n<massgen_skill name=\"{skill['name']}\">\n{skill_content}\n</massgen_skill>"
+                                logger.info(f"[Orchestrator] Injected {skill['name']} SKILL.md content into system prompt")
+                                break
+
+                # Add skills table for external skills only
+                skills_msg = self.message_templates.skills_system_message(skills)
+                system_message = system_message + skills_msg
+                logger.info(f"[Orchestrator] Injected skills system message for {agent_id} ({len(skills)} external skills in table, {len(builtin_skills_to_load)} built-in skills auto-loaded)")
+                if skills:
+                    logger.info(f"[Orchestrator] Skills message content:\n{skills_msg[:2000]}")
 
             conversation_messages = [
                 {"role": "system", "content": system_message},

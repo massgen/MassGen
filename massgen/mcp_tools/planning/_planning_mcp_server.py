@@ -18,7 +18,9 @@ Tools provided:
 """
 
 import argparse
+import json
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import fastmcp
@@ -28,10 +30,59 @@ from massgen.mcp_tools.planning.planning_dataclasses import TaskPlan
 # Global storage for task plans (keyed by agent_id)
 _task_plans: Dict[str, TaskPlan] = {}
 
+# Optional workspace path for filesystem-based task storage
+_workspace_path: Optional[Path] = None
+
+
+def _save_plan_to_filesystem(plan: TaskPlan) -> None:
+    """
+    Save task plan to filesystem if workspace path is configured.
+
+    Writes to tasks/plan.json in the workspace directory.
+
+    Args:
+        plan: TaskPlan to save
+    """
+    if _workspace_path is None:
+        return
+
+    tasks_dir = _workspace_path / "tasks"
+    tasks_dir.mkdir(exist_ok=True)
+
+    plan_file = tasks_dir / "plan.json"
+    plan_file.write_text(json.dumps(plan.to_dict(), indent=2))
+
+
+def _load_plan_from_filesystem(agent_id: str) -> Optional[TaskPlan]:
+    """
+    Load task plan from filesystem if it exists.
+
+    Args:
+        agent_id: Agent identifier
+
+    Returns:
+        TaskPlan if found on filesystem, None otherwise
+    """
+    if _workspace_path is None:
+        return None
+
+    plan_file = _workspace_path / "tasks" / "plan.json"
+    if not plan_file.exists():
+        return None
+
+    try:
+        plan_data = json.loads(plan_file.read_text())
+        return TaskPlan.from_dict(plan_data)
+    except Exception:
+        # If file is corrupted or invalid, return None
+        return None
+
 
 def _get_or_create_plan(agent_id: str, orchestrator_id: str) -> TaskPlan:
     """
     Get existing plan or create new one for agent.
+
+    If filesystem storage is enabled, attempts to load from tasks/plan.json first.
 
     Args:
         agent_id: Agent identifier
@@ -42,7 +93,12 @@ def _get_or_create_plan(agent_id: str, orchestrator_id: str) -> TaskPlan:
     """
     key = f"{orchestrator_id}:{agent_id}"
     if key not in _task_plans:
-        _task_plans[key] = TaskPlan(agent_id=key)
+        # Try loading from filesystem if configured
+        loaded_plan = _load_plan_from_filesystem(key)
+        if loaded_plan is not None:
+            _task_plans[key] = loaded_plan
+        else:
+            _task_plans[key] = TaskPlan(agent_id=key)
     return _task_plans[key]
 
 
@@ -109,6 +165,7 @@ def _resolve_dependency_references(
 
 async def create_server() -> fastmcp.FastMCP:
     """Factory function to create and configure the planning MCP server."""
+    global _workspace_path
 
     parser = argparse.ArgumentParser(description="Planning MCP Server")
     parser.add_argument(
@@ -123,7 +180,17 @@ async def create_server() -> fastmcp.FastMCP:
         required=True,
         help="ID of the orchestrator managing this agent",
     )
+    parser.add_argument(
+        "--workspace-path",
+        type=str,
+        required=False,
+        help="Optional path to agent workspace for filesystem-based task storage",
+    )
     args = parser.parse_args()
+
+    # Set workspace path if provided
+    if args.workspace_path:
+        _workspace_path = Path(args.workspace_path)
 
     # Create the FastMCP server
     mcp = fastmcp.FastMCP("Agent Task Planning")
@@ -213,6 +280,9 @@ async def create_server() -> fastmcp.FastMCP:
                 )
                 created_tasks.append(task.to_dict())
 
+            # Save to filesystem if configured
+            _save_plan_to_filesystem(plan)
+
             return {
                 "success": True,
                 "operation": "create_task_plan",
@@ -265,6 +335,9 @@ async def create_server() -> fastmcp.FastMCP:
                 depends_on=depends_on or [],
             )
 
+            # Save to filesystem if configured
+            _save_plan_to_filesystem(plan)
+
             return {
                 "success": True,
                 "operation": "add_task",
@@ -307,6 +380,9 @@ async def create_server() -> fastmcp.FastMCP:
             plan = _get_or_create_plan(mcp.agent_id, mcp.orchestrator_id)
             result = plan.update_task_status(task_id, status)
 
+            # Save to filesystem if configured
+            _save_plan_to_filesystem(plan)
+
             return {
                 "success": True,
                 "operation": "update_task_status",
@@ -341,6 +417,9 @@ async def create_server() -> fastmcp.FastMCP:
         try:
             plan = _get_or_create_plan(mcp.agent_id, mcp.orchestrator_id)
             task = plan.edit_task(task_id, description)
+
+            # Save to filesystem if configured
+            _save_plan_to_filesystem(plan)
 
             return {
                 "success": True,
@@ -414,6 +493,9 @@ async def create_server() -> fastmcp.FastMCP:
         try:
             plan = _get_or_create_plan(mcp.agent_id, mcp.orchestrator_id)
             plan.delete_task(task_id)
+
+            # Save to filesystem if configured
+            _save_plan_to_filesystem(plan)
 
             return {
                 "success": True,

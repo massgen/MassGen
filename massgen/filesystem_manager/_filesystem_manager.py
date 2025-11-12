@@ -163,6 +163,8 @@ class FilesystemManager:
         agent_id: str,
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
+        skills_directory: Optional[str] = None,
+        massgen_skills: Optional[List[str]] = None,
     ) -> None:
         """
         Setup orchestration-specific paths for snapshots and temporary workspace.
@@ -172,8 +174,12 @@ class FilesystemManager:
             agent_id: The agent identifier for this orchestration
             snapshot_storage: Base path for storing workspace snapshots
             agent_temporary_workspace: Base path for temporary workspace during context sharing
+            skills_directory: Path to skills directory to mount in Docker (e.g., .agent/skills)
         """
-        logger.info(f"[FilesystemManager.setup_orchestration_paths] Called for agent_id={agent_id}, snapshot_storage={snapshot_storage}, agent_temporary_workspace={agent_temporary_workspace}")
+        logger.info(
+            f"[FilesystemManager.setup_orchestration_paths] Called for agent_id={agent_id}, snapshot_storage={snapshot_storage}, "
+            f"agent_temporary_workspace={agent_temporary_workspace}, skills_directory={skills_directory}",
+        )
         self.agent_id = agent_id
 
         # Setup snapshot storage if provided
@@ -197,8 +203,70 @@ class FilesystemManager:
                 workspace_path=self.cwd,
                 temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
                 context_paths=context_paths,
+                skills_directory=skills_directory,
+                massgen_skills=massgen_skills,
             )
             logger.info(f"[FilesystemManager] Docker container created for agent {self.agent_id}")
+
+    def setup_massgen_skill_directories(self, massgen_skills: list) -> None:
+        """
+        Setup workspace directories based on enabled MassGen skills.
+
+        Creates directories only for skills that need them:
+        - "file_search": No directory needed
+
+        Note: The old "memory" skill has been removed. Use enable_memory_filesystem_mode
+        config option instead for filesystem-based memory.
+
+        When any skill directory is created, also creates workspace/ for main working files.
+
+        Args:
+            massgen_skills: List of MassGen skills to enable (e.g., ["file_search"])
+        """
+        if not massgen_skills:
+            logger.debug("[FilesystemManager] No MassGen skills configured, skipping directory setup")
+            return
+
+        # Define which skills need directories
+        SKILL_DIRECTORIES = {
+            # "file_search": no directory needed
+            # Note: "memory" skill removed - use enable_memory_filesystem_mode instead
+        }
+
+        # Determine which directories to create
+        dirs_to_create = []
+        for skill in massgen_skills:
+            if skill in SKILL_DIRECTORIES:
+                dirs_to_create.append(SKILL_DIRECTORIES[skill])
+
+        if not dirs_to_create:
+            logger.debug(f"[FilesystemManager] MassGen skills {massgen_skills} don't need directories")
+            return
+
+        logger.info(f"[FilesystemManager] Setting up directories for MassGen skills: {massgen_skills}")
+
+        # Create skill directories in current workspace
+        for dir_name in dirs_to_create:
+            skill_dir = self.cwd / dir_name
+            skill_dir.mkdir(exist_ok=True)
+            logger.info(f"[FilesystemManager] Created {dir_name}/ directory")
+
+        # Also create workspace/ directory for main working files
+        workspace_dir = self.cwd / "workspace"
+        workspace_dir.mkdir(exist_ok=True)
+        logger.info("[FilesystemManager] Created workspace/ directory")
+
+        # Also create in agent's temporary workspace if it exists
+        # This ensures other agents can see the organized structure
+        if self.agent_temporary_workspace:
+            for dir_name in dirs_to_create:
+                temp_dir = self.agent_temporary_workspace / dir_name
+                temp_dir.mkdir(exist_ok=True)
+
+            temp_workspace = self.agent_temporary_workspace / "workspace"
+            temp_workspace.mkdir(exist_ok=True)
+
+            logger.info(f"[FilesystemManager] Created organized structure in temp workspace: {self.agent_temporary_workspace}")
 
     def update_backend_mcp_config(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
         """
