@@ -213,13 +213,15 @@ class FilesystemManager:
         Setup workspace directories based on enabled MassGen skills.
 
         Creates directories only for skills that need them:
-        - "memory": Creates memory/ directory for persistent memory skill
         - "file_search": No directory needed
+
+        Note: The old "memory" skill has been removed. Use enable_memory_filesystem_mode
+        config option instead for filesystem-based memory.
 
         When any skill directory is created, also creates workspace/ for main working files.
 
         Args:
-            massgen_skills: List of MassGen skills to enable (e.g., ["memory"])
+            massgen_skills: List of MassGen skills to enable (e.g., ["file_search"])
         """
         if not massgen_skills:
             logger.debug("[FilesystemManager] No MassGen skills configured, skipping directory setup")
@@ -227,8 +229,8 @@ class FilesystemManager:
 
         # Define which skills need directories
         SKILL_DIRECTORIES = {
-            "memory": "memory",
             # "file_search": no directory needed
+            # Note: "memory" skill removed - use enable_memory_filesystem_mode instead
         }
 
         # Determine which directories to create

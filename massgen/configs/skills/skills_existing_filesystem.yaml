@@ -1,22 +1,23 @@
-# Skills with Existing Filesystem
-# Demonstrates using skills system with task planning enabled
+# Skills with Existing Filesystem and Memory
+# Case Study: Skills Self-Extension
+# Demonstrates agents analyzing codebase, discovering workflows, and creating their own skills
 #
 # Run with:
-#   uv run massgen --config massgen/configs/skills/skills_existing_filesystem.yaml "Find places in MassGen where we can improve logging and add more detailed debug info"
+#   uv run massgen --config massgen/configs/skills/skills_existing_filesystem.yaml "Analyze the MassGen codebase to identify common development workflows that could benefit from being codified as skills. Create 1-2 optional skills that would help future agents work more efficiently with the codebase."
 
 agents:
   - id: "agent_a"
     backend:
       type: "openai"
-      model: "gpt-5-nano"
+      model: "gpt-5-codex"
       cwd: "workspace1"
       enable_mcp_command_line: true
       command_line_execution_mode: "docker"
 
   - id: "agent_b"
     backend:
-      type: "openai"
-      model: "gpt-5-nano"
+      type: "claude_code"
+      model: claude-sonnet-4-5-20250929
       cwd: "workspace2"
       enable_mcp_command_line: true
       command_line_execution_mode: "docker"
@@ -35,6 +36,9 @@ orchestrator:
     # Skills directory
     skills_directory: ".agent/skills"
 
-    # Enable task planning
+    # Enable task planning with filesystem mode
     enable_agent_task_planning: true
-    max_tasks_per_plan: 10
+    task_planning_filesystem_mode: true
+
+    # Enable memory filesystem mode for persistent context
+    enable_memory_filesystem_mode: true
