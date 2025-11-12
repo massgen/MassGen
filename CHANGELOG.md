@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Recent Releases
 
 **v0.1.11 (November 12, 2025)** - Skills System, Memory MCP & Rate Limiting
-Modular skills system for enhanced agent prompting, MCP-based memory management with filesystem persistence, multi-dimensional rate limiting for API calls, and memory-filesystem integration mode for advanced workflows.
+Modular skills system for enhanced agent prompting, MCP-based memory management with filesystem integration for advanced workflows, and multi-dimensional rate limiting for Gemini API calls.
 
 **v0.1.10 (November 10, 2025)** - Docker Configuration, Framework Streaming & Contributor Handbook
 Enhanced Docker configuration with nested credential and package management structures, framework interoperability streaming for LangGraph and SmoLAgent, improved parallel execution safety across all modes, and comprehensive contributor handbook at https://massgen.github.io/Handbook/.
@@ -44,7 +44,7 @@ Complete session management system with conversation restoration, computer use a
   - Inspired by Letta's context hierarchy design pattern
 
 - **Rate Limiting System (Gemini)**: Multi-dimensional rate limiting for Gemini API calls and agent startup
-  - New `massgen/rate_limiter.py` (321 lines) with comprehensive rate limiting infrastructure
+  - New `massgen/backend/rate_limiter.py` (321 lines) with comprehensive rate limiting infrastructure
   - Support for multiple limit types: requests per minute (RPM), tokens per minute (TPM), requests per day (RPD)
   - Model-specific rate limits with configurable thresholds for Gemini models
   - Graceful cooldown periods with exponential backoff
@@ -69,7 +69,7 @@ Complete session management system with conversation restoration, computer use a
 - **Rate Limiter Asyncio Lock**: Resolved asyncio lock event loop error
   - Fixed asyncio lock reuse across different event loops causing errors
   - Improved rate limiter thread safety and event loop handling
-  - Updated `massgen/rate_limiter.py` and added comprehensive tests
+  - Updated `massgen/backend/rate_limiter.py` and added comprehensive tests
 
 ### Documentations, Configurations and Resources
 

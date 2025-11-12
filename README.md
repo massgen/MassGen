@@ -162,14 +162,13 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 **What's New in v0.1.11:**
 - **🎯 Skills System** - Modular prompting framework for enhanced agent capabilities
-- **💾 Memory MCP Tool & Filesystem Integration** - Persistent memory management with filesystem synchronization and combined workflows
+- **💾 Memory MCP Tool & Filesystem Integration** - Persistent memory management with filesystem integration for advanced workflows
 - **⚙️ Rate Limiting System (Gemini)** - Multi-dimensional API rate control for Gemini models
 
 **Key Improvements:**
 - Always-available file search skill with automatic skill discovery from `massgen/skills/`
-- MCP server for memory CRUD operations with markdown-based persistence
+- MCP server for memory CRUD operations with markdown-based persistence and filesystem integration
 - RPM, TPM, and RPD rate limiting for Gemini models with graceful cooldowns
-- Simultaneous memory MCP tools and filesystem operations for advanced workflows
 - Enhanced Claude Code backend for Windows with improved system prompt handling
 
 **Try v0.1.11 Features:**
@@ -1079,7 +1078,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Memory Data Models**: Short-term and long-term memory tiers with markdown-based storage format
 - **Workspace Integration**: Automatic persistence to workspace under `memory/short_term/` and `memory/long_term/` directories
 - **Cross-Agent Sharing**: Orchestrator integration for memory sharing across agents
-- **Combined Capabilities**: Simultaneous memory MCP tools and filesystem operations for advanced workflows
+- **Combined Workflows**: Simultaneous memory MCP tools and filesystem operations enable advanced workflows for long-running projects requiring both code changes and learned context
 - **Enhanced Windows Support**: Improved Claude Code backend handling of long system prompts on Windows
 - **Planning MCP Updates**: Tasks saved to agent workspace instead of separate directory
 
