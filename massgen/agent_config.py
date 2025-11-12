@@ -44,13 +44,13 @@ class CoordinationConfig:
                                     to break down complex work, track progress, and coordinate
                                     based on dependencies.
         max_tasks_per_plan: Maximum number of tasks allowed in an agent's task plan.
+        task_planning_filesystem_mode: If True, task planning MCP writes tasks to tasks/ directory
+                                       in agent workspace for transparency and cross-agent visibility.
         use_skills: If True, enables skills system using openskills. Agents can invoke skills
                    via bash commands (openskills read <skill-name>). Requires command line
-                   execution to be enabled. When both use_skills and enable_agent_task_planning
-                   are True, filesystem-based tasks skill is used instead of task MCP.
+                   execution to be enabled.
         massgen_skills: List of MassGen built-in skills to enable. Available skills:
                        - "memory": Persistent memory skill (creates memory/ dir)
-                       - "tasks": Task planning skill (creates tasks/ dir)
                        - "file_search": File search skill (no dir needed)
                        When any skill that needs a dir is enabled, workspace/ is also created.
         skills_directory: Path to the skills directory. Default is .agent/skills which is where
@@ -64,6 +64,7 @@ class CoordinationConfig:
     max_orchestration_restarts: int = 0
     enable_agent_task_planning: bool = False
     max_tasks_per_plan: int = 10
+    task_planning_filesystem_mode: bool = False
     use_skills: bool = False
     massgen_skills: List[str] = field(default_factory=list)
     skills_directory: str = ".agent/skills"

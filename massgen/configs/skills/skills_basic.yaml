@@ -38,3 +38,4 @@ orchestrator:
 
     # enable planning
     enable_agent_task_planning: true
+    task_planning_filesystem_mode: true

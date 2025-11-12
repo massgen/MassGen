@@ -119,17 +119,20 @@ Make sure you actually call `vote` or `new_answer` (in tool call format).
 
 *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
 
-    def get_planning_guidance(self) -> str:
+    def get_planning_guidance(self, filesystem_mode: bool = False) -> str:
         """
         Generate system message guidance for task planning tools.
 
         This guidance is appended to the agent's system message when
         agent task planning is enabled in the coordination config.
 
+        Args:
+            filesystem_mode: If True, adds guidance about filesystem-based task storage
+
         Returns:
             Formatted planning guidance string
         """
-        return """
+        base_guidance = """
 
 # Task Planning and Management
 
@@ -233,6 +236,17 @@ Status: 4/4 tasks completed
 ```
 
 This helps other agents understand your approach and makes voting more specific."""
+
+        filesystem_guidance = ""
+        if filesystem_mode:
+            filesystem_guidance = """
+
+**Filesystem Mode Enabled:**
+Your task plans are automatically saved to `tasks/plan.json` in your workspace. You can write notes or comments in `tasks/notes.md` or other files in the `tasks/` directory.
+
+*NOTE*: You will also have access to other agents' task plans in the shared reference."""
+
+        return base_guidance + filesystem_guidance
 
     # =============================================================================
     # USER MESSAGE TEMPLATES

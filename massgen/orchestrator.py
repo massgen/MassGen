@@ -265,17 +265,12 @@ class Orchestrator(ChatAgent):
                 self._validate_skills_config()
                 logger.info("[Orchestrator] Skills validation complete")
 
-        # Inject planning tools if enabled (but not when using skills)
+        # Inject planning tools if enabled
         if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_agent_task_planning"):
             if self.config.coordination_config.enable_agent_task_planning:
-                # Skip task MCP if skills are enabled (use filesystem-based tasks skill instead)
-                use_skills = hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills
-                if use_skills:
-                    logger.info("[Orchestrator] Using tasks skill instead of task MCP (skills mode enabled)")
-                else:
-                    logger.info(f"[Orchestrator] Injecting planning tools for {len(self.agents)} agents")
-                    self._inject_planning_tools_for_all_agents()
-                    logger.info("[Orchestrator] Planning tools injection complete")
+                logger.info(f"[Orchestrator] Injecting planning tools for {len(self.agents)} agents")
+                self._inject_planning_tools_for_all_agents()
+                logger.info("[Orchestrator] Planning tools injection complete")
 
     async def _prepare_paraphrases_for_agents(self, question: str) -> None:
         """Generate and assign DSPy paraphrases for the current question."""
@@ -418,7 +413,7 @@ class Orchestrator(ChatAgent):
         logger.info(f"[Orchestrator] Injecting planning tools for agent: {agent_id}")
 
         # Create planning MCP config
-        planning_mcp_config = self._create_planning_mcp_config(agent_id)
+        planning_mcp_config = self._create_planning_mcp_config(agent_id, agent)
         logger.info(f"[Orchestrator] Created planning MCP config: {planning_mcp_config['name']}")
 
         # Get existing mcp_servers configuration
@@ -441,12 +436,13 @@ class Orchestrator(ChatAgent):
         agent.backend.config["mcp_servers"] = mcp_servers
         logger.info(f"[Orchestrator] Updated MCP servers for {agent_id}, now has {len(mcp_servers) if isinstance(mcp_servers, (list, dict)) else 0} servers")
 
-    def _create_planning_mcp_config(self, agent_id: str) -> Dict[str, Any]:
+    def _create_planning_mcp_config(self, agent_id: str, agent: Any) -> Dict[str, Any]:
         """
         Create MCP server configuration for planning tools.
 
         Args:
             agent_id: ID of the agent
+            agent: Agent instance (for accessing workspace path)
 
         Returns:
             MCP server configuration dictionary
@@ -457,19 +453,49 @@ class Orchestrator(ChatAgent):
 
         script_path = PathlibPath(planning_module.__file__).resolve()
 
+        args = [
+            "run",
+            f"{script_path}:create_server",
+            "--",
+            "--agent-id",
+            agent_id,
+            "--orchestrator-id",
+            self.orchestrator_id,
+        ]
+
+        # Add workspace path if filesystem mode is enabled
+        logger.info(f"[Orchestrator] Checking task_planning_filesystem_mode for {agent_id}")
+        has_coord_config = hasattr(self.config, "coordination_config")
+        logger.info(f"[Orchestrator] Has coordination_config: {has_coord_config}")
+
+        if has_coord_config:
+            has_filesystem_mode = hasattr(self.config.coordination_config, "task_planning_filesystem_mode")
+            logger.info(f"[Orchestrator] Has task_planning_filesystem_mode attr: {has_filesystem_mode}")
+            if has_filesystem_mode:
+                value = self.config.coordination_config.task_planning_filesystem_mode
+                logger.info(f"[Orchestrator] task_planning_filesystem_mode value: {value}")
+
+        filesystem_mode_enabled = (
+            hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "task_planning_filesystem_mode") and self.config.coordination_config.task_planning_filesystem_mode
+        )
+
+        if filesystem_mode_enabled:
+            logger.info("[Orchestrator] task_planning_filesystem_mode is enabled")
+            if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager") and agent.backend.filesystem_manager:
+                if agent.backend.filesystem_manager.cwd:
+                    workspace_path = str(agent.backend.filesystem_manager.cwd)
+                    args.extend(["--workspace-path", workspace_path])
+                    logger.info(f"[Orchestrator] Enabling filesystem mode for task planning: {workspace_path}")
+                else:
+                    logger.warning(f"[Orchestrator] Agent {agent_id} filesystem_manager.cwd is None")
+            else:
+                logger.warning(f"[Orchestrator] Agent {agent_id} has no filesystem_manager")
+
         config = {
             "name": f"planning_{agent_id}",
             "type": "stdio",
             "command": "fastmcp",
-            "args": [
-                "run",
-                f"{script_path}:create_server",
-                "--",
-                "--agent-id",
-                agent_id,
-                "--orchestrator-id",
-                self.orchestrator_id,
-            ],
+            "args": args,
             "env": {
                 "FASTMCP_SHOW_CLI_BANNER": "false",
             },
@@ -2395,7 +2421,16 @@ Your answer:"""
             # Add planning guidance if enabled
             system_message = conversation["system_message"]
             if self.config.coordination_config.enable_agent_task_planning:
-                planning_guidance = self.message_templates.get_planning_guidance()
+                # Check if filesystem mode is enabled and agent has workspace
+                filesystem_mode = (
+                    hasattr(self.config.coordination_config, "task_planning_filesystem_mode")
+                    and self.config.coordination_config.task_planning_filesystem_mode
+                    and hasattr(agent, "backend")
+                    and hasattr(agent.backend, "filesystem_manager")
+                    and agent.backend.filesystem_manager
+                    and agent.backend.filesystem_manager.cwd
+                )
+                planning_guidance = self.message_templates.get_planning_guidance(filesystem_mode=filesystem_mode)
                 system_message = system_message + planning_guidance
 
             # Add skills system message if enabled

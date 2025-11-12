@@ -1,5 +1,5 @@
 # Skills with Organized Workspace
-# Creates separated memory/, tasks/, and workspace/ directories
+# Creates separated memory/ and workspace/ directories
 # for cleaner organization when using skills
 #
 # Run with:
@@ -30,14 +30,13 @@ orchestrator:
     # Enable skills system
     use_skills: true
 
-    # Enable task planning (uses filesystem-based tasks skill)
+    # Enable task planning
     enable_agent_task_planning: true
 
     # Enable MassGen built-in skills
     # This creates the necessary workspace directories
     massgen_skills:
       - memory      # Creates memory/ directory
-      # - tasks       # Creates tasks/ directory
       # - file_search  # No directory needed
 
     # Skills directory (contains external skills from openskills)
@@ -47,17 +46,13 @@ orchestrator:
 #
 # agent_workspace/
 #   ├── memory/              # Long-term context (memory skill)
-#   ├── tasks/               # Task plans (tasks skill)
-#   │   └── plan.json
 #   └── workspace/           # Main working directory (created when any skill dir is made)
 #       └── your_files.py
 #
 # temp_workspaces/
 #   ├── agent1/
 #   │   ├── memory/          # Agent 1's memories (read-only)
-#   │   ├── tasks/           # Agent 1's task plan (read-only)
 #   │   └── workspace/       # Agent 1's work (read-only)
 #   └── agent2/
 #       ├── memory/
-#       ├── tasks/
 #       └── workspace/
