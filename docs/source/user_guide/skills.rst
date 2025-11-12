@@ -24,21 +24,7 @@ When enabled, agents can invoke skills via bash commands to access domain-specif
 Installation
 ============
 
-Docker Users (Recommended)
----------------------------
-
-Skills are **pre-installed** in MassGen Docker containers. No additional setup required.
-
-The Docker images include:
-
-* ``openskills`` CLI tool
-* Anthropic's official skills collection
-* ripgrep and ast-grep for file search
-
-Local Users
------------
-
-For local installations, you need to install openskills separately:
+Install openskills and Anthropic's skills collection:
 
 .. code-block:: bash
 
@@ -49,6 +35,12 @@ For local installations, you need to install openskills separately:
    openskills install anthropics/skills --universal -y
 
 This creates ``.agent/skills/`` directory with all available skills.
+
+.. important::
+   Skills currently require Docker mode (``command_line_execution_mode: "docker"``). Local mode is not yet supported.
+
+.. note::
+   The Docker images include ripgrep and ast-grep for file search capabilities used by the built-in file search skill.
 
 Configuration
 =============

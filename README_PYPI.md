@@ -176,7 +176,10 @@ This project started with the "threads of thought" and "iterative refinement" id
 pip install --upgrade massgen
 
 # Skills System - enable domain-specific capabilities
-# Prerequisites: Docker daemon running (or install openskills locally)
+# Prerequisites:
+# - Docker daemon running (call `massgen/docker/build.sh [--sudo]` for updated containers)
+# - openskills installed and placed in ./agents/skills.
+#   - Run `npm i -g openskills` followed by `openskills install anthropics/skills --universal -y`
 uv run massgen --config massgen/configs/skills/skills_basic.yaml \
   "Create cool algorithmic art we can use in GitHub repo"
 

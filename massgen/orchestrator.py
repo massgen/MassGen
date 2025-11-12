@@ -387,10 +387,7 @@ class Orchestrator(ChatAgent):
 
         if not skills_dir.exists():
             raise RuntimeError(
-                f"Skills directory '{skills_dir}' does not exist. "
-                f"Local users: Install openskills with 'npm i -g openskills', "
-                f"then run 'openskills install anthropics/skills --universal -y'. "
-                f"Docker users: Skills are pre-installed in the container.",
+                f"Skills directory '{skills_dir}' does not exist. " f"Install openskills with 'npm i -g openskills', " f"then run 'openskills install anthropics/skills --universal -y'.",
             )
 
         # Check if directory has any skills (allow both .agent/skills/ and built-in massgen/skills/)
@@ -3355,7 +3352,9 @@ Your answer:"""
                             yield ("result", ("answer", content))
                             yield ("done", None)
                             return
-                        elif tool_name.startswith("mcp"):
+                        elif tool_name.startswith("mcp") or "__" in tool_name:
+                            # MCP tools (with or without mcp__ prefix) and custom tools are handled by the backend
+                            # Tool results are streamed separately via StreamChunks
                             pass
                         elif tool_name.startswith("custom_tool"):
                             # Custom tools are handled by the backend and their results are streamed separately
