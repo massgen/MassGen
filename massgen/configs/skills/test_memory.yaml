@@ -8,15 +8,15 @@ agents:
       model: "gpt-5-mini"
       cwd: "workspace1"  # Required for filesystem mode
       enable_mcp_command_line: true
-      command_line_execution_mode: "local"
+      command_line_execution_mode: "docker"
 
   - id: "agent_b"
     backend:
-      type: "openai"
-      model: "gpt-5-nano"
+      type: "gemini"
+      model: "gemini-2.5-flash"
       cwd: "workspace2"  # Required for filesystem mode
       enable_mcp_command_line: true
-      command_line_execution_mode: "local"
+      command_line_execution_mode: "docker"
 
 orchestrator:
   snapshot_storage: "snapshots"
