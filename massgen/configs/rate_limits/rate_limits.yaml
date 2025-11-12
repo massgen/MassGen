@@ -1,0 +1,66 @@
+# Rate Limit Configuration for MassGen Backends
+# This file defines rate limits for different AI provider models
+#
+# Limit Types:
+# - rpm: Requests Per Minute
+# - tpm: Tokens Per Minute
+# - rpd: Requests Per Day
+#
+# Format:
+# provider_name:
+#   model_name:
+#     rpm: <number>
+#     tpm: <number>
+#     rpd: <number>
+
+gemini:
+  # Gemini 2.5 Flash Model
+  # Source: Google AI Studio rate limits dashboard
+  gemini-2.5-flash:
+    rpm: 9        # Conservative: 9 instead of 10 (actual limit: 10)
+    tpm: 240000   # Conservative: 240K instead of 250K (actual limit: 250K)
+    rpd: 245      # Conservative: 245 instead of 250 (actual limit: 250)
+
+  # Gemini 2.5 Pro Model
+  # Source: Google AI Studio rate limits dashboard
+  gemini-2.5-pro:
+    rpm: 2        # Very limited! (actual limit: 2)
+    tpm: 120000   # Conservative: 120K instead of 125K (actual limit: 125K)
+    rpd: 48       # Conservative: 48 instead of 50 (actual limit: 50)
+
+  # Default fallback for other Gemini models
+  default:
+    rpm: 7
+    tpm: 100000
+    rpd: 100
+
+# OpenAI Models
+# Add your OpenAI rate limits here
+# openai:
+#   gpt-4:
+#     rpm: 500
+#     tpm: 150000
+#     rpd: 10000
+#
+#   gpt-4-turbo:
+#     rpm: 500
+#     tpm: 300000
+#     rpd: 10000
+#
+#   gpt-3.5-turbo:
+#     rpm: 3000
+#     tpm: 250000
+#     rpd: 50000
+
+# Claude Models
+# Add your Claude rate limits here
+# claude:
+#   claude-3-5-sonnet:
+#     rpm: 50
+#     tpm: 100000
+#     rpd: 5000
+#
+#   claude-3-5-haiku:
+#     rpm: 50
+#     tpm: 100000
+#     rpd: 5000

@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.10
+**Current Version:** v0.1.11
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** November 10, 2025
+**Last Updated:** November 12, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -32,7 +32,6 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | Parallel File Operations | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Semtools Integration | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | MassGen Terminal Evaluation | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
-| Multi-Agent Computer Use | TBD | TBD |
 | Web UI | [@voidcenter](https://github.com/voidcenter) | justin_zhang |
 
 *For general questions, join the #massgen channel on [Discord](https://discord.gg/VVrT2rQaz5)*
@@ -42,32 +41,22 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.11** | 11/12/25 | Gemini Rate Limiting System | @AbhimanyuAryan | Prevent API spam and manage costs within rate limits |
-| | | Automatic MCP Tool Selection | @ncrispino | Intelligently select MCP tools based on task requirements |
-| **v0.1.12** | 11/14/25 | Parallel File Operations | @ncrispino | Increase parallelism and standard efficiency evaluation |
+| **v0.1.12** | 11/14/25 | Automatic MCP Tool Selection | @ncrispino | Intelligently select MCP tools based on task requirements |
+| | | Semtools/Serena Semantic Search Skill | @ncrispino | Implement semantic search capabilities as a reusable skill |
+| **v0.1.13** | 11/17/25 | Parallel File Operations | @ncrispino | Increase parallelism and standard efficiency evaluation |
 | | | Semtools Integration | @ncrispino | Semantic search for files, configs, and tool discovery |
-| **v0.1.13** | 11/17/25 | MassGen Terminal Evaluation | @ncrispino | Self-evaluation and improvement of frontend/UI |
+| **v0.1.14** | 11/19/25 | MassGen Terminal Evaluation | @ncrispino | Self-evaluation and improvement of frontend/UI |
 | | | NLIP Integration | @qidanrui | Natural Language Integration Platform for hierarchy initialization and RL integration |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.11 - Rate Limiting & Intelligent Tool Selection
+## 📋 v0.1.12 - Intelligent Tool Selection & Semantic Search
 
 ### Features
 
-**1. Gemini Rate Limiting System** (@AbhimanyuAryan)
-- PR: [#383](https://github.com/massgen/MassGen/pull/383) (Draft)
-- Multi-dimensional rate limiting for Gemini models (RPM, TPM, RPD)
-- Model-specific limits: Flash (9 RPM), Pro (2 RPM)
-- Sliding window tracking for precise rate management
-- External YAML configuration for centralized limit control
-- Optional `--rate-limit` CLI flag to enable/disable
-- Mandatory cooldown after agent startup to prevent API bursts
-- **Use Case**: Prevent API spam and manage costs while ensuring smooth operation within Gemini's rate limits
-
-**2. Automatic MCP Tool Selection** (@ncrispino)
+**1. Automatic MCP Tool Selection** (@ncrispino)
 - Issue: [#414](https://github.com/massgen/MassGen/issues/414)
 - Intelligent selection of MCP tools before task execution based on user prompts
 - Dynamic tool refinement during execution as task requirements evolve
@@ -76,18 +65,26 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Eliminates manual tool selection burden for users
 - **Use Case**: Intelligently select appropriate MCP tools (e.g., Playwright for web testing) based on task requirements, improving performance without requiring users to know which tools to include
 
+**2. Semtools/Serena Semantic Search Skill** (@ncrispino)
+- Issue: [#497](https://github.com/massgen/MassGen/issues/497)
+- Implement semtools and serena for advanced semantic search capabilities
+- Package as a reusable skill within the MassGen skills framework
+- Enable semantic understanding of code, documentation, and configuration files
+- Support for multiple embedding models and vector databases
+- Integration with existing file search and discovery mechanisms
+- **Use Case**: Provide intelligent semantic search across codebases, enabling agents to find relevant code and documentation based on meaning rather than just keywords
+
 ### Success Criteria
-- ✅ Rate limiting prevents API quota violations and manages costs
-- ✅ Features are configurable and well-documented
-- ✅ Rate limiting works across all Gemini model types
-- ✅ Sliding window tracking is accurate and efficient
 - ✅ Automatic tool selection improves task performance vs manual selection
 - ✅ Context pollution reduced through filesystem-first approach
 - ✅ Tool selection adapts dynamically during execution
+- ✅ Semantic search skill successfully integrates with existing skills framework
+- ✅ Semantic search outperforms keyword-based search for code discovery
+- ✅ Support for multiple embedding models and configurable backends
 
 ---
 
-## 📋 v0.1.12 - Performance Optimization & Semantic Search
+## 📋 v0.1.13 - Performance Optimization & Semantic Search
 
 ### Features
 
@@ -121,7 +118,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.13 - Self-Evaluation & NLIP Integration
+## 📋 v0.1.14 - Self-Evaluation & NLIP Integration
 
 ### Features
 
@@ -201,10 +198,10 @@ These features are being actively developed on **separate parallel tracks** and 
 - **Status:** ✅ Completed in v0.1.10
 
 ### Track: Rate Limiting System (@AbhimanyuAryan, abhimanyuaryan)
-- PR: [#383](https://github.com/massgen/MassGen/pull/383) (Draft)
+- PR: [#383](https://github.com/massgen/MassGen/pull/383)
 - Multi-dimensional rate limiting for Gemini models
 - Model-specific limits with sliding window tracking
-- **Target:** v0.1.11
+- **Status:** ✅ Completed in v0.1.11
 
 ### Track: MassGen Handbook (@a5507203, @Henry-811, crinvo, henry_weiqi)
 - Issue: [#387](https://github.com/massgen/MassGen/issues/387)
@@ -228,31 +225,31 @@ These features are being actively developed on **separate parallel tracks** and 
 - Issue: [#414](https://github.com/massgen/MassGen/issues/414)
 - Intelligent selection of MCP tools based on task requirements
 - Filesystem-first approach to reduce context pollution
-- **Target:** v0.1.11
+- **Target:** v0.1.12
 
 ### Track: Parallel File Operations (@ncrispino, nickcrispino)
 - Issue: [#441](https://github.com/massgen/MassGen/issues/441)
 - Increase parallelism of file read operations
 - Standard efficiency evaluation and benchmarking methodology
-- **Target:** v0.1.12
+- **Target:** v0.1.13
 
 ### Track: Semtools Integration (@ncrispino, nickcrispino)
 - Issue: [#465](https://github.com/massgen/MassGen/issues/465)
 - Semantic search for files, configs, and automated tool discovery
 - Replace keyword matching with semantic understanding
-- **Target:** v0.1.12
+- **Target:** v0.1.13
 
 ### Track: MassGen Terminal Evaluation (@ncrispino, nickcrispino)
 - Issue: [#476](https://github.com/massgen/MassGen/issues/476)
 - Self-evaluation and improvement of frontend/UI through terminal recording
 - Automated video generation and case study creation
-- **Target:** v0.1.13
+- **Target:** v0.1.14
 
 ### Track: NLIP Integration (@qidanrui, danrui2020)
 - PR: [#475](https://github.com/massgen/MassGen/pull/475) (Draft)
 - Natural Language Integration Platform for enhanced agent coordination
 - Hierarchy initialization and reinforcement learning integration
-- **Target:** v0.1.13
+- **Target:** v0.1.14
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/massgen/MassGen/pull/251)
@@ -334,5 +331,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** November 10, 2025
+**Last Updated:** November 13, 2025
 **Maintained By:** MassGen Team

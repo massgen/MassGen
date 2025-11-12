@@ -227,7 +227,48 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.10 - Latest
+### v0.1.11 - Latest
+**New Features:** Skills System, Memory MCP & Rate Limiting
+
+**Configuration Files:**
+- `skills/skills_basic.yaml` - Basic skills system with file search capabilities
+- `skills/skills_with_memory.yaml` - Skills with memory and task planning integration
+- `skills/skills_existing_filesystem.yaml` - Skills integrated into existing project filesystem
+- `rate_limits/rate_limits.yaml` - Rate limiting configuration for Gemini models
+
+**Key Features:**
+- **Skills System**: Modular prompting framework with automatic skill discovery from `massgen/skills/` directory, organized into `always/` (auto-included) and `optional/` categories
+- **Memory MCP Tool & Filesystem Integration**: MCP server for memory management with persistent markdown storage, simultaneous memory and filesystem operations for advanced workflows
+- **Rate Limiting System (Gemini)**: Multi-dimensional rate limiting (RPM, TPM, RPD) for Gemini models with graceful cooldown periods
+- **Enhanced Windows Support**: Improved Claude Code backend handling of long system prompts on Windows
+
+**Try It:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# Skills System - enable domain-specific capabilities
+# Prerequisites: Docker daemon running (or install openskills locally)
+uv run massgen --config massgen/configs/skills/skills_basic.yaml \
+  "Create cool algorithmic art we can use in GitHub repo"
+
+# Memory with Skills and Task Planning - combined filesystem coordination
+# Prerequisites: Docker daemon running
+uv run massgen --config massgen/configs/skills/skills_with_memory.yaml \
+  "Research neural architectures and document findings"
+
+# Skills with Existing Filesystem - self-extension case study
+# Prerequisites: Docker daemon running
+uv run massgen --config massgen/configs/skills/skills_existing_filesystem.yaml \
+  "Analyze the MassGen codebase to identify common development workflows that could benefit from being codified as skills. Create 1-2 optional skills that would help future agents work more efficiently with the codebase."
+
+# Rate Limiting - manage API costs for Gemini models
+# Enable rate limiting for any configuration with --enable-rate-limiting flag
+massgen --backend gemini --model gemini-2.5-flash --enable-rate-limiting \
+  "Explain quantum computing"
+```
+
+### v0.1.10
 **New Features:** Framework Interoperability Streaming & Docker Enhancements
 
 **Configuration Files:**

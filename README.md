@@ -48,6 +48,10 @@ This project started with the "threads of thought" and "iterative refinement" id
   <b>🤖 For LLM Agents:</b> <a href="AI_USAGE.md">AI_USAGE.md</a> - Complete automation guide to run MassGen inside an LLM
 </p>
 
+<p align="center">
+  <b>📚 For Contributors:</b> See <a href="https://massgen.github.io/Handbook/">MassGen Contributor Handbook</a> - Centralized policies and resources for development and research teams
+</p>
+
 ---
 
 ## 📋 Table of Contents
@@ -65,7 +69,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.10 Features](#-latest-features-v0110)
+- [v0.1.11 Features](#-latest-features-v0111)
 </details>
 
 <details open>
@@ -119,15 +123,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.10](#recent-achievements-v0110)
-  - [v0.0.3 - v0.1.9](#previous-achievements-v003---v019)
+  - [v0.1.11](#recent-achievements-v0111)
+  - [v0.0.3 - v0.1.10](#previous-achievements-v003---v0110)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.11 Roadmap](#v0111-roadmap)
+- [v0.1.12 Roadmap](#v0112-roadmap)
 </details>
 
 <details open>
@@ -152,57 +156,45 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.10)
+## 🆕 Latest Features (v0.1.11)
 
-**🎉 Released: November 10, 2025**
+**🎉 Released: November 12, 2025**
 
-**What's New in v0.1.10:**
-- **⚡ Framework Interoperability Streaming** - Real-time intermediate step streaming for LangGraph and SmoLAgent
-- **🐳 Docker Configuration Enhancements** - Restructured authentication with custom image support
-- **🔒 Parallel Execution Safety** - Universal workspace isolation for concurrent executions
-- **📚 MassGen Handbook** - Comprehensive contributor documentation and development policies
+**What's New in v0.1.11:**
+- **🎯 Skills System** - Modular prompting framework for enhanced agent capabilities
+- **💾 Memory MCP Tool & Filesystem Integration** - Persistent memory management with filesystem integration for advanced workflows
+- **⚙️ Rate Limiting System (Gemini)** - Multi-dimensional API rate control for Gemini models
 
 **Key Improvements:**
-- Real-time visibility into LangGraph and SmoLAgent reasoning steps with log/output distinction
-- Nested Docker authentication with separate mount arrays and environment variable arrays
-- Custom Docker image support via `Dockerfile.custom-example` for package extensions
-- Instance ID generation ensuring safe parallel execution across all modes
-- Complete contributor handbook at https://massgen.github.io/Handbook/
+- Always-available file search skill with automatic skill discovery from `massgen/skills/`
+- MCP server for memory CRUD operations with markdown-based persistence and filesystem integration
+- RPM, TPM, and RPD rate limiting for Gemini models with graceful cooldowns
+- Enhanced Claude Code backend for Windows with improved system prompt handling
 
-**Try v0.1.10 Features:**
+**Try v0.1.11 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# LangGraph streaming - watch workflow execution in real-time
-# Prerequisites:
-#   1. pip install langgraph langchain-openai langchain-core
-#   2. OPENAI_API_KEY environment variable must be set
-massgen --config @examples/tools/custom_tools/interop/langgraph_lesson_planner_example.yaml \
-  "Create a lesson plan for photosynthesis"
+# Skills System - enable domain-specific capabilities
+# Prerequisites: Docker daemon running (or install openskills locally)
+uv run massgen --config massgen/configs/skills/skills_basic.yaml \
+  "Create cool algorithmic art we can use in GitHub repo"
 
-# SmoLAgent streaming - see agent reasoning steps live
-# Prerequisites:
-#   1. pip install smolagents
-#   2. OPENAI_API_KEY environment variable must be set
-massgen --config @examples/tools/custom_tools/interop/smolagent_lesson_planner_example.yaml \
-  "Create a lesson plan for photosynthesis"
+# Memory with Skills and Task Planning - combined filesystem coordination
+# Prerequisites: Docker daemon running
+uv run massgen --config massgen/configs/skills/skills_with_memory.yaml \
+  "Research neural architectures and document findings"
 
-# Docker custom image - use your own Docker image with preinstalled packages
-# Prerequisites:
-#   1. Docker daemon running
-#   2. Build the example custom image:
-#      docker build -t massgen-custom-test:v1 -f massgen/docker/Dockerfile.custom-example .
-uv run massgen --config @examples/configs/tools/code-execution/docker_custom_image.yaml \
-  "Verify custom packages: sklearn, matplotlib, seaborn, ipython, black, vim, htop, tree"
+# Skills with Existing Filesystem - self-extension case study
+# Prerequisites: Docker daemon running
+uv run massgen --config massgen/configs/skills/skills_existing_filesystem.yaml \
+  "Analyze the MassGen codebase to identify common development workflows that could benefit from being codified as skills. Create 1-2 optional skills that would help future agents work more efficiently with the codebase."
 
-# Docker with GitHub authentication - read-only repository access
-# Prerequisites:
-#   1. Docker daemon running
-#   2. Already logged in: gh auth login (or set GITHUB_TOKEN)
-#   3. Build the Docker image: bash massgen/docker/build.sh
-uv run massgen --config @examples/configs/tools/code-execution/docker_github_readonly.yaml \
-  "Test to see the most recent issues in the massgen/MassGen repo with the github cli"
+# Rate Limiting - manage API costs with multi-dimensional limits
+# Enable rate limiting for any configuration with --enable-rate-limiting flag
+massgen --backend gemini --model gemini-2.5-flash --enable-rate-limiting \
+  "Explain quantum computing"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1071,29 +1063,39 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.10)
+### Recent Achievements (v0.1.11)
 
-**🎉 Released: November 10, 2025**
+**🎉 Released: November 12, 2025**
 
-#### Framework Interoperability Streaming
-- **LangGraph Streaming**: Real-time intermediate step streaming with `is_log=True` flag distinguishing logs from final output (`massgen/tool/_extraframework_agents/langgraph_*`)
-- **SmoLAgent Streaming**: Streams `ActionStep` and `PlanningStep` outputs as logs for better debugging and monitoring
-- **Enhanced Debugging**: Real-time visibility into external framework reasoning steps during multi-agent coordination
+#### Skills System
+- **Modular Prompting Framework**: SkillsManager class for dynamic skill loading and injection (`massgen/filesystem_manager/skills_manager.py`)
+- **File Search Skill**: Always-available skill for searching files and code across workspace (`massgen/skills/always/file_search/SKILL.md`)
+- **Automatic Discovery**: Skills organized into `always/` (auto-included) and `optional/` categories with Docker-compatible mounting
+- **Configuration Examples**: `skills_basic.yaml`, `skills_existing_filesystem.yaml`, `skills_with_memory.yaml`
 
-#### Docker Configuration Enhancements
-- **Authentication Restructuring**: Nested dictionary format with `command_line_docker_credentials` containing separate `mount` array and `env_vars` array (`docker_github_readonly.yaml`, `docker_full_dev_setup.yaml`)
-- **Custom Image Support**: Example Dockerfile (`Dockerfile.custom-example`) for extending MassGen base image with custom packages
-- **Package Management**: Preinstall capability via `command_line_docker_packages` array for automatic package installation before agent execution
+#### Memory MCP Tool & Filesystem Integration
+- **Memory MCP Server**: MCP server for memory management with filesystem persistence (`massgen/mcp_tools/memory/`)
+- **Memory Data Models**: Short-term and long-term memory tiers with markdown-based storage format
+- **Workspace Integration**: Automatic persistence to workspace under `memory/short_term/` and `memory/long_term/` directories
+- **Cross-Agent Sharing**: Orchestrator integration for memory sharing across agents
+- **Combined Workflows**: Simultaneous memory MCP tools and filesystem operations enable advanced workflows for long-running projects requiring both code changes and learned context
+- **Enhanced Windows Support**: Improved Claude Code backend handling of long system prompts on Windows
+- **Planning MCP Updates**: Tasks saved to agent workspace instead of separate directory
 
-#### Parallel Execution Safety
-- **Universal Instance IDs**: Extended workspace isolation to all execution modes (not just automation) via instance ID generation in `massgen/filesystem_manager/_filesystem_manager.py`
-- **Parallel Workspace Support**: Enhanced `_generate_instance_id()` method ensures unique workspace paths across concurrent executions
+#### Rate Limiting System (Gemini)
+- **Multi-Dimensional Limiting**: Support for RPM (requests per minute), TPM (tokens per minute), and RPD (requests per day) (`massgen/rate_limiter.py`)
+- **Model-Specific Limits**: Configurable thresholds for Gemini models with graceful cooldown periods
+- **Configuration System**: YAML-based configuration in `massgen/configs/rate_limits/rate_limits.yaml`
+- **CLI Integration**: Optional `--enable-rate-limiting` flag for opt-in rate limiting
+- **Asyncio Lock Fix**: Resolved rate limiter lock reuse across different event loops
 
-#### Session Management & Documentation
-- **Session Fixes**: Improved session restoration reliability with better workspace path handling
-- **MassGen Contributor Handbook**: Comprehensive documentation at https://massgen.github.io/Handbook/ with development policies and best practices
+### Previous Achievements (v0.0.3 - v0.1.10)
 
-### Previous Achievements (v0.0.3 - v0.1.9)
+✅ **Framework Interoperability Streaming (v0.1.10)**: Real-time intermediate step streaming for LangGraph and SmoLAgent with log/output distinction, enhanced debugging for external framework reasoning steps
+
+✅ **Docker Configuration Enhancements (v0.1.10)**: Nested authentication with separate mount and environment variable arrays, custom image support via Dockerfile.custom-example, automatic package installation
+
+✅ **Universal Workspace Isolation (v0.1.10)**: Instance ID generation extended to all execution modes ensuring safe parallel execution, enhanced workspace path uniqueness across concurrent sessions
 
 ✅ **Session Management System (v0.1.9)**: Complete session state tracking and restoration with SessionState dataclass and SessionRegistry for multi-turn persistence across CLI invocations, workspace continuity preserving agent states and coordination history between turns
 
@@ -1241,21 +1243,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.11 Roadmap
+### v0.1.12 Roadmap
 
-Version 0.1.11 focuses on rate limiting and intelligent tool selection:
+Version 0.1.12 focuses on intelligent tool selection and semantic search capabilities:
 
 #### Planned Features
-- **Gemini Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) to prevent API spam and manage costs
 - **Automatic MCP Tool Selection**: Intelligent selection of MCP tools based on task requirements to improve performance
+- **Semtools/Serena Semantic Search Skill**: Advanced semantic search capabilities as a reusable skill
 
 Key technical approach:
-- **Rate Limiting**: Sliding window tracking, model-specific limits (Flash 9 RPM, Pro 2 RPM), YAML configuration, CLI flag support
 - **Tool Selection**: Pre-execution tool selection based on prompts, dynamic tool refinement during execution, filesystem-first approach to reduce context pollution
+- **Semantic Search**: Implement semtools and serena for semantic code discovery, multiple embedding models support, skills framework integration
 
-**Target Release**: November 12, 2025 (Wednesday @ 9am PT)
+**Target Release**: November 14, 2025 (Friday @ 9am PT)
 
-For detailed milestones and technical specifications, see the [full v0.1.11 roadmap](ROADMAP_v0.1.11.md).
+For detailed milestones and technical specifications, see the [full v0.1.12 roadmap](ROADMAP_v0.1.12.md).
 
 ---
 

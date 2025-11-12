@@ -20,17 +20,31 @@ ENV PYTHONUNBUFFERED=1 \
 # - git: Version control operations
 # - curl: HTTP operations and downloads
 # - build-essential: Compiling Python packages with C extensions
+# - ripgrep: Fast text search (REQUIRED for filesystem-first mode)
+# - unzip: For extracting ast-grep binary
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     ca-certificates \
     build-essential \
+    ripgrep \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x (LTS) for JavaScript execution
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+# Install ast-grep for structural code search (filesystem-first mode)
+# Using pip (avoids conflict with system 'sg' command that npm version creates)
+RUN pip install --no-cache-dir ast-grep-cli
+
+# Install openskills CLI for skills management
+# Anthropic skills are installed manually beforehand and added as a volume at runtime
+RUN npm install -g openskills
+# && \
+    # openskills install anthropics/skills --universal -y
 
 # Install GitHub CLI for authenticated git operations
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \

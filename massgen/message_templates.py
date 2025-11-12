@@ -119,17 +119,20 @@ Make sure you actually call `vote` or `new_answer` (in tool call format).
 
 *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
 
-    def get_planning_guidance(self) -> str:
+    def get_planning_guidance(self, filesystem_mode: bool = False) -> str:
         """
         Generate system message guidance for task planning tools.
 
         This guidance is appended to the agent's system message when
         agent task planning is enabled in the coordination config.
 
+        Args:
+            filesystem_mode: If True, adds guidance about filesystem-based task storage
+
         Returns:
             Formatted planning guidance string
         """
-        return """
+        base_guidance = """
 
 # Task Planning and Management
 
@@ -233,6 +236,112 @@ Status: 4/4 tasks completed
 ```
 
 This helps other agents understand your approach and makes voting more specific."""
+
+        filesystem_guidance = ""
+        if filesystem_mode:
+            filesystem_guidance = """
+
+**Filesystem Mode Enabled:**
+Your task plans are automatically saved to `tasks/plan.json` in your workspace. You can write notes or comments in `tasks/notes.md` or other files in the `tasks/` directory.
+
+*NOTE*: You will also have access to other agents' task plans in the shared reference."""
+
+        return base_guidance + filesystem_guidance
+
+    def get_memory_system_message(
+        self,
+        short_term_memories: List[Dict[str, Any]],
+        long_term_memories: List[Dict[str, Any]],
+    ) -> str:
+        """
+        Generate memory system prompt with cross-agent visibility.
+
+        Creates two sections:
+        1. Short-term memories: Full content auto-injected (always available)
+        2. Long-term memories: Summary table (load on-demand via load_memory)
+
+        Args:
+            short_term_memories: List of short-term memory dicts with keys:
+                - name, description, content, agent_id, created, updated
+            long_term_memories: List of long-term memory dicts with keys:
+                - name, description, agent_id, created, updated
+
+        Returns:
+            Formatted memory system message string
+
+        Note:
+            Inspired by Letta's context hierarchy (https://docs.letta.com/guides/agents/context-hierarchy)
+            Short-term memories are like Tier 1 (always in-context), long-term like Tier 2 (load on-demand).
+        """
+        if not short_term_memories and not long_term_memories:
+            return ""
+
+        message = "\n\n# Memory System\n\n"
+        message += "You have access to a two-tier memory system for storing and retrieving context.\n\n"
+
+        # Short-term: Full injection with all content
+        if short_term_memories:
+            message += "## Short-term Memory (Always Available)\n\n"
+            message += "These memories are always in your context. They contain critical information that should be immediately available.\n\n"
+
+            for mem in short_term_memories:
+                agent_label = f" [Agent: {mem['agent_id']}]" if mem.get("agent_id") else ""
+                message += f"### {mem['name']}{agent_label}\n\n"
+                if mem.get("description"):
+                    message += f"*{mem['description']}*\n\n"
+                message += mem["content"]
+                message += "\n\n---\n\n"
+
+        # Long-term: Summary table only
+        if long_term_memories:
+            message += "## Long-term Memory (Load as Needed)\n\n"
+            message += 'These memories are available but not loaded by default. Use `load_memory(name="...")` to retrieve full content.\n\n'
+
+            message += "| Agent | Memory Name | Description |\n"
+            message += "|-------|-------------|-------------|\n"
+
+            for mem in long_term_memories:
+                agent_id = mem.get("agent_id", "unknown")
+                name = mem["name"]
+                description = mem.get("description", "No description")
+                message += f"| {agent_id} | **{name}** | {description} |\n"
+
+            message += '\n**To load**: Use `load_memory(name="memory_name")` to retrieve full content of any long-term memory.\n\n'
+
+        # Add usage guidance and strong encouragement
+        message += "## Memory Management Tools\n\n"
+
+        message += "**IMPORTANT - Use Memory Proactively:**\n"
+        message += "You should **actively create memories** during your work to:\n"
+        message += "- Save important decisions and rationale for future reference\n"
+        message += "- Record user preferences, constraints, and requirements\n"
+        message += "- Document key findings, patterns, or insights discovered\n"
+        message += "- Store context that other agents (or future you) will need\n\n"
+
+        message += "**When to create memories:**\n"
+        message += "- ✅ After making design decisions → Save why you chose this approach\n"
+        message += "- ✅ When discovering user preferences → Save for consistency\n"
+        message += "- ✅ After completing analysis → Save key findings\n"
+        message += "- ✅ When establishing patterns/conventions → Save for future work\n"
+        message += "- ✅ After solving tricky problems → Save the solution approach\n\n"
+
+        message += "**Available operations:**\n"
+        message += '- `create_memory(name, description, content, tier)` - Create new memory (tier="short_term" or "long_term")\n'
+        message += "- `update_memory(name, content, description)` - Update existing memory\n"
+        message += "- `remove_memory(name)` - Delete a memory\n"
+        message += "- `load_memory(name)` - Load long-term memory into context\n\n"
+
+        message += "**Memory tier selection:**\n"
+        message += "- **Short-term** (auto-injected): Critical info needed immediately. Use for user prefs, key constraints, active context. Keep concise (<10 memories).\n"
+        message += "- **Long-term** (load on-demand): Reference info, detailed docs, historical context. Use for project history, technical details, less urgent data.\n\n"
+
+        message += "**Cross-agent coordination:**\n"
+        message += (
+            "All agents see all memories. When you create a memory, other agents will have access to it in their system prompt "
+            "(short-term) or can load it (long-term). Use clear names and descriptions so others can benefit from your knowledge.\n"
+        )
+
+        return message
 
     # =============================================================================
     # USER MESSAGE TEMPLATES
@@ -1116,6 +1225,66 @@ Based on the coordination process above, present your final answer:"""
             parts.append(f"\n{command_exec_message}")
 
         return "\n".join(parts)
+
+    def skills_system_message(self, skills: List[Dict[str, str]]) -> str:
+        """Generate skills system prompt with available skills table.
+
+        Args:
+            skills: List of skill dictionaries with keys: name, description, location
+
+        Returns:
+            Formatted skills system message for agent system prompt
+
+        Example:
+            >>> skills = [{"name": "pdf", "description": "PDF toolkit", "location": "project"}]
+            >>> msg = templates.skills_system_message(skills)
+        """
+        if "skills_system_message" in self._template_overrides:
+            return str(self._template_overrides["skills_system_message"])
+
+        # Build skills table in markdown format
+        if not skills:
+            skills_table = "_No external skills available_"
+        else:
+            table_rows = ["| Skill | Description |", "|-------|-------------|"]
+            for skill in skills:
+                # Escape pipe characters in description
+                desc = skill["description"].replace("|", "\\|")
+                table_rows.append(f"| **{skill['name']}** | {desc} |")
+            skills_table = "\n".join(table_rows)
+
+        return f"""
+## Available Skills
+
+**IMPORTANT**: You have access to specialized skills that provide domain-specific knowledge, workflows, and tools.
+
+Before starting any (sub)task, **ALWAYS think about the relevant available skills below**, then load them as needed.
+
+### How to Use Skills
+
+Load a skill with: `execute_command(command="openskills read <skill-name>")`
+
+The skill content will load with:
+- Detailed instructions and workflows
+- Domain-specific best practices
+- Bundled resources (scripts, templates, references)
+
+### When to Load Skills
+
+- **AT THE START**: Review skill descriptions before beginning work
+- **PROACTIVELY**: Load any skill that seems relevant to the task, even if you think you can do it without
+- **WHEN UNSURE**: Load it anyway - the cost is minimal and the benefit can be substantial
+
+Skills are specifically designed for common tasks. If a skill exists for your task, use it - skills contain tested workflows and tools that will make your work better and faster.
+
+When submitting a new answer, reference any skills you loaded and how they helped.
+
+### Available Skills
+
+{skills_table}
+
+**Note**: Only use skills listed above. Do not invoke a skill that is already loaded in your context.
+"""
 
 
 # ### IMPORTANT Evaluation Note:
