@@ -7,16 +7,182 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.11 (November 12, 2025)** - Skills System, Memory MCP & Rate Limiting
+Modular skills system for enhanced agent prompting, MCP-based memory management with filesystem persistence, multi-dimensional rate limiting for API calls, and memory-filesystem integration mode for advanced workflows.
+
+**v0.1.10 (November 10, 2025)** - Docker Configuration, Framework Streaming & Contributor Handbook
+Enhanced Docker configuration with nested credential and package management structures, framework interoperability streaming for LangGraph and SmoLAgent, improved parallel execution safety across all modes, and comprehensive contributor handbook at https://massgen.github.io/Handbook/.
+
 **v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
 Complete session management system with conversation restoration, computer use automation tools for browser and desktop control, enhanced config builder with fuzzy model matching, and expanded backend support.
 
-**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
-Complete automation infrastructure for LLM agents with real-time status tracking, silent execution mode, and DSPy-powered question paraphrasing for enhanced multi-agent diversity.
-
-**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
-Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
-
 ---
+
+## [0.1.11] - 2025-11-12
+
+### Added
+- **Skills System**: Modular prompting framework for enhancing agent capabilities
+  - New `SkillsManager` class in `massgen/filesystem_manager/skills_manager.py` for dynamic skill loading and injection (158 lines)
+  - **File Search Skill**: Always-available skill for searching files and code across workspace (`massgen/skills/always/file_search/SKILL.md`, 280 lines)
+  - Automatic skill discovery and loading from `massgen/skills/` directory structure
+  - Docker-compatible skill mounting and environment setup
+  - Skills organized into `always/` (auto-included) and `optional/` categories
+  - Flexible skill injection into agent system prompts via orchestrator
+  - Configuration examples in `massgen/configs/skills/` (skills_basic.yaml, skills_existing_filesystem.yaml, skills_with_memory.yaml)
+
+- **Memory MCP Tool**: MCP server for agent memory management with filesystem persistence
+  - New `massgen/mcp_tools/memory/` module with memory MCP server implementation (513 lines total)
+  - **MemoryMCPServer** in `_memory_mcp_server.py` (352 lines) for memory CRUD operations with automatic filesystem sync
+  - **Memory data models** in `_memory_models.py` (161 lines) with short-term and long-term memory tiers
+  - Memory persistence to workspace under `memory/short_term/` and `memory/long_term/` directories
+  - Markdown-based memory storage format for human readability
+  - Integration with orchestrator for cross-agent memory sharing (+218 lines in orchestrator.py)
+  - Memory-specific message templates for memory operations (+95 lines in message_templates.py)
+  - Inspired by Letta's context hierarchy design pattern
+
+- **Rate Limiting System**: Multi-dimensional rate limiting for API calls and agent startup
+  - New `massgen/rate_limiter.py` (321 lines) with comprehensive rate limiting infrastructure
+  - Support for multiple limit types: requests per minute (RPM), tokens per minute (TPM), requests per day (RPD)
+  - Model-specific rate limits with configurable thresholds
+  - Graceful cooldown periods with exponential backoff
+  - Agent startup rate limiting to prevent API quota exhaustion
+  - Test suite in `massgen/tests/test_rate_limiter.py` (122 lines)
+  - Configuration system in `massgen/configs/rate_limits/` with rate_limits.yaml and rate_limit_config.py (180 lines)
+  - CLI flag `--enable-rate-limiting` for opt-in rate limiting
+
+- **Memory-Filesystem Integration Mode**: Combined memory and filesystem capabilities for advanced workflows
+  - Enables simultaneous use of memory MCP tools and filesystem operations
+  - Allows agents to maintain persistent memory while manipulating files
+  - Configuration examples demonstrating integrated workflows
+  - Use case: Long-running projects requiring both code changes and learned context
+
+### Changed
+- **Claude Code Backend**: Improved Windows support for long system prompts
+  - Enhanced handling of long system prompts on Windows platforms
+  - Resolved command-line length limitations and encoding issues
+  - Updated `massgen/backend/claude_code.py` with more robust Windows compatibility (27 lines changed)
+
+- **Planning MCP Server**: Added filesystem task persistence within workspace
+  - Tasks now saved to agent workspace instead of separate tasks/ directory
+  - Improved task organization and workspace management
+  - Enhanced `massgen/mcp_tools/planning/_planning_mcp_server.py` (+84 lines)
+  - Removed standalone tasks/ skill in favor of integrated planning
+
+### Fixed
+- **Rate Limiter Asyncio Lock**: Resolved asyncio lock event loop error
+  - Fixed asyncio lock reuse across different event loops causing errors
+  - Improved rate limiter thread safety and event loop handling
+  - Updated `massgen/rate_limiter.py` and added comprehensive tests
+
+### Documentations, Configurations and Resources
+
+- **Skills System Documentation**: Comprehensive guide for using and creating skills
+  - New `docs/source/user_guide/skills.rst` (473 lines)
+  - Covers skill structure, loading mechanisms, and best practices
+  - Examples of creating custom skills for specific agent capabilities
+
+- **Memory-Filesystem Mode Documentation**: Guide for integrated memory and filesystem workflows
+  - New `docs/source/user_guide/memory_filesystem_mode.rst` (883 lines)
+  - Demonstrates combining memory MCP tools with filesystem operations
+  - Configuration examples and use case scenarios
+
+- **Rate Limiting Documentation**: Complete rate limiting configuration guide
+  - New `docs/rate_limiting.md` (254 lines)
+  - Model-specific rate limits and configuration examples
+  - Best practices for managing API quotas
+  - New `massgen/configs/rate_limits/README.md` (108 lines)
+
+- **Skills Configuration Examples**: Three YAML configurations for skills usage
+  - `massgen/configs/skills/skills_basic.yaml`: Basic skills setup
+  - `massgen/configs/skills/skills_existing_filesystem.yaml`: Skills with filesystem integration
+  - `massgen/configs/skills/skills_with_memory.yaml`: Skills with memory MCP integration
+
+- **Filesystem Tool Discovery Design**: Comprehensive design document for new tool paradigm
+  - New `docs/dev_notes/filesystem_tool_discovery_design.md` (1,582 lines)
+  - Proposes shift from context-based to filesystem-based tool discovery
+  - Enables attaching 100+ MCP servers without context pollution
+  - Details progressive disclosure and code-based tool composition
+  - Includes implementation proposals and technical architecture
+
+### Technical Details
+- **Major Focus**: Skills system for modular agent prompting, memory MCP tool with filesystem persistence, multi-dimensional rate limiting, memory-filesystem integration mode
+- **Contributors**: @ncrispino @abhimanyuaryan @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.1.10] - 2025-11-10
+
+### Added
+- **Docker Custom Image Support**: Example Dockerfile for extending MassGen base image with custom packages
+  - New `massgen/docker/Dockerfile.custom-example` demonstrating how to add ML/data science packages, development tools, and system utilities
+  - Template for creating specialized Docker images for specific project needs
+
+### Changed
+- **Docker Authentication Configuration**: Restructured to nested dictionary format for better organization
+  - New `command_line_docker_credentials` structure consolidating all credential-related settings
+  - Nested `mount` array for credential file mounting (`ssh_keys`, `git_config`, `gh_config`, `npm_config`, `pypi_config`)
+  - Nested `env_file`, `env_vars`, and `pass_all_env` for environment variable management
+  - Nested `additional_mounts` for custom volume mounting
+  - Migration from flat parameters (`command_line_docker_mount_ssh_keys`, `command_line_docker_pass_env_vars`, etc.) to organized nested structure
+  - Enhanced `massgen/filesystem_manager/_docker_manager.py` and `_filesystem_manager.py` with new configuration parsing
+
+- **Docker Package Management**: New nested configuration structure for dependency installation
+  - New `command_line_docker_packages` structure with `auto_install_deps`, `auto_install_on_clone`, and `preinstall` settings
+  - Support for pre-installing Python, npm, and system packages before agent execution
+  - Improved dependency detection and installation workflow
+
+- **Framework Interoperability Streaming**: Real-time intermediate step streaming for external framework agents
+  - **LangGraph Streaming**: Updated `massgen/tool/_extraframework_agents/langgraph_lesson_planner_tool.py` (78 lines changed)
+    - Now yields intermediate updates from each workflow node (standards, lesson_plan, reviewed_plan)
+    - Distinguishes between logs (`is_log=True`) and final output using result type
+    - Enables real-time progress tracking during LangGraph workflow execution
+  - **SmoLAgent Streaming**: Updated `massgen/tool/_extraframework_agents/smolagent_lesson_planner_tool.py` (60 lines changed)
+    - Streams ActionStep and PlanningStep outputs as logs during agent execution
+    - FinalAnswerStep yielded as final output
+    - Set verbosity_level=0 to prevent duplicate console output
+  - Both frameworks now provide visibility into multi-step reasoning processes
+
+- **Parallel Execution Safety**: Extended automatic workspace isolation to all execution modes
+  - Parallel execution safety now works in both `--automation` and normal modes (previously automation-only)
+  - Automatic Docker container naming with unique instance ID suffixes (e.g., `massgen-agent_a-a1b2c3d4`)
+  - Enhanced `massgen/filesystem_manager/_filesystem_manager.py` with instance ID generation for all modes
+
+### Fixed
+- **Session Management**: Resolved CLI session handling issues
+  - Fixed session restoration edge cases in `massgen/cli.py`
+  - Improved error handling for session state loading
+
+### Documentations, Configurations and Resources
+
+- **MassGen Contributor Handbook**: Comprehensive contributor guide addressing issue #387
+  - New handbook website at https://massgen.github.io/Handbook/
+  - Eight major sections: Case Studies, Issues, Development, Documentation, Release, Announcements, Marketing, and Resources
+  - Workflow diagrams illustrating contribution pipeline from research to release
+  - Seven contribution tracks with assigned track owners
+  - Communication channels and meeting schedules (daily sync 5:30pm PST, research 6:00pm PST)
+  - Getting started guide for new contributors
+
+- **Docker Configuration Examples**: Three new YAML configurations for advanced Docker workflows
+  - `massgen/configs/tools/code-execution/docker_custom_image.yaml`: Using custom Docker images
+  - `massgen/configs/tools/code-execution/docker_full_dev_setup.yaml`: Complete development environment setup
+  - `massgen/configs/tools/code-execution/docker_github_readonly.yaml`: Read-only GitHub access configuration
+
+- **Automation Documentation**: Enhanced parallel execution section
+  - Updated `docs/source/user_guide/automation.rst` clarifying automatic isolation works in all modes
+  - Added Docker container isolation examples with unique container naming
+  - Clarified that `--automation` flag is for output control, not parallel safety
+
+- **Code Execution Design Documentation**: Updated Docker configuration architecture
+  - Enhanced `docs/dev_notes/CODE_EXECUTION_DESIGN.md` (90 lines revised)
+  - New credential and package management configuration examples
+  - Architecture diagrams for nested configuration structures
+
+- **Computer Use Tools Documentation**: Clarified Docker usage requirements
+  - Updated `massgen/tool/_computer_use/README.md` and `QUICKSTART.md`
+  - Specified Docker requirements for Claude computer use
+  - Added troubleshooting guide for computer use setup
+
+### Technical Details
+- **Major Focus**: Docker configuration improvements with nested structures for credentials and packages, framework interoperability streaming enhancements, parallel execution safety across all modes, contributor handbook
+- **Contributors**: @ncrispino @Eric-Shang @franklinnwren and the MassGen team
 
 ## [0.1.9] - 2025-11-07
 

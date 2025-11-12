@@ -227,7 +227,78 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.9 - Latest
+### v0.1.11 - Latest
+**New Features:** Skills System, Memory MCP & Rate Limiting
+
+**Configuration Files:**
+- `skills/skills_basic.yaml` - Basic skills system with file search capabilities
+- `skills/skills_with_memory.yaml` - Skills with memory and task planning integration
+- `skills/skills_existing_filesystem.yaml` - Skills integrated into existing project filesystem
+- `rate_limits/rate_limits.yaml` - Rate limiting configuration for API cost management
+- `SKILL.md` - File search skill definition in `massgen/skills/always/file_search/`
+
+**Key Features:**
+- **Skills System**: Modular prompting framework with automatic skill discovery and Docker-compatible mounting
+- **Memory MCP Tool**: Persistent memory management with markdown-based storage and cross-agent sharing
+- **Rate Limiting System**: Multi-dimensional rate limiting (RPM, TPM, RPD) with model-specific thresholds
+- **Memory-Filesystem Integration**: Combined memory MCP tools and filesystem operations for advanced workflows
+- **Enhanced Windows Support**: Improved Claude Code backend for long system prompts on Windows
+
+**Try It:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# Skills System - enable domain-specific capabilities with file search
+# Prerequisites: Docker daemon running (or install openskills locally)
+uv run massgen --config massgen/configs/skills/skills_basic.yaml \
+  "Create cool algorithmic art we can use in GitHub repo"
+
+# Memory with Skills and Task Planning - combined filesystem coordination
+# Prerequisites: Docker daemon running
+uv run massgen --config massgen/configs/skills/skills_with_memory.yaml \
+  "Research neural architectures and document findings"
+
+# Skills with Existing Filesystem - self-extension case study
+# Prerequisites: Docker daemon running
+uv run massgen --config massgen/configs/skills/skills_existing_filesystem.yaml \
+  "Analyze the MassGen codebase to identify common development workflows that could benefit from being codified as skills. Create 1-2 optional skills that would help future agents work more efficiently with the codebase."
+
+# Rate Limiting - manage API costs with multi-dimensional limits
+# Enable rate limiting for any configuration with --enable-rate-limiting flag
+massgen --backend gemini --model gemini-2.5-flash --enable-rate-limiting \
+  "Explain quantum computing"
+```
+
+### v0.1.10
+**New Features:** Framework Interoperability Streaming & Docker Enhancements
+
+**Configuration Files:**
+- `docker_custom_image.yaml` - Custom Docker image with pre-installed packages
+- `docker_github_readonly.yaml` - Docker with read-only GitHub access via gh CLI and git
+- `docker_full_dev_setup.yaml` - Full development environment with authentication
+- `langgraph_lesson_planner_example.yaml` - LangGraph workflow streaming
+- `smolagent_lesson_planner_example.yaml` - SmoLAgent framework streaming
+- `Dockerfile.custom-example` - Example Dockerfile for extending MassGen base image
+
+**Key Features:**
+- **Framework Interoperability Streaming**: Real-time intermediate step streaming for LangGraph and SmoLAgent with log/output distinction
+- **Docker Authentication Restructuring**: Nested `command_line_docker_credentials` with separate `mount` array and `env_vars` array
+- **Docker Custom Image Support**: Extend MassGen base image with your own packages via custom Dockerfiles
+- **Universal Workspace Isolation**: Instance ID generation for safe parallel execution across all modes
+
+**Try It:**
+```bash
+# LangGraph streaming - watch state graph workflow execution in real-time
+massgen --config @examples/tools/custom_tools/interop/langgraph_lesson_planner_example.yaml \
+  "Create a lesson plan for photosynthesis"
+
+# Docker custom image - use your own Docker image with preinstalled packages
+uv run massgen --config @examples/configs/tools/code-execution/docker_custom_image.yaml \
+  "Verify custom packages: sklearn, matplotlib, seaborn, ipython, black, vim, htop, tree"
+```
+
+### v0.1.9
 **New Features:** Session Management & Computer Use Tools
 
 **Configuration Files:**

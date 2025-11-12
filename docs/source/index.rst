@@ -111,17 +111,17 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.11 (November 12, 2025)** - Skills System, Memory MCP & Rate Limiting
+
+Modular skills framework with automatic discovery and file search capabilities, MCP-based memory management with persistent markdown storage and cross-agent sharing, multi-dimensional rate limiting (RPM, TPM, RPD) with model-specific thresholds, and memory-filesystem integration for advanced workflows.
+
+**v0.1.10 (November 10, 2025)** - Framework Interoperability Streaming & Docker Enhancements
+
+Real-time intermediate step streaming for LangGraph and SmoLAgent with log/output distinction, restructured Docker authentication with custom image support, parallel execution safety with universal instance IDs, and MassGen Contributor Handbook at https://massgen.github.io/Handbook/.
+
 **v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
 
 Complete session management system with conversation restoration, Claude and Gemini computer use tools for browser and desktop automation, enhanced config builder with fuzzy model matching, and expanded backend support.
-
-**v0.1.8 (November 5, 2025)** - Automation Mode & DSPy Integration
-
-Automation Mode for LLM agents with silent execution and status monitoring, DSPy question paraphrasing integration with semantic validation, and comprehensive case study documentation.
-
-**v0.1.7 (November 3, 2025)** - Agent Task Planning & Background Execution
-
-Agent task planning system with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows.
 
 Quick Start
 -----------
