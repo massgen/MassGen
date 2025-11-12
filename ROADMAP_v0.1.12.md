@@ -1,69 +1,23 @@
-# MassGen v0.1.11 Roadmap
+# MassGen v0.1.12 Roadmap
 
 ## Overview
 
-Version 0.1.11 focuses on rate limiting and intelligent tool selection, bringing two key enhancements to the MassGen multi-agent coordination experience.
+Version 0.1.12 focuses on intelligent tool selection and semantic search capabilities, bringing key enhancements to the MassGen multi-agent coordination experience.
 
-- **Gemini Rate Limiting System** (Required): ⚡ Multi-dimensional rate limiting for Gemini models to prevent API spam and manage costs
 - **Automatic MCP Tool Selection** (Required): 🔧 Intelligent selection of MCP tools based on task requirements
+- **Semtools/Serena Semantic Search Skill** (Required): 🔍 Implementation of semantic search capabilities as a reusable skill
 
 ## Key Technical Priorities
 
-1. **Gemini Rate Limiting System**: Multi-dimensional rate limiting for Gemini models (RPM, TPM, RPD)
-   **Use Case**: Prevent API spam and manage costs while ensuring smooth operation within Gemini's rate limits
-
-2. **Automatic MCP Tool Selection**: Intelligent selection of MCP tools before task execution based on user prompts
+1. **Automatic MCP Tool Selection**: Intelligent selection of MCP tools before task execution based on user prompts
    **Use Case**: Intelligently select appropriate MCP tools (e.g., Playwright for web testing) based on task requirements, improving performance without requiring users to know which tools to include
+
+2. **Semtools/Serena Semantic Search Skill**: Advanced semantic search capabilities packaged as a reusable skill
+   **Use Case**: Provide intelligent semantic search across codebases, enabling agents to find relevant code and documentation based on meaning rather than just keywords
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Gemini Rate Limiting System (REQUIRED)
-
-**Goal**: Multi-dimensional rate limiting for Gemini models to prevent API quota violations and manage costs
-
-**Owner**: @AbhimanyuAryan (abhimanyuaryan on Discord)
-
-**PR**: [#383](https://github.com/massgen/MassGen/pull/383) (Draft)
-
-#### 1.1 Rate Limiting Core Implementation
-- [ ] Multi-dimensional rate limiting (RPM, TPM, RPD)
-- [ ] Model-specific limits: Flash (9 RPM), Pro (2 RPM)
-- [ ] Sliding window tracking for precise rate management
-- [ ] Request queue management and throttling
-- [ ] Token count tracking and estimation
-
-#### 1.2 Configuration System
-- [ ] External YAML configuration for centralized limit control
-- [ ] Model-specific configuration support
-- [ ] Dynamic limit updates without restart
-- [ ] Default limits for new models
-- [ ] Configuration validation and error handling
-
-#### 1.3 CLI Integration
-- [ ] Optional `--rate-limit` CLI flag to enable/disable
-- [ ] Runtime configuration override support
-- [ ] Status reporting for rate limit state
-- [ ] Cooldown period after agent startup
-- [ ] Clear user messaging for rate limit events
-
-#### 1.4 Testing and Validation
-- [ ] Test sliding window accuracy
-- [ ] Validate model-specific limits
-- [ ] Test YAML configuration loading
-- [ ] Verify mandatory cooldown behavior
-- [ ] Documentation and usage examples
-
-**Success Criteria**:
-- ✅ Rate limiting prevents API quota violations
-- ✅ Model-specific limits work correctly (Flash 9 RPM, Pro 2 RPM)
-- ✅ Sliding window tracking is accurate and efficient
-- ✅ YAML configuration loads and applies correctly
-- ✅ CLI flag enables/disables rate limiting as expected
-- ✅ Mandatory cooldown prevents API bursts on startup
-
----
-
-### 🎯 Milestone 2: Automatic MCP Tool Selection (REQUIRED)
+### 🎯 Milestone 1: Automatic MCP Tool Selection (REQUIRED)
 
 **Goal**: Intelligent selection of MCP tools based on task requirements to improve performance and reduce context pollution
 
@@ -71,28 +25,28 @@ Version 0.1.11 focuses on rate limiting and intelligent tool selection, bringing
 
 **Issue**: [#414](https://github.com/massgen/MassGen/issues/414)
 
-#### 2.1 Pre-Execution Tool Selection
+#### 1.1 Pre-Execution Tool Selection
 - [ ] Intelligent selection of MCP tools before task execution
 - [ ] Analysis of user prompts to identify required tools
 - [ ] Automatic tool loading based on task requirements
 - [ ] Reduction of unnecessary tools in context
 - [ ] Support for common tool categories (web, file, data, etc.)
 
-#### 2.2 Dynamic Tool Refinement
+#### 1.2 Dynamic Tool Refinement
 - [ ] Dynamic tool refinement during execution
 - [ ] Tool addition as task requirements evolve
 - [ ] Tool removal when no longer needed
 - [ ] Adaptive tool selection based on intermediate results
 - [ ] Efficient context management throughout execution
 
-#### 2.3 Filesystem-First Approach
+#### 1.3 Filesystem-First Approach
 - [ ] MCPs appear as files rather than in-context specifications
 - [ ] File-based tool discovery and loading
 - [ ] Reduced context pollution from excessive in-context tools
 - [ ] Efficient tool metadata storage
 - [ ] Fast tool lookup and activation
 
-#### 2.4 User Experience & Testing
+#### 1.4 User Experience & Testing
 - [ ] Eliminate manual tool selection burden for users
 - [ ] Automatic selection outperforms manual selection
 - [ ] Clear logging of tool selection decisions
@@ -109,16 +63,55 @@ Version 0.1.11 focuses on rate limiting and intelligent tool selection, bringing
 
 ---
 
+### 🎯 Milestone 2: Semtools/Serena Semantic Search Skill (REQUIRED)
+
+**Goal**: Implement semantic search capabilities as a reusable skill within the MassGen skills framework
+
+**Owner**: @ncrispino (nickcrispino on Discord)
+
+**Issue**: [#497](https://github.com/massgen/MassGen/issues/497)
+
+#### 2.1 Core Semantic Search Implementation
+- [ ] Implement semtools and serena for semantic search
+- [ ] Support for multiple embedding models
+- [ ] Vector database integration
+- [ ] Efficient indexing and retrieval mechanisms
+- [ ] Support for various file types and formats
+
+#### 2.2 Skills Framework Integration
+- [ ] Package as a reusable skill within MassGen skills framework
+- [ ] Skill configuration and initialization
+- [ ] Integration with existing file search mechanisms
+- [ ] Compatibility with other skills
+- [ ] Documentation for skill usage
+
+#### 2.3 Semantic Understanding Capabilities
+- [ ] Semantic understanding of code structures
+- [ ] Documentation and comment analysis
+- [ ] Configuration file comprehension
+- [ ] Cross-file semantic relationships
+- [ ] Context-aware search results
+
+#### 2.4 Performance and Testing
+- [ ] Benchmark against keyword-based search
+- [ ] Optimize embedding generation and caching
+- [ ] Test with various codebases and languages
+- [ ] Validate search accuracy and relevance
+- [ ] Documentation and usage examples
+
+**Success Criteria**:
+- ✅ Semantic search skill successfully integrates with existing skills framework
+- ✅ Semantic search outperforms keyword-based search for code discovery
+- ✅ Support for multiple embedding models and configurable backends
+- ✅ Efficient indexing and retrieval performance
+- ✅ Comprehensive documentation and examples provided
+- ✅ Works seamlessly with other MassGen skills
+
+---
+
 ## Success Criteria
 
 ### Functional Requirements
-
-**Gemini Rate Limiting:**
-- [ ] Multi-dimensional rate limiting (RPM, TPM, RPD)
-- [ ] Model-specific limits enforced
-- [ ] Sliding window tracking implemented
-- [ ] YAML configuration support
-- [ ] CLI flag for enable/disable
 
 **Automatic MCP Tool Selection:**
 - [ ] Pre-execution tool selection based on prompts
@@ -127,44 +120,51 @@ Version 0.1.11 focuses on rate limiting and intelligent tool selection, bringing
 - [ ] Context pollution reduced
 - [ ] Manual tool selection eliminated
 
+**Semtools/Serena Semantic Search:**
+- [ ] Semantic search skill implemented and integrated
+- [ ] Multiple embedding models supported
+- [ ] Vector database integration functional
+- [ ] Skills framework compatibility achieved
+- [ ] Performance benchmarks completed
+
 ### Performance Requirements
-- [ ] Rate limiting has minimal overhead
 - [ ] Tool selection is fast and efficient
+- [ ] Semantic search indexing is optimized
 - [ ] Overall system remains responsive
-- [ ] Sliding window tracking is performant
+- [ ] Embedding generation is performant
 
 ### Quality Requirements
 - [ ] All tests passing
 - [ ] Comprehensive documentation
-- [ ] YAML configuration examples provided
+- [ ] Configuration examples provided
 - [ ] Error handling is robust
 - [ ] User-facing messages are clear
-- [ ] Rate limit violations prevented
+- [ ] Search relevance is validated
 
 ---
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **Gemini Rate Limiting**: Gemini API integration, YAML configuration system, sliding window implementation, request tracking infrastructure
 - **Automatic MCP Tool Selection**: MCP tool registry, filesystem abstraction, prompt analysis capabilities, dynamic tool loading system
+- **Semtools/Serena Semantic Search**: Skills framework, embedding models, vector database, semtools/serena libraries, filesystem access
 
 ### Risks & Mitigations
-1. **Rate Limit Accuracy**: *Mitigation*: Precise sliding window tracking, token estimation algorithms, extensive testing with real API calls
-2. **Configuration Complexity**: *Mitigation*: Clear YAML schema, validation on load, sensible defaults, comprehensive documentation
-3. **Tool Selection Accuracy**: *Mitigation*: Prompt analysis testing, fallback to manual selection, user feedback integration
-4. **Performance Overhead**: *Mitigation*: Efficient rate tracking, lazy tool loading, minimal context pollution, performance benchmarking
-5. **API Changes**: *Mitigation*: Flexible configuration system, monitoring for API updates, version-specific handling
+1. **Tool Selection Accuracy**: *Mitigation*: Prompt analysis testing, fallback to manual selection, user feedback integration
+2. **Semantic Search Performance**: *Mitigation*: Caching strategies, optimized indexing, lazy loading, performance benchmarking
+3. **Embedding Model Compatibility**: *Mitigation*: Support multiple models, fallback options, clear documentation on model requirements
+4. **Skills Framework Integration**: *Mitigation*: Thorough testing with existing skills, clear API contracts, backward compatibility
+5. **Search Relevance**: *Mitigation*: Continuous tuning, user feedback loop, hybrid search fallback (semantic + keyword)
 
 ---
 
-## Future Enhancements (Post-v0.1.11)
+## Future Enhancements (Post-v0.1.12)
 
-### v0.1.12 Plans
+### v0.1.13 Plans
 - **Parallel File Operations** (@ncrispino): Increase parallelism of file read operations with standard efficiency evaluation
 - **Semtools Integration** (@ncrispino): Semantic search for files, configs, and automated tool discovery
 
-### v0.1.13 Plans
+### v0.1.14 Plans
 - **MassGen Terminal Evaluation** (@ncrispino): Self-evaluation and improvement of frontend/UI through terminal recording
 - **NLIP Integration** (@qidanrui): Natural Language Integration Platform for hierarchy initialization and RL integration
 
@@ -180,10 +180,10 @@ Version 0.1.11 focuses on rate limiting and intelligent tool selection, bringing
 
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
-| Phase 1 | Rate Limiting | Multi-dimensional rate limiting, YAML config, CLI integration | @AbhimanyuAryan | **REQUIRED** |
-| Phase 2 | Tool Selection | Intelligent MCP tool selection, filesystem-first approach, dynamic refinement | @ncrispino | **REQUIRED** |
+| Phase 1 | Tool Selection | Intelligent MCP tool selection, filesystem-first approach, dynamic refinement | @ncrispino | **REQUIRED** |
+| Phase 2 | Semantic Search | Semtools/serena implementation, skills framework integration, semantic capabilities | @ncrispino | **REQUIRED** |
 
-**Target Release**: November 12, 2025 (Wednesday @ 9am PT)
+**Target Release**: November 14, 2025 (Friday @ 9am PT)
 
 ---
 
@@ -191,16 +191,7 @@ Version 0.1.11 focuses on rate limiting and intelligent tool selection, bringing
 
 ### For Contributors
 
-**Phase 1 - Gemini Rate Limiting:**
-1. Implement multi-dimensional rate limiting (PR #383)
-2. Add model-specific limits (Flash 9 RPM, Pro 2 RPM)
-3. Implement sliding window tracking
-4. Create YAML configuration system
-5. Add CLI flag support
-6. Add comprehensive tests for rate limiting
-7. Document rate limiting configuration and usage
-
-**Phase 2 - Automatic MCP Tool Selection:**
+**Phase 1 - Automatic MCP Tool Selection:**
 1. Implement pre-execution tool selection (Issue #414)
 2. Add dynamic tool refinement during execution
 3. Create filesystem-first tool discovery
@@ -208,17 +199,17 @@ Version 0.1.11 focuses on rate limiting and intelligent tool selection, bringing
 5. Add testing with various task types
 6. Document automatic tool selection behavior
 
+**Phase 2 - Semtools/Serena Semantic Search:**
+1. Implement semtools and serena integration (Issue #497)
+2. Create skill wrapper for semantic search
+3. Add support for multiple embedding models
+4. Integrate with vector database
+5. Add benchmarking and performance tests
+6. Document skill usage and configuration
+
 ### For Users
 
-- v0.1.11 brings rate limiting and intelligent tool selection:
-
-  **Gemini Rate Limiting:**
-  - Prevent API quota violations with multi-dimensional limits
-  - Model-specific rate limits (Flash 9 RPM, Pro 2 RPM)
-  - Configurable limits via YAML files
-  - Optional CLI flag to enable/disable
-  - Automatic cooldown on startup to prevent bursts
-  - Better cost management and control
+- v0.1.12 brings intelligent tool selection and semantic search capabilities:
 
   **Automatic MCP Tool Selection:**
   - No more manual tool selection required
@@ -227,6 +218,14 @@ Version 0.1.11 focuses on rate limiting and intelligent tool selection, bringing
   - Reduced context pollution from unused tools
   - Better performance with optimized tool sets
   - Filesystem-first approach for efficient tool discovery
+
+  **Semtools/Serena Semantic Search:**
+  - Advanced semantic search across codebases
+  - Find code based on meaning, not just keywords
+  - Support for multiple embedding models
+  - Integrated as a reusable skill
+  - Better code discovery and understanding
+  - Works with various file types and languages
 
 ---
 
@@ -239,12 +238,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Documentation guidelines
 
 **Contact Track Owners:**
-- Gemini Rate Limiting: @AbhimanyuAryan on Discord (abhimanyuaryan)
 - Automatic MCP Tool Selection: @ncrispino on Discord (nickcrispino)
+- Semtools/Serena Semantic Search: @ncrispino on Discord (nickcrispino)
 
 ---
 
-*This roadmap reflects v0.1.11 priorities focusing on rate limiting and intelligent tool selection.*
+*This roadmap reflects v0.1.12 priorities focusing on intelligent tool selection and semantic search capabilities.*
 
-**Last Updated:** November 10, 2025
+**Last Updated:** November 13, 2025
 **Maintained By:** MassGen Team
