@@ -1,0 +1,40 @@
+# Skills with Task Planning
+# When both use_skills and enable_agent_task_planning are true,
+# the filesystem-based tasks skill is used instead of task MCP
+#
+# Run with:
+#   uv run massgen --config massgen/configs/skills/skills_with_task_planning.yaml "Build a todo list web application with HTML, CSS, and JavaScript"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  coordination:
+    # Enable skills system
+    use_skills: true
+
+    # Enable task planning
+    # With use_skills=true, this uses filesystem-based tasks skill
+    # instead of task MCP for better transparency
+    enable_agent_task_planning: true
+    max_tasks_per_plan: 10
+
+    # Skills directory
+    skills_directory: ".agent/skills"

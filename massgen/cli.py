@@ -1299,6 +1299,9 @@ async def run_question_with_history(
             max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
             enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
             max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
+            use_skills=coord_cfg.get("use_skills", False),
+            organize_workspace=coord_cfg.get("organize_workspace", False),
+            skills_directory=coord_cfg.get("skills_directory", ".agent/skills"),
         )
 
     # Get previous turns and winning agents history from session_info if already loaded,
@@ -1342,7 +1345,8 @@ async def run_question_with_history(
         mode_text = "Multi-Agent"
 
         # Get coordination config from YAML (if present)
-        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        orchestrator_kwargs = kwargs.get("orchestrator", {})
+        coordination_settings = orchestrator_kwargs.get("coordination", {})
         if coordination_settings:
             from .agent_config import CoordinationConfig
 
@@ -1355,6 +1359,9 @@ async def run_question_with_history(
                 ),
                 enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
+                use_skills=coordination_settings.get("use_skills", False),
+                organize_workspace=coordination_settings.get("organize_workspace", False),
+                skills_directory=coordination_settings.get("skills_directory", ".agent/skills"),
             )
 
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
@@ -1572,7 +1579,8 @@ async def run_single_question(
             orchestrator_config.timeout_config = timeout_config
 
         # Get coordination config from YAML (if present)
-        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        orchestrator_kwargs = kwargs.get("orchestrator", {})
+        coordination_settings = orchestrator_kwargs.get("coordination", {})
         if coordination_settings:
             from .agent_config import CoordinationConfig
 
@@ -1585,6 +1593,9 @@ async def run_single_question(
                 ),
                 enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
+                use_skills=coordination_settings.get("use_skills", False),
+                organize_workspace=coordination_settings.get("organize_workspace", False),
+                skills_directory=coordination_settings.get("skills_directory", ".agent/skills"),
             )
 
         # Get orchestrator parameters from config
@@ -1627,6 +1638,9 @@ async def run_single_question(
                 max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
                 enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
+                use_skills=coord_cfg.get("use_skills", False),
+                organize_workspace=coord_cfg.get("organize_workspace", False),
+                skills_directory=coord_cfg.get("skills_directory", ".agent/skills"),
             )
 
         orchestrator = Orchestrator(

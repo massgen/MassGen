@@ -44,6 +44,14 @@ class CoordinationConfig:
                                     to break down complex work, track progress, and coordinate
                                     based on dependencies.
         max_tasks_per_plan: Maximum number of tasks allowed in an agent's task plan.
+        use_skills: If True, enables skills system using openskills. Agents can invoke skills
+                   via bash commands (openskills read <skill-name>). Requires command line
+                   execution to be enabled. When both use_skills and enable_agent_task_planning
+                   are True, filesystem-based tasks skill is used instead of task MCP.
+        organize_workspace: If True, creates separated memory/, tasks/, and workspace/ directories
+                          for better organization when using skills. Optional feature.
+        skills_directory: Path to the skills directory. Default is .agent/skills which is where
+                         openskills installs skills. This directory is scanned for available skills.
     """
 
     enable_planning_mode: bool = False
@@ -53,6 +61,9 @@ class CoordinationConfig:
     max_orchestration_restarts: int = 0
     enable_agent_task_planning: bool = False
     max_tasks_per_plan: int = 10
+    use_skills: bool = False
+    organize_workspace: bool = False
+    skills_directory: str = ".agent/skills"
 
 
 @dataclass

@@ -1,0 +1,35 @@
+# Basic Skills Configuration
+# This example shows how to enable the skills system with default settings
+#
+# Run with:
+#   uv run massgen --config massgen/configs/skills/skills_basic.yaml "Create cool algorithmic art we can use in GitHub repo"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"  # or "local"
+
+  # - id: "agent_b"
+  #   backend:
+  #     type: "openai"
+  #     model: "gpt-5-nano"
+  #     cwd: "workspace2"
+  #     enable_mcp_command_line: true
+  #     command_line_execution_mode: "docker"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  coordination:
+    # Enable skills system
+    use_skills: true
+
+    # Skills are discovered from this directory (default: .agent/skills)
+    # Docker: Anthropic skills pre-installed
+    # Local: Run 'npm i -g openskills' then 'openskills install anthropics/skills --universal -y'
+    skills_directory: ".agent/skills"

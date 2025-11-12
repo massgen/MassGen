@@ -36,6 +36,7 @@ from .coordination_tracker import CoordinationTracker
 
 if TYPE_CHECKING:
     from .dspy_paraphraser import QuestionParaphraser
+
 from .logger_config import get_log_session_dir  # Import to get log directory
 from .logger_config import logger  # Import logger directly for INFO logging
 from .logger_config import (
@@ -231,26 +232,46 @@ class Orchestrator(ChatAgent):
             snapshot_path.mkdir(parents=True, exist_ok=True)
 
         # Configure orchestration paths for each agent with filesystem support
+        # Get skills directory if skills are enabled
+        skills_directory = None
+        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "use_skills"):
+            if self.config.coordination_config.use_skills:
+                skills_directory = self.config.coordination_config.skills_directory
+
         for agent_id, agent in self.agents.items():
             if agent.backend.filesystem_manager:
                 agent.backend.filesystem_manager.setup_orchestration_paths(
                     agent_id=agent_id,
                     snapshot_storage=self._snapshot_storage,
                     agent_temporary_workspace=self._agent_temporary_workspace,
+                    skills_directory=skills_directory,
                 )
+                # Setup organized workspace if requested
+                if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "organize_workspace"):
+                    agent.backend.filesystem_manager.setup_organized_workspace(
+                        organize=self.config.coordination_config.organize_workspace,
+                    )
                 # Update MCP config with agent_id for Docker mode (must be after setup_orchestration_paths)
                 agent.backend.filesystem_manager.update_backend_mcp_config(agent.backend.config)
 
-        # Inject planning tools if enabled
-        logger.info(f"[Orchestrator] Checking planning config: coordination_config exists={hasattr(self.config, 'coordination_config')}")
+        # Validate and setup skills if enabled
+        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "use_skills"):
+            if self.config.coordination_config.use_skills:
+                logger.info("[Orchestrator] Skills enabled, validating configuration")
+                self._validate_skills_config()
+                logger.info("[Orchestrator] Skills validation complete")
+
+        # Inject planning tools if enabled (but not when using skills)
         if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_agent_task_planning"):
-            logger.info(f"[Orchestrator] enable_agent_task_planning={self.config.coordination_config.enable_agent_task_planning}")
             if self.config.coordination_config.enable_agent_task_planning:
-                logger.info(f"[Orchestrator] Injecting planning tools for {len(self.agents)} agents")
-                self._inject_planning_tools_for_all_agents()
-                logger.info("[Orchestrator] Planning tools injection complete")
-        else:
-            logger.info("[Orchestrator] Planning config not found or disabled")
+                # Skip task MCP if skills are enabled (use filesystem-based tasks skill instead)
+                use_skills = hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills
+                if use_skills:
+                    logger.info("[Orchestrator] Using tasks skill instead of task MCP (skills mode enabled)")
+                else:
+                    logger.info(f"[Orchestrator] Injecting planning tools for {len(self.agents)} agents")
+                    self._inject_planning_tools_for_all_agents()
+                    logger.info("[Orchestrator] Planning tools injection complete")
 
     async def _prepare_paraphrases_for_agents(self, question: str) -> None:
         """Generate and assign DSPy paraphrases for the current question."""
@@ -316,6 +337,61 @@ class Orchestrator(ChatAgent):
                 logger.debug(f"Unable to fetch DSPy paraphraser metrics: {exc}")
 
         return status
+
+    def _validate_skills_config(self) -> None:
+        """
+        Validate skills configuration before orchestration.
+
+        Checks that:
+        1. Command line execution is enabled for at least one agent
+        2. Skills directory exists and is not empty
+
+        Raises:
+            RuntimeError: If skills requirements are not met
+        """
+        from pathlib import Path
+
+        # Check if command execution is available
+        has_command_execution = False
+        for agent_id, agent in self.agents.items():
+            if hasattr(agent, "config") and agent.config:
+                enable_cmd = agent.backend.config.get("enable_mcp_command_line", False)
+                if enable_cmd:
+                    has_command_execution = True
+                    logger.info(f"[Orchestrator] Agent {agent_id} has command execution enabled")
+                    break
+
+        if not has_command_execution:
+            raise RuntimeError(
+                "Skills require command line execution to be enabled. " "Set enable_mcp_command_line: true in at least one agent's backend config.",
+            )
+
+        # Check if skills directory exists and has skills
+        skills_dir = Path(self.config.coordination_config.skills_directory)
+        logger.info(f"[Orchestrator] Checking skills directory: {skills_dir}")
+
+        if not skills_dir.exists():
+            raise RuntimeError(
+                f"Skills directory '{skills_dir}' does not exist. "
+                f"Local users: Install openskills with 'npm i -g openskills', "
+                f"then run 'openskills install anthropics/skills --universal -y'. "
+                f"Docker users: Skills are pre-installed in the container.",
+            )
+
+        # Check if directory has any skills (allow both .agent/skills/ and built-in massgen/skills/)
+        has_external_skills = any(skills_dir.iterdir()) if skills_dir.is_dir() else False
+        builtin_skills_dir = Path(__file__).parent / "skills"
+        has_builtin_skills = builtin_skills_dir.exists() and builtin_skills_dir.is_dir()
+
+        if not has_external_skills and not has_builtin_skills:
+            raise RuntimeError(
+                f"Skills directory '{skills_dir}' is empty and no built-in skills found. "
+                f"Local users: Install openskills with 'npm i -g openskills', "
+                f"then run 'openskills install anthropics/skills --universal -y'. "
+                f"Docker users: Skills are pre-installed in the container.",
+            )
+
+        logger.info(f"[Orchestrator] Skills configuration valid (external: {has_external_skills}, builtin: {has_builtin_skills})")
 
     def _inject_planning_tools_for_all_agents(self) -> None:
         """
@@ -2317,6 +2393,19 @@ Your answer:"""
             if self.config.coordination_config.enable_agent_task_planning:
                 planning_guidance = self.message_templates.get_planning_guidance()
                 system_message = system_message + planning_guidance
+
+            # Add skills system message if enabled
+            if hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills:
+                from pathlib import Path
+
+                from massgen.skills_manager import scan_skills
+
+                skills_dir = Path(self.config.coordination_config.skills_directory)
+                skills = scan_skills(skills_dir)
+                skills_msg = self.message_templates.skills_system_message(skills)
+                system_message = system_message + skills_msg
+                logger.info(f"[Orchestrator] Injected skills system message for {agent_id} ({len(skills)} skills available)")
+                logger.info(f"[Orchestrator] Skills message content:\n{skills_msg[:2000]}")
 
             conversation_messages = [
                 {"role": "system", "content": system_message},

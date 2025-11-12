@@ -1117,6 +1117,62 @@ Based on the coordination process above, present your final answer:"""
 
         return "\n".join(parts)
 
+    def skills_system_message(self, skills: List[Dict[str, str]]) -> str:
+        """Generate skills system prompt with available skills table.
+
+        Args:
+            skills: List of skill dictionaries with keys: name, description, location
+
+        Returns:
+            Formatted skills system message for agent system prompt
+
+        Example:
+            >>> skills = [{"name": "pdf", "description": "PDF toolkit", "location": "project"}]
+            >>> msg = templates.skills_system_message(skills)
+        """
+        if "skills_system_message" in self._template_overrides:
+            return str(self._template_overrides["skills_system_message"])
+
+        # Build skills table
+        skills_table = []
+        for skill in skills:
+            skills_table.append(
+                f"""
+<skill>
+<name>{skill['name']}</name>
+<description>{skill['description']}</description>
+<location>{skill['location']}</location>
+</skill>""",
+            )
+
+        skills_xml = "\n".join(skills_table) if skills_table else "<no_skills_available />"
+
+        return f"""
+<skills_system priority="1">
+
+## Available Skills
+
+<!-- SKILLS_TABLE_START -->
+<usage>
+When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively.
+
+How to use skills:
+- Invoke: execute_command(command="openskills read <skill-name>")
+- The skill content will load with detailed instructions
+- Base directory provided in output for resolving bundled resources
+
+Usage notes:
+- Only use skills listed in <available_skills> below
+- Do not invoke a skill that is already loaded in your context
+</usage>
+
+<available_skills>
+{skills_xml}
+</available_skills>
+<!-- SKILLS_TABLE_END -->
+
+</skills_system>"""
+
 
 # ### IMPORTANT Evaluation Note:
 # When evaluating other agents' work, focus on the CONTENT and FUNCTIONALITY of their files.

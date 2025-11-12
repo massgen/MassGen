@@ -1,0 +1,60 @@
+# Skills with Organized Workspace
+# Creates separated memory/, tasks/, and workspace/ directories
+# for cleaner organization when using skills
+#
+# Run with:
+#   uv run massgen --config massgen/configs/skills/skills_organized_workspace.yaml "Analyze this codebase and suggest refactoring improvements"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  coordination:
+    # Enable skills system
+    use_skills: true
+
+    # Enable task planning (uses filesystem-based tasks skill)
+    enable_agent_task_planning: true
+
+    # Create organized workspace structure
+    # Creates memory/, tasks/, workspace/ directories
+    organize_workspace: true
+
+    # Skills directory
+    skills_directory: ".agent/skills"
+
+# Example workspace structure when organize_workspace=true:
+#
+# agent_workspace/
+#   ├── memory/              # Long-term context (memory skill)
+#   ├── tasks/               # Task plans (tasks skill)
+#   │   └── plan.json
+#   └── workspace/           # Main working directory
+#       └── your_files.py
+#
+# temp_workspaces/
+#   ├── agent1/
+#   │   ├── memory/          # Agent 1's memories (read-only)
+#   │   ├── tasks/           # Agent 1's task plan (read-only)
+#   │   └── workspace/       # Agent 1's work (read-only)
+#   └── agent2/
+#       ├── memory/
+#       ├── tasks/
+#       └── workspace/

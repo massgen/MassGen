@@ -457,6 +457,7 @@ class DockerManager:
         workspace_path: Path,
         temp_workspace_path: Optional[Path] = None,
         context_paths: Optional[List[Dict[str, Any]]] = None,
+        skills_directory: Optional[str] = None,
     ) -> str:
         """
         Create and start a persistent Docker container for an agent.
@@ -473,6 +474,7 @@ class DockerManager:
             temp_workspace_path: Path to shared temp workspace (mounted at same path, read-only)
             context_paths: List of context path dicts with 'path', 'permission', and optional 'name' keys
                           (each mounted at its host path)
+            skills_directory: Path to skills directory (e.g., .agent/skills) to mount read-only
 
         Returns:
             Container ID
@@ -544,6 +546,20 @@ class DockerManager:
 
                 volumes[str(ctx_path)] = {"bind": str(ctx_path), "mode": mode}
                 mount_info.append(f"      {ctx_path} ← {ctx_path} ({mode})")
+
+        # Mount skills directory to ~/.agent/skills (read-only) if provided
+        # openskills expects skills in ~/.agent/skills, so we mount the host's
+        # skills directory there regardless of the host path
+        if skills_directory:
+            skills_path = Path(skills_directory).resolve()
+            if skills_path.exists():
+                # Mount to /home/massgen/.agent/skills so openskills can find them
+                container_skills_path = "/home/massgen/.agent/skills"
+                volumes[str(skills_path)] = {"bind": container_skills_path, "mode": "ro"}
+                mount_info.append(f"      {skills_path} → {container_skills_path} (ro)")
+                logger.info(f"[Docker] Mounting skills directory: {skills_path} → {container_skills_path}")
+            else:
+                logger.warning(f"[Docker] Skills directory does not exist: {skills_path}")
 
         # Add credential file mounts
         credential_mounts = self._build_credential_mounts()
