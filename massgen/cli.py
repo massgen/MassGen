@@ -3055,7 +3055,7 @@ async def main(args):
         agents = create_agents_from_config(
             config,
             orchestrator_cfg,
-            enable_rate_limit=enable_rate_limit, 
+            enable_rate_limit=enable_rate_limit,
             config_path=str(resolved_path) if resolved_path else None,
             memory_session_id=memory_session_id,
             debug=args.debug,

@@ -1,9 +1,9 @@
 # Rate Limit Configuration for MassGen Backends
 # This file defines rate limits for different AI provider models
-# 
+#
 # Limit Types:
 # - rpm: Requests Per Minute
-# - tpm: Tokens Per Minute  
+# - tpm: Tokens Per Minute
 # - rpd: Requests Per Day
 #
 # Format:
@@ -20,14 +20,14 @@ gemini:
     rpm: 9        # Conservative: 9 instead of 10 (actual limit: 10)
     tpm: 240000   # Conservative: 240K instead of 250K (actual limit: 250K)
     rpd: 245      # Conservative: 245 instead of 250 (actual limit: 250)
-    
-  # Gemini 2.5 Pro Model  
+
+  # Gemini 2.5 Pro Model
   # Source: Google AI Studio rate limits dashboard
   gemini-2.5-pro:
     rpm: 2        # Very limited! (actual limit: 2)
     tpm: 120000   # Conservative: 120K instead of 125K (actual limit: 125K)
     rpd: 48       # Conservative: 48 instead of 50 (actual limit: 50)
-    
+
   # Default fallback for other Gemini models
   default:
     rpm: 7
@@ -41,7 +41,7 @@ gemini:
 #     rpm: 500
 #     tpm: 150000
 #     rpd: 10000
-#   
+#
 #   gpt-4-turbo:
 #     rpm: 500
 #     tpm: 300000

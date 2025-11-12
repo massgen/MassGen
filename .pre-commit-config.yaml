@@ -121,6 +121,7 @@ repos:
         entry: python scripts/precommit_validate_configs.py
         language: system
         files: ^massgen/configs/.*\.(yaml|yml)$
+        exclude: ^massgen/configs/rate_limits/
         pass_filenames: true
       - id: sync-readme-pypi
         name: Auto-sync README_PYPI.md when README.md changes

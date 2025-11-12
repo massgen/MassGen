@@ -8,4 +8,4 @@ across different AI providers (Gemini, OpenAI, Claude, etc.).
 
 from .rate_limit_config import RateLimitConfig, get_rate_limit_config
 
-__all__ = ['RateLimitConfig', 'get_rate_limit_config']
+__all__ = ["RateLimitConfig", "get_rate_limit_config"]

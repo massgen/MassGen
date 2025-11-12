@@ -54,7 +54,7 @@ Add rate limits for any provider:
 ### RPM (Requests Per Minute)
 Maximum number of API requests allowed per minute (60-second sliding window).
 
-### TPM (Tokens Per Minute)  
+### TPM (Tokens Per Minute)
 Maximum number of tokens (input + output) allowed per minute (60-second sliding window).
 
 ### RPD (Requests Per Day)
@@ -79,7 +79,7 @@ openai:
     rpm: 500
     tpm: 150000
     rpd: 10000
-    
+
   gpt-3.5-turbo:
     rpm: 3000
     tpm: 250000
