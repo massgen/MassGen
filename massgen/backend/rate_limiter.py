@@ -11,6 +11,8 @@ import time
 from collections import deque
 from typing import Any, Dict, Optional
 
+from ..logger_config import logger
+
 
 class RateLimiter:
     """
@@ -73,8 +75,6 @@ class RateLimiter:
 
                 if wait_time > 0:
                     # Log waiting information
-                    from .logger_config import logger
-
                     logger.info(
                         f"[RateLimiter] Rate limit reached ({len(self.request_times)}/{self.max_requests} " f"requests in {self.time_window}s window). Waiting {wait_time:.2f}s...",
                     )
@@ -223,8 +223,6 @@ class MultiRateLimiter:
 
             # If we need to wait, do it
             if max_wait_time > 0:
-                from .logger_config import logger
-
                 reason_str = " and ".join(wait_reasons)
                 logger.info(
                     f"[MultiRateLimiter] Rate limit reached: {reason_str}. " f"Waiting {max_wait_time:.2f}s...",

@@ -1,11 +1,14 @@
 Memory Filesystem Mode
 ======================
 
+.. warning::
+   **This feature is currently in development and experimental.** Multi-turn persistence and some advanced features may not work as expected. For production use, see :doc:`memory` for the stable persistent memory system with Qdrant.
+
 MassGen's filesystem-based memory mode provides a simple, transparent two-tier memory system for agents. Memories are automatically saved to the filesystem, visible across agents, and can be managed using MCP tools.
 
 .. note::
 
-   This is different from the persistent memory system (``memory.rst``). Filesystem mode is designed for transparent, file-based memory storage suitable for coordination and cross-agent visibility, while persistent memory uses vector databases for semantic retrieval across sessions.
+   This is different from the :doc:`memory` system. Filesystem mode is designed for transparent, file-based memory storage suitable for coordination and cross-agent visibility, while persistent memory uses vector databases for semantic retrieval across sessions.
 
 .. contents:: Table of Contents
    :local:
@@ -705,174 +708,20 @@ Filesystem Mode vs. Skills System
 - Skills: Pre-existing knowledge (how to use tools, workflows)
 - Memory: Runtime discoveries (user prefs, findings, decisions)
 
-Known Limitations and Future Work
-----------------------------------
+Known Limitations
+-----------------
 
-Current Limitations
-~~~~~~~~~~~~~~~~~~~
+This feature is experimental. Key limitations:
 
-**1. Multi-Turn Memory Persistence**
+1. **Multi-Turn Persistence**: Memories may not persist across turns in multi-turn mode. Use :doc:`memory` for cross-session persistence.
 
-**Current Behavior:**
-   Memories persist **within a single orchestration session** (one turn). When a new turn starts in multi-turn mode, agent workspaces are refreshed, and previous memories may not be automatically available.
+2. **Dynamic Updates**: Memory updates appear on the next turn, not immediately during conversation.
 
-**Status:**
-   - ⚠️ **Not yet verified**: Multi-turn memory persistence needs testing
-   - Previous workspaces exist in ``temp_workspaces/`` from prior turns
-   - Unclear if memories are automatically loaded from previous workspaces
+3. **No Semantic Search**: Retrieval by exact name only. No similarity search or automatic relevance ranking.
 
-**Workaround:**
-   - Memories should be saved to a persistent location outside agent workspaces
-   - Or manually copy memories from previous workspace to new workspace at turn start
-   - Use long-term persistent memory (Qdrant) for cross-session knowledge
+4. **Token Management**: No automatic enforcement of memory size limits. Keep short-term memories under 1000 tokens each.
 
-**Future Enhancement:**
-   Implement automatic memory migration from previous winning agents' workspaces:
-
-   .. code-block:: python
-
-      # Proposed: Load memories from previous turn's winner
-      if previous_turn_winner and previous_turn_winner.workspace_path:
-          previous_memory_dir = previous_turn_winner.workspace_path / "memory"
-          if previous_memory_dir.exists():
-              # Copy or merge memories into current workspace
-              merge_memories_from_previous_turn(previous_memory_dir)
-
-**2. Dynamic Memory Updates During Conversation**
-
-**Current Behavior:**
-   System prompt is built once per turn. If memories are created/updated mid-conversation, they appear in system prompt on the **next turn**, not immediately.
-
-**Impact:**
-   - Agent A creates a memory → Agent B doesn't see it until next system message
-   - Within a single coordination round, memory updates don't propagate instantly
-
-**Future Enhancement:**
-   - Rebuild system message on each agent message (expensive)
-   - Incremental injection via ``append_system_prompt`` parameter
-   - Event-based notification when memories change
-
-**3. Memory Size and Token Limits**
-
-**Current Behavior:**
-   No automatic enforcement of memory size limits. Large short-term memories can consume excessive context window tokens.
-
-**Recommendations:**
-   - Keep short-term memories <1000 tokens each
-   - Total short-term <10k tokens recommended
-   - Monitor context usage manually
-
-**Future Enhancement:**
-   - Automatic token counting and warnings
-   - Automatic compression/summarization when approaching limits
-   - Smart memory tier promotion/demotion based on usage
-
-**4. No Semantic Search or Retrieval**
-
-**Current State:**
-   Memories are retrieved by exact name only. No semantic search, no similarity matching, no automatic relevance ranking.
-
-**Comparison to Persistent Memory:**
-   - Filesystem mode: ``load_memory(name="exact_name")``
-   - Persistent memory (Qdrant): Semantic search by content similarity
-
-**Future Enhancement:**
-   - Add semantic embedding for long-term memories
-   - Implement ``search_memories(query="...")`` tool
-   - Automatic relevance-based loading suggestions
-
-**5. Memory Conflicts and Versioning**
-
-**Current Behavior:**
-   - Each agent can create memories with the same name
-   - No conflict resolution or versioning
-   - Last write wins if two agents update simultaneously
-
-**Future Enhancement:**
-   - Memory ownership and permissions
-   - Conflict detection and merge strategies
-   - Version history and rollback capability
-
-Planned Features
-~~~~~~~~~~~~~~~~
-
-**Near-Term (Next Release)**
-
-1. **Multi-Turn Memory Migration**
-   - Automatically copy memories from previous turn's winning agent
-   - Merge memories from multiple previous agents
-   - Configurable retention policies
-
-2. **Memory Compression**
-   - Automatic summarization when approaching token limits
-   - LLM-based compression for long-term memories
-   - Preserve key information while reducing size
-
-3. **Memory Cleanup Tools**
-   - ``list_all_memories()`` - Browse all memories
-   - ``cleanup_memories(older_than=...)`` - Remove stale memories
-   - ``archive_memory(name)`` - Move to archival tier
-
-**Mid-Term (Future Releases)**
-
-4. **Archival Tier (Tier 3)**
-   - Write-only memory for historical context
-   - Semantic search for retrieval
-   - Unlimited storage, minimal token cost
-
-5. **Memory Analytics**
-   - Track memory usage patterns
-   - Automatic tier recommendations
-   - Memory effectiveness metrics
-
-6. **RAG Integration (Tier 4)**
-   - External vector database connection
-   - Massive knowledge base support
-   - Custom retrieval logic via MCP
-
-**Long-Term (Research)**
-
-7. **Intelligent Memory Management**
-   - AI-driven memory importance scoring
-   - Automatic promotion/demotion between tiers
-   - Predictive memory loading
-
-8. **Cross-Session Learning**
-   - Persistent memory across orchestration sessions
-   - Knowledge accumulation over time
-   - Transfer learning between projects
-
-Testing Multi-Turn Memory
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**To verify multi-turn memory persistence**, test:
-
-.. code-block:: bash
-
-   # Turn 1: Create memories
-   uv run massgen --config test_config.yaml "Create memories about coding preferences"
-
-   # Turn 2: Check if memories persist
-   uv run massgen --config test_config.yaml --continue "What are my coding preferences?"
-
-**Expected Behavior (if working):**
-   Agent should have access to memories from Turn 1
-
-**Current Status:**
-   ⚠️ **Needs testing and validation**
-
-**How to check:**
-
-1. Inspect workspace directories after Turn 1:
-
-   .. code-block:: bash
-
-      ls temp_workspaces/workspace1_*/memory/short_term/
-
-2. Check if Turn 2 workspace loads these memories
-3. Look for orchestrator logs about memory loading
-
-**Please report findings** to help improve multi-turn support!
+5. **Conflict Resolution**: No versioning or conflict detection. Last write wins.
 
 Related Documentation
 ---------------------
