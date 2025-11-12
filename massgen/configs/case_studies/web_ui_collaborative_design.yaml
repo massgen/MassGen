@@ -1,0 +1,175 @@
+# Web UI Development: Multi-Agent Competitive Design Case Study
+# Three agents independently create complete dashboard implementations,
+# then vote for the best solution. The winner deploys to production.
+#
+# Run with:
+#   massgen --config @examples/case_studies/web_ui_collaborative_design "Design and build a modern, responsive web UI for a 'MassGen Dashboard' that visualizes multi-agent coordination in real-time. The dashboard should include: 1) A header with navigation and branding, 2) A main grid showing live agent cards with status indicators (thinking/generating/voting), 3) An interactive timeline visualization of the coordination process, 4) A comparison panel for viewing and voting on agent outputs, 5) Dark/light theme support with smooth transitions, 6) Fully responsive design (mobile, tablet, desktop), 7) Accessibility features (ARIA labels, keyboard navigation), and 8) Modern animations and micro-interactions. Use vanilla HTML, CSS, and JavaScript with no external frameworks. Include mock data for demonstration."
+
+coordination:
+  mode: "grok_heavy"  # Multi-round refinement with voting
+  max_rounds: 2
+  voting:
+    strategy: "consensus"
+    min_agreement: 0.51
+  max_restarts: 3  # Allow agents to refine after seeing competitors
+
+orchestrator:
+  log_level: "DEBUG"
+  display_mode: "terminal"
+  
+  # Production deployment directory with write permissions for winner
+  context_paths:
+    - path: "massgen/configs/resources/dashboard_demo"
+      permission: "write"
+
+agents:
+  - id: "gpt5_solution_a"
+    backend:
+      type: openai
+      model: "gpt-5-nano"
+      text:
+        verbosity: "high"
+      reasoning:
+        effort: "high"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
+    
+    system_message: |
+      You are a full-stack web developer tasked with creating a COMPLETE dashboard implementation.
+      
+      Your task: Build a fully functional MassGen Dashboard with ALL requirements:
+      1. Header with navigation and branding
+      2. Agent cards grid with status indicators (thinking/generating/voting)
+      3. Interactive timeline visualization
+      4. Comparison panel for voting
+      5. Dark/light theme toggle with smooth transitions
+      6. Fully responsive (mobile/tablet/desktop)
+      7. Complete accessibility (ARIA labels, keyboard navigation)
+      8. Modern animations and micro-interactions
+      
+      Create in your workspace:
+      - index.html (complete HTML with semantic structure)
+      - styles.css (all styling with CSS variables for theming)
+      - script.js (all interactivity, theme switching, mock data)
+      
+      Make it production-ready with:
+      - Clean, well-commented code
+      - Mobile-first responsive design
+      - Smooth animations and transitions
+      - Mock data for demonstration
+      - No external dependencies (vanilla JS only)
+      
+      After generating, review other agents' solutions and vote for the best implementation based on:
+      - Completeness (all 8 requirements met)
+      - Code quality and organization
+      - Visual design and polish
+      - Responsiveness and accessibility
+      - User experience
+    
+    mcp_servers:
+      - filesystem
+      - workspace_copy
+
+  - id: "claude_solution_b"
+    backend:
+      type: claude
+      model: "claude-3-5-haiku-20241022"
+      enable_code_execution: true
+    
+    system_message: |
+      You are a full-stack web developer tasked with creating a COMPLETE dashboard implementation.
+      
+      Your task: Build a fully functional MassGen Dashboard with ALL requirements:
+      1. Header with navigation and branding
+      2. Agent cards grid with status indicators (thinking/generating/voting)
+      3. Interactive timeline visualization
+      4. Comparison panel for voting
+      5. Dark/light theme toggle with smooth transitions
+      6. Fully responsive (mobile/tablet/desktop)
+      7. Complete accessibility (ARIA labels, keyboard navigation)
+      8. Modern animations and micro-interactions
+      
+      Create in your workspace:
+      - dashboard.html (complete HTML with semantic structure and ARIA)
+      - dashboard.css (all styling with CSS variables, focus on accessibility)
+      - dashboard.js (all interactivity with keyboard support, mock data)
+      
+      Prioritize:
+      - WCAG 2.1 AA compliance
+      - Keyboard navigation (tab, enter, arrows, escape)
+      - ARIA landmarks, labels, and live regions
+      - Performance optimization
+      - Clean code architecture
+      - Mock data for demonstration
+      
+      After generating, review other agents' solutions and vote for the best implementation based on:
+      - Accessibility features
+      - Code quality and maintainability
+      - User experience and usability
+      - Completeness of requirements
+      - Performance optimization
+    
+    mcp_servers:
+      - filesystem
+      - workspace_copy
+
+  - id: "gemini_solution_c"
+    backend:
+      type: gemini
+      model: "gemini-2.5-flash"
+      enable_web_search: true
+    
+    system_message: |
+      You are a full-stack web developer tasked with creating a COMPLETE dashboard implementation.
+      
+      Your task: Build a fully functional MassGen Dashboard with ALL requirements:
+      1. Header with navigation and branding
+      2. Agent cards grid with status indicators (thinking/generating/voting)
+      3. Interactive timeline visualization
+      4. Comparison panel for voting
+      5. Dark/light theme toggle with smooth transitions
+      6. Fully responsive (mobile/tablet/desktop)
+      7. Complete accessibility (ARIA labels, keyboard navigation)
+      8. Modern animations and micro-interactions
+      
+      Create in your workspace:
+      - index.html (complete HTML with beautiful structure)
+      - style.css (stunning visual design with CSS variables and animations)
+      - app.js (all interactivity with smooth transitions, mock data)
+      
+      Focus on:
+      - Beautiful visual design (gradients, shadows, depth)
+      - Smooth animations and micro-interactions
+      - Modern color schemes (dark/light themes)
+      - Professional typography and spacing
+      - Engaging status indicators
+      - Mock data for demonstration
+      
+      After generating, review other agents' solutions and vote for the best implementation based on:
+      - Visual design and aesthetics
+      - Animation quality and smoothness
+      - User interface polish
+      - Completeness of requirements
+      - Overall user experience
+    
+    mcp_servers:
+      - filesystem
+      - workspace_copy
+
+mcp_servers:
+  filesystem:
+    command: "npx"
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-filesystem"
+      - "massgen/configs/resources"
+      - "massgen/configs/resources/dashboard_demo"
+    
+  workspace_copy:
+    command: "uv"
+    args:
+      - "run"
+      - "python"
+      - "-m"
+      - "massgen.mcp_tools.workspace_copy_server"
