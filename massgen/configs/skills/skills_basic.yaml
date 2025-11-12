@@ -7,19 +7,21 @@
 agents:
   - id: "agent_a"
     backend:
-      type: "openai"
-      model: "gpt-5-nano"
+      # type: "openai"
+      # model: "gpt-5-mini"
+      type: "gemini"
+      model: "gemini-2.5-flash"
       cwd: "workspace1"
       enable_mcp_command_line: true
       command_line_execution_mode: "docker"  # or "local"
 
-  # - id: "agent_b"
-  #   backend:
-  #     type: "openai"
-  #     model: "gpt-5-nano"
-  #     cwd: "workspace2"
-  #     enable_mcp_command_line: true
-  #     command_line_execution_mode: "docker"
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
 
 orchestrator:
   snapshot_storage: "snapshots"
@@ -33,3 +35,6 @@ orchestrator:
     # Docker: Anthropic skills pre-installed
     # Local: Run 'npm i -g openskills' then 'openskills install anthropics/skills --universal -y'
     skills_directory: ".agent/skills"
+
+    # enable planning
+    enable_agent_task_planning: true

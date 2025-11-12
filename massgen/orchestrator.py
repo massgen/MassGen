@@ -232,11 +232,13 @@ class Orchestrator(ChatAgent):
             snapshot_path.mkdir(parents=True, exist_ok=True)
 
         # Configure orchestration paths for each agent with filesystem support
-        # Get skills directory if skills are enabled
+        # Get skills configuration if skills are enabled
         skills_directory = None
+        massgen_skills = []
         if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "use_skills"):
             if self.config.coordination_config.use_skills:
                 skills_directory = self.config.coordination_config.skills_directory
+                massgen_skills = self.config.coordination_config.massgen_skills
 
         for agent_id, agent in self.agents.items():
             if agent.backend.filesystem_manager:
@@ -245,12 +247,14 @@ class Orchestrator(ChatAgent):
                     snapshot_storage=self._snapshot_storage,
                     agent_temporary_workspace=self._agent_temporary_workspace,
                     skills_directory=skills_directory,
+                    massgen_skills=massgen_skills,
                 )
-                # Setup organized workspace if requested
-                if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "organize_workspace"):
-                    agent.backend.filesystem_manager.setup_organized_workspace(
-                        organize=self.config.coordination_config.organize_workspace,
-                    )
+                # Setup workspace directories for massgen skills
+                if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "massgen_skills"):
+                    if self.config.coordination_config.massgen_skills:
+                        agent.backend.filesystem_manager.setup_massgen_skill_directories(
+                            massgen_skills=self.config.coordination_config.massgen_skills,
+                        )
                 # Update MCP config with agent_id for Docker mode (must be after setup_orchestration_paths)
                 agent.backend.filesystem_manager.update_backend_mcp_config(agent.backend.config)
 
@@ -2398,14 +2402,59 @@ Your answer:"""
             if hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills:
                 from pathlib import Path
 
-                from massgen.skills_manager import scan_skills
+                from massgen.filesystem_manager.skills_manager import scan_skills
 
+                # Scan all available skills (external + built-in)
                 skills_dir = Path(self.config.coordination_config.skills_directory)
-                skills = scan_skills(skills_dir)
+                all_skills = scan_skills(skills_dir)
+
+                # Log what we found
+                builtin_count = len([s for s in all_skills if s["location"] == "builtin"])
+                project_count = len([s for s in all_skills if s["location"] == "project"])
+                logger.info(f"[Orchestrator] Scanned skills: {builtin_count} builtin, {project_count} project")
+                logger.info(f"[Orchestrator] Built-in skills found: {[s['name'] for s in all_skills if s['location'] == 'builtin']}")
+
+                # Only include external/project skills in the skills table
+                # Built-in skills are auto-loaded directly instead
+                skills = [s for s in all_skills if s["location"] == "project"]
+
+                # Auto-load built-in skills (from always/ and configured optional/)
+                # These are injected directly into system prompt, not listed in skills table
+                builtin_skills_to_load = []
+                if hasattr(self.config.coordination_config, "massgen_skills") and self.config.coordination_config.massgen_skills:
+                    configured_massgen_skills = set(self.config.coordination_config.massgen_skills)
+                    logger.info(f"[Orchestrator] Configured massgen_skills: {configured_massgen_skills}")
+
+                    # Load configured optional skills
+                    for skill in all_skills:
+                        if skill["location"] == "builtin" and skill["name"] in configured_massgen_skills:
+                            builtin_skills_to_load.append(skill)
+                            logger.info(f"[Orchestrator] Auto-loading MassGen skill: {skill['name']}")
+
+                # Load built-in skills content and inject directly
+                if builtin_skills_to_load:
+                    builtin_skills_base = Path(__file__).parent / "skills"
+                    for skill in builtin_skills_to_load:
+                        # Check both always/ and optional/ subdirectories
+                        for subdir in ["always", "optional"]:
+                            skill_md_path = builtin_skills_base / subdir / skill["name"] / "SKILL.md"
+                            if skill_md_path.exists():
+                                skill_content = skill_md_path.read_text(encoding="utf-8")
+                                # Strip YAML frontmatter and inject just the markdown content
+                                if skill_content.startswith("---"):
+                                    parts = skill_content.split("---", 2)
+                                    if len(parts) >= 3:
+                                        skill_content = parts[2].strip()
+                                system_message += f"\n\n<massgen_skill name=\"{skill['name']}\">\n{skill_content}\n</massgen_skill>"
+                                logger.info(f"[Orchestrator] Injected {skill['name']} SKILL.md content into system prompt")
+                                break
+
+                # Add skills table for external skills only
                 skills_msg = self.message_templates.skills_system_message(skills)
                 system_message = system_message + skills_msg
-                logger.info(f"[Orchestrator] Injected skills system message for {agent_id} ({len(skills)} skills available)")
-                logger.info(f"[Orchestrator] Skills message content:\n{skills_msg[:2000]}")
+                logger.info(f"[Orchestrator] Injected skills system message for {agent_id} ({len(skills)} external skills in table, {len(builtin_skills_to_load)} built-in skills auto-loaded)")
+                if skills:
+                    logger.info(f"[Orchestrator] Skills message content:\n{skills_msg[:2000]}")
 
             conversation_messages = [
                 {"role": "system", "content": system_message},

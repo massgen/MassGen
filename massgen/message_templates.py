@@ -1133,45 +1133,49 @@ Based on the coordination process above, present your final answer:"""
         if "skills_system_message" in self._template_overrides:
             return str(self._template_overrides["skills_system_message"])
 
-        # Build skills table
-        skills_table = []
-        for skill in skills:
-            skills_table.append(
-                f"""
-<skill>
-<name>{skill['name']}</name>
-<description>{skill['description']}</description>
-<location>{skill['location']}</location>
-</skill>""",
-            )
-
-        skills_xml = "\n".join(skills_table) if skills_table else "<no_skills_available />"
+        # Build skills table in markdown format
+        if not skills:
+            skills_table = "_No external skills available_"
+        else:
+            table_rows = ["| Skill | Description |", "|-------|-------------|"]
+            for skill in skills:
+                # Escape pipe characters in description
+                desc = skill["description"].replace("|", "\\|")
+                table_rows.append(f"| **{skill['name']}** | {desc} |")
+            skills_table = "\n".join(table_rows)
 
         return f"""
-<skills_system priority="1">
-
 ## Available Skills
 
-<!-- SKILLS_TABLE_START -->
-<usage>
-When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively.
+**IMPORTANT**: You have access to specialized skills that provide domain-specific knowledge, workflows, and tools.
 
-How to use skills:
-- Invoke: execute_command(command="openskills read <skill-name>")
-- The skill content will load with detailed instructions
-- Base directory provided in output for resolving bundled resources
+Before starting any (sub)task, **ALWAYS think about the relevant available skills below**, then load them as needed.
 
-Usage notes:
-- Only use skills listed in <available_skills> below
-- Do not invoke a skill that is already loaded in your context
-</usage>
+### How to Use Skills
 
-<available_skills>
-{skills_xml}
-</available_skills>
-<!-- SKILLS_TABLE_END -->
+Load a skill with: `execute_command(command="openskills read <skill-name>")`
 
-</skills_system>"""
+The skill content will load with:
+- Detailed instructions and workflows
+- Domain-specific best practices
+- Bundled resources (scripts, templates, references)
+
+### When to Load Skills
+
+- **AT THE START**: Review skill descriptions before beginning work
+- **PROACTIVELY**: Load any skill that seems relevant to the task, even if you think you can do it without
+- **WHEN UNSURE**: Load it anyway - the cost is minimal and the benefit can be substantial
+
+Skills are specifically designed for common tasks. If a skill exists for your task, use it - skills contain tested workflows and tools that will make your work better and faster.
+
+When submitting a new answer, reference any skills you loaded and how they helped.
+
+### Available Skills
+
+{skills_table}
+
+**Note**: Only use skills listed above. Do not invoke a skill that is already loaded in your context.
+"""
 
 
 # ### IMPORTANT Evaluation Note:

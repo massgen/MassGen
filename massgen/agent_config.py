@@ -9,7 +9,7 @@ deprecated patterns. Update to reflect current backend architecture.
 
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from .message_templates import MessageTemplates
@@ -48,8 +48,11 @@ class CoordinationConfig:
                    via bash commands (openskills read <skill-name>). Requires command line
                    execution to be enabled. When both use_skills and enable_agent_task_planning
                    are True, filesystem-based tasks skill is used instead of task MCP.
-        organize_workspace: If True, creates separated memory/, tasks/, and workspace/ directories
-                          for better organization when using skills. Optional feature.
+        massgen_skills: List of MassGen built-in skills to enable. Available skills:
+                       - "memory": Persistent memory skill (creates memory/ dir)
+                       - "tasks": Task planning skill (creates tasks/ dir)
+                       - "file_search": File search skill (no dir needed)
+                       When any skill that needs a dir is enabled, workspace/ is also created.
         skills_directory: Path to the skills directory. Default is .agent/skills which is where
                          openskills installs skills. This directory is scanned for available skills.
     """
@@ -62,7 +65,7 @@ class CoordinationConfig:
     enable_agent_task_planning: bool = False
     max_tasks_per_plan: int = 10
     use_skills: bool = False
-    organize_workspace: bool = False
+    massgen_skills: List[str] = field(default_factory=list)
     skills_directory: str = ".agent/skills"
 
 

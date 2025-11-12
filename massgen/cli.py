@@ -1300,7 +1300,7 @@ async def run_question_with_history(
             enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
             max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
             use_skills=coord_cfg.get("use_skills", False),
-            organize_workspace=coord_cfg.get("organize_workspace", False),
+            massgen_skills=coord_cfg.get("massgen_skills", []),
             skills_directory=coord_cfg.get("skills_directory", ".agent/skills"),
         )
 
@@ -1360,7 +1360,7 @@ async def run_question_with_history(
                 enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
                 use_skills=coordination_settings.get("use_skills", False),
-                organize_workspace=coordination_settings.get("organize_workspace", False),
+                massgen_skills=coordination_settings.get("massgen_skills", []),
                 skills_directory=coordination_settings.get("skills_directory", ".agent/skills"),
             )
 
@@ -1594,7 +1594,7 @@ async def run_single_question(
                 enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
                 use_skills=coordination_settings.get("use_skills", False),
-                organize_workspace=coordination_settings.get("organize_workspace", False),
+                massgen_skills=coordination_settings.get("massgen_skills", []),
                 skills_directory=coordination_settings.get("skills_directory", ".agent/skills"),
             )
 
@@ -1639,7 +1639,7 @@ async def run_single_question(
                 enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
                 use_skills=coord_cfg.get("use_skills", False),
-                organize_workspace=coord_cfg.get("organize_workspace", False),
+                massgen_skills=coord_cfg.get("massgen_skills", []),
                 skills_directory=coord_cfg.get("skills_directory", ".agent/skills"),
             )
 

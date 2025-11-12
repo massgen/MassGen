@@ -164,6 +164,7 @@ class FilesystemManager:
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
         skills_directory: Optional[str] = None,
+        massgen_skills: Optional[List[str]] = None,
     ) -> None:
         """
         Setup orchestration-specific paths for snapshots and temporary workspace.
@@ -203,49 +204,66 @@ class FilesystemManager:
                 temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
                 context_paths=context_paths,
                 skills_directory=skills_directory,
+                massgen_skills=massgen_skills,
             )
             logger.info(f"[FilesystemManager] Docker container created for agent {self.agent_id}")
 
-    def setup_organized_workspace(self, organize: bool = False) -> None:
+    def setup_massgen_skill_directories(self, massgen_skills: list) -> None:
         """
-        Setup organized workspace structure with memory/, tasks/, and workspace/ separation.
+        Setup workspace directories based on enabled MassGen skills.
 
-        When organize=True, creates a structured workspace layout:
-        - memory/: For long-term context and decisions (used by memory skill)
-        - tasks/: For task plans and status (used by tasks skill)
-        - workspace/: Main working directory for files and outputs
+        Creates directories only for skills that need them:
+        - "memory": Creates memory/ directory for persistent memory skill
+        - "tasks": Creates tasks/ directory for task planning skill
+        - "file_search": No directory needed
 
-        This provides clean separation of concerns and makes it easier to use skills.
+        When any skill directory is created, also creates workspace/ for main working files.
 
         Args:
-            organize: Whether to create organized directory structure
+            massgen_skills: List of MassGen skills to enable (e.g., ["memory", "tasks"])
         """
-        if not organize:
-            logger.debug("[FilesystemManager] Organized workspace not requested, skipping")
+        if not massgen_skills:
+            logger.debug("[FilesystemManager] No MassGen skills configured, skipping directory setup")
             return
 
-        logger.info("[FilesystemManager] Setting up organized workspace structure")
+        # Define which skills need directories
+        SKILL_DIRECTORIES = {
+            "memory": "memory",
+            "tasks": "tasks",
+            # "file_search": no directory needed
+        }
 
-        # Create separated directories in current workspace
-        memory_dir = self.cwd / "memory"
-        tasks_dir = self.cwd / "tasks"
+        # Determine which directories to create
+        dirs_to_create = []
+        for skill in massgen_skills:
+            if skill in SKILL_DIRECTORIES:
+                dirs_to_create.append(SKILL_DIRECTORIES[skill])
+
+        if not dirs_to_create:
+            logger.debug(f"[FilesystemManager] MassGen skills {massgen_skills} don't need directories")
+            return
+
+        logger.info(f"[FilesystemManager] Setting up directories for MassGen skills: {massgen_skills}")
+
+        # Create skill directories in current workspace
+        for dir_name in dirs_to_create:
+            skill_dir = self.cwd / dir_name
+            skill_dir.mkdir(exist_ok=True)
+            logger.info(f"[FilesystemManager] Created {dir_name}/ directory")
+
+        # Also create workspace/ directory for main working files
         workspace_dir = self.cwd / "workspace"
-
-        memory_dir.mkdir(exist_ok=True)
-        tasks_dir.mkdir(exist_ok=True)
         workspace_dir.mkdir(exist_ok=True)
-
-        logger.info(f"[FilesystemManager] Created organized workspace: memory/, tasks/, workspace/ in {self.cwd}")
+        logger.info("[FilesystemManager] Created workspace/ directory")
 
         # Also create in agent's temporary workspace if it exists
         # This ensures other agents can see the organized structure
         if self.agent_temporary_workspace:
-            temp_memory = self.agent_temporary_workspace / "memory"
-            temp_tasks = self.agent_temporary_workspace / "tasks"
-            temp_workspace = self.agent_temporary_workspace / "workspace"
+            for dir_name in dirs_to_create:
+                temp_dir = self.agent_temporary_workspace / dir_name
+                temp_dir.mkdir(exist_ok=True)
 
-            temp_memory.mkdir(exist_ok=True)
-            temp_tasks.mkdir(exist_ok=True)
+            temp_workspace = self.agent_temporary_workspace / "workspace"
             temp_workspace.mkdir(exist_ok=True)
 
             logger.info(f"[FilesystemManager] Created organized structure in temp workspace: {self.agent_temporary_workspace}")
