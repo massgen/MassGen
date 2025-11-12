@@ -30,7 +30,7 @@ Complete session management system with conversation restoration, computer use a
   - Flexible skill injection into agent system prompts via orchestrator
   - Configuration examples in `massgen/configs/skills/` (skills_basic.yaml, skills_existing_filesystem.yaml, skills_with_memory.yaml)
 
-- **Memory MCP Tool**: MCP server for agent memory management with filesystem persistence
+- **Memory MCP Tool & Filesystem Integration**: MCP server for agent memory management with filesystem persistence and combined workflows
   - New `massgen/mcp_tools/memory/` module with memory MCP server implementation (513 lines total)
   - **MemoryMCPServer** in `_memory_mcp_server.py` (352 lines) for memory CRUD operations with automatic filesystem sync
   - **Memory data models** in `_memory_models.py` (161 lines) with short-term and long-term memory tiers
@@ -38,23 +38,20 @@ Complete session management system with conversation restoration, computer use a
   - Markdown-based memory storage format for human readability
   - Integration with orchestrator for cross-agent memory sharing (+218 lines in orchestrator.py)
   - Memory-specific message templates for memory operations (+95 lines in message_templates.py)
+  - **Combined workflows**: Simultaneous use of memory MCP tools and filesystem operations for advanced workflows
+  - Enables agents to maintain persistent memory while manipulating files
+  - Configuration examples demonstrating integrated workflows for long-running projects requiring both code changes and learned context
   - Inspired by Letta's context hierarchy design pattern
 
-- **Rate Limiting System**: Multi-dimensional rate limiting for API calls and agent startup
+- **Rate Limiting System (Gemini)**: Multi-dimensional rate limiting for Gemini API calls and agent startup
   - New `massgen/rate_limiter.py` (321 lines) with comprehensive rate limiting infrastructure
   - Support for multiple limit types: requests per minute (RPM), tokens per minute (TPM), requests per day (RPD)
-  - Model-specific rate limits with configurable thresholds
+  - Model-specific rate limits with configurable thresholds for Gemini models
   - Graceful cooldown periods with exponential backoff
   - Agent startup rate limiting to prevent API quota exhaustion
   - Test suite in `massgen/tests/test_rate_limiter.py` (122 lines)
   - Configuration system in `massgen/configs/rate_limits/` with rate_limits.yaml and rate_limit_config.py (180 lines)
   - CLI flag `--enable-rate-limiting` for opt-in rate limiting
-
-- **Memory-Filesystem Integration Mode**: Combined memory and filesystem capabilities for advanced workflows
-  - Enables simultaneous use of memory MCP tools and filesystem operations
-  - Allows agents to maintain persistent memory while manipulating files
-  - Configuration examples demonstrating integrated workflows
-  - Use case: Long-running projects requiring both code changes and learned context
 
 ### Changed
 - **Claude Code Backend**: Improved Windows support for long system prompts
