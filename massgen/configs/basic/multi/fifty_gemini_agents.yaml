@@ -104,11 +104,6 @@ agents:
   - id: "pro_agent_20"
     backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 1.0}
 
-orchestrator:
-  max_duration: 7200  # 2 hours for 50 agents
-  consensus_threshold: 0.67  # 34 out of 50 agents need to agree
-  max_debate_rounds: 2
-
 ui:
   display_type: "rich_terminal"
   logging_enabled: true

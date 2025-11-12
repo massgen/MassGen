@@ -17,11 +17,6 @@ agents:
     backend: {type: "gemini", model: "gemini-2.5-pro", temperature: 0.7}
   # Removed agent_7 to avoid hitting 2 RPM limit for gemini-2.5-pro
 
-orchestrator:
-  max_duration: 600
-  consensus_threshold: 0.6
-  max_debate_rounds: 2
-
 ui:
   display_type: "rich_terminal"
   logging_enabled: true

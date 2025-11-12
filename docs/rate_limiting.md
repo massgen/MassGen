@@ -22,12 +22,12 @@ gemini:
     rpm: 9        # 9 requests per minute
     tpm: 240000   # 240K tokens per minute
     rpd: 245      # 245 requests per day
-    
+
   gemini-2.5-pro:
     rpm: 2        # 2 requests per minute
     tpm: 120000   # 120K tokens per minute
     rpd: 48       # 48 requests per day
-    
+
   default:
     rpm: 7
     tpm: 100000
@@ -44,7 +44,7 @@ openai:
     rpm: 500
     tpm: 150000
     rpd: 10000
-    
+
   gpt-3.5-turbo:
     rpm: 3000
     tpm: 250000
@@ -70,7 +70,7 @@ limits = config.get_limits('gemini', 'gemini-2.5-flash')
 The backend creates a shared multi-dimensional rate limiter:
 
 ```python
-from massgen.rate_limiter import GlobalRateLimiter
+from massgen.backend.rate_limiter import GlobalRateLimiter
 
 limiter = GlobalRateLimiter.get_multi_limiter_sync(
     provider='gemini-2.5-flash',
@@ -107,7 +107,7 @@ await self.rate_limiter.record_tokens(total_tokens)
 All limits use sliding windows, not fixed time periods:
 
 - **RPM**: Tracks requests in the last 60 seconds
-- **TPM**: Tracks tokens used in the last 60 seconds  
+- **TPM**: Tracks tokens used in the last 60 seconds
 - **RPD**: Tracks requests in the last 86400 seconds (24 hours)
 
 This provides accurate, real-time enforcement without "reset" windows.
@@ -148,7 +148,7 @@ This ensures that total usage across all agents respects the provider's limits.
 You can also create rate limiters programmatically:
 
 ```python
-from massgen.rate_limiter import MultiRateLimiter
+from massgen.backend.rate_limiter import MultiRateLimiter
 
 limiter = MultiRateLimiter(
     rpm=10,      # 10 requests per minute
@@ -217,7 +217,7 @@ from massgen.backend.gemini import GeminiBackend
 
 async def test_rate_limiting():
     backend = GeminiBackend(model='gemini-2.5-flash')
-    
+
     # Make multiple rapid requests
     for i in range(20):
         print(f"Request {i+1}...")
