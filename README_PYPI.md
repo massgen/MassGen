@@ -161,14 +161,13 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 **What's New in v0.1.11:**
 - **🎯 Skills System** - Modular prompting framework for enhanced agent capabilities
-- **💾 Memory MCP Tool** - Persistent memory management with filesystem synchronization
-- **⚙️ Rate Limiting System** - Multi-dimensional API rate control for cost management
-- **🔗 Memory-Filesystem Integration** - Combined memory and filesystem capabilities
+- **💾 Memory MCP Tool & Filesystem Integration** - Persistent memory management with filesystem synchronization and combined workflows
+- **⚙️ Rate Limiting System (Gemini)** - Multi-dimensional API rate control for Gemini models
 
 **Key Improvements:**
 - Always-available file search skill with automatic skill discovery from `massgen/skills/`
 - MCP server for memory CRUD operations with markdown-based persistence
-- RPM, TPM, and RPD rate limiting with model-specific thresholds and graceful cooldowns
+- RPM, TPM, and RPD rate limiting for Gemini models with graceful cooldowns
 - Simultaneous memory MCP tools and filesystem operations for advanced workflows
 - Enhanced Claude Code backend for Windows with improved system prompt handling
 
@@ -1074,22 +1073,20 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Automatic Discovery**: Skills organized into `always/` (auto-included) and `optional/` categories with Docker-compatible mounting
 - **Configuration Examples**: `skills_basic.yaml`, `skills_existing_filesystem.yaml`, `skills_with_memory.yaml`
 
-#### Memory MCP Tool
+#### Memory MCP Tool & Filesystem Integration
 - **Memory MCP Server**: MCP server for memory management with filesystem persistence (`massgen/mcp_tools/memory/`)
 - **Memory Data Models**: Short-term and long-term memory tiers with markdown-based storage format
 - **Workspace Integration**: Automatic persistence to workspace under `memory/short_term/` and `memory/long_term/` directories
 - **Cross-Agent Sharing**: Orchestrator integration for memory sharing across agents
-
-#### Rate Limiting System
-- **Multi-Dimensional Limiting**: Support for RPM (requests per minute), TPM (tokens per minute), and RPD (requests per day) (`massgen/rate_limiter.py`)
-- **Model-Specific Limits**: Configurable thresholds for different models with graceful cooldown periods
-- **Configuration System**: YAML-based configuration in `massgen/configs/rate_limits/rate_limits.yaml`
-- **CLI Integration**: Optional `--enable-rate-limiting` flag for opt-in rate limiting
-
-#### Memory-Filesystem Integration & Enhancements
 - **Combined Capabilities**: Simultaneous memory MCP tools and filesystem operations for advanced workflows
 - **Enhanced Windows Support**: Improved Claude Code backend handling of long system prompts on Windows
 - **Planning MCP Updates**: Tasks saved to agent workspace instead of separate directory
+
+#### Rate Limiting System (Gemini)
+- **Multi-Dimensional Limiting**: Support for RPM (requests per minute), TPM (tokens per minute), and RPD (requests per day) (`massgen/rate_limiter.py`)
+- **Model-Specific Limits**: Configurable thresholds for Gemini models with graceful cooldown periods
+- **Configuration System**: YAML-based configuration in `massgen/configs/rate_limits/rate_limits.yaml`
+- **CLI Integration**: Optional `--enable-rate-limiting` flag for opt-in rate limiting
 - **Asyncio Lock Fix**: Resolved rate limiter lock reuse across different event loops
 
 ### Previous Achievements (v0.0.3 - v0.1.10)
