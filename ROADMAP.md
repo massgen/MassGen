@@ -32,7 +32,6 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | Parallel File Operations | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Semtools Integration | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | MassGen Terminal Evaluation | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
-| Multi-Agent Computer Use | TBD | TBD |
 | Web UI | [@voidcenter](https://github.com/voidcenter) | justin_zhang |
 
 *For general questions, join the #massgen channel on [Discord](https://discord.gg/VVrT2rQaz5)*
