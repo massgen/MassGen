@@ -881,8 +881,3 @@ Related Documentation
 - :doc:`agent_task_planning` - Task planning MCP (similar filesystem pattern)
 - :doc:`skills` - Skills system (similar injection pattern)
 - `Letta Context Hierarchy <https://docs.letta.com/guides/agents/context-hierarchy>`_ - Inspiration for tier design
-
-API Reference
--------------
-
-See :doc:`../api/memory_mcp` for detailed API documentation of memory MCP tools.
