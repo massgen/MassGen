@@ -431,9 +431,12 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 **Notes:**
 - **Multimodal Understanding** (NEW in v0.1.3): Analyze images, audio, video, and documents via custom tools using OpenAI GPT-4.1 - works with any backend
 - **Multimodal Generation** (NEW in v0.1.4): Generate images, videos, audio, and documents via custom tools using OpenAI APIs - works with any backend
+- **Semantic Search Skills** (NEW in v0.1.12): Optional skills for advanced code understanding - `serena` (LSP-based symbol tracking) and `semtools` (embedding-based semantic search)
 - See custom tool configurations: [`understand_image.yaml`](massgen/configs/tools/custom_tools/multimodal_tools/understand_image.yaml), [`text_to_image_generation_single.yaml`](massgen/configs/tools/custom_tools/multimodal_tools/text_to_image_generation_single.yaml)
 
 → For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://docs.massgen.ai/en/latest/user_guide/backends.html)
+
+→ For skills system documentation, see [User Guide - Skills](https://docs.massgen.ai/en/latest/user_guide/skills.html)
 
 ---
 

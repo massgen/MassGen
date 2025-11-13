@@ -2594,6 +2594,218 @@ Your answer:"""
             )
             await asyncio.sleep(cooldown)
 
+    def _build_structured_system_message(
+        self,
+        agent: ChatAgent,
+        agent_id: str,
+        answers: Optional[Dict[str, str]],
+        planning_mode_enabled: bool,
+        use_skills: bool,
+        enable_memory: bool,
+        enable_task_planning: bool,
+    ) -> str:
+        """
+        Build system message using the new structured section architecture.
+
+        This method assembles the system prompt using priority-based sections with
+        XML structure, ensuring critical instructions (skills, memory) appear early.
+
+        Args:
+            agent: The agent instance
+            agent_id: Agent identifier
+            answers: Dict of current answers from agents
+            planning_mode_enabled: Whether planning mode is active
+            use_skills: Whether to include skills section
+            enable_memory: Whether to include memory section
+            enable_task_planning: Whether to include task planning guidance
+
+        Returns:
+            Complete system prompt string with XML structure
+        """
+        from massgen.system_prompt_sections import (
+            AgentIdentitySection,
+            CoreBehaviorsSection,
+            EvaluationSection,
+            FilesystemOperationsSection,
+            MemorySection,
+            PlanningModeSection,
+            SkillsSection,
+            SystemPromptBuilder,
+            TaskPlanningSection,
+            WorkspaceStructureSection,
+        )
+
+        builder = SystemPromptBuilder()
+
+        # PRIORITY 1 (CRITICAL): Agent Identity - WHO they are
+        agent_system_message = agent.get_configurable_system_message()
+        # Use empty string if None to avoid showing "None" in prompt
+        if agent_system_message is None:
+            agent_system_message = ""
+        builder.add_section(AgentIdentitySection(agent_system_message))
+
+        # PRIORITY 1 (CRITICAL): Core Behaviors - HOW to act
+        builder.add_section(CoreBehaviorsSection())
+
+        # PRIORITY 1 (CRITICAL): MassGen Coordination - vote/new_answer primitives
+        evaluation_instructions = self.message_templates.evaluation_system_message()
+        builder.add_section(EvaluationSection(evaluation_instructions))
+
+        # PRIORITY 5 (HIGH): Skills - Must be visible early
+        if use_skills:
+            from pathlib import Path
+
+            from massgen.filesystem_manager.skills_manager import scan_skills
+
+            # Scan all available skills
+            skills_dir = Path(self.config.coordination_config.skills_directory)
+            all_skills = scan_skills(skills_dir)
+
+            # Log what we found
+            builtin_count = len([s for s in all_skills if s["location"] == "builtin"])
+            project_count = len([s for s in all_skills if s["location"] == "project"])
+            logger.info(f"[Orchestrator] Scanned skills: {builtin_count} builtin, {project_count} project")
+
+            # Separate external and built-in skills
+            external_skills = [s for s in all_skills if s["location"] == "project"]
+            builtin_skills_names = [s["name"] for s in all_skills if s["location"] == "builtin"]
+
+            # Add skills section with high visibility
+            builder.add_section(SkillsSection(external_skills, builtin_skills_names))
+
+            # Auto-inject built-in skills content (these are loaded directly, not in table)
+            if hasattr(self.config.coordination_config, "massgen_skills") and self.config.coordination_config.massgen_skills:
+                configured_massgen_skills = set(self.config.coordination_config.massgen_skills)
+                builtin_skills_base = Path(__file__).parent / "skills"
+
+                for skill in all_skills:
+                    if skill["location"] == "builtin" and skill["name"] in configured_massgen_skills:
+                        # Find and inject SKILL.md content
+                        for subdir in ["always", "optional"]:
+                            skill_md_path = builtin_skills_base / subdir / skill["name"] / "SKILL.md"
+                            if skill_md_path.exists():
+                                skill_content = skill_md_path.read_text(encoding="utf-8")
+                                # Strip YAML frontmatter
+                                if skill_content.startswith("---"):
+                                    parts = skill_content.split("---", 2)
+                                    if len(parts) >= 3:
+                                        skill_content = parts[2].strip()
+
+                                # Create a simple section for built-in skill content
+                                # This will be injected after the skills table
+                                from massgen.system_prompt_sections import (
+                                    Priority,
+                                    SystemPromptSection,
+                                )
+
+                                class BuiltInSkillSection(SystemPromptSection):
+                                    def __init__(self, skill_name: str, skill_content: str):
+                                        super().__init__(
+                                            title=f"Skill: {skill_name}",
+                                            priority=Priority.HIGH,
+                                            xml_tag="massgen_skill",
+                                        )
+                                        self.skill_name = skill_name
+                                        self.skill_content = skill_content
+
+                                    def build_content(self) -> str:
+                                        return self.skill_content
+
+                                    def render(self) -> str:
+                                        # Custom render with name attribute
+                                        if not self.enabled:
+                                            return ""
+                                        return f'<massgen_skill name="{self.skill_name}">\n{self.skill_content}\n</massgen_skill>'
+
+                                builder.add_section(BuiltInSkillSection(skill["name"], skill_content))
+                                logger.info(f"[Orchestrator] Injected built-in skill: {skill['name']}")
+                                break
+
+        # PRIORITY 5 (HIGH): Memory - Proactive usage
+        if enable_memory:
+            short_term_memories, long_term_memories = self._get_all_memories()
+            # Always add memory section to show usage instructions, even if empty
+            memory_config = {
+                "short_term": {
+                    "content": "\n".join([f"- {m}" for m in short_term_memories]) if short_term_memories else "",
+                },
+                "long_term": [{"id": f"mem_{i}", "summary": mem, "created_at": "N/A"} for i, mem in enumerate(long_term_memories)] if long_term_memories else [],
+            }
+            builder.add_section(MemorySection(memory_config))
+            logger.info(f"[Orchestrator] Added memory section ({len(short_term_memories)} short-term, {len(long_term_memories)} long-term memories)")
+
+        # PRIORITY 5 (HIGH): Filesystem - Essential context
+        if agent.backend.filesystem_manager:
+            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
+
+            # Add workspace structure section (critical paths)
+            builder.add_section(WorkspaceStructureSection(main_workspace, [p.get("path", "") for p in context_paths]))
+
+            # Add filesystem operations section (the full existing message for now)
+            # TODO: Break this into subsections (operations vs best practices)
+            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+            previous_turns_context = self._get_previous_turns_context_paths()
+            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
+            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
+            workspace_prepopulated = len(previous_turns_context) > 0
+
+            # Check image generation
+            enable_image_generation = False
+            if hasattr(agent, "config") and agent.config:
+                enable_image_generation = agent.config.backend_params.get("enable_image_generation", False)
+            elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+                enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
+
+            # Check command execution
+            enable_command_execution = False
+            docker_mode = False
+            enable_sudo = False
+            if hasattr(agent, "config") and agent.config:
+                enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+                docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
+                enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
+            elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+                enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+                docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
+                enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
+
+            # Get the full filesystem message content for now
+            filesystem_system_message = self.message_templates.filesystem_system_message(
+                main_workspace=main_workspace,
+                temp_workspace=temp_workspace,
+                context_paths=context_paths,
+                previous_turns=turns_to_show,
+                workspace_prepopulated=workspace_prepopulated,
+                enable_image_generation=enable_image_generation,
+                agent_answers=answers,
+                enable_command_execution=enable_command_execution,
+                docker_mode=docker_mode,
+                enable_sudo=enable_sudo,
+            )
+            builder.add_section(FilesystemOperationsSection(filesystem_system_message))
+
+        # PRIORITY 10 (MEDIUM): Task Planning
+        if enable_task_planning:
+            filesystem_mode = (
+                hasattr(self.config.coordination_config, "task_planning_filesystem_mode")
+                and self.config.coordination_config.task_planning_filesystem_mode
+                and hasattr(agent, "backend")
+                and hasattr(agent.backend, "filesystem_manager")
+                and agent.backend.filesystem_manager
+                and agent.backend.filesystem_manager.cwd
+            )
+            planning_guidance = self.message_templates.get_planning_guidance(filesystem_mode=filesystem_mode)
+            builder.add_section(TaskPlanningSection(planning_guidance))
+
+        # PRIORITY 10 (MEDIUM): Planning Mode (conditional)
+        if planning_mode_enabled and self.config and hasattr(self.config, "coordination_config") and self.config.coordination_config and self.config.coordination_config.planning_mode_instruction:
+            builder.add_section(PlanningModeSection(self.config.coordination_config.planning_mode_instruction))
+            logger.info(f"[Orchestrator] Added planning mode instructions for {agent_id}")
+
+        # Build and return the complete structured system prompt
+        return builder.build()
+
     async def _stream_agent_execution(
         self,
         agent_id: str,
@@ -2733,14 +2945,21 @@ Your answer:"""
             is_coordination_phase = self.workflow_phase == "coordinating"
             planning_mode_enabled = agent.backend.is_planning_mode_enabled() if is_coordination_phase else False
 
-            # Add planning mode instructions to system message if enabled
-            # Only add instructions if we have a coordination config with planning instruction
-            if planning_mode_enabled and self.config and hasattr(self.config, "coordination_config") and self.config.coordination_config and self.config.coordination_config.planning_mode_instruction:
-                planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
-                agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
-                print(f"📝 [{agent_id}] Adding planning mode instructions to system message", flush=True)
+            # Build new structured system message FIRST (before conversation building)
+            logger.info(f"[Orchestrator] Building structured system message for {agent_id}")
+            system_message = self._build_structured_system_message(
+                agent=agent,
+                agent_id=agent_id,
+                answers=normalized_answers,
+                planning_mode_enabled=planning_mode_enabled,
+                use_skills=hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills,
+                enable_memory=hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode,
+                enable_task_planning=self.config.coordination_config.enable_agent_task_planning,
+            )
+            logger.info(f"[Orchestrator] Structured system message built for {agent_id} (length: {len(system_message)} chars)")
 
-            # Build conversation with context support
+            # Build conversation with context support (for user message and conversation history)
+            # We pass the NEW system_message so it gets tracked in context JSONs
             if conversation_context and conversation_context.get("conversation_history"):
                 # Use conversation context-aware building
                 conversation = self.message_templates.build_conversation_with_context(
@@ -2748,7 +2967,7 @@ Your answer:"""
                     conversation_history=conversation_context.get("conversation_history", []),
                     agent_summaries=normalized_answers,
                     valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
-                    base_system_message=agent_system_message,
+                    base_system_message=system_message,  # Use NEW structured message
                     paraphrase=paraphrase,
                 )
             else:
@@ -2757,7 +2976,7 @@ Your answer:"""
                     task=task,
                     agent_summaries=normalized_answers,
                     valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
-                    base_system_message=agent_system_message,
+                    base_system_message=system_message,  # Use NEW structured message
                     paraphrase=paraphrase,
                 )
 
@@ -2772,6 +2991,7 @@ Your answer:"""
                 conversation["user_message"] = restart_context + "\n\n" + conversation["user_message"]
 
             # Track all the context used for this agent execution
+            # Now conversation["system_message"] contains the NEW structured message
             self.coordination_tracker.track_agent_context(
                 agent_id,
                 answers,
@@ -2791,13 +3011,12 @@ Your answer:"""
                 agent_id,
                 "SEND",
                 {
-                    "system": conversation["system_message"],
+                    "system": conversation["system_message"],  # NEW structured message logged
                     "user": conversation["user_message"],
                 },
                 backend_name=backend_name,
             )
 
-            # Clean startup without redundant messages
             # Set planning mode on the agent's backend to control MCP tool execution
             if hasattr(agent.backend, "set_planning_mode"):
                 agent.backend.set_planning_mode(planning_mode_enabled)
@@ -2808,89 +3027,6 @@ Your answer:"""
 
             # Build proper conversation messages with system + user messages
             max_attempts = 3
-            # Add planning guidance if enabled
-            system_message = conversation["system_message"]
-            if self.config.coordination_config.enable_agent_task_planning:
-                # Check if filesystem mode is enabled and agent has workspace
-                filesystem_mode = (
-                    hasattr(self.config.coordination_config, "task_planning_filesystem_mode")
-                    and self.config.coordination_config.task_planning_filesystem_mode
-                    and hasattr(agent, "backend")
-                    and hasattr(agent.backend, "filesystem_manager")
-                    and agent.backend.filesystem_manager
-                    and agent.backend.filesystem_manager.cwd
-                )
-                planning_guidance = self.message_templates.get_planning_guidance(filesystem_mode=filesystem_mode)
-                system_message = system_message + planning_guidance
-
-            # Add memory system message if enabled
-            if hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode:
-                short_term_memories, long_term_memories = self._get_all_memories()
-                if short_term_memories or long_term_memories:
-                    memory_message = self.message_templates.get_memory_system_message(
-                        short_term_memories=short_term_memories,
-                        long_term_memories=long_term_memories,
-                    )
-                    system_message = system_message + memory_message
-                    logger.info(f"[Orchestrator] Added {len(short_term_memories)} short-term and {len(long_term_memories)} long-term memories to system message")
-
-            # Add skills system message if enabled
-            if hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills:
-                from pathlib import Path
-
-                from massgen.filesystem_manager.skills_manager import scan_skills
-
-                # Scan all available skills (external + built-in)
-                skills_dir = Path(self.config.coordination_config.skills_directory)
-                all_skills = scan_skills(skills_dir)
-
-                # Log what we found
-                builtin_count = len([s for s in all_skills if s["location"] == "builtin"])
-                project_count = len([s for s in all_skills if s["location"] == "project"])
-                logger.info(f"[Orchestrator] Scanned skills: {builtin_count} builtin, {project_count} project")
-                logger.info(f"[Orchestrator] Built-in skills found: {[s['name'] for s in all_skills if s['location'] == 'builtin']}")
-
-                # Only include external/project skills in the skills table
-                # Built-in skills are auto-loaded directly instead
-                skills = [s for s in all_skills if s["location"] == "project"]
-
-                # Auto-load built-in skills (from always/ and configured optional/)
-                # These are injected directly into system prompt, not listed in skills table
-                builtin_skills_to_load = []
-                if hasattr(self.config.coordination_config, "massgen_skills") and self.config.coordination_config.massgen_skills:
-                    configured_massgen_skills = set(self.config.coordination_config.massgen_skills)
-                    logger.info(f"[Orchestrator] Configured massgen_skills: {configured_massgen_skills}")
-
-                    # Load configured optional skills
-                    for skill in all_skills:
-                        if skill["location"] == "builtin" and skill["name"] in configured_massgen_skills:
-                            builtin_skills_to_load.append(skill)
-                            logger.info(f"[Orchestrator] Auto-loading MassGen skill: {skill['name']}")
-
-                # Load built-in skills content and inject directly
-                if builtin_skills_to_load:
-                    builtin_skills_base = Path(__file__).parent / "skills"
-                    for skill in builtin_skills_to_load:
-                        # Check both always/ and optional/ subdirectories
-                        for subdir in ["always", "optional"]:
-                            skill_md_path = builtin_skills_base / subdir / skill["name"] / "SKILL.md"
-                            if skill_md_path.exists():
-                                skill_content = skill_md_path.read_text(encoding="utf-8")
-                                # Strip YAML frontmatter and inject just the markdown content
-                                if skill_content.startswith("---"):
-                                    parts = skill_content.split("---", 2)
-                                    if len(parts) >= 3:
-                                        skill_content = parts[2].strip()
-                                system_message += f"\n\n<massgen_skill name=\"{skill['name']}\">\n{skill_content}\n</massgen_skill>"
-                                logger.info(f"[Orchestrator] Injected {skill['name']} SKILL.md content into system prompt")
-                                break
-
-                # Add skills table for external skills only
-                skills_msg = self.message_templates.skills_system_message(skills)
-                system_message = system_message + skills_msg
-                logger.info(f"[Orchestrator] Injected skills system message for {agent_id} ({len(skills)} external skills in table, {len(builtin_skills_to_load)} built-in skills auto-loaded)")
-                if skills:
-                    logger.info(f"[Orchestrator] Skills message content:\n{skills_msg[:2000]}")
 
             conversation_messages = [
                 {"role": "system", "content": system_message},

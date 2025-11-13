@@ -107,7 +107,21 @@ This creates:
 Built-in Skills
 ===============
 
-MassGen includes three built-in skills automatically available when ``use_skills: true``:
+MassGen includes built-in skills that fall into two categories:
+
+**Always Available (Default)**
+
+These skills are automatically included when ``use_skills: true``:
+
+* ``memory`` - Filesystem-based context storage
+* ``file_search`` - Fast text and structural code search
+
+**Optional Skills**
+
+These skills can be enabled by adding them to ``massgen_skills`` configuration:
+
+* ``serena`` - Symbol-level code understanding using LSP
+* ``semtools`` - Semantic search using embeddings
 
 Memory Skill
 ------------
@@ -154,6 +168,180 @@ Fast text and structural code search using ripgrep and ast-grep.
 * Finding code patterns
 * Analyzing codebases
 * Refactoring workflows
+
+Optional Built-in Skills
+========================
+
+These skills provide advanced code understanding capabilities and must be explicitly enabled.
+
+Serena Skill
+------------
+
+Symbol-level code understanding using Language Server Protocol (LSP). Provides IDE-like capabilities for finding symbols, tracking references, and making precise code edits.
+
+**Prerequisites:**
+
+.. code-block:: bash
+
+   # Install Serena
+   uv pip install git+https://github.com/oraios/serena
+
+   # Or use uvx for one-time execution
+   uvx --from git+https://github.com/oraios/serena serena --help
+
+**Configuration:**
+
+.. code-block:: yaml
+
+   orchestrator:
+     coordination:
+       use_skills: true
+       massgen_skills:
+         - "file_search"
+         - "serena"  # Enable serena skill
+
+**Core Capabilities:**
+
+* **find_symbol**: Locate class, function, or variable definitions
+* **find_referencing_symbols**: Find all locations where a symbol is used
+* **insert_after_symbol**: Make precise code insertions at symbol level
+
+**Usage:**
+
+.. code-block:: bash
+
+   # Read skill guidance
+   openskills read serena
+
+   # Find symbol definitions (after reading skill)
+   serena find_symbol --name 'UserService' --type class
+
+   # Find all references
+   serena find_referencing_symbols --name 'authenticate'
+
+   # Insert code at symbol location
+   serena insert_after_symbol --name 'MyClass' --type class --code '...'
+
+**Best for:**
+
+* Understanding symbol relationships and dependencies
+* Impact analysis before refactoring
+* Precise code insertions at symbol level
+* Tracking all usages of functions/classes
+* Working with large, complex codebases
+
+**Supported Languages:**
+
+Python, JavaScript, TypeScript, Rust, Go, Java, C/C++, C#, Ruby, PHP, and 20+ more languages through LSP.
+
+Semtools Skill
+--------------
+
+Semantic search using embedding-based similarity matching. Find code by meaning, not just keywords.
+
+**Prerequisites:**
+
+.. code-block:: bash
+
+   # Install via cargo (recommended)
+   cargo install semtools
+
+   # Or via npm
+   npm install -g semtools
+
+   # Optional: For document parsing (PDF, DOCX, PPTX)
+   export LLAMA_CLOUD_API_KEY="your-key"
+
+**Configuration:**
+
+.. code-block:: yaml
+
+   orchestrator:
+     coordination:
+       use_skills: true
+       massgen_skills:
+         - "file_search"
+         - "semtools"  # Enable semtools skill
+
+**Core Capabilities:**
+
+* **Semantic Search**: Find code by meaning, not exact keywords
+* **Workspace Management**: Cache embeddings for fast repeated searches
+* **Document Parsing**: Convert PDFs, DOCX, PPTX to searchable text (optional)
+
+**Usage:**
+
+.. code-block:: bash
+
+   # Read skill guidance
+   openskills read semtools
+
+   # Semantic search by concept (after reading skill)
+   semtools search "authentication logic" src/
+
+   # Search with more results
+   semtools search "error handling" --top-k 10 --n-lines 5
+
+   # Create workspace for large codebases
+   semtools workspace use my-project
+   export SEMTOOLS_WORKSPACE=my-project
+
+   # Parse documents (requires API key)
+   semtools parse research_papers/*.pdf
+
+**Best for:**
+
+* Finding code when you know the concept but not the keywords
+* Discovering semantically similar implementations
+* Searching across different terminology/languages
+* Document analysis and research
+* Exploratory code discovery
+
+**Note:**
+
+* Semantic search works **locally** without API keys
+* Document parsing (PDF/DOCX) requires LlamaIndex Cloud API key
+* Embeddings are computed locally using model2vec
+
+Choosing Between Search Tools
+------------------------------
+
+MassGen provides three complementary search approaches:
+
++------------------+----------------------+------------------------+---------------------------+
+| Tool             | Search Type          | Best For               | Example                   |
++==================+======================+========================+===========================+
+| **file_search**  | Text/Syntax          | Exact keywords,        | Find "LoginService" class |
+| (ripgrep/ast-grep)|                     | code patterns          |                           |
++------------------+----------------------+------------------------+---------------------------+
+| **serena**       | Symbols/References   | Finding definitions,   | Track all uses of         |
+|                  |                      | tracking usage         | authenticate()            |
++------------------+----------------------+------------------------+---------------------------+
+| **semtools**     | Semantic/Meaning     | Concept discovery,     | Find "rate limiting"      |
+|                  |                      | similar code           | implementations           |
++------------------+----------------------+------------------------+---------------------------+
+
+**Search Strategy:**
+
+1. **Concept Discovery**: Use semtools to find relevant areas
+2. **Symbol Tracking**: Use serena to track precise definitions and references
+3. **Text Search**: Use file_search (ripgrep) for exact keyword follow-up
+
+**Example Workflow:**
+
+.. code-block:: bash
+
+   # 1. Discover authentication-related code semantically
+   semtools search "user authentication" src/
+
+   # 2. Find exact class definition
+   serena find_symbol --name 'AuthService' --type class
+
+   # 3. Track all references
+   serena find_referencing_symbols --name 'AuthService'
+
+   # 4. Search for specific patterns
+   rg "AuthService\(" --type py src/
 
 External Skills
 ===============
@@ -461,5 +649,7 @@ Examples
 ========
 
 * ``massgen/configs/skills/skills_basic.yaml`` - Basic skills usage
+* ``massgen/configs/skills/skills_semantic_search.yaml`` - Semantic search with serena and semtools
+* ``massgen/configs/skills/test_semantic_skills.yaml`` - Test configuration for semantic skills
 * ``massgen/configs/skills/skills_with_task_planning.yaml`` - With task planning
 * ``massgen/configs/skills/skills_organized_workspace.yaml`` - Organized workspace structure

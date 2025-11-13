@@ -33,7 +33,16 @@ class MessageTemplates:
     # =============================================================================
 
     def evaluation_system_message(self) -> str:
-        """Standard evaluation system message for all cases."""
+        """
+        Standard evaluation system message for all cases.
+
+        NOTE: This method is being replaced by the EvaluationSection class in
+        system_prompt_sections.py. The new architecture provides better priority
+        management and XML structure. This method is kept for backward compatibility
+        during the transition period.
+
+        See: docs/dev_notes/system_prompt_architecture_redesign.md
+        """
         if "evaluation_system_message" in self._template_overrides:
             return str(self._template_overrides["evaluation_system_message"])
 
@@ -125,6 +134,12 @@ Make sure you actually call `vote` or `new_answer` (in tool call format).
 
         This guidance is appended to the agent's system message when
         agent task planning is enabled in the coordination config.
+
+        NOTE: This method is being replaced by the TaskPlanningSection class in
+        system_prompt_sections.py. The new architecture provides better priority
+        management and XML structure. This method is kept for backward compatibility.
+
+        See: docs/dev_notes/system_prompt_architecture_redesign.md
 
         Args:
             filesystem_mode: If True, adds guidance about filesystem-based task storage
@@ -259,6 +274,13 @@ Your task plans are automatically saved to `tasks/plan.json` in your workspace. 
         Creates two sections:
         1. Short-term memories: Full content auto-injected (always available)
         2. Long-term memories: Summary table (load on-demand via load_memory)
+
+        NOTE: This method is being replaced by the MemorySection class in
+        system_prompt_sections.py. The new architecture provides better priority
+        management (CRITICAL priority for visibility) and XML structure. This method
+        is kept for backward compatibility.
+
+        See: docs/dev_notes/system_prompt_architecture_redesign.md
 
         Args:
             short_term_memories: List of short-term memory dicts with keys:
@@ -932,7 +954,13 @@ Please address these specific issues in your coordination and final answer.
         """Build complete initial conversation for MassGen evaluation."""
         # Use agent's custom system message if provided, otherwise use default evaluation message
         if base_system_message:
-            system_message = f"{self.evaluation_system_message()}\n\n#Special Requirement\n{base_system_message}"
+            # Check if this is a structured system prompt (contains <system_prompt> tag)
+            # Structured prompts already include evaluation message, so don't prepend it
+            if "<system_prompt>" in base_system_message:
+                system_message = base_system_message
+            else:
+                # Old-style: prepend evaluation message for backward compatibility
+                system_message = f"{self.evaluation_system_message()}\n\n#Special Requirement\n{base_system_message}"
         else:
             system_message = self.evaluation_system_message()
 
@@ -954,7 +982,13 @@ Please address these specific issues in your coordination and final answer.
         """Build complete conversation with conversation history context for MassGen evaluation."""
         # Use agent's custom system message if provided, otherwise use default context-aware message
         if base_system_message:
-            system_message = f"{base_system_message}\n\n{self.system_message_with_context(conversation_history)}"
+            # Check if this is a structured system prompt (contains <system_prompt> tag)
+            # Structured prompts already include evaluation message, so don't append it
+            if "<system_prompt>" in base_system_message:
+                system_message = base_system_message
+            else:
+                # Old-style: append evaluation message for backward compatibility
+                system_message = f"{base_system_message}\n\n{self.system_message_with_context(conversation_history)}"
         else:
             system_message = self.system_message_with_context(conversation_history)
 
@@ -1098,10 +1132,14 @@ Based on the coordination process above, present your final answer:"""
                     workspace_tree += f"{prefix}{temp_workspace}/{anon_id}/\n"
 
             workspace_tree += (
-                "   - To improve upon existing answers: Copy files from Shared Reference to your workspace using `copy_file` or `copy_directory` tools, then modify them\n"
-                "   - These correspond directly to the answers shown in the CURRENT ANSWERS section\n"
-                "   - However, not all workspaces may have a matching answer (e.g., if an agent was in the middle of working but restarted before submitting an answer). "
-                "So, it is wise to check the actual files in the Shared Reference, not rely solely on the CURRENT ANSWERS section.\n"
+                "   **Building on Others' Work:**\n"
+                "   - **Inspect First**: Use `read_file`, `read_multiple_files`, or other command line tools to examine files before copying. Understand what you're working with.\n"
+                "   - **Selective Copying**: Only copy specific files you'll actually modify or use. Use `copy_file` for individual files, not `copy_directory` for wholesale copying.\n"
+                "   - **Merging Approaches**: If combining work from multiple agents, consider merging complementary parts "
+                "(e.g., agent1's data model + agent2's API layer) rather than picking one entire solution.\n"
+                "   - **Attribution**: Be explicit in your answer about what you built on (e.g., 'Extended agent1's parser.py to handle edge cases').\n"
+                "   - **Verify Files**: Not all workspaces may have matching answers in CURRENT ANSWERS section (restart scenarios). "
+                "Check actual files in Shared Reference.\n"
             )
             parts.append(workspace_tree)
 
@@ -1185,12 +1223,13 @@ Based on the coordination process above, present your final answer:"""
 
         # Add workspace cleanup guidance
         parts.append(
-            "**Workspace Cleanup**: Before submitting your answer with `new_answer`, " "ensure that your workspace contains only the files relevant to your final answer.\n",
-            # use `delete_file` or "
-            # "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
-            # "Note: You cannot delete read-only files (e.g., files from other agents' workspaces or read-only context paths). "
-            # "This ensures only the relevant final files remain for evaluation. For example, if you created "
-            # "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
+            "**Workspace Management**: \n"
+            "- **Selective Copying**: When building on other agents' work, only copy the specific files you need to modify or use. "
+            "Do not copy entire workspaces wholesale. Be explicit about what you're building on (e.g., 'Using agent1's parser.py with modifications').\n"
+            "- **Cleanup**: Remove any temporary files, intermediate artifacts, test scripts, or unused files copied from another agent before submitting `new_answer`. "
+            "Your workspace should contain only the files that are part of your final deliverable. "
+            "For example, if you created `test_output.txt` for debugging or `old_version.py` before refactoring, delete them.\n"
+            "- **Organization**: Keep files logically organized. If you're combining work from multiple agents, structure the result clearly.\n",
         )
 
         # Add diff tools guidance
@@ -1228,6 +1267,14 @@ Based on the coordination process above, present your final answer:"""
 
     def skills_system_message(self, skills: List[Dict[str, str]]) -> str:
         """Generate skills system prompt with available skills table.
+
+        NOTE: This method is being replaced by the SkillsSection class in
+        system_prompt_sections.py. The new architecture provides better priority
+        management (CRITICAL priority for early visibility) and XML structure,
+        ensuring skills are not buried at the end of prompts. This method is kept
+        for backward compatibility.
+
+        See: docs/dev_notes/system_prompt_architecture_redesign.md
 
         Args:
             skills: List of skill dictionaries with keys: name, description, location
