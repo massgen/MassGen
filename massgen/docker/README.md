@@ -169,12 +169,18 @@ Orchestration End
 
 **Contents:**
 - Base: Python 3.11-slim
-- System packages: git, curl, build-essential, Node.js 20.x
-- Python packages: pytest, requests, numpy, pandas
+- System packages: git, curl, build-essential, Node.js 20.x, ripgrep
+- Python packages: pytest, requests, numpy, pandas, ast-grep-cli
+- CLI tools: openskills, semtools (npm), uv (for uvx)
 - User: non-root (massgen, UID 1000)
 - Working directory: /workspace
 
-**Size:** ~400-500MB (compressed)
+**Skills support:**
+- file_search (ripgrep + ast-grep) - pre-installed ✓
+- semtools (semantic search) - pre-installed ✓
+- serena (LSP code understanding) - available via `uvx --from git+https://github.com/oraios/serena serena` ✓
+
+**Size:** ~500-600MB (compressed)
 
 ### Custom Images
 

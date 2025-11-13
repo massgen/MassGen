@@ -183,11 +183,11 @@ Symbol-level code understanding using Language Server Protocol (LSP). Provides I
 
 .. code-block:: bash
 
-   # Install Serena
-   uv pip install git+https://github.com/oraios/serena
-
-   # Or use uvx for one-time execution
+   # Use uvx to run serena on-demand (no permanent installation)
    uvx --from git+https://github.com/oraios/serena serena --help
+
+   # Works in both Docker mode (uv pre-installed) and local mode
+   # For local mode, install uv first: curl -LsSf https://astral.sh/uv/install.sh | sh
 
 **Configuration:**
 
@@ -243,11 +243,11 @@ Semantic search using embedding-based similarity matching. Find code by meaning,
 
 .. code-block:: bash
 
-   # Install via cargo (recommended)
-   cargo install semtools
+   # Install via npm (recommended)
+   npm install -g @llamaindex/semtools
 
-   # Or via npm
-   npm install -g semtools
+   # Or via cargo
+   cargo install semtools
 
    # Optional: For document parsing (PDF, DOCX, PPTX)
    export LLAMA_CLOUD_API_KEY="your-key"
@@ -277,17 +277,17 @@ Semantic search using embedding-based similarity matching. Find code by meaning,
    openskills read semtools
 
    # Semantic search by concept (after reading skill)
-   semtools search "authentication logic" src/
+   search "authentication logic" src/
 
    # Search with more results
-   semtools search "error handling" --top-k 10 --n-lines 5
+   search "error handling" --top-k 10 --n-lines 5
 
    # Create workspace for large codebases
-   semtools workspace use my-project
+   workspace use my-project
    export SEMTOOLS_WORKSPACE=my-project
 
    # Parse documents (requires API key)
-   semtools parse research_papers/*.pdf
+   parse research_papers/*.pdf
 
 **Best for:**
 
@@ -332,13 +332,13 @@ MassGen provides three complementary search approaches:
 .. code-block:: bash
 
    # 1. Discover authentication-related code semantically
-   semtools search "user authentication" src/
+   search "user authentication" src/
 
    # 2. Find exact class definition
-   serena find_symbol --name 'AuthService' --type class
+   uvx --from git+https://github.com/oraios/serena serena find_symbol --name 'AuthService' --type class
 
    # 3. Track all references
-   serena find_referencing_symbols --name 'AuthService'
+   uvx --from git+https://github.com/oraios/serena serena find_referencing_symbols --name 'AuthService'
 
    # 4. Search for specific patterns
    rg "AuthService\(" --type py src/

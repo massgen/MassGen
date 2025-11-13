@@ -2624,8 +2624,10 @@ Your answer:"""
         """
         from massgen.system_prompt_sections import (
             AgentIdentitySection,
+            CommandExecutionSection,
             CoreBehaviorsSection,
             EvaluationSection,
+            FilesystemBestPracticesSection,
             FilesystemOperationsSection,
             MemorySection,
             PlanningModeSection,
@@ -2648,8 +2650,14 @@ Your answer:"""
         builder.add_section(CoreBehaviorsSection())
 
         # PRIORITY 1 (CRITICAL): MassGen Coordination - vote/new_answer primitives
-        evaluation_instructions = self.message_templates.evaluation_system_message()
-        builder.add_section(EvaluationSection(evaluation_instructions))
+        voting_sensitivity = self.message_templates._voting_sensitivity
+        answer_novelty_requirement = self.message_templates._answer_novelty_requirement
+        builder.add_section(
+            EvaluationSection(
+                voting_sensitivity=voting_sensitivity,
+                answer_novelty_requirement=answer_novelty_requirement,
+            ),
+        )
 
         # PRIORITY 5 (HIGH): Skills - Must be visible early
         if use_skills:
@@ -2751,11 +2759,10 @@ Your answer:"""
             workspace_prepopulated = len(previous_turns_context) > 0
 
             # Check image generation
-            enable_image_generation = False
             if hasattr(agent, "config") and agent.config:
-                enable_image_generation = agent.config.backend_params.get("enable_image_generation", False)
+                agent.config.backend_params.get("enable_image_generation", False)
             elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
-                enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
+                agent.backend.backend_params.get("enable_image_generation", False)
 
             # Check command execution
             enable_command_execution = False
@@ -2770,20 +2777,27 @@ Your answer:"""
                 docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
                 enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
 
-            # Get the full filesystem message content for now
-            filesystem_system_message = self.message_templates.filesystem_system_message(
-                main_workspace=main_workspace,
-                temp_workspace=temp_workspace,
-                context_paths=context_paths,
-                previous_turns=turns_to_show,
-                workspace_prepopulated=workspace_prepopulated,
-                enable_image_generation=enable_image_generation,
-                agent_answers=answers,
-                enable_command_execution=enable_command_execution,
-                docker_mode=docker_mode,
-                enable_sudo=enable_sudo,
+            # Add filesystem operations section with direct parameters
+            builder.add_section(
+                FilesystemOperationsSection(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace,
+                    context_paths=context_paths,
+                    previous_turns=turns_to_show,
+                    workspace_prepopulated=workspace_prepopulated,
+                    agent_answers=answers,
+                    enable_command_execution=enable_command_execution,
+                ),
             )
-            builder.add_section(FilesystemOperationsSection(filesystem_system_message))
+
+            # Add filesystem best practices section
+            builder.add_section(FilesystemBestPracticesSection())
+
+            # Add command execution section if enabled
+            if enable_command_execution:
+                builder.add_section(
+                    CommandExecutionSection(docker_mode=docker_mode, enable_sudo=enable_sudo),
+                )
 
         # PRIORITY 10 (MEDIUM): Task Planning
         if enable_task_planning:
@@ -2795,8 +2809,7 @@ Your answer:"""
                 and agent.backend.filesystem_manager
                 and agent.backend.filesystem_manager.cwd
             )
-            planning_guidance = self.message_templates.get_planning_guidance(filesystem_mode=filesystem_mode)
-            builder.add_section(TaskPlanningSection(planning_guidance))
+            builder.add_section(TaskPlanningSection(filesystem_mode=filesystem_mode))
 
         # PRIORITY 10 (MEDIUM): Planning Mode (conditional)
         if planning_mode_enabled and self.config and hasattr(self.config, "coordination_config") and self.config.coordination_config and self.config.coordination_config.planning_mode_instruction:
@@ -2805,6 +2818,170 @@ Your answer:"""
 
         # Build and return the complete structured system prompt
         return builder.build()
+
+    def _build_final_presentation_system_message(
+        self,
+        agent: ChatAgent,
+        all_answers: Dict[str, str],
+        enable_image_generation: bool = False,
+        enable_audio_generation: bool = False,
+        enable_file_generation: bool = False,
+        enable_video_generation: bool = False,
+        has_irreversible_actions: bool = False,
+        enable_command_execution: bool = False,
+        docker_mode: bool = False,
+        enable_sudo: bool = False,
+    ) -> str:
+        """
+        Build system message for final presentation phase using section architecture.
+
+        This combines the agent's identity, presentation instructions, and filesystem
+        operations using the structured section approach.
+
+        Args:
+            agent: The presenting agent
+            all_answers: All answers from coordination phase
+            enable_image_generation: Whether image generation is enabled
+            enable_audio_generation: Whether audio generation is enabled
+            enable_file_generation: Whether file generation is enabled
+            enable_video_generation: Whether video generation is enabled
+            has_irreversible_actions: Whether agent has write access
+            enable_command_execution: Whether command execution is enabled
+            docker_mode: Whether commands run in Docker
+            enable_sudo: Whether sudo is available
+
+        Returns:
+            Complete system message string
+        """
+        # Get agent's configurable system message
+        agent_system_message = agent.get_configurable_system_message()
+        if agent_system_message is None:
+            agent_system_message = ""
+
+        # Get presentation instructions from message_templates
+        # (This contains special logic for image/audio/file/video generation)
+        presentation_instructions = self.message_templates.final_presentation_system_message(
+            original_system_message=agent_system_message,
+            enable_image_generation=enable_image_generation,
+            enable_audio_generation=enable_audio_generation,
+            enable_file_generation=enable_file_generation,
+            enable_video_generation=enable_video_generation,
+            has_irreversible_actions=has_irreversible_actions,
+            enable_command_execution=enable_command_execution,
+        )
+
+        # If filesystem is available, prepend filesystem sections
+        if agent.backend.filesystem_manager:
+            from massgen.system_prompt_sections import (
+                CommandExecutionSection,
+                FilesystemBestPracticesSection,
+                FilesystemOperationsSection,
+            )
+
+            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
+
+            # Get previous turns context
+            previous_turns_context = self._get_previous_turns_context_paths()
+            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
+            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
+            workspace_prepopulated = len(previous_turns_context) > 0
+
+            # Build filesystem sections
+            fs_ops = FilesystemOperationsSection(
+                main_workspace=main_workspace,
+                temp_workspace=temp_workspace,
+                context_paths=context_paths,
+                previous_turns=turns_to_show,
+                workspace_prepopulated=workspace_prepopulated,
+                agent_answers=all_answers,
+                enable_command_execution=enable_command_execution,
+            )
+
+            fs_best = FilesystemBestPracticesSection()
+
+            # Build sections list
+            sections_content = [fs_ops.build_content(), fs_best.build_content()]
+
+            # Add command execution section if enabled
+            if enable_command_execution:
+                cmd_exec = CommandExecutionSection(docker_mode=docker_mode, enable_sudo=enable_sudo)
+                sections_content.append(cmd_exec.build_content())
+
+            # Combine: filesystem sections + presentation instructions
+            filesystem_content = "\n\n".join(sections_content)
+            return f"{filesystem_content}\n\n## Instructions\n{presentation_instructions}"
+        else:
+            # No filesystem - just return presentation instructions
+            return presentation_instructions
+
+    def _build_post_evaluation_system_message(
+        self,
+        agent: ChatAgent,
+        all_answers: Dict[str, str],
+    ) -> str:
+        """
+        Build system message for post-evaluation phase using section architecture.
+
+        This combines the agent's identity, post-evaluation instructions, and filesystem
+        operations using the structured section approach.
+
+        Args:
+            agent: The evaluating agent
+            all_answers: All answers from coordination phase
+
+        Returns:
+            Complete system message string
+        """
+        from massgen.system_prompt_sections import (
+            FilesystemBestPracticesSection,
+            FilesystemOperationsSection,
+            PostEvaluationSection,
+        )
+
+        # Get agent's configurable system message
+        agent_system_message = agent.get_configurable_system_message()
+        if agent_system_message is None:
+            agent_system_message = ""
+
+        # Start with agent identity if provided
+        parts = []
+        if agent_system_message:
+            parts.append(agent_system_message)
+
+        # If filesystem is available, add filesystem sections
+        if agent.backend.filesystem_manager:
+            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
+
+            # Get previous turns context
+            previous_turns_context = self._get_previous_turns_context_paths()
+            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
+            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
+            workspace_prepopulated = len(previous_turns_context) > 0
+
+            # Build filesystem sections
+            fs_ops = FilesystemOperationsSection(
+                main_workspace=main_workspace,
+                temp_workspace=temp_workspace,
+                context_paths=context_paths,
+                previous_turns=turns_to_show,
+                workspace_prepopulated=workspace_prepopulated,
+                agent_answers=all_answers,
+                enable_command_execution=False,  # No command execution in post-eval
+            )
+            parts.append(fs_ops.build_content())
+
+            fs_best = FilesystemBestPracticesSection()
+            parts.append(fs_best.build_content())
+
+        # Add post-evaluation instructions
+        post_eval = PostEvaluationSection()
+        parts.append(post_eval.build_content())
+
+        return "\n\n".join(parts)
 
     async def _stream_agent_execution(
         self,
@@ -2873,63 +3050,6 @@ Your answer:"""
             agent.backend.filesystem_manager.log_current_state("before execution")
 
         try:
-            # Get agent's custom system message if available
-            agent_system_message = agent.get_configurable_system_message()
-
-            # Append filesystem system message, if applicable
-            if agent.backend.filesystem_manager:
-                main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-                temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-                # Get context paths if available
-                context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-
-                # Add previous turns as read-only context paths (only n-2 and earlier)
-                previous_turns_context = self._get_previous_turns_context_paths()
-
-                # Filter to only show turn n-2 and earlier (agents start with n-1 in their workspace)
-                # Get current turn from previous_turns list
-                current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-                turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-
-                # Previous turn paths already registered in orchestrator constructor
-
-                # Check if workspace was pre-populated (has any previous turns)
-                workspace_prepopulated = len(previous_turns_context) > 0
-
-                # Check if image generation is enabled for this agent
-                enable_image_generation = False
-                if hasattr(agent, "config") and agent.config:
-                    enable_image_generation = agent.config.backend_params.get("enable_image_generation", False)
-                elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
-                    enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
-
-                # Extract command execution parameters
-                enable_command_execution = False
-                docker_mode = False
-                enable_sudo = False
-                if hasattr(agent, "config") and agent.config:
-                    enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
-                    docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
-                    enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
-                elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
-                    enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
-                    docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
-                    enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
-
-                filesystem_system_message = self.message_templates.filesystem_system_message(
-                    main_workspace=main_workspace,
-                    temp_workspace=temp_workspace,
-                    context_paths=context_paths,
-                    previous_turns=turns_to_show,
-                    workspace_prepopulated=workspace_prepopulated,
-                    enable_image_generation=enable_image_generation,
-                    agent_answers=answers,
-                    enable_command_execution=enable_command_execution,
-                    docker_mode=docker_mode,
-                    enable_sudo=enable_sudo,
-                )
-                agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
-
             # Normalize workspace paths in agent answers for better comparison from this agent's perspective
             normalized_answers = self._normalize_workspace_paths_in_answers(answers, agent_id) if answers else answers
 
@@ -3781,7 +3901,7 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
         )
 
         # Get agent's configurable system message using the standard interface
-        agent_system_message = agent.get_configurable_system_message()
+        agent.get_configurable_system_message()
 
         # Check if image generation is enabled for this agent
         enable_image_generation = False
@@ -3830,15 +3950,18 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
             # Check if any context path has write permission
             has_irreversible_actions = any(cp.get("permission") == "write" for cp in context_paths)
 
-        # Build system message with workspace context if available
-        base_system_message = self.message_templates.final_presentation_system_message(
-            agent_system_message,
-            enable_image_generation,
-            enable_audio_generation,
-            enable_file_generation,
-            enable_video_generation,
-            has_irreversible_actions,
-            enable_command_execution,
+        # Build system message using section architecture
+        base_system_message = self._build_final_presentation_system_message(
+            agent=agent,
+            all_answers=all_answers,
+            enable_image_generation=enable_image_generation,
+            enable_audio_generation=enable_audio_generation,
+            enable_file_generation=enable_file_generation,
+            enable_video_generation=enable_video_generation,
+            has_irreversible_actions=has_irreversible_actions,
+            enable_command_execution=enable_command_execution,
+            docker_mode=docker_mode,
+            enable_sudo=enable_sudo,
         )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
@@ -3851,40 +3974,6 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
         log_session_dir = get_log_session_dir()
         if log_session_dir:
             self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
-
-        # Add workspace context information to system message if workspace was restored
-        if agent.backend.filesystem_manager and temp_workspace_path:
-            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-            # Get context paths if available
-            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-
-            # Add previous turns as read-only context paths (only n-2 and earlier)
-            previous_turns_context = self._get_previous_turns_context_paths()
-
-            # Filter to only show turn n-2 and earlier
-            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-
-            # Check if workspace was pre-populated
-            workspace_prepopulated = len(previous_turns_context) > 0
-
-            base_system_message = (
-                self.message_templates.filesystem_system_message(
-                    main_workspace=main_workspace,
-                    temp_workspace=temp_workspace,
-                    context_paths=context_paths,
-                    previous_turns=turns_to_show,
-                    workspace_prepopulated=workspace_prepopulated,
-                    enable_image_generation=enable_image_generation,
-                    agent_answers=all_answers,
-                    enable_command_execution=enable_command_execution,
-                    docker_mode=docker_mode,
-                    enable_sudo=enable_sudo,
-                )
-                + "\n\n## Instructions\n"
-                + base_system_message
-            )
 
         # Create conversation with system and user messages
         presentation_messages = [
@@ -4120,41 +4209,14 @@ FINAL ANSWER TO EVALUATE:
 Review this answer carefully and determine if it fully addresses the original task. Use your available tools to verify claims and check files as needed.
 Then call either submit(confirmed=True) if the answer is satisfactory, or restart_orchestration(reason, instructions) if improvements are needed."""
 
-        # Get agent's configurable system message
-        agent_system_message = agent.get_configurable_system_message()
+        # Get all answers for context
+        all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
 
-        # Build post-evaluation system message
-        base_system_message = self.message_templates.post_evaluation_system_message(agent_system_message)
-
-        # Add filesystem context if available (same as final presentation)
-        if agent.backend.filesystem_manager:
-            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-            previous_turns_context = self._get_previous_turns_context_paths()
-            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-            workspace_prepopulated = len(previous_turns_context) > 0
-
-            # Get all answers for context
-            all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
-
-            base_system_message = (
-                self.message_templates.filesystem_system_message(
-                    main_workspace=main_workspace,
-                    temp_workspace=temp_workspace,
-                    context_paths=context_paths,
-                    previous_turns=turns_to_show,
-                    workspace_prepopulated=workspace_prepopulated,
-                    enable_image_generation=False,
-                    agent_answers=all_answers,
-                    enable_command_execution=False,
-                    docker_mode=False,
-                    enable_sudo=False,
-                )
-                + "\n\n## Post-Evaluation Task\n"
-                + base_system_message
-            )
+        # Build post-evaluation system message using section architecture
+        base_system_message = self._build_post_evaluation_system_message(
+            agent=agent,
+            all_answers=all_answers,
+        )
 
         # Create evaluation messages
         evaluation_messages = [

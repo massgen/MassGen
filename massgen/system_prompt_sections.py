@@ -383,43 +383,294 @@ class WorkspaceStructureSection(SystemPromptSection):
         return "\n".join(content_parts)
 
 
+class CommandExecutionSection(SystemPromptSection):
+    """
+    Command execution environment and instructions.
+
+    Documents the execution environment (Docker vs native), available packages,
+    and any restrictions.
+
+    NOTE: Package list is manually maintained and should match massgen/docker/Dockerfile.
+    TODO: Consider auto-generating this from the Dockerfile for accuracy.
+
+    Args:
+        docker_mode: Whether commands execute in Docker containers
+        enable_sudo: Whether sudo is available in Docker containers
+    """
+
+    def __init__(self, docker_mode: bool = False, enable_sudo: bool = False):
+        super().__init__(
+            title="Command Execution",
+            priority=Priority.MEDIUM,
+            xml_tag="command_execution",
+        )
+        self.docker_mode = docker_mode
+        self.enable_sudo = enable_sudo
+
+    def build_content(self) -> str:
+        parts = ["## Command Execution"]
+        parts.append("You can run command line commands using the `execute_command` tool.\n")
+
+        if self.docker_mode:
+            parts.append("**IMPORTANT: Docker Execution Environment**")
+            parts.append("- You are running in a Linux Docker container (Debian-based)")
+            parts.append("- Base image: Python 3.11-slim with Node.js 20.x LTS")
+            parts.append(
+                "- Pre-installed packages:\n"
+                "  - System: git, curl, build-essential, ripgrep, gh (GitHub CLI)\n"
+                "  - Python: pytest, requests, numpy, pandas, ast-grep-cli\n"
+                "  - Node: npm, openskills (global)",
+            )
+            parts.append("- Use `apt-get` for system packages (NOT brew, dnf, yum, etc.)")
+
+            if self.enable_sudo:
+                parts.append(
+                    "- **Sudo is available**: You can install packages with " "`sudo apt-get install <package>`",
+                )
+                parts.append("- Example: `sudo apt-get update && sudo apt-get install -y ffmpeg`")
+            else:
+                parts.append("- Sudo is NOT available - use pip/npm for user-level packages only")
+                parts.append(
+                    "- For system packages, ask the user to rebuild the Docker image with " "needed packages",
+                )
+
+            parts.append("")
+
+        return "\n".join(parts)
+
+
 class FilesystemOperationsSection(SystemPromptSection):
     """
     Filesystem tool usage instructions.
 
     Documents how to use filesystem tools for creating answers, managing
     files, and coordinating with other agents.
+
+    Args:
+        main_workspace: Path to agent's main workspace
+        temp_workspace: Path to shared reference workspace
+        context_paths: List of context paths with permissions
+        previous_turns: List of previous turn metadata
+        workspace_prepopulated: Whether workspace is pre-populated
+        agent_answers: Dict of agent answers to show workspace structure
+        enable_command_execution: Whether command line execution is enabled
     """
 
-    def __init__(self, operations_content: str):
+    def __init__(
+        self,
+        main_workspace: Optional[str] = None,
+        temp_workspace: Optional[str] = None,
+        context_paths: Optional[List[Dict[str, str]]] = None,
+        previous_turns: Optional[List[Dict[str, Any]]] = None,
+        workspace_prepopulated: bool = False,
+        agent_answers: Optional[Dict[str, str]] = None,
+        enable_command_execution: bool = False,
+    ):
         super().__init__(
             title="Filesystem Operations",
             priority=Priority.MEDIUM,
             xml_tag="filesystem_operations",
         )
-        self.operations_content = operations_content
+        self.main_workspace = main_workspace
+        self.temp_workspace = temp_workspace
+        self.context_paths = context_paths or []
+        self.previous_turns = previous_turns or []
+        self.workspace_prepopulated = workspace_prepopulated
+        self.agent_answers = agent_answers
+        self.enable_command_execution = enable_command_execution
 
     def build_content(self) -> str:
-        return self.operations_content
+        parts = ["## Filesystem Access"]
+
+        # Explain workspace behavior
+        parts.append(
+            "Your working directory is set to your workspace, so all relative paths in your file "
+            "operations will be resolved from there. This ensures each agent works in isolation "
+            "while having access to shared references. Only include in your workspace files that "
+            "should be used in your answer.\n",
+        )
+
+        if self.main_workspace:
+            workspace_note = f"**Your Workspace**: `{self.main_workspace}` - Write actual files here using " "file tools. All your file operations will be relative to this directory."
+            if self.workspace_prepopulated:
+                workspace_note += (
+                    " **Note**: Your workspace already contains a writable copy of the previous "
+                    "turn's results - you can modify or build upon these files. The original "
+                    "unmodified version is also available as a read-only context path if you need "
+                    "to reference what was originally there."
+                )
+            parts.append(workspace_note)
+
+        if self.temp_workspace:
+            # Build workspace tree structure
+            workspace_tree = f"**Shared Reference**: `{self.temp_workspace}` - Contains previous answers from " "all agents (read/execute-only)\n"
+
+            # Add agent subdirectories in tree format
+            if self.agent_answers:
+                agent_mapping = {}
+                for i, agent_id in enumerate(sorted(self.agent_answers.keys()), 1):
+                    agent_mapping[agent_id] = f"agent{i}"
+
+                workspace_tree += "   Available agent workspaces:\n"
+                agent_items = list(agent_mapping.items())
+                for idx, (agent_id, anon_id) in enumerate(agent_items):
+                    is_last = idx == len(agent_items) - 1
+                    prefix = "   └── " if is_last else "   ├── "
+                    workspace_tree += f"{prefix}{self.temp_workspace}/{anon_id}/\n"
+
+            workspace_tree += (
+                "   **Building on Others' Work:**\n"
+                "   - **Inspect First**: Use `read_file`, `read_multiple_files`, or other command "
+                "line tools to examine files before copying. Understand what you're working with.\n"
+                "   - **Selective Copying**: Only copy specific files you'll actually modify or "
+                "use. Use `copy_file` for individual files, not `copy_directory` for wholesale "
+                "copying.\n"
+                "   - **Merging Approaches**: If combining work from multiple agents, consider "
+                "merging complementary parts (e.g., agent1's data model + agent2's API layer) "
+                "rather than picking one entire solution.\n"
+                "   - **Attribution**: Be explicit in your answer about what you built on (e.g., "
+                "'Extended agent1's parser.py to handle edge cases').\n"
+                "   - **Verify Files**: Not all workspaces may have matching answers in CURRENT "
+                "ANSWERS section (restart scenarios). Check actual files in Shared Reference.\n"
+            )
+            parts.append(workspace_tree)
+
+        if self.context_paths:
+            has_target = any(p.get("will_be_writable", False) for p in self.context_paths)
+            has_readonly_context = any(not p.get("will_be_writable", False) and p.get("permission") == "read" for p in self.context_paths)
+
+            if has_target:
+                parts.append(
+                    "\n**Important Context**: If the user asks about improving, fixing, debugging, "
+                    "or understanding an existing code/project (e.g., 'Why is this code not "
+                    "working?', 'Fix this bug', 'Add feature X'), they are referring to the Target "
+                    "Path below. First READ the existing files from that path to understand what's "
+                    "there, then make your changes based on that codebase. Final deliverables must "
+                    "end up there.\n",
+                )
+            elif has_readonly_context:
+                parts.append(
+                    "\n**Important Context**: If the user asks about debugging or understanding an "
+                    "existing code/project (e.g., 'Why is this code not working?', 'Explain this "
+                    "bug'), they are referring to (one of) the Context Path(s) below. Read then "
+                    "provide analysis/explanation based on that codebase - you cannot modify it "
+                    "directly.\n",
+                )
+
+            for path_config in self.context_paths:
+                path = path_config.get("path", "")
+                permission = path_config.get("permission", "read")
+                will_be_writable = path_config.get("will_be_writable", False)
+                if path:
+                    if permission == "read" and will_be_writable:
+                        parts.append(
+                            f"**Target Path**: `{path}` (read-only now, write access later) - This "
+                            "is where your changes will be delivered. Work in your workspace first, "
+                            f"then the final presenter will place or update files DIRECTLY into "
+                            f"`{path}` using the FULL ABSOLUTE PATH.",
+                        )
+                    elif permission == "write":
+                        parts.append(
+                            f"**Target Path**: `{path}` (write access) - This is where your changes "
+                            "must be delivered. First, ensure you place your answer in your "
+                            f"workspace, then copy/write files DIRECTLY into `{path}` using FULL "
+                            f"ABSOLUTE PATH (not relative paths). Files must go directly into the "
+                            f"target path itself (e.g., `{path}/file.txt`), NOT into a `.massgen/` "
+                            "subdirectory within it.",
+                        )
+                    else:
+                        parts.append(
+                            f"**Context Path**: `{path}` (read-only) - Use FULL ABSOLUTE PATH when " "reading.",
+                        )
+
+        # Add note about multi-turn conversations
+        if self.previous_turns:
+            parts.append(
+                "\n**Note**: This is a multi-turn conversation. Each User/Assistant exchange in "
+                "the conversation history represents one turn. The workspace from each turn is "
+                "available as a read-only context path listed above (e.g., turn 1's workspace is "
+                "at the path ending in `/turn_1/workspace`).",
+            )
+
+        # Add task handling priority
+        parts.append(
+            "\n**Task Handling Priority**: When responding to user requests, follow this priority "
+            "order:\n"
+            "1. **Use MCP Tools First**: If you have specialized MCP tools available, call them "
+            "DIRECTLY to complete the task\n"
+            "   - Save any outputs/artifacts from MCP tools to your workspace\n"
+            "2. **Write Code If Needed**: If MCP tools cannot complete the task, write and execute "
+            "code\n"
+            "3. **Create Other Files**: Create configs, documents, or other deliverables as "
+            "needed\n"
+            "4. **Text Response Otherwise**: If no tools or files are needed, provide a direct "
+            "text answer\n\n"
+            "**Important**: Do NOT ask the user for clarification or additional input. Make "
+            "reasonable assumptions and proceed with sensible defaults. You will not receive user "
+            "feedback, so complete the task autonomously based on the original request.\n",
+        )
+
+        # Add new answer guidance
+        new_answer_guidance = "\n**New Answer**: When calling `new_answer`:\n"
+        if self.enable_command_execution:
+            new_answer_guidance += "- If you executed commands (e.g., running tests), explain the results in your " "answer (what passed, what failed, what the output shows)\n"
+        new_answer_guidance += "- If you created files, list your cwd and file paths (but do NOT paste full file " "contents)\n"
+        new_answer_guidance += "- If providing a text response, include your analysis/explanation in the `content` " "field\n"
+        parts.append(new_answer_guidance)
+
+        return "\n".join(parts)
 
 
 class FilesystemBestPracticesSection(SystemPromptSection):
     """
     Optional filesystem best practices and tips.
 
-    Lower priority guidance about workspace cleanup, comparison tools, etc.
+    Lower priority guidance about workspace cleanup, comparison tools, and evaluation.
     """
 
-    def __init__(self, best_practices_content: str):
+    def __init__(self):
         super().__init__(
             title="Filesystem Best Practices",
             priority=Priority.AUXILIARY,
             xml_tag="filesystem_best_practices",
         )
-        self.best_practices_content = best_practices_content
 
     def build_content(self) -> str:
-        return self.best_practices_content
+        parts = []
+
+        # Workspace management guidance
+        parts.append(
+            "**Workspace Management**: \n"
+            "- **Selective Copying**: When building on other agents' work, only copy the specific "
+            "files you need to modify or use. Do not copy entire workspaces wholesale. Be explicit "
+            "about what you're building on (e.g., 'Using agent1's parser.py with "
+            "modifications').\n"
+            "- **Cleanup**: Remove any temporary files, intermediate artifacts, test scripts, or "
+            "unused files copied from another agent before submitting `new_answer`. Your workspace "
+            "should contain only the files that are part of your final deliverable. For example, "
+            "if you created `test_output.txt` for debugging or `old_version.py` before "
+            "refactoring, delete them.\n"
+            "- **Organization**: Keep files logically organized. If you're combining work from "
+            "multiple agents, structure the result clearly.\n",
+        )
+
+        # Comparison tools
+        parts.append(
+            "**Comparison Tools**: Use `compare_directories` to see differences between two "
+            "directories (e.g., comparing your workspace to another agent's workspace or a previous "
+            "version), or `compare_files` to see line-by-line diffs between two files. These "
+            "read-only tools help you understand what changed, build upon existing work "
+            "effectively, or verify solutions before voting.\n",
+        )
+
+        # Evaluation guidance
+        parts.append(
+            "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on "
+            "the answer text. Instead, read and verify the actual files in their workspaces (via "
+            "Shared Reference) to ensure the work matches their claims.\n",
+        )
+
+        return "\n".join(parts)
 
 
 class FilesystemSection(SystemPromptSection):
@@ -435,16 +686,29 @@ class FilesystemSection(SystemPromptSection):
     Args:
         workspace_path: Path to agent's workspace
         context_paths: List of context paths
-        operations_content: Tool usage instructions
-        best_practices_content: Optional guidance
+        main_workspace: Path to agent's main workspace
+        temp_workspace: Path to shared reference workspace
+        previous_turns: List of previous turn metadata
+        workspace_prepopulated: Whether workspace is pre-populated
+        agent_answers: Dict of agent answers to show workspace structure
+        enable_command_execution: Whether command line execution is enabled
+        docker_mode: Whether commands execute in Docker containers
+        enable_sudo: Whether sudo is available in Docker containers
     """
 
     def __init__(
         self,
         workspace_path: str,
         context_paths: List[str],
-        operations_content: str,
-        best_practices_content: str,
+        main_workspace: Optional[str] = None,
+        temp_workspace: Optional[str] = None,
+        context_paths_detailed: Optional[List[Dict[str, str]]] = None,
+        previous_turns: Optional[List[Dict[str, Any]]] = None,
+        workspace_prepopulated: bool = False,
+        agent_answers: Optional[Dict[str, str]] = None,
+        enable_command_execution: bool = False,
+        docker_mode: bool = False,
+        enable_sudo: bool = False,
     ):
         super().__init__(
             title="Filesystem & Workspace",
@@ -455,9 +719,23 @@ class FilesystemSection(SystemPromptSection):
         # Create subsections with appropriate priorities
         self.subsections = [
             WorkspaceStructureSection(workspace_path, context_paths),
-            FilesystemOperationsSection(operations_content),
-            FilesystemBestPracticesSection(best_practices_content),
+            FilesystemOperationsSection(
+                main_workspace=main_workspace,
+                temp_workspace=temp_workspace,
+                context_paths=context_paths_detailed,
+                previous_turns=previous_turns,
+                workspace_prepopulated=workspace_prepopulated,
+                agent_answers=agent_answers,
+                enable_command_execution=enable_command_execution,
+            ),
+            FilesystemBestPracticesSection(),
         ]
+
+        # Add command execution section if enabled
+        if enable_command_execution:
+            self.subsections.append(
+                CommandExecutionSection(docker_mode=docker_mode, enable_sudo=enable_sudo),
+            )
 
     def build_content(self) -> str:
         """Brief intro - subsections contain the details."""
@@ -468,20 +746,138 @@ class TaskPlanningSection(SystemPromptSection):
     """
     Task planning guidance for complex multi-step tasks.
 
+    Provides comprehensive instructions on when and how to use task planning
+    tools for organizing multi-step work.
+
     Args:
-        planning_guidance: The planning guidance content from message_templates
+        filesystem_mode: If True, includes guidance about filesystem-based task storage
     """
 
-    def __init__(self, planning_guidance: str):
+    def __init__(self, filesystem_mode: bool = False):
         super().__init__(
             title="Task Planning",
             priority=Priority.MEDIUM,
             xml_tag="task_planning",
         )
-        self.planning_guidance = planning_guidance
+        self.filesystem_mode = filesystem_mode
 
     def build_content(self) -> str:
-        return self.planning_guidance
+        base_guidance = """
+# Task Planning and Management
+
+You have access to task planning tools to organize complex work.
+
+**IMPORTANT WORKFLOW - Plan Before Executing:**
+
+When working on multi-step tasks:
+1. **Think first** - Understand the requirements (some initial research/analysis is fine)
+2. **Create your task plan EARLY** - Use `create_task_plan()` BEFORE executing file operations or major
+   actions
+3. **Execute tasks** - Work through your plan systematically
+4. **Update as you go** - Use `add_task()` to capture new requirements you discover
+
+**DO NOT:**
+- ❌ Jump straight into creating files without planning first
+- ❌ Start executing complex work without a clear task breakdown
+- ❌ Ignore the planning tools for multi-step work
+
+**DO:**
+- ✅ Create a task plan early, even if it's just 3-4 high-level tasks
+- ✅ Refine your plan as you learn more (tasks can be added/edited/deleted)
+- ✅ Brief initial analysis is OK before planning (e.g., reading docs, checking existing code)
+
+**When to create a task plan:**
+- Multi-step tasks with dependencies (most common)
+- Multiple files or components to create
+- Complex features requiring coordination
+- Work that needs to be tracked or broken down
+- Any task where you'd benefit from a checklist
+
+**Skip task planning ONLY for:**
+- Trivial single-step tasks
+- Simple questions/analysis with no execution
+- Quick one-off operations
+
+**Tools available:**
+- `create_task_plan(tasks)` - Create a plan with tasks and dependencies
+- `get_ready_tasks()` - Get tasks ready to start (dependencies satisfied)
+- `get_blocked_tasks()` - See what's waiting on dependencies
+- `update_task_status(task_id, status)` - Mark progress (pending/in_progress/completed)
+- `add_task(description, depends_on)` - Add new tasks as you discover them
+- `get_task_plan()` - View your complete task plan
+- `edit_task(task_id, description)` - Update task descriptions
+- `delete_task(task_id)` - Remove tasks no longer needed
+
+**Recommended workflow:**
+```python
+# 1. Create plan FIRST (before major execution)
+plan = create_task_plan([
+    {"id": "research", "description": "Research OAuth providers"},
+    {"id": "design", "description": "Design auth flow", "depends_on": ["research"]},
+    {"id": "implement", "description": "Implement endpoints", "depends_on": ["design"]}
+])
+
+# 2. Work through tasks systematically
+update_task_status("research", "in_progress")
+# ... do research work ...
+update_task_status("research", "completed")
+
+# 3. Add tasks as you discover new requirements
+add_task("Write integration tests", depends_on=["implement"])
+
+# 4. Continue working
+ready = get_ready_tasks()  # ["design"]
+update_task_status("design", "in_progress")
+```
+
+**Dependency formats:**
+```python
+# By index (0-based)
+create_task_plan([
+    "Task 1",
+    {"description": "Task 2", "depends_on": [0]}  # Depends on Task 1
+])
+
+# By ID (recommended for clarity)
+create_task_plan([
+    {"id": "auth", "description": "Setup auth"},
+    {"id": "api", "description": "Build API", "depends_on": ["auth"]}
+])
+```
+
+**IMPORTANT - Including Task Plan in Your Answer:**
+If you created a task plan, include a summary at the end of your `new_answer` showing:
+1. Each task name
+2. Completion status (✓ or ✗)
+3. Brief description of what you did
+
+Example format:
+```
+[Your main answer content here]
+
+---
+**Task Execution Summary:**
+✓ Research OAuth providers - Analyzed OAuth 2.0 spec and compared providers
+✓ Design auth flow - Created flow diagram with PKCE and token refresh
+✓ Implement endpoints - Built /auth/login, /auth/callback, /auth/refresh
+✓ Write tests - Added integration tests for auth flow
+
+Status: 4/4 tasks completed
+```
+
+This helps other agents understand your approach and makes voting more specific."""
+
+        if self.filesystem_mode:
+            filesystem_guidance = """
+
+**Filesystem Mode Enabled:**
+Your task plans are automatically saved to `tasks/plan.json` in your workspace. You can write notes
+or comments in `tasks/notes.md` or other files in the `tasks/` directory.
+
+*NOTE*: You will also have access to other agents' task plans in the shared reference."""
+            return base_guidance + filesystem_guidance
+
+        return base_guidance
 
 
 class EvaluationSection(SystemPromptSection):
@@ -493,19 +889,131 @@ class EvaluationSection(SystemPromptSection):
     coordination mechanics. This is foundational knowledge, not task-specific.
 
     Args:
-        evaluation_instructions: The evaluation system message content
+        voting_sensitivity: Controls evaluation strictness ('lenient', 'balanced', 'strict')
+        answer_novelty_requirement: Controls novelty requirements ('lenient', 'balanced', 'strict')
     """
 
-    def __init__(self, evaluation_instructions: str):
+    def __init__(
+        self,
+        voting_sensitivity: str = "lenient",
+        answer_novelty_requirement: str = "lenient",
+    ):
         super().__init__(
             title="MassGen Coordination",
             priority=Priority.CRITICAL,
             xml_tag="massgen_coordination",
         )
-        self.evaluation_instructions = evaluation_instructions
+        self.voting_sensitivity = voting_sensitivity
+        self.answer_novelty_requirement = answer_novelty_requirement
 
     def build_content(self) -> str:
-        return self.evaluation_instructions
+        import time
+
+        # Determine evaluation criteria based on voting sensitivity
+        if self.voting_sensitivity == "strict":
+            evaluation_section = """Does the best CURRENT ANSWER address the ORIGINAL MESSAGE exceptionally well? Consider:
+- Is it comprehensive, addressing ALL aspects and edge cases?
+- Is it technically accurate and well-reasoned?
+- Does it provide clear explanations and proper justification?
+- Is it complete with no significant gaps or weaknesses?
+- Could it serve as a reference-quality solution?
+
+Only use the `vote` tool if the best answer meets high standards of excellence."""
+        elif self.voting_sensitivity == "balanced":
+            evaluation_section = """Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well? Consider:
+- Is it comprehensive, accurate, and complete?
+- Could it be meaningfully improved, refined, or expanded?
+- Are there weaknesses, gaps, or better approaches?
+
+Only use the `vote` tool if the best answer is strong and complete."""
+        else:
+            # Default to lenient (including explicit "lenient" or any other value)
+            evaluation_section = """Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well?
+
+If YES, use the `vote` tool to record your vote and skip the `new_answer` tool."""
+
+        # Add novelty requirement instructions if not lenient
+        novelty_section = ""
+        if self.answer_novelty_requirement == "balanced":
+            novelty_section = """
+IMPORTANT: If you provide a new answer, it must be meaningfully different from existing answers.
+- Don't just rephrase or reword existing solutions
+- Introduce new insights, approaches, or tools
+- Make substantive improvements, not cosmetic changes"""
+        elif self.answer_novelty_requirement == "strict":
+            novelty_section = """
+CRITICAL: New answers must be SUBSTANTIALLY different from existing answers.
+- Use a fundamentally different approach or methodology
+- Employ different tools or techniques
+- Provide significantly more depth or novel perspectives
+- If you cannot provide a truly novel solution, vote instead"""
+
+        return f"""You are evaluating answers from multiple agents for final response to a message.
+Different agents may have different builtin tools and capabilities.
+{evaluation_section}
+Otherwise, digest existing answers, combine their strengths, and do additional work to address their weaknesses,
+then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE.{novelty_section}
+Make sure you actually call `vote` or `new_answer` (in tool call format).
+
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
+
+
+class PostEvaluationSection(SystemPromptSection):
+    """
+    Post-evaluation phase instructions.
+
+    After final presentation, the winning agent evaluates its own answer
+    and decides whether to submit or restart with improvements.
+
+    MEDIUM priority as this is phase-specific operational guidance.
+    """
+
+    def __init__(self):
+        super().__init__(
+            title="Post-Presentation Evaluation",
+            priority=Priority.MEDIUM,
+            xml_tag="post_evaluation",
+        )
+
+    def build_content(self) -> str:
+        return """## Post-Presentation Evaluation
+
+You have just presented a final answer to the user. Now you must evaluate whether your answer fully addresses the original task.
+
+**Your Task:**
+Review the final answer that was presented and determine if it completely and accurately addresses the original task requirements.
+
+**Available Tools:**
+You have access to the same filesystem and MCP tools that were available during presentation. Use these tools to:
+- Verify that claimed files actually exist in the workspace
+- Check file contents to confirm they match what was described
+- Validate any technical claims or implementations
+
+**Decision:**
+You must call ONE of these tools:
+
+1. **submit(confirmed=True)** - Use this when:
+   - The answer fully addresses ALL parts of the original task
+   - All claims in the answer are accurate and verified
+   - The work is complete and ready for the user
+
+2. **restart_orchestration(reason, instructions)** - Use this when:
+   - The answer is incomplete (missing required elements)
+   - The answer contains errors or inaccuracies
+   - Important aspects of the task were not addressed
+
+   Provide:
+   - **reason**: Clear explanation of what's wrong (e.g., "The task required descriptions of two Beatles, but only John Lennon was described")
+   - **instructions**: Detailed, actionable guidance for the next attempt (e.g.,
+     "Provide two descriptions (John Lennon AND Paul McCartney). Each should include:
+     birth year, role in band, notable songs, impact on music. Use 4-6 sentences per person.")
+
+**Important Notes:**
+- Be honest and thorough in your evaluation
+- You are evaluating your own work with a fresh perspective
+- If you find problems, restarting with clear instructions will lead to a better result
+- The restart process gives you another opportunity to get it right
+"""
 
 
 class PlanningModeSection(SystemPromptSection):
