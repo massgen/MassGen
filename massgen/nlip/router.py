@@ -172,56 +172,67 @@ class NLIPRouter:
                     # Extract execution context from request
                     execution_context = request.content.get("execution_context", {})
 
-                    async for execution_result in self.tool_manager.execute_tool(
+                    # Properly handle the async generator to avoid GeneratorExit issues
+                    tool_generator = self.tool_manager.execute_tool(
                         tool_request={
                             "name": tool_call.tool_name,
                             "input": native_call.get("parameters", {}),
                         },
                         execution_context=execution_context,
-                    ):
-                        # Stream intermediate output blocks immediately
-                        if hasattr(execution_result, "output_blocks"):
-                            for block in execution_result.output_blocks:
-                                block_data = getattr(block, "data", "")
-                                if block_data:
-                                    if isinstance(block_data, dict) and "content" in block_data:
-                                        content = block_data["content"]
-                                        if isinstance(content, list) and content:
-                                            first_entry = content[0]
-                                            if isinstance(first_entry, dict) and "text" in first_entry:
-                                                block_data = first_entry["text"]
-                                    block_text = str(block_data)
-                                    if block_text:
-                                        yield self._create_response(
-                                            request,
-                                            content={
-                                                "stream_chunk": block_text,
-                                                "tool_id": tool_call.tool_id,
-                                                "tool_name": tool_call.tool_name,
-                                                "is_log": execution_result.is_log,
-                                            },
-                                        )
+                    )
 
-                        # Aggregate non-log results for final summary
-                        if not execution_result.is_log and hasattr(execution_result, "output_blocks"):
-                            for block in execution_result.output_blocks:
-                                block_data = getattr(block, "data", "")
-                                if block_data:
-                                    if isinstance(block_data, dict) and "content" in block_data:
-                                        content = block_data["content"]
-                                        if isinstance(content, list) and content:
-                                            first_entry = content[0]
-                                            if isinstance(first_entry, dict) and "text" in first_entry:
-                                                block_data = first_entry["text"]
-                                    accumulated_output.append(str(block_data))
+                    try:
+                        async for execution_result in tool_generator:
+                            # Stream intermediate output blocks immediately
+                            if hasattr(execution_result, "output_blocks"):
+                                for block in execution_result.output_blocks:
+                                    block_data = getattr(block, "data", "")
+                                    if block_data:
+                                        if isinstance(block_data, dict) and "content" in block_data:
+                                            content = block_data["content"]
+                                            if isinstance(content, list) and content:
+                                                first_entry = content[0]
+                                                if isinstance(first_entry, dict) and "text" in first_entry:
+                                                    block_data = first_entry["text"]
+                                        block_text = str(block_data)
+                                        if block_text:
+                                            yield self._create_response(
+                                                request,
+                                                content={
+                                                    "stream_chunk": block_text,
+                                                    "tool_id": tool_call.tool_id,
+                                                    "tool_name": tool_call.tool_name,
+                                                    "is_log": execution_result.is_log,
+                                                },
+                                            )
 
-                        # Store final result metadata
-                        if execution_result.is_final:
-                            final_result = {
-                                "output": "\n".join(accumulated_output),
-                                "blocks": len(execution_result.output_blocks),
-                                "metadata": execution_result.meta_info,
-                            }
+                            # Aggregate non-log results for final summary
+                            if not execution_result.is_log and hasattr(execution_result, "output_blocks"):
+                                for block in execution_result.output_blocks:
+                                    block_data = getattr(block, "data", "")
+                                    if block_data:
+                                        if isinstance(block_data, dict) and "content" in block_data:
+                                            content = block_data["content"]
+                                            if isinstance(content, list) and content:
+                                                first_entry = content[0]
+                                                if isinstance(first_entry, dict) and "text" in first_entry:
+                                                    block_data = first_entry["text"]
+                                        accumulated_output.append(str(block_data))
+
+                            # Store final result metadata
+                            if execution_result.is_final:
+                                final_result = {
+                                    "output": "\n".join(accumulated_output),
+                                    "blocks": len(execution_result.output_blocks),
+                                    "metadata": execution_result.meta_info,
+                                }
+                    finally:
+                        # Ensure the async generator is properly closed
+                        if hasattr(tool_generator, "aclose"):
+                            try:
+                                await tool_generator.aclose()
+                            except Exception as close_error:
+                                logger.debug(f"Error closing tool generator: {close_error}")
 
                     result = final_result if final_result else {"output": "\n".join(accumulated_output)}
                 else:

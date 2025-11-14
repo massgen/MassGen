@@ -1018,49 +1018,64 @@ class CustomToolAndMCPBackend(LLMBackend):
 
         request = self._build_nlip_request(call)
 
-        async for response in self._nlip_router.route_message(request):
-            chunk = self._convert_nlip_stream_chunk(response.content, config, tool_name)
-            if chunk:
-                yield chunk
-                continue
+        # Properly handle the async generator to avoid GeneratorExit issues
+        nlip_generator = self._nlip_router.route_message(request)
+        result_found = False
 
-            if response.tool_results:
-                matching_result = self._select_matching_tool_result(response.tool_results, call_id)
-                if not matching_result:
+        try:
+            async for response in nlip_generator:
+                chunk = self._convert_nlip_stream_chunk(response.content, config, tool_name)
+                if chunk:
+                    yield chunk
                     continue
 
-                if matching_result.status == "error":
-                    error_msg = matching_result.error or "Unknown error"
-                    self._append_tool_error_message(updated_messages, call, error_msg, config.tool_type)
+                if response.tool_results:
+                    matching_result = self._select_matching_tool_result(response.tool_results, call_id)
+                    if not matching_result:
+                        continue
+
+                    if matching_result.status == "error":
+                        error_msg = matching_result.error or "Unknown error"
+                        self._append_tool_error_message(updated_messages, call, error_msg, config.tool_type)
+                        processed_call_ids.add(call_id)
+                        yield StreamChunk(
+                            type=config.chunk_type,
+                            status=config.status_error,
+                            content=f"{config.error_emoji} {tool_name}: {error_msg}",
+                            source=f"{config.source_prefix}{tool_name}",
+                        )
+                        result_found = True
+                        break
+
+                    result_text = self._extract_nlip_result_text(matching_result, config.tool_type)
+                    self._append_tool_result_message(updated_messages, call, result_text, config.tool_type)
                     processed_call_ids.add(call_id)
+
                     yield StreamChunk(
                         type=config.chunk_type,
-                        status=config.status_error,
-                        content=f"{config.error_emoji} {tool_name}: {error_msg}",
+                        status="function_call_output",
+                        content=f"Results for Calling {tool_name}: {result_text}",
                         source=f"{config.source_prefix}{tool_name}",
                     )
-                    return
 
-                result_text = self._extract_nlip_result_text(matching_result, config.tool_type)
-                self._append_tool_result_message(updated_messages, call, result_text, config.tool_type)
-                processed_call_ids.add(call_id)
+                    yield StreamChunk(
+                        type=config.chunk_type,
+                        status=config.status_response,
+                        content=f"{config.success_emoji} {tool_name} completed",
+                        source=f"{config.source_prefix}{tool_name}",
+                    )
+                    result_found = True
+                    break
+        finally:
+            # Ensure the async generator is properly closed
+            if hasattr(nlip_generator, "aclose"):
+                try:
+                    await nlip_generator.aclose()
+                except Exception as close_error:
+                    logger.debug(f"Error closing NLIP generator: {close_error}")
 
-                yield StreamChunk(
-                    type=config.chunk_type,
-                    status="function_call_output",
-                    content=f"Results for Calling {tool_name}: {result_text}",
-                    source=f"{config.source_prefix}{tool_name}",
-                )
-
-                yield StreamChunk(
-                    type=config.chunk_type,
-                    status=config.status_response,
-                    content=f"{config.success_emoji} {tool_name} completed",
-                    source=f"{config.source_prefix}{tool_name}",
-                )
-                return
-
-        raise Exception("NLIP router returned no result")
+        if not result_found:
+            raise Exception("NLIP router returned no result")
 
     def _convert_nlip_stream_chunk(
         self,
@@ -1136,6 +1151,16 @@ class CustomToolAndMCPBackend(LLMBackend):
             )
             return output
 
+        # Handle MCP CallToolResult objects (has .content attribute)
+        if hasattr(raw_result, "content") and not isinstance(raw_result, dict):
+            content_payload = getattr(raw_result, "content", None)
+            content_text = self._extract_text_from_content(content_payload)
+            if content_text:
+                logger.debug(
+                    f"[NLIP] Extracted CallToolResult.content for {tool_name} ({len(content_text)} chars)",
+                )
+                return content_text
+
         if isinstance(raw_result, (dict, list)):
             content_payload = raw_result.get("content") if isinstance(raw_result, dict) else raw_result
             content_text = self._extract_text_from_content(content_payload)
@@ -1164,7 +1189,11 @@ class CustomToolAndMCPBackend(LLMBackend):
         if isinstance(content, list):
             text_parts = []
             for item in content:
-                if isinstance(item, dict):
+                # Handle MCP TextContent objects (have .text attribute)
+                if hasattr(item, "text"):
+                    text_parts.append(str(item.text))
+                # Handle dict-based content
+                elif isinstance(item, dict):
                     if "text" in item:
                         text_parts.append(str(item["text"]))
                     elif "type" in item and item["type"] == "text" and "content" in item:
