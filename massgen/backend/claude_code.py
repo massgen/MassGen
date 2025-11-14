@@ -1068,6 +1068,7 @@ class ClaudeCodeBackend(LLMBackend):
             "permission_mode",
             "custom_tools",  # Handled separately via SDK MCP server conversion
             "instance_id",  # Used for Docker container naming, not for ClaudeAgentOptions
+            "enable_rate_limit",  # Rate limiting parameter (handled at orchestrator level, not backend)
             # Note: system_prompt is NOT excluded - it's needed for internal workflow prompt injection
             # Validation prevents it from being set in YAML backend config
         }

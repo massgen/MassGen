@@ -51,6 +51,7 @@ from .logger_config import (
 from .memory import ConversationMemory, PersistentMemoryBase
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
+from .system_message_builder import SystemMessageBuilder
 from .tool import get_post_evaluation_tools, get_workflow_tools
 from .utils import ActionType, AgentStatus, CoordinationStage
 
@@ -167,6 +168,8 @@ class Orchestrator(ChatAgent):
             voting_sensitivity=self.config.voting_sensitivity,
             answer_novelty_requirement=self.config.answer_novelty_requirement,
         )
+        # Create system message builder for all phases (coordination, presentation, post-evaluation)
+        self._system_message_builder: Optional[SystemMessageBuilder] = None  # Lazy initialization
         # Create workflow tools for agents (vote and new_answer) using new toolkit system
         self.workflow_tools = get_workflow_tools(
             valid_agent_ids=list(agents.keys()),
@@ -617,104 +620,6 @@ class Orchestrator(ChatAgent):
         }
 
         return config
-
-    def _get_all_memories(self) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """
-        Read all memories from all agents' workspaces.
-
-        Returns:
-            Tuple of (short_term_memories, long_term_memories)
-            Each is a list of memory dictionaries with keys:
-            - name, description, content, tier, agent_id, created, updated
-        """
-        from pathlib import Path
-
-        short_term_memories = []
-        long_term_memories = []
-
-        # Scan all agents' workspaces
-        for agent_id, agent in self.agents.items():
-            if not (hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager") and agent.backend.filesystem_manager):
-                continue
-
-            workspace = agent.backend.filesystem_manager.cwd
-            if not workspace:
-                continue
-
-            memory_dir = Path(workspace) / "memory"
-            if not memory_dir.exists():
-                continue
-
-            # Read short-term memories
-            short_term_dir = memory_dir / "short_term"
-            if short_term_dir.exists():
-                for mem_file in short_term_dir.glob("*.md"):
-                    try:
-                        memory_data = self._parse_memory_file(mem_file)
-                        if memory_data:
-                            short_term_memories.append(memory_data)
-                    except Exception as e:
-                        logger.warning(f"[Orchestrator] Failed to parse memory file {mem_file}: {e}")
-
-            # Read long-term memories
-            long_term_dir = memory_dir / "long_term"
-            if long_term_dir.exists():
-                for mem_file in long_term_dir.glob("*.md"):
-                    try:
-                        memory_data = self._parse_memory_file(mem_file)
-                        if memory_data:
-                            long_term_memories.append(memory_data)
-                    except Exception as e:
-                        logger.warning(f"[Orchestrator] Failed to parse memory file {mem_file}: {e}")
-
-        return short_term_memories, long_term_memories
-
-    @staticmethod
-    def _parse_memory_file(file_path: Path) -> Optional[Dict[str, Any]]:
-        """
-        Parse a memory markdown file with YAML frontmatter.
-
-        Args:
-            file_path: Path to the memory file
-
-        Returns:
-            Dictionary with memory data or None if parsing fails
-        """
-        try:
-            content = file_path.read_text()
-
-            # Split frontmatter from content
-            if not content.startswith("---"):
-                return None
-
-            parts = content.split("---", 2)
-            if len(parts) < 3:
-                return None
-
-            frontmatter_text = parts[1].strip()
-            memory_content = parts[2].strip()
-
-            # Parse frontmatter (simple key: value parser)
-            metadata = {}
-            for line in frontmatter_text.split("\n"):
-                line = line.strip()
-                if not line or ":" not in line:
-                    continue
-                key, value = line.split(":", 1)
-                metadata[key.strip()] = value.strip()
-
-            return {
-                "name": metadata.get("name", file_path.stem),
-                "description": metadata.get("description", ""),
-                "content": memory_content,
-                "tier": metadata.get("tier", "short_term"),
-                "agent_id": metadata.get("agent_id", "unknown"),
-                "created": metadata.get("created", ""),
-                "updated": metadata.get("updated", ""),
-            }
-        except Exception as e:
-            logger.error(f"[Orchestrator] Error parsing memory file {file_path}: {e}")
-            return None
 
     @staticmethod
     def _get_chunk_type_value(chunk) -> str:
@@ -2594,395 +2499,6 @@ Your answer:"""
             )
             await asyncio.sleep(cooldown)
 
-    def _build_structured_system_message(
-        self,
-        agent: ChatAgent,
-        agent_id: str,
-        answers: Optional[Dict[str, str]],
-        planning_mode_enabled: bool,
-        use_skills: bool,
-        enable_memory: bool,
-        enable_task_planning: bool,
-    ) -> str:
-        """
-        Build system message using the new structured section architecture.
-
-        This method assembles the system prompt using priority-based sections with
-        XML structure, ensuring critical instructions (skills, memory) appear early.
-
-        Args:
-            agent: The agent instance
-            agent_id: Agent identifier
-            answers: Dict of current answers from agents
-            planning_mode_enabled: Whether planning mode is active
-            use_skills: Whether to include skills section
-            enable_memory: Whether to include memory section
-            enable_task_planning: Whether to include task planning guidance
-
-        Returns:
-            Complete system prompt string with XML structure
-        """
-        from massgen.system_prompt_sections import (
-            AgentIdentitySection,
-            CommandExecutionSection,
-            CoreBehaviorsSection,
-            EvaluationSection,
-            FilesystemBestPracticesSection,
-            FilesystemOperationsSection,
-            MemorySection,
-            PlanningModeSection,
-            SkillsSection,
-            SystemPromptBuilder,
-            TaskPlanningSection,
-            WorkspaceStructureSection,
-        )
-
-        builder = SystemPromptBuilder()
-
-        # PRIORITY 1 (CRITICAL): Agent Identity - WHO they are
-        agent_system_message = agent.get_configurable_system_message()
-        # Use empty string if None to avoid showing "None" in prompt
-        if agent_system_message is None:
-            agent_system_message = ""
-        builder.add_section(AgentIdentitySection(agent_system_message))
-
-        # PRIORITY 1 (CRITICAL): Core Behaviors - HOW to act
-        builder.add_section(CoreBehaviorsSection())
-
-        # PRIORITY 1 (CRITICAL): MassGen Coordination - vote/new_answer primitives
-        voting_sensitivity = self.message_templates._voting_sensitivity
-        answer_novelty_requirement = self.message_templates._answer_novelty_requirement
-        builder.add_section(
-            EvaluationSection(
-                voting_sensitivity=voting_sensitivity,
-                answer_novelty_requirement=answer_novelty_requirement,
-            ),
-        )
-
-        # PRIORITY 5 (HIGH): Skills - Must be visible early
-        if use_skills:
-            from pathlib import Path
-
-            from massgen.filesystem_manager.skills_manager import scan_skills
-
-            # Scan all available skills
-            skills_dir = Path(self.config.coordination_config.skills_directory)
-            all_skills = scan_skills(skills_dir)
-
-            # Log what we found
-            builtin_count = len([s for s in all_skills if s["location"] == "builtin"])
-            project_count = len([s for s in all_skills if s["location"] == "project"])
-            logger.info(f"[Orchestrator] Scanned skills: {builtin_count} builtin, {project_count} project")
-
-            # Separate external and built-in skills
-            external_skills = [s for s in all_skills if s["location"] == "project"]
-            builtin_skills_names = [s["name"] for s in all_skills if s["location"] == "builtin"]
-
-            # Add skills section with high visibility
-            builder.add_section(SkillsSection(external_skills, builtin_skills_names))
-
-            # Auto-inject built-in skills content (these are loaded directly, not in table)
-            if hasattr(self.config.coordination_config, "massgen_skills") and self.config.coordination_config.massgen_skills:
-                configured_massgen_skills = set(self.config.coordination_config.massgen_skills)
-                builtin_skills_base = Path(__file__).parent / "skills"
-
-                for skill in all_skills:
-                    if skill["location"] == "builtin" and skill["name"] in configured_massgen_skills:
-                        # Find and inject SKILL.md content
-                        for subdir in ["always", "optional"]:
-                            skill_md_path = builtin_skills_base / subdir / skill["name"] / "SKILL.md"
-                            if skill_md_path.exists():
-                                skill_content = skill_md_path.read_text(encoding="utf-8")
-                                # Strip YAML frontmatter
-                                if skill_content.startswith("---"):
-                                    parts = skill_content.split("---", 2)
-                                    if len(parts) >= 3:
-                                        skill_content = parts[2].strip()
-
-                                # Create a simple section for built-in skill content
-                                # This will be injected after the skills table
-                                from massgen.system_prompt_sections import (
-                                    Priority,
-                                    SystemPromptSection,
-                                )
-
-                                class BuiltInSkillSection(SystemPromptSection):
-                                    def __init__(self, skill_name: str, skill_content: str):
-                                        super().__init__(
-                                            title=f"Skill: {skill_name}",
-                                            priority=Priority.HIGH,
-                                            xml_tag="massgen_skill",
-                                        )
-                                        self.skill_name = skill_name
-                                        self.skill_content = skill_content
-
-                                    def build_content(self) -> str:
-                                        return self.skill_content
-
-                                    def render(self) -> str:
-                                        # Custom render with name attribute
-                                        if not self.enabled:
-                                            return ""
-                                        return f'<massgen_skill name="{self.skill_name}">\n{self.skill_content}\n</massgen_skill>'
-
-                                builder.add_section(BuiltInSkillSection(skill["name"], skill_content))
-                                logger.info(f"[Orchestrator] Injected built-in skill: {skill['name']}")
-                                break
-
-        # PRIORITY 5 (HIGH): Memory - Proactive usage
-        if enable_memory:
-            short_term_memories, long_term_memories = self._get_all_memories()
-            # Always add memory section to show usage instructions, even if empty
-            memory_config = {
-                "short_term": {
-                    "content": "\n".join([f"- {m}" for m in short_term_memories]) if short_term_memories else "",
-                },
-                "long_term": [{"id": f"mem_{i}", "summary": mem, "created_at": "N/A"} for i, mem in enumerate(long_term_memories)] if long_term_memories else [],
-            }
-            builder.add_section(MemorySection(memory_config))
-            logger.info(f"[Orchestrator] Added memory section ({len(short_term_memories)} short-term, {len(long_term_memories)} long-term memories)")
-
-        # PRIORITY 5 (HIGH): Filesystem - Essential context
-        if agent.backend.filesystem_manager:
-            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-
-            # Add workspace structure section (critical paths)
-            builder.add_section(WorkspaceStructureSection(main_workspace, [p.get("path", "") for p in context_paths]))
-
-            # Add filesystem operations section (the full existing message for now)
-            # TODO: Break this into subsections (operations vs best practices)
-            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-            previous_turns_context = self._get_previous_turns_context_paths()
-            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-            workspace_prepopulated = len(previous_turns_context) > 0
-
-            # Check image generation
-            if hasattr(agent, "config") and agent.config:
-                agent.config.backend_params.get("enable_image_generation", False)
-            elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
-                agent.backend.backend_params.get("enable_image_generation", False)
-
-            # Check command execution
-            enable_command_execution = False
-            docker_mode = False
-            enable_sudo = False
-            if hasattr(agent, "config") and agent.config:
-                enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
-                docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
-                enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
-            elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
-                enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
-                docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
-                enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
-
-            # Add filesystem operations section with direct parameters
-            builder.add_section(
-                FilesystemOperationsSection(
-                    main_workspace=main_workspace,
-                    temp_workspace=temp_workspace,
-                    context_paths=context_paths,
-                    previous_turns=turns_to_show,
-                    workspace_prepopulated=workspace_prepopulated,
-                    agent_answers=answers,
-                    enable_command_execution=enable_command_execution,
-                ),
-            )
-
-            # Add filesystem best practices section
-            builder.add_section(FilesystemBestPracticesSection())
-
-            # Add command execution section if enabled
-            if enable_command_execution:
-                builder.add_section(
-                    CommandExecutionSection(docker_mode=docker_mode, enable_sudo=enable_sudo),
-                )
-
-        # PRIORITY 10 (MEDIUM): Task Planning
-        if enable_task_planning:
-            filesystem_mode = (
-                hasattr(self.config.coordination_config, "task_planning_filesystem_mode")
-                and self.config.coordination_config.task_planning_filesystem_mode
-                and hasattr(agent, "backend")
-                and hasattr(agent.backend, "filesystem_manager")
-                and agent.backend.filesystem_manager
-                and agent.backend.filesystem_manager.cwd
-            )
-            builder.add_section(TaskPlanningSection(filesystem_mode=filesystem_mode))
-
-        # PRIORITY 10 (MEDIUM): Planning Mode (conditional)
-        if planning_mode_enabled and self.config and hasattr(self.config, "coordination_config") and self.config.coordination_config and self.config.coordination_config.planning_mode_instruction:
-            builder.add_section(PlanningModeSection(self.config.coordination_config.planning_mode_instruction))
-            logger.info(f"[Orchestrator] Added planning mode instructions for {agent_id}")
-
-        # Build and return the complete structured system prompt
-        return builder.build()
-
-    def _build_final_presentation_system_message(
-        self,
-        agent: ChatAgent,
-        all_answers: Dict[str, str],
-        enable_image_generation: bool = False,
-        enable_audio_generation: bool = False,
-        enable_file_generation: bool = False,
-        enable_video_generation: bool = False,
-        has_irreversible_actions: bool = False,
-        enable_command_execution: bool = False,
-        docker_mode: bool = False,
-        enable_sudo: bool = False,
-    ) -> str:
-        """
-        Build system message for final presentation phase using section architecture.
-
-        This combines the agent's identity, presentation instructions, and filesystem
-        operations using the structured section approach.
-
-        Args:
-            agent: The presenting agent
-            all_answers: All answers from coordination phase
-            enable_image_generation: Whether image generation is enabled
-            enable_audio_generation: Whether audio generation is enabled
-            enable_file_generation: Whether file generation is enabled
-            enable_video_generation: Whether video generation is enabled
-            has_irreversible_actions: Whether agent has write access
-            enable_command_execution: Whether command execution is enabled
-            docker_mode: Whether commands run in Docker
-            enable_sudo: Whether sudo is available
-
-        Returns:
-            Complete system message string
-        """
-        # Get agent's configurable system message
-        agent_system_message = agent.get_configurable_system_message()
-        if agent_system_message is None:
-            agent_system_message = ""
-
-        # Get presentation instructions from message_templates
-        # (This contains special logic for image/audio/file/video generation)
-        presentation_instructions = self.message_templates.final_presentation_system_message(
-            original_system_message=agent_system_message,
-            enable_image_generation=enable_image_generation,
-            enable_audio_generation=enable_audio_generation,
-            enable_file_generation=enable_file_generation,
-            enable_video_generation=enable_video_generation,
-            has_irreversible_actions=has_irreversible_actions,
-            enable_command_execution=enable_command_execution,
-        )
-
-        # If filesystem is available, prepend filesystem sections
-        if agent.backend.filesystem_manager:
-            from massgen.system_prompt_sections import (
-                CommandExecutionSection,
-                FilesystemBestPracticesSection,
-                FilesystemOperationsSection,
-            )
-
-            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-
-            # Get previous turns context
-            previous_turns_context = self._get_previous_turns_context_paths()
-            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-            workspace_prepopulated = len(previous_turns_context) > 0
-
-            # Build filesystem sections
-            fs_ops = FilesystemOperationsSection(
-                main_workspace=main_workspace,
-                temp_workspace=temp_workspace,
-                context_paths=context_paths,
-                previous_turns=turns_to_show,
-                workspace_prepopulated=workspace_prepopulated,
-                agent_answers=all_answers,
-                enable_command_execution=enable_command_execution,
-            )
-
-            fs_best = FilesystemBestPracticesSection()
-
-            # Build sections list
-            sections_content = [fs_ops.build_content(), fs_best.build_content()]
-
-            # Add command execution section if enabled
-            if enable_command_execution:
-                cmd_exec = CommandExecutionSection(docker_mode=docker_mode, enable_sudo=enable_sudo)
-                sections_content.append(cmd_exec.build_content())
-
-            # Combine: filesystem sections + presentation instructions
-            filesystem_content = "\n\n".join(sections_content)
-            return f"{filesystem_content}\n\n## Instructions\n{presentation_instructions}"
-        else:
-            # No filesystem - just return presentation instructions
-            return presentation_instructions
-
-    def _build_post_evaluation_system_message(
-        self,
-        agent: ChatAgent,
-        all_answers: Dict[str, str],
-    ) -> str:
-        """
-        Build system message for post-evaluation phase using section architecture.
-
-        This combines the agent's identity, post-evaluation instructions, and filesystem
-        operations using the structured section approach.
-
-        Args:
-            agent: The evaluating agent
-            all_answers: All answers from coordination phase
-
-        Returns:
-            Complete system message string
-        """
-        from massgen.system_prompt_sections import (
-            FilesystemBestPracticesSection,
-            FilesystemOperationsSection,
-            PostEvaluationSection,
-        )
-
-        # Get agent's configurable system message
-        agent_system_message = agent.get_configurable_system_message()
-        if agent_system_message is None:
-            agent_system_message = ""
-
-        # Start with agent identity if provided
-        parts = []
-        if agent_system_message:
-            parts.append(agent_system_message)
-
-        # If filesystem is available, add filesystem sections
-        if agent.backend.filesystem_manager:
-            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-
-            # Get previous turns context
-            previous_turns_context = self._get_previous_turns_context_paths()
-            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-            workspace_prepopulated = len(previous_turns_context) > 0
-
-            # Build filesystem sections
-            fs_ops = FilesystemOperationsSection(
-                main_workspace=main_workspace,
-                temp_workspace=temp_workspace,
-                context_paths=context_paths,
-                previous_turns=turns_to_show,
-                workspace_prepopulated=workspace_prepopulated,
-                agent_answers=all_answers,
-                enable_command_execution=False,  # No command execution in post-eval
-            )
-            parts.append(fs_ops.build_content())
-
-            fs_best = FilesystemBestPracticesSection()
-            parts.append(fs_best.build_content())
-
-        # Add post-evaluation instructions
-        post_eval = PostEvaluationSection()
-        parts.append(post_eval.build_content())
-
-        return "\n\n".join(parts)
-
     async def _stream_agent_execution(
         self,
         agent_id: str,
@@ -3067,7 +2583,7 @@ Your answer:"""
 
             # Build new structured system message FIRST (before conversation building)
             logger.info(f"[Orchestrator] Building structured system message for {agent_id}")
-            system_message = self._build_structured_system_message(
+            system_message = self._get_system_message_builder().build_coordination_message(
                 agent=agent,
                 agent_id=agent_id,
                 answers=normalized_answers,
@@ -3075,6 +2591,7 @@ Your answer:"""
                 use_skills=hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills,
                 enable_memory=hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode,
                 enable_task_planning=self.config.coordination_config.enable_agent_task_planning,
+                previous_turns=self._previous_turns,
             )
             logger.info(f"[Orchestrator] Structured system message built for {agent_id} (length: {len(system_message)} chars)")
 
@@ -3951,9 +3468,10 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
             has_irreversible_actions = any(cp.get("permission") == "write" for cp in context_paths)
 
         # Build system message using section architecture
-        base_system_message = self._build_final_presentation_system_message(
+        base_system_message = self._get_system_message_builder().build_presentation_message(
             agent=agent,
             all_answers=all_answers,
+            previous_turns=self._previous_turns,
             enable_image_generation=enable_image_generation,
             enable_audio_generation=enable_audio_generation,
             enable_file_generation=enable_file_generation,
@@ -4213,9 +3731,10 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
         all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
 
         # Build post-evaluation system message using section architecture
-        base_system_message = self._build_post_evaluation_system_message(
+        base_system_message = self._get_system_message_builder().build_post_evaluation_message(
             agent=agent,
             all_answers=all_answers,
+            previous_turns=self._previous_turns,
         )
 
         # Create evaluation messages
@@ -4556,6 +4075,20 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
             elif "append_system_prompt" in backend_params:
                 return backend_params["append_system_prompt"]
         return None
+
+    def _get_system_message_builder(self) -> SystemMessageBuilder:
+        """Get or create the SystemMessageBuilder instance.
+
+        Returns:
+            SystemMessageBuilder instance initialized with orchestrator's config and state
+        """
+        if self._system_message_builder is None:
+            self._system_message_builder = SystemMessageBuilder(
+                config=self.config,
+                message_templates=self.message_templates,
+                agents=self.agents,
+            )
+        return self._system_message_builder
 
     def _clear_agent_workspaces(self) -> None:
         """

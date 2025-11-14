@@ -8,6 +8,33 @@ license: MIT
 
 Navigate and manipulate code at the symbol level using IDE-like semantic analysis powered by Language Server Protocol (LSP).
 
+## Integration Options
+
+Serena can be used in two ways:
+
+1. **CLI commands** (via uvx) - Covered in this skill, good for simple workflows
+2. **MCP Server** (recommended) - Exposes all 30+ tools automatically via MCP protocol
+
+**For full access to all Serena capabilities**, consider using the MCP server approach:
+```yaml
+mcp_servers:
+  - name: "serena"
+    type: "stdio"
+    command: "uvx"
+    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
+```
+
+See `massgen/configs/skills/serena_mcp_example.yaml` for a complete configuration.
+
+This skill documents the **core CLI commands** for strategic guidance. The MCP server provides additional tools like:
+- `rename_symbol` - Safe refactoring across codebase
+- `insert_before_symbol` - Insert before symbol definitions
+- `replace_symbol_body` - Replace symbol implementations
+- `onboarding` - Project structure analysis
+- Memory system (`write_memory`, `read_memory`, etc.)
+- Metacognitive tools (`think_about_*`)
+- And 20+ more tools
+
 ## Purpose
 
 The serena skill provides access to Serena, a coding agent toolkit that transforms text-based LLMs into symbol-aware code agents. Unlike traditional text search (ripgrep) or structural search (ast-grep), Serena understands code semantics through LSP integration.

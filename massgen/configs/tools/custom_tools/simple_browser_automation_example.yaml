@@ -1,20 +1,22 @@
 # Simple Browser Automation Example with gpt-4.1
 # This config demonstrates browser automation without requiring OpenAI's computer-use-preview model
+# Works great with LOCAL websites (localhost, file://) where crawl4ai doesn't work
 #
 # Usage:
-#   massgen --config simple_browser_automation_example.yaml
+#   uv run massgen --config @examples/tools/custom_tools/simple_browser_automation_example "Navigate to http://localhost:3000 and analyze the page"
 #
 # Prerequisites:
 #   1. Set OPENAI_API_KEY in your .env file
 #   2. Install Playwright: pip install playwright
-#   3. Install browsers: playwright install
+#   3. Install browsers: playwright install chromium
 
 agents:
   - id: "browser_agent"
     backend:
       type: "openai"
       model: "gpt-4.1"
-      temperature: 0.3
+      cwd: workspace
+
       custom_tools:
         - name: ["browser_automation"]
           category: "automation"
@@ -26,10 +28,11 @@ agents:
 
             Parameters:
             - task: Description of what you're doing (required)
-            - url: URL to navigate to (required for 'navigate' action)
+            - url: URL to navigate to (works with localhost and file:// URLs!)
             - action: Action to perform - "navigate", "click", "type", "extract", or "screenshot" (required)
             - selector: CSS selector for element (required for click/type/extract actions)
             - text: Text to type (required for 'type' action)
+            - output_filename: Save screenshot to workspace (e.g., "page.png") - avoids returning large base64
             - headless: Run browser invisibly (default: false)
             - screenshot: Take screenshot after action (default: true)
 
@@ -38,11 +41,39 @@ agents:
             - Click: {"task": "Click search button", "action": "click", "selector": "button[type='submit']"}
             - Type: {"task": "Enter search term", "action": "type", "selector": "input[name='q']", "text": "hello"}
             - Extract: {"task": "Get headings", "action": "extract", "selector": "h1, h2"}
+            - Screenshot: {"task": "Capture page", "action": "screenshot", "output_filename": "page.png"}
 
-          # Default parameters (can be overridden)
           default_params:
             headless: false
             screenshot: true
 
-display:
-  type: "rich_terminal"
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+          description: >
+            Analyze images and screenshots to understand visual content.
+
+    system_message: |
+      You are a browser automation specialist with vision capabilities.
+
+      You can:
+      - Navigate to websites (including localhost and file:// URLs!)
+      - Interact with pages (click, type, extract content)
+      - Take screenshots and analyze them visually
+
+      IMPORTANT: When taking screenshots, ALWAYS use output_filename to save them to workspace.
+      This avoids wasting tokens on large base64 data.
+
+      Workflow example:
+      1. Navigate to page with browser_automation
+      2. Take screenshot with output_filename="page.png"
+      3. Analyze with understand_image to verify what's on the page
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: rich_terminal
+  logging_enabled: true
