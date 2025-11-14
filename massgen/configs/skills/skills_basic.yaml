@@ -7,10 +7,8 @@
 agents:
   - id: "agent_a"
     backend:
-      # type: "openai"
-      # model: "gpt-5-mini"
       type: "gemini"
-      model: "gemini-2.5-flash"
+      model: "gemini-2.5-pro"
       cwd: "workspace1"
       enable_mcp_command_line: true
       command_line_execution_mode: "docker"  # or "local"
@@ -18,7 +16,7 @@ agents:
   - id: "agent_b"
     backend:
       type: "openai"
-      model: "gpt-5-nano"
+      model: "gpt-5"
       cwd: "workspace2"
       enable_mcp_command_line: true
       command_line_execution_mode: "docker"
