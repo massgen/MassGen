@@ -123,15 +123,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.11](#recent-achievements-v0111)
-  - [v0.0.3 - v0.1.10](#previous-achievements-v003---v0110)
+  - [v0.1.12](#recent-achievements-v0111)
+  - [v0.0.3 - v0.1.11](#previous-achievements-v003---v0110)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.12 Roadmap](#v0112-roadmap)
+- [v0.1.13 Roadmap](#v0112-roadmap)
 </details>
 
 <details open>
@@ -156,48 +156,52 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.11)
+## 🆕 Latest Features (v0.1.12)
 
-**🎉 Released: November 12, 2025**
+**🎉 Released: November 14, 2025**
 
-**What's New in v0.1.11:**
-- **🎯 Skills System** - Modular prompting framework for enhanced agent capabilities
-- **💾 Memory MCP Tool & Filesystem Integration** - Persistent memory management with filesystem integration for advanced workflows
-- **⚙️ Rate Limiting System (Gemini)** - Multi-dimensional API rate control for Gemini models
+**What's New in v0.1.12:**
+- **🏗️ System Prompt Architecture Refactoring** - Complete redesign with hierarchical structure and XML-based formatting for better LLM attention
+- **🔍 Semtools & Serena Skills** - Semantic search via embeddings and symbol-level code understanding via LSP integration
+- **🤖 Multi-Agent Computer Use** - Enhanced Docker integration with VNC visualization and multi-agent coordination
 
 **Key Improvements:**
-- Always-available file search skill with automatic skill discovery from `massgen/skills/`
-- MCP server for memory CRUD operations with markdown-based persistence and filesystem integration
-- RPM, TPM, and RPD rate limiting for Gemini models with graceful cooldowns
-- Enhanced Claude Code backend for Windows with improved system prompt handling
+- Hierarchical system prompt construction with improved modularity and attention management
+- Semtools skill for embedding-based semantic file search and code discovery
+- Serena skill for LSP-based symbol-level code navigation and analysis
+- Skills system local execution mode supporting non-Docker environments
+- Enhanced Gemini computer use tool with Docker integration, VNC visualization, and X11 display
+- Multi-agent computer automation combining Claude (Docker/Linux) and Gemini (Browser)
+- Browser automation tool with screenshot file saving to workspace directories
 
-**Try v0.1.11 Features:**
+**Try v0.1.12 Features:**
 ```bash
 # Install or upgrade from PyPI
 pip install --upgrade massgen
 
-# Skills System - enable domain-specific capabilities
+# Enhanced Skills System - semantic search and code understanding
 # Prerequisites:
 # - Docker daemon running (call `massgen/docker/build.sh [--sudo]` for updated containers)
-# - openskills installed and placed in ./agents/skills.
-#   - Run `npm i -g openskills` followed by `openskills install anthropics/skills --universal -y`
+# - openskills installed: `npm i -g openskills` then `openskills install anthropics/skills --universal -y`
 uv run massgen --config massgen/configs/skills/skills_basic.yaml \
   "Create cool algorithmic art we can use in GitHub repo"
 
-# Memory with Skills and Task Planning - combined filesystem coordination
-# Prerequisites: Docker daemon running
-uv run massgen --config massgen/configs/skills/skills_with_memory.yaml \
-  "Research neural architectures and document findings"
+# Multi-Agent Computer Use - Claude (Docker) + Gemini (Browser) coordination
+# Prerequisites:
+# - Set ANTHROPIC_API_KEY and GEMINI_API_KEY in .env
+# - Docker installed and running
+# - Run ./scripts/setup_docker_cua.sh for Claude Docker setup
+# - Install Playwright: pip install playwright && playwright install chromium
+uv run massgen --config massgen/configs/tools/custom_tools/multi_agent_computer_use_example.yaml \
+  "Search for latest Python releases online and create a summary document"
 
-# Skills with Existing Filesystem - self-extension case study
-# Prerequisites: Docker daemon running
-uv run massgen --config massgen/configs/skills/skills_existing_filesystem.yaml \
-  "Analyze the MassGen codebase to identify common development workflows that could benefit from being codified as skills. Create 1-2 optional skills that would help future agents work more efficiently with the codebase."
-
-# Rate Limiting - manage API costs with multi-dimensional limits
-# Enable rate limiting for any configuration with --enable-rate-limiting flag
-massgen --backend gemini --model gemini-2.5-flash --enable-rate-limiting \
-  "Explain quantum computing"
+# Gemini Computer Use with Docker - Linux desktop automation
+# Prerequisites:
+# - Set GEMINI_API_KEY in .env
+# - Docker running, run ./scripts/setup_docker_cua.sh
+# - pip install google-genai docker
+massgen --config massgen/configs/tools/custom_tools/gemini_computer_use_docker_example.yaml \
+  "Browse GitHub and find popular AI projects"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1066,33 +1070,31 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.11)
+### Recent Achievements (v0.1.12)
 
-**🎉 Released: November 12, 2025**
+**🎉 Released: November 14, 2025**
 
-#### Skills System
-- **Modular Prompting Framework**: SkillsManager class for dynamic skill loading and injection (`massgen/filesystem_manager/skills_manager.py`)
-- **File Search Skill**: Always-available skill for searching files and code across workspace (`massgen/skills/always/file_search/SKILL.md`)
-- **Automatic Discovery**: Skills organized into `always/` (auto-included) and `optional/` categories with Docker-compatible mounting
-- **Configuration Examples**: `skills_basic.yaml`, `skills_existing_filesystem.yaml`, `skills_with_memory.yaml`
+#### System Prompt Architecture & Semantic Skills
+- **Complete Refactoring**: Hierarchical system prompt structure with improved LLM attention management and XML-based formatting for Claude (`massgen/system_messages/system_message_builder.py`)
+- **Semtools Skill**: Semantic search capabilities using embedding-based similarity for intelligent file and code discovery (`massgen/skills/optional/semtools/`)
+- **Serena Skill**: Symbol-level code understanding via LSP integration for precise code navigation and analysis (`massgen/skills/optional/serena/`)
+- **Skills System Enhancements**: Local execution mode support enabling skills to run outside Docker environments with improved module loading
+- **Documentation**: `system_prompt_architecture_redesign.md`, `semtools_skill_integration.md`, `serena_skill_integration.md`
 
-#### Memory MCP Tool & Filesystem Integration
-- **Memory MCP Server**: MCP server for memory management with filesystem persistence (`massgen/mcp_tools/memory/`)
-- **Memory Data Models**: Short-term and long-term memory tiers with markdown-based storage format
-- **Workspace Integration**: Automatic persistence to workspace under `memory/short_term/` and `memory/long_term/` directories
-- **Cross-Agent Sharing**: Orchestrator integration for memory sharing across agents
-- **Combined Workflows**: Simultaneous memory MCP tools and filesystem operations enable advanced workflows for long-running projects requiring both code changes and learned context
-- **Enhanced Windows Support**: Improved Claude Code backend handling of long system prompts on Windows
-- **Planning MCP Updates**: Tasks saved to agent workspace instead of separate directory
+#### Multi-Agent Computer Use with Docker
+- **Enhanced Gemini Tool**: Docker integration for Linux desktop automation with VNC visualization and X11 display support (`massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py`)
+- **Multi-Agent Coordination**: Combined Claude (Docker/Linux) and Gemini (Browser) computer use for complex automation workflows
+- **Configuration Examples**: `multi_agent_computer_use_example.yaml`, `gemini_computer_use_docker_example.yaml`, `claude_computer_use_docker_example.yaml`
+- **Visualization Tools**: VNC viewer support and real-time browser monitoring for debugging automation tasks
+- **Browser Automation**: Screenshot file saving with automatic persistence to workspace directories
 
-#### Rate Limiting System (Gemini)
-- **Multi-Dimensional Limiting**: Support for RPM (requests per minute), TPM (tokens per minute), and RPD (requests per day) (`massgen/rate_limiter.py`)
-- **Model-Specific Limits**: Configurable thresholds for Gemini models with graceful cooldown periods
-- **Configuration System**: YAML-based configuration in `massgen/configs/rate_limits/rate_limits.yaml`
-- **CLI Integration**: Optional `--enable-rate-limiting` flag for opt-in rate limiting
-- **Asyncio Lock Fix**: Resolved rate limiter lock reuse across different event loops
+### Previous Achievements (v0.0.3 - v0.1.11)
 
-### Previous Achievements (v0.0.3 - v0.1.10)
+✅ **Skills System (v0.1.11)**: Modular prompting framework with SkillsManager for dynamic skill loading, automatic discovery with always/optional categories, file search skill, Docker-compatible mounting
+
+✅ **Memory MCP Tool & Filesystem Integration (v0.1.11)**: MCP server for memory management with markdown-based storage, short-term/long-term memory tiers, automatic workspace persistence, orchestrator integration for cross-agent memory sharing, enhanced Windows support for long system prompts
+
+✅ **Rate Limiting System (v0.1.11)**: Multi-dimensional limiting (RPM, TPM, RPD) for Gemini models with configurable thresholds, YAML-based configuration, CLI integration with --enable-rate-limiting flag, asyncio lock fix for event loop reuse
 
 ✅ **Framework Interoperability Streaming (v0.1.10)**: Real-time intermediate step streaming for LangGraph and SmoLAgent with log/output distinction, enhanced debugging for external framework reasoning steps
 

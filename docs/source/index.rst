@@ -111,6 +111,10 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.12 (November 14, 2025)** - System Prompt Architecture, Semantic Skills & Multi-Agent Computer Use
+
+Complete system prompt refactoring with hierarchical structure and XML-based formatting for improved LLM attention management. New Semtools skill for semantic search via embedding-based similarity and Serena skill for symbol-level code understanding via LSP integration. Enhanced multi-agent computer use with Docker integration for Linux desktop automation, VNC visualization, and coordinated Claude (Docker/Linux) + Gemini (Browser) workflows.
+
 **v0.1.11 (November 12, 2025)** - Skills System, Memory MCP & Rate Limiting
 
 Modular skills framework with automatic discovery and file search capabilities, MCP-based memory management with persistent markdown storage and cross-agent sharing, multi-dimensional rate limiting (RPM, TPM, RPD) with model-specific thresholds, and memory-filesystem integration for advanced workflows.
@@ -118,10 +122,6 @@ Modular skills framework with automatic discovery and file search capabilities, 
 **v0.1.10 (November 10, 2025)** - Framework Interoperability Streaming & Docker Enhancements
 
 Real-time intermediate step streaming for LangGraph and SmoLAgent with log/output distinction, restructured Docker authentication with custom image support, parallel execution safety with universal instance IDs, and MassGen Contributor Handbook at https://massgen.github.io/Handbook/.
-
-**v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
-
-Complete session management system with conversation restoration, Claude and Gemini computer use tools for browser and desktop automation, enhanced config builder with fuzzy model matching, and expanded backend support.
 
 Quick Start
 -----------
