@@ -69,13 +69,13 @@ Use the serena skill when you need symbol-level code understanding:
 - Inserting error handling after specific function calls
 - Modifying all call sites of a deprecated function
 
-**Choose serena over file_search (ripgrep/ast-grep) when:**
+**Choose serena over file-search (ripgrep/ast-grep) when:**
 - You need to understand symbol semantics (not just text patterns)
 - You want to track references across files and modules
 - You need precise insertion points based on code structure
 - You're working with complex, multi-file codebases
 
-**Still use file_search when:**
+**Still use file-search when:**
 - Searching for text patterns, comments, or strings
 - Finding todos, security issues, or documentation
 - You need faster, simpler pattern matching
@@ -291,9 +291,9 @@ serena find_referencing_symbols --name 'legacy_auth_handler'
 # [If output shows only the definition, symbol is unused]
 ```
 
-## Integration with file_search
+## Integration with file-search
 
-Serena and file_search (ripgrep/ast-grep) are **complementary tools**. Use them together:
+Serena and file-search (ripgrep/ast-grep) are **complementary tools**. Use them together:
 
 ### When to Combine Tools
 
@@ -488,7 +488,7 @@ If `find_symbol` returns no results:
 
 If `find_referencing_symbols` returns hundreds of results:
 
-1. **Use file_search first**: Narrow scope with ripgrep
+1. **Use file-search first**: Narrow scope with ripgrep
    ```bash
    rg "MyClass" src/services/  # Limit to specific directory
    serena find_referencing_symbols --name 'MyClass' --path src/services/

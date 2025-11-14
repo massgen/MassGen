@@ -598,6 +598,15 @@ class DockerManager:
             mount_info.append(f"      {temp_skills_dir} → {container_skills_path} (ro, merged)")
             logger.info(f"[Docker] Mounted merged skills directory: {temp_skills_dir} → {container_skills_path}")
 
+            # Scan and enumerate all skills in the merged directory
+            from .skills_manager import scan_skills
+
+            all_skills = scan_skills(temp_skills_dir)
+            logger.info(f"[Docker] Total skills loaded: {len(all_skills)}")
+            for skill in all_skills:
+                title = skill.get("title", skill.get("name", "Unknown"))
+                logger.info(f"[Docker]   - {skill['name']}: {title}")
+
             # Store temp dir for cleanup
             self.temp_skills_dirs[agent_id] = temp_skills_dir
 

@@ -42,13 +42,13 @@ Use the semtools skill when you need meaning-based search:
 - "Find code similar to this implementation" (semantic similarity)
 - "Search research papers for 'distributed consensus'" (document search)
 
-**Choose semtools over file_search (ripgrep/ast-grep) when:**
+**Choose semtools over file-search (ripgrep/ast-grep) when:**
 - You know the **concept** but not the **keywords**
 - Exact string matching misses relevant results
 - You want semantically similar code, not exact matches
 - Searching across languages or mixed content
 
-**Still use file_search when:**
+**Still use file-search when:**
 - You know exact keywords, function names, or patterns
 - You need structural code matching (ast-grep)
 - Speed is critical (ripgrep is faster for exact matches)
@@ -287,9 +287,9 @@ search "transformer architecture" papers.md
 search "attention mechanism implementation" src/
 ```
 
-## Integration with file_search
+## Integration with file-search
 
-Semtools and file_search (ripgrep/ast-grep) are **complementary tools**. Use them together for comprehensive search:
+Semtools and file-search (ripgrep/ast-grep) are **complementary tools**. Use them together for comprehensive search:
 
 ### Search Strategy Matrix
 

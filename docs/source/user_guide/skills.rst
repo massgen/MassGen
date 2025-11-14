@@ -21,6 +21,9 @@ When enabled, agents can invoke skills via bash commands to access domain-specif
 .. note::
    Skills complement MCP tools but work via filesystem instead of MCP protocol. This provides better transparency and allows skills to be version-controlled.
 
+.. important::
+   **Model Recommendations**: Skills work best with frontier models (Claude Sonnet/Opus, GPT-5). Smaller models like gpt-5-mini and gpt-5-nano may not reliably recognize when to invoke skills or may skip skill invocation in favor of attempting tasks directly.
+
 Installation
 ============
 
@@ -36,11 +39,11 @@ Install openskills and Anthropic's skills collection:
 
 This creates ``.agent/skills/`` directory with all available skills.
 
-.. important::
-   Skills currently require Docker mode (``command_line_execution_mode: "docker"``). Local mode is not yet supported.
-
 .. note::
-   The Docker images include ripgrep and ast-grep for file search capabilities used by the built-in file search skill.
+   Skills work with both Docker mode (``command_line_execution_mode: "docker"``) and local mode (``command_line_execution_mode: "local"``).
+
+   - **Docker mode**: Skills and dependencies (ripgrep, ast-grep) are pre-installed in the container
+   - **Local mode**: You need to install dependencies manually (``brew install ripgrep ast-grep`` on macOS)
 
 Configuration
 =============
@@ -107,72 +110,52 @@ This creates:
 Built-in Skills
 ===============
 
-MassGen includes built-in skills that fall into two categories:
+MassGen includes built-in skills bundled in ``massgen/skills/``:
 
-**Always Available (Default)**
-
-These skills are automatically included when ``use_skills: true``:
-
-* ``memory`` - Filesystem-based context storage
-* ``file_search`` - Fast text and structural code search
-
-**Optional Skills**
-
-These skills can be enabled by adding them to ``massgen_skills`` configuration:
-
+* ``file-search`` - Fast text and structural code search (ripgrep/ast-grep)
 * ``serena`` - Symbol-level code understanding using LSP
 * ``semtools`` - Semantic search using embeddings
 
-Memory Skill
-------------
+All skills are invoked the same way using ``openskills read <skill-name>``.
 
-Filesystem-based memory for storing context across turns.
+.. note::
+   **Lightweight Guidance**: When command execution is enabled, agents automatically receive lightweight file search guidance (~30 lines) in their system prompt. For comprehensive documentation, invoke: ``openskills read file-search``
 
-**Usage:**
-
-.. code-block:: bash
-
-   # Save memory
-   echo "User prefers JSON format" > memory/preferences.txt
-
-   # Load memory
-   cat memory/context.txt
-
-   # View another agent's memories
-   # (Path shown in system prompt as "Shared Reference", typically temp_workspaces/)
-   cat temp_workspaces/agent1/memory/decisions.json
-
-**Best for:**
-
-* Storing user preferences
-* Saving important decisions
-* Maintaining context across multi-turn conversations
-
-File Search Skill
------------------
+File Search
+-----------
 
 Fast text and structural code search using ripgrep and ast-grep.
 
-**Usage:**
+**Lightweight Guidance (Always Available):**
+
+When command execution is enabled, agents automatically see basic usage:
 
 .. code-block:: bash
 
    # Text search with ripgrep
-   rg "function.*login" --type py
+   rg "pattern" --type py --type js
 
    # Structural search with ast-grep
-   sg --pattern 'class $NAME { $$$ }'
+   sg --pattern 'function $NAME($$$) { $$$ }' --lang js
+
+**Full Skill Content:**
+
+.. code-block:: bash
+
+   # Load comprehensive 280-line guide with targeting strategies
+   openskills read file-search
 
 **Best for:**
 
 * Finding code patterns
 * Analyzing codebases
 * Refactoring workflows
+* Fast keyword searches
 
-Optional Built-in Skills
-========================
+Serena
+------
 
-These skills provide advanced code understanding capabilities and must be explicitly enabled.
+Symbol-level code understanding using Language Server Protocol (LSP). Provides IDE-like capabilities for finding symbols, tracking references, and making precise code edits.
 
 Serena Skill
 ------------

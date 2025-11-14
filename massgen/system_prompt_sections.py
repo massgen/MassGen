@@ -116,7 +116,13 @@ class SystemPromptSection(ABC):
 
         # Wrap in XML if tag specified
         if self.xml_tag:
-            priority_name = self.priority.name.lower()
+            # Handle both Priority enum and raw integers
+            if isinstance(self.priority, Priority):
+                priority_name = self.priority.name.lower()
+            else:
+                # Map integer priorities to names
+                priority_map = {1: "critical", 2: "critical", 3: "critical", 4: "critical", 5: "high", 10: "medium", 15: "low", 20: "auxiliary"}
+                priority_name = priority_map.get(self.priority, "medium")
             return f'<{self.xml_tag} priority="{priority_name}">\n{content}\n</{self.xml_tag}>'
 
         return content
@@ -126,8 +132,9 @@ class AgentIdentitySection(SystemPromptSection):
     """
     Agent's core identity: role, expertise, personality.
 
-    This section ALWAYS comes first (Priority.CRITICAL) to establish
+    This section ALWAYS comes first (Priority 1) to establish
     WHO the agent is before any operational instructions.
+    Skips rendering if empty.
 
     Args:
         agent_message: The agent's custom system message from
@@ -137,13 +144,19 @@ class AgentIdentitySection(SystemPromptSection):
     def __init__(self, agent_message: str):
         super().__init__(
             title="Agent Identity",
-            priority=Priority.CRITICAL,
+            priority=1,  # First, before massgen_coordination(2) and core_behaviors(3)
             xml_tag="agent_identity",
         )
         self.agent_message = agent_message
 
     def build_content(self) -> str:
         return self.agent_message
+
+    def render(self) -> str:
+        """Skip rendering if agent message is empty."""
+        if not self.agent_message or not self.agent_message.strip():
+            return ""
+        return super().render()
 
 
 class CoreBehaviorsSection(SystemPromptSection):
@@ -156,12 +169,13 @@ class CoreBehaviorsSection(SystemPromptSection):
     - File cleanup
 
     Based on Anthropic Claude 4 best practices.
+    Priority 4 puts this after agent_identity(1), massgen_coordination(2), and skills(3).
     """
 
     def __init__(self):
         super().__init__(
             title="Core Behaviors",
-            priority=Priority.CRITICAL,
+            priority=4,  # After agent_identity(1), massgen_coordination(2), skills(3)
             xml_tag="core_behaviors",
         )
 
@@ -188,74 +202,116 @@ class SkillsSection(SystemPromptSection):
     """
     Available skills that agents can invoke.
 
-    HIGH priority ensures skills are visible early in the prompt.
-    Includes prominent emphasis on reviewing skills before starting work.
+    CRITICAL priority (3) ensures skills appear before general behaviors.
+    Skills define fundamental capabilities that must be known before task execution.
 
     Args:
-        skills: List of external skills with name, description, etc.
-        built_in_skills: Optional list of built-in skills to document
+        skills: List of all skills (both builtin and project) with name, description, location
     """
 
-    def __init__(self, skills: List[Dict[str, Any]], built_in_skills: Optional[List[str]] = None):
+    def __init__(self, skills: List[Dict[str, Any]]):
         super().__init__(
             title="Available Skills",
-            priority=Priority.HIGH,
+            priority=3,  # After agent_identity(1) and massgen_coordination(2), before core_behaviors(4)
             xml_tag="skills",
         )
         self.skills = skills
-        self.built_in_skills = built_in_skills or []
 
     def build_content(self) -> str:
-        """Build skills table and usage instructions."""
+        """Build skills in XML format with full descriptions."""
         content_parts = []
 
-        # Prominent header emphasizing importance
-        content_parts.append(
-            "## IMPORTANT: Review Available Skills Before Starting Work\n\n"
-            "You have access to specialized skills that can dramatically improve your "
-            "performance on certain tasks. ALWAYS think about the relevant available "
-            "skills below before starting work - they may save significant time and effort.",
-        )
+        # Header
+        content_parts.append("## Available Skills")
+        content_parts.append("")
+        content_parts.append("<!-- SKILLS_TABLE_START -->")
 
-        # Built-in skills (if any)
-        if self.built_in_skills:
-            content_parts.append("\n### Built-in Skills\n")
-            content_parts.append(
-                "The following skills are automatically available and have been " "injected into your system prompt:\n",
-            )
-            for skill_name in self.built_in_skills:
-                content_parts.append(f"- `{skill_name}`")
+        # Usage instructions
+        content_parts.append("<usage>")
+        content_parts.append("When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively.")
+        content_parts.append("")
+        content_parts.append("How to use skills:")
+        content_parts.append('- Invoke: execute_command("openskills read <skill-name>")')
+        content_parts.append("- The skill content will load with detailed instructions")
+        content_parts.append("- Base directory provided in output for resolving bundled resources")
+        content_parts.append("")
+        content_parts.append("Usage notes:")
+        content_parts.append("- Only use skills listed in <available_skills> below")
+        content_parts.append("- Do not invoke a skill that is already loaded in your context")
+        content_parts.append("</usage>")
+        content_parts.append("")
 
-        # External skills table
-        if self.skills:
-            content_parts.append("\n### Available Skills\n")
-            content_parts.append(
-                "| Skill | Description | When to Use |\n" "|-------|-------------|-------------|",
-            )
+        # Skills list (project skills only - builtin skills are auto-loaded elsewhere)
+        content_parts.append("<available_skills>")
 
-            for skill in self.skills:
-                name = skill.get("name", "Unknown")
-                description = skill.get("description", "No description")
-                when_to_use = skill.get("when_to_use", "See description")
+        # Add project skills only
+        for skill in self.skills:
+            name = skill.get("name", "Unknown")
+            description = skill.get("description", "No description")
+            location = skill.get("location", "project")
 
-                # Truncate long descriptions for table readability
-                if len(description) > 100:
-                    description = description[:97] + "..."
+            content_parts.append("")
+            content_parts.append("<skill>")
+            content_parts.append(f"<name>{name}</name>")
+            content_parts.append(f"<description>{description}</description>")
+            content_parts.append(f"<location>{location}</location>")
+            content_parts.append("</skill>")
 
-                content_parts.append(
-                    f"| {name} | {description} | {when_to_use} |",
-                )
-
-            # Usage instructions
-            content_parts.append(
-                "\n**How to use skills:**\n"
-                "1. Review the table above and identify which skill(s) apply to your task\n"
-                "2. Invoke the skill by name using the appropriate tool/command\n"
-                "3. Skills may provide specialized tools, context, or capabilities\n"
-                "4. Always check skill outputs before proceeding with your task",
-            )
+        content_parts.append("")
+        content_parts.append("</available_skills>")
+        content_parts.append("<!-- SKILLS_TABLE_END -->")
 
         return "\n".join(content_parts)
+
+
+class FileSearchSection(SystemPromptSection):
+    """
+    Lightweight file search guidance for ripgrep and ast-grep.
+
+    This provides essential usage patterns for the pre-installed search tools.
+    For comprehensive guidance, agents can invoke: execute_command("openskills read file-search")
+
+    MEDIUM priority - useful but not critical for all tasks.
+    """
+
+    def __init__(self):
+        super().__init__(
+            title="File Search Tools",
+            priority=Priority.MEDIUM,
+            xml_tag="file_search_tools",
+        )
+
+    def build_content(self) -> str:
+        """Build concise file search guidance."""
+        return """## File Search Tools
+
+You have access to fast search tools for code exploration:
+
+**ripgrep (rg)** - Fast text/regex search:
+```bash
+# Search with file type filtering
+rg "pattern" --type py --type js
+
+# Common flags: -i (case-insensitive), -w (whole words), -l (files only), -C N (context lines)
+rg "function.*login" --type js src/
+```
+
+**ast-grep (sg)** - Structural code search:
+```bash
+# Find code patterns by syntax
+sg --pattern 'function $NAME($$$) { $$$ }' --lang js
+
+# Metavariables: $VAR (single node), $$$ (zero or more nodes)
+sg --pattern 'class $NAME { $$$ }' --lang python
+```
+
+**Key principles:**
+- Start narrow: Specify file types (--type py) and directories (src/)
+- Count first: Use `rg "pattern" --count` to check result volume before full search
+- Limit output: Pipe to `head -N` if results are large
+- Use rg for text, sg for code structure
+
+For detailed guidance including targeting strategies and examples, invoke: `execute_command("openskills read file-search")`"""
 
 
 class MemorySection(SystemPromptSection):
@@ -884,9 +940,9 @@ class EvaluationSection(SystemPromptSection):
     """
     MassGen evaluation and coordination mechanics.
 
-    CRITICAL priority because this defines the fundamental MassGen primitives
-    that the agent needs to understand: vote tool, new_answer tool, and
-    coordination mechanics. This is foundational knowledge, not task-specific.
+    Priority 2 places this after agent_identity(1) but before core_behaviors(3).
+    This defines the fundamental MassGen primitives that the agent needs to understand:
+    vote tool, new_answer tool, and coordination mechanics.
 
     Args:
         voting_sensitivity: Controls evaluation strictness ('lenient', 'balanced', 'strict')
@@ -900,7 +956,7 @@ class EvaluationSection(SystemPromptSection):
     ):
         super().__init__(
             title="MassGen Coordination",
-            priority=Priority.CRITICAL,
+            priority=2,  # After agent_identity(1), before core_behaviors(3)
             xml_tag="massgen_coordination",
         )
         self.voting_sensitivity = voting_sensitivity

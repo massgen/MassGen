@@ -384,26 +384,26 @@ class Orchestrator(ChatAgent):
                 "Skills require command line execution to be enabled. " "Set enable_mcp_command_line: true in at least one agent's backend config.",
             )
 
-        # Check if skills directory exists and has skills
+        # Check if skills are configured (external or built-in)
         skills_dir = Path(self.config.coordination_config.skills_directory)
-        logger.info(f"[Orchestrator] Checking skills directory: {skills_dir}")
+        massgen_skills = self.config.coordination_config.massgen_skills or []
+        logger.info(f"[Orchestrator] Checking skills configuration - directory: {skills_dir}, massgen_skills: {massgen_skills}")
 
-        if not skills_dir.exists():
-            raise RuntimeError(
-                f"Skills directory '{skills_dir}' does not exist. " f"Install openskills with 'npm i -g openskills', " f"then run 'openskills install anthropics/skills --universal -y'.",
-            )
+        # Check for external skills
+        has_external_skills = skills_dir.exists() and skills_dir.is_dir() and any(skills_dir.iterdir())
 
-        # Check if directory has any skills (allow both .agent/skills/ and built-in massgen/skills/)
-        has_external_skills = any(skills_dir.iterdir()) if skills_dir.is_dir() else False
+        # Check for built-in skills
         builtin_skills_dir = Path(__file__).parent / "skills"
-        has_builtin_skills = builtin_skills_dir.exists() and builtin_skills_dir.is_dir()
+        has_builtin_skills = len(massgen_skills) > 0 and builtin_skills_dir.exists()
 
+        # At least one type of skills must be configured
         if not has_external_skills and not has_builtin_skills:
             raise RuntimeError(
-                f"Skills directory '{skills_dir}' is empty and no built-in skills found. "
-                f"Local users: Install openskills with 'npm i -g openskills', "
-                f"then run 'openskills install anthropics/skills --universal -y'. "
-                f"Docker users: Skills are pre-installed in the container.",
+                f"No skills configured. Either:\n"
+                f"1. Install external skills: 'npm i -g openskills && openskills install anthropics/skills --universal -y'\n"
+                f"   Skills directory '{skills_dir}' must exist and contain skills.\n"
+                f"2. Enable built-in MassGen skills: Set massgen_skills: ['file_search'] in coordination config.\n"
+                f"3. Use both external and built-in skills together.",
             )
 
         logger.info(f"[Orchestrator] Skills configuration valid (external: {has_external_skills}, builtin: {has_builtin_skills})")
