@@ -219,3 +219,4 @@ workspace*/
 sessions/
 .claude/
 CLAUDE.md
+.agent/

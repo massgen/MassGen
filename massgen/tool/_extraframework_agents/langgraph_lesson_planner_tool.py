@@ -31,7 +31,7 @@ class LessonPlannerState(TypedDict):
 async def run_langgraph_lesson_planner_agent(
     messages: List[Dict[str, Any]],
     api_key: str,
-) -> str:
+) -> AsyncGenerator[Dict[str, Any], None]:
     """
     Core LangGraph lesson planner agent - pure LangGraph implementation.
 
@@ -42,8 +42,8 @@ async def run_langgraph_lesson_planner_agent(
         messages: Complete message history from orchestrator
         api_key: OpenAI API key for the agents
 
-    Returns:
-        The formatted lesson plan as a string
+    Yields:
+        Dict with 'type' ('log' or 'output') and 'content' (the message)
 
     Raises:
         Exception: Any errors during agent execution
@@ -215,16 +215,23 @@ async def run_langgraph_lesson_planner_agent(
         "final_plan": "",
     }
 
-    # Extract the final lesson plan
-    final_state = None
+    # Stream through the workflow and yield intermediate updates
     async for chunk in app.astream(initial_state):
         for node_name, state_update in chunk.items():
-            if node_name == "formatter" and state_update.get("final_plan"):
-                final_state = state_update
+            # Surface meaningful updates as logs
+            for key in ("standards", "lesson_plan", "reviewed_plan"):
+                if state_update.get(key):
+                    yield {
+                        "type": "log",
+                        "content": f"[{node_name}] {key}:\n{state_update[key]}",
+                    }
 
-    lesson_plan = final_state.get("final_plan", "No lesson plan generated") if final_state else "No lesson plan generated"
-
-    return lesson_plan
+            # Yield final plan as output (not log)
+            if state_update.get("final_plan"):
+                yield {
+                    "type": "output",
+                    "content": state_update["final_plan"],
+                }
 
 
 @context_params("prompt")
@@ -255,17 +262,26 @@ async def langgraph_lesson_planner(
         return
 
     try:
-        # Call the core agent function with processed messages
-        lesson_plan = await run_langgraph_lesson_planner_agent(
+        # Call the core agent function with processed messages and stream results
+        async for result in run_langgraph_lesson_planner_agent(
             messages=prompt,
             api_key=api_key,
-        )
-
-        yield ExecutionResult(
-            output_blocks=[
-                TextContent(data=f"LangGraph Lesson Planner Result:\n\n{lesson_plan}"),
-            ],
-        )
+        ):
+            if result["type"] == "log":
+                # Yield intermediate updates as logs
+                yield ExecutionResult(
+                    output_blocks=[
+                        TextContent(data=result["content"]),
+                    ],
+                    is_log=True,
+                )
+            else:  # type == "output"
+                # Yield final plan as actual output
+                yield ExecutionResult(
+                    output_blocks=[
+                        TextContent(data=f"LangGraph Lesson Planner Result:\n\n{result['content']}"),
+                    ],
+                )
 
     except Exception as e:
         yield ExecutionResult(

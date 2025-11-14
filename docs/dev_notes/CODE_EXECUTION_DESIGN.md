@@ -1,9 +1,9 @@
 # Code Execution System Design
 
-**Issues:** #295, #304
+**Issues:** #295, #304, #436
 **Author:** MassGen Team
-**Date:** 2025-10-13
-**Status:** Complete (Local + Docker Execution)
+**Date:** 2025-10-13 (Updated: 2025-11-09 for v0.1.10 credential management)
+**Status:** Complete (Local + Docker Execution + Credentials + Package Preinstall)
 
 ## Overview
 
@@ -685,6 +685,118 @@ docker exec massgen-{agent_id} {command}
 3. **Run normally:** Container created automatically at orchestration start
 
 For more details, see `docs/dev_notes/DOCKER_CODE_EXECUTION_DESIGN.md`
+
+### Credential Management (✅ ADDED in v0.1.10)
+
+Docker containers can now access host credentials for authenticated operations (git, npm, PyPI, APIs, etc.).
+
+**Features:**
+- Environment variable passing (from .env files or host environment)
+- Credential file mounting (SSH keys, .gitconfig, .npmrc, .pypirc)
+- GitHub CLI pre-installed and ready for authentication
+- Custom volume mounts for additional credentials
+- All credential mounting is **opt-in** for security
+
+**Configuration (2 Nested Dictionaries):**
+
+```yaml
+agent:
+  backend:
+    command_line_execution_mode: "docker"
+    command_line_docker_network_mode: "bridge"
+
+    # Credential management
+    command_line_docker_credentials:
+      # Mount credential files (all read-only)
+      mount:
+        - "ssh_keys"     # ~/.ssh → /home/massgen/.ssh
+        - "git_config"   # ~/.gitconfig → /home/massgen/.gitconfig
+        - "gh_config"    # ~/.config/gh → /home/massgen/.config/gh
+        - "npm_config"   # ~/.npmrc → /home/massgen/.npmrc
+        - "pypi_config"  # ~/.pypirc → /home/massgen/.pypirc
+
+      # Custom mounts
+      additional_mounts:
+        "/path/to/credentials.json":
+          bind: "/home/massgen/.config/app/credentials.json"
+          mode: "ro"
+
+      # Environment variables
+      env_file: ".env"                    # Load from .env file
+      env_vars: ["GITHUB_TOKEN", "NPM_TOKEN"]  # Or pass specific vars
+      pass_all_env: false                 # Or pass all (dangerous)
+
+    # Package management
+    command_line_docker_packages:
+      auto_install_deps: true
+      preinstall:
+        python: ["pytest", "requests"]
+        npm: ["typescript"]
+        system: ["vim"]
+```
+
+Agents can now use `gh` commands:
+```bash
+gh pr create --title "Feature" --body "Description"
+gh repo clone user/repo
+gh issue list
+```
+
+**Security:**
+- All credential files mounted as **read-only** by default
+- Path validation prevents mounting arbitrary directories
+- Credentials only accessible within container (isolated from host)
+- Warning logged when mounting sensitive credentials
+
+**Implementation:**
+- `_docker_manager.py`: `_load_env_file()`, `_build_environment()`, `_build_credential_mounts()`
+- Environment variables passed to container via Docker SDK's `environment` parameter
+- Credential files mounted via Docker SDK's `volumes` parameter
+- Validation ensures paths exist before mounting
+
+### Package Preinstall (✅ ADDED in v0.1.10)
+
+Specify base packages to pre-install in every container via config.
+
+**Configuration:**
+
+```yaml
+agent:
+  backend:
+    command_line_execution_mode: "docker"
+    command_line_docker_enable_sudo: true  # Required for npm/system packages
+    command_line_docker_network_mode: "bridge"  # Required for downloads
+
+    command_line_docker_packages:
+      # Pre-install base packages (always available)
+      preinstall:
+        python: ["pytest>=7.0.0", "requests>=2.31.0"]
+        npm: ["typescript"]
+        system: ["vim", "curl"]
+```
+
+**Installation Process:**
+
+1. Container created and started
+2. `preinstall_packages()` runs
+3. Installs in order: system → Python → npm
+4. Each uses appropriate package manager with sudo if needed
+5. Success/failure logged for each
+6. Container ready with base environment
+
+**When to use**:
+- Consistent base packages across all runs
+- Different package sets per configuration
+- Quick iteration without rebuilding Docker images
+
+**Implementation:**
+- `_docker_manager.py`: `preinstall_packages()` method
+  - System: `sudo apt-get update && sudo apt-get install -y {packages}`
+  - Python: `pip install {packages}`
+  - npm: `sudo npm install -g {packages}` (requires sudo for global install)
+  - Timeout: 600 seconds per package type
+  - Graceful error handling
+
 
 ## Future Enhancements
 

@@ -1,0 +1,109 @@
+# MassGen 50 Gemini Agents Configuration
+# Stress test with 50 agents using gemini-2.5-flash and gemini-2.5-pro
+# Run: massgen --config @examples/basic/multi/three_gemini_agents "Your question here"
+
+agents:
+  - id: "flash_agent_1"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.1}
+  - id: "flash_agent_2"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.2}
+  - id: "flash_agent_3"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.3}
+  - id: "flash_agent_4"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.4}
+  - id: "flash_agent_5"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.5}
+  - id: "flash_agent_6"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.6}
+  - id: "flash_agent_7"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.7}
+  - id: "flash_agent_8"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.8}
+  - id: "flash_agent_9"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 0.9}
+  - id: "flash_agent_10"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, temperature: 1.0}
+  - id: "flash_agent_11"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.1}
+  - id: "flash_agent_12"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.2}
+  - id: "flash_agent_13"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.3}
+  - id: "flash_agent_14"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.4}
+  - id: "flash_agent_15"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.5}
+  - id: "flash_agent_16"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.6}
+  - id: "flash_agent_17"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.7}
+  - id: "flash_agent_18"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.8}
+  - id: "flash_agent_19"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 0.9}
+  - id: "flash_agent_20"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_code_execution: true, temperature: 1.0}
+  - id: "flash_agent_21"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.1}
+  - id: "flash_agent_22"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.2}
+  - id: "flash_agent_23"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.3}
+  - id: "flash_agent_24"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.4}
+  - id: "flash_agent_25"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.5}
+  - id: "flash_agent_26"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.6}
+  - id: "flash_agent_27"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.7}
+  - id: "flash_agent_28"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.8}
+  - id: "flash_agent_29"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 0.9}
+  - id: "flash_agent_30"
+    backend: {type: "gemini", model: "gemini-2.5-flash", enable_web_search: true, enable_code_execution: true, temperature: 1.0}
+  - id: "pro_agent_1"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.1}
+  - id: "pro_agent_2"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.2}
+  - id: "pro_agent_3"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.3}
+  - id: "pro_agent_4"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.4}
+  - id: "pro_agent_5"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.5}
+  - id: "pro_agent_6"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.6}
+  - id: "pro_agent_7"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.7}
+  - id: "pro_agent_8"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.8}
+  - id: "pro_agent_9"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 0.9}
+  - id: "pro_agent_10"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_web_search: true, temperature: 1.0}
+  - id: "pro_agent_11"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.1}
+  - id: "pro_agent_12"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.2}
+  - id: "pro_agent_13"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.3}
+  - id: "pro_agent_14"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.4}
+  - id: "pro_agent_15"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.5}
+  - id: "pro_agent_16"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.6}
+  - id: "pro_agent_17"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.7}
+  - id: "pro_agent_18"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.8}
+  - id: "pro_agent_19"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 0.9}
+  - id: "pro_agent_20"
+    backend: {type: "gemini", model: "gemini-2.5-pro", enable_code_execution: true, temperature: 1.0}
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

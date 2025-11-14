@@ -587,6 +587,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
 def create_agents_from_config(
     config: Dict[str, Any],
     orchestrator_config: Optional[Dict[str, Any]] = None,
+    enable_rate_limit: bool = False,
     config_path: Optional[str] = None,
     memory_session_id: Optional[str] = None,
     debug: bool = False,
@@ -594,6 +595,10 @@ def create_agents_from_config(
     """Create agents from configuration.
 
     Args:
+        config: Configuration dictionary
+        orchestrator_config: Optional orchestrator configuration
+        enable_rate_limit: Whether to enable rate limiting (from CLI flag)
+        config_path: Optional path to the config file for error messages
         memory_session_id: Optional session ID to use for memory isolation.
                           If provided, overrides session_name from YAML config.
     """
@@ -643,6 +648,9 @@ def create_agents_from_config(
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
+
+        # Inject rate limiting flag from CLI
+        backend_config["enable_rate_limit"] = enable_rate_limit
 
         # Substitute variables like ${cwd} in backend config
         if "cwd" in backend_config:
@@ -1311,6 +1319,11 @@ async def run_question_with_history(
             max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
             enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
             max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
+            task_planning_filesystem_mode=coord_cfg.get("task_planning_filesystem_mode", False),
+            enable_memory_filesystem_mode=coord_cfg.get("enable_memory_filesystem_mode", False),
+            use_skills=coord_cfg.get("use_skills", False),
+            massgen_skills=coord_cfg.get("massgen_skills", []),
+            skills_directory=coord_cfg.get("skills_directory", ".agent/skills"),
         )
 
     # Get previous turns and winning agents history from session_info if already loaded,
@@ -1339,6 +1352,7 @@ async def run_question_with_history(
         previous_turns=previous_turns,
         winning_agents_history=winning_agents_history,  # Restore for memory sharing
         dspy_paraphraser=kwargs.get("dspy_paraphraser"),
+        enable_rate_limit=kwargs.get("enable_rate_limit", False),
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(
@@ -1354,7 +1368,8 @@ async def run_question_with_history(
         mode_text = "Multi-Agent"
 
         # Get coordination config from YAML (if present)
-        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        orchestrator_kwargs = kwargs.get("orchestrator", {})
+        coordination_settings = orchestrator_kwargs.get("coordination", {})
         if coordination_settings:
             from .agent_config import CoordinationConfig
 
@@ -1367,6 +1382,11 @@ async def run_question_with_history(
                 ),
                 enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
+                task_planning_filesystem_mode=coordination_settings.get("task_planning_filesystem_mode", False),
+                enable_memory_filesystem_mode=coordination_settings.get("enable_memory_filesystem_mode", False),
+                use_skills=coordination_settings.get("use_skills", False),
+                massgen_skills=coordination_settings.get("massgen_skills", []),
+                skills_directory=coordination_settings.get("skills_directory", ".agent/skills"),
             )
 
     print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
@@ -1584,7 +1604,8 @@ async def run_single_question(
             orchestrator_config.timeout_config = timeout_config
 
         # Get coordination config from YAML (if present)
-        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        orchestrator_kwargs = kwargs.get("orchestrator", {})
+        coordination_settings = orchestrator_kwargs.get("coordination", {})
         if coordination_settings:
             from .agent_config import CoordinationConfig
 
@@ -1597,6 +1618,11 @@ async def run_single_question(
                 ),
                 enable_agent_task_planning=coordination_settings.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coordination_settings.get("max_tasks_per_plan", 10),
+                task_planning_filesystem_mode=coordination_settings.get("task_planning_filesystem_mode", False),
+                enable_memory_filesystem_mode=coordination_settings.get("enable_memory_filesystem_mode", False),
+                use_skills=coordination_settings.get("use_skills", False),
+                massgen_skills=coordination_settings.get("massgen_skills", []),
+                skills_directory=coordination_settings.get("skills_directory", ".agent/skills"),
             )
 
         # Get orchestrator parameters from config
@@ -1639,6 +1665,11 @@ async def run_single_question(
                 max_orchestration_restarts=coord_cfg.get("max_orchestration_restarts", 0),
                 enable_agent_task_planning=coord_cfg.get("enable_agent_task_planning", False),
                 max_tasks_per_plan=coord_cfg.get("max_tasks_per_plan", 10),
+                task_planning_filesystem_mode=coord_cfg.get("task_planning_filesystem_mode", False),
+                enable_memory_filesystem_mode=coord_cfg.get("enable_memory_filesystem_mode", False),
+                use_skills=coord_cfg.get("use_skills", False),
+                massgen_skills=coord_cfg.get("massgen_skills", []),
+                skills_directory=coord_cfg.get("skills_directory", ".agent/skills"),
             )
 
         orchestrator = Orchestrator(
@@ -1647,6 +1678,7 @@ async def run_single_question(
             snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace,
             dspy_paraphraser=kwargs.get("dspy_paraphraser"),
+            enable_rate_limit=kwargs.get("enable_rate_limit", False),
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
@@ -2539,10 +2571,12 @@ async def run_interactive_mode(
         config_modified = prompt_for_context_paths(original_config, orchestrator_cfg)
         if config_modified:
             # Recreate agents with updated context paths (use same session)
+            enable_rate_limit = kwargs.get("enable_rate_limit", False)
             agents = create_agents_from_config(
                 original_config,
                 orchestrator_cfg,
                 debug=debug,
+                enable_rate_limit=enable_rate_limit,
                 config_path=config_path,
                 memory_session_id=memory_session_id,
             )
@@ -2630,10 +2664,12 @@ async def run_interactive_mode(
                                 backend_config["context_paths"] = existing_context_paths + [new_turn_config]
 
                         # Recreate agents from modified config (use same session)
+                        enable_rate_limit = kwargs.get("enable_rate_limit", False)
                         agents = create_agents_from_config(
                             modified_config,
                             orchestrator_cfg,
                             debug=debug,
+                            enable_rate_limit=enable_rate_limit,
                             config_path=config_path,
                             memory_session_id=session_id,
                         )
@@ -2917,6 +2953,26 @@ async def main(args):
         # Relocate all filesystem paths to .massgen/ directory
         relocate_filesystem_paths(config)
 
+        # Generate unique instance ID for parallel execution safety
+        # This prevents Docker container naming and workspace conflicts when running multiple instances
+        import uuid
+
+        instance_id = uuid.uuid4().hex[:8]
+
+        # Inject instance_id and apply workspace suffixes to all agent backend configs
+        agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
+        for agent_data in agent_entries:
+            backend_config = agent_data.get("backend", {})
+            # Set instance_id for Docker container naming
+            backend_config["instance_id"] = instance_id
+            # Apply unique suffix to workspace paths to prevent filesystem conflicts
+            if "cwd" in backend_config:
+                original_cwd = backend_config["cwd"]
+                # Append unique suffix to workspace path
+                # e.g., ".massgen/workspaces/workspace1" -> ".massgen/workspaces/workspace1_a1b2c3d4"
+                backend_config["cwd"] = f"{original_cwd}_{instance_id}"
+                logger.debug(f"Auto-generated unique workspace: {original_cwd} -> {backend_config['cwd']}")
+
         # Apply command-line overrides
         ui_config = config.get("ui", {})
         if args.automation:
@@ -2924,22 +2980,6 @@ async def main(args):
             ui_config["display_type"] = "silent"
             ui_config["logging_enabled"] = True
             ui_config["automation_mode"] = True
-
-            # Auto-generate unique workspace suffixes for parallel execution safety
-            # This prevents conflicts when running multiple instances with the same config
-            import uuid
-
-            unique_suffix = uuid.uuid4().hex[:8]
-
-            agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
-            for agent_data in agent_entries:
-                backend_config = agent_data.get("backend", {})
-                if "cwd" in backend_config:
-                    original_cwd = backend_config["cwd"]
-                    # Append unique suffix to workspace path
-                    # e.g., ".massgen/workspaces/workspace1" -> ".massgen/workspaces/workspace1_a1b2c3d4"
-                    backend_config["cwd"] = f"{original_cwd}_{unique_suffix}"
-                    logger.debug(f"[Automation] Auto-generated unique workspace: {original_cwd} -> {backend_config['cwd']}")
         if args.no_display:
             ui_config["display_type"] = "simple"
         if args.no_logs:
@@ -2959,9 +2999,13 @@ async def main(args):
         # Update config with timeout settings
         config["timeout_settings"] = timeout_settings
 
+        # Get rate limiting flag from CLI
+        enable_rate_limit = args.rate_limit
+
         # Create agents
         if args.debug:
             logger.debug("Creating agents from config...")
+            logger.debug(f"Rate limiting enabled: {enable_rate_limit}")
         # Extract orchestrator config for agent setup
         orchestrator_cfg = config.get("orchestrator", {})
 
@@ -3049,6 +3093,7 @@ async def main(args):
         agents = create_agents_from_config(
             config,
             orchestrator_cfg,
+            enable_rate_limit=enable_rate_limit,
             config_path=str(resolved_path) if resolved_path else None,
             memory_session_id=memory_session_id,
             debug=args.debug,
@@ -3073,6 +3118,9 @@ async def main(args):
         # Add orchestrator configuration if present
         if "orchestrator" in config:
             kwargs["orchestrator"] = config["orchestrator"]
+
+        # Add rate limit flag to kwargs for interactive mode
+        kwargs["enable_rate_limit"] = enable_rate_limit
 
         # Optionally enable DSPy paraphrasing
         dspy_paraphraser = create_dspy_paraphraser_from_config(
@@ -3181,6 +3229,9 @@ Examples:
 
   # Timeout control examples
   massgen --config config.yaml --orchestrator-timeout 600 "Complex task"
+
+  # Enable rate limiting (uses limits from rate_limits.yaml)
+  massgen --config config.yaml --rate-limit "Your question"
 
   # Configuration management
   massgen --init          # Create new configuration interactively
@@ -3360,6 +3411,13 @@ Environment Variables:
         "--orchestrator-timeout",
         type=int,
         help="Maximum time for orchestrator coordination in seconds (default: 1800)",
+    )
+
+    # Rate limit options
+    parser.add_argument(
+        "--rate-limit",
+        action="store_true",
+        help="Enable rate limiting (uses limits from rate_limits.yaml config)",
     )
 
     args = parser.parse_args()

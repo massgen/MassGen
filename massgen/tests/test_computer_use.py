@@ -388,7 +388,7 @@ class ComputerUseTestSuite:
         required_configs = {
             "computer_use_example.yaml": "OpenAI Computer Use",
             "gemini_computer_use_example.yaml": "Gemini Computer Use",
-            "claude_computer_use_example.yaml": "Claude Computer Use",
+            "claude_computer_use_browser_example.yaml": "Claude Computer Use",
             "simple_browser_automation_example.yaml": "Simple Browser Automation",
         }
 
