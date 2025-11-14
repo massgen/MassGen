@@ -161,7 +161,6 @@ Version 0.1.13 focuses on intelligent tool selection and NLIP integration, bring
 ## Future Enhancements (Post-v0.1.13)
 
 ### v0.1.14 Plans
-- **Semtools Integration** (@ncrispino): Semantic search for files, configs, and automated tool discovery
 - **MassGen Terminal Evaluation** (@ncrispino): Self-evaluation and improvement of frontend/UI through terminal recording
 
 ### v0.1.15 Plans

@@ -30,7 +30,6 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 | Session Management | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Automatic MCP Tool Selection | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Parallel File Operations | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
-| Semtools Integration | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | MassGen Terminal Evaluation | [@ncrispino](https://github.com/ncrispino) | nickcrispino |
 | Web UI | [@voidcenter](https://github.com/voidcenter) | justin_zhang |
 
@@ -43,8 +42,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 |---------|--------|---------|-------|----------|
 | **v0.1.13** | 11/17/25 | Automatic MCP Tool Selection | @ncrispino | Intelligently select MCP tools based on task requirements |
 | | | NLIP Integration | @qidanrui | Natural Language Integration Platform for hierarchy initialization and RL integration |
-| **v0.1.14** | 11/19/25 | Semtools Integration | @ncrispino | Semantic search for files, configs, and tool discovery |
-| | | MassGen Terminal Evaluation | @ncrispino | Self-evaluation and improvement of frontend/UI |
+| **v0.1.14** | 11/19/25 | MassGen Terminal Evaluation | @ncrispino | Self-evaluation and improvement of frontend/UI |
 | **v0.1.15** | 11/21/25 | Parallel File Operations | @ncrispino | Increase parallelism and standard efficiency evaluation |
 | | | Launch Custom Tools in Docker | @ncrispino | Enable custom tools to run in isolated Docker containers for security and portability |
 
@@ -84,20 +82,11 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.14 - Semantic Search & Self-Evaluation
+## 📋 v0.1.14 - Self-Evaluation & Terminal Recording
 
 ### Features
 
-**1. Semtools Integration** (@ncrispino)
-- Issue: [#465](https://github.com/massgen/MassGen/issues/465)
-- Semantic search capabilities for file parsing and retrieval using [semtools](https://github.com/run-llama/semtools)
-- Semantic understanding for filesystem efficiency (PDFs, various document formats)
-- Intelligent configuration file and MCP tool discovery through semantic search
-- Automatic identification of relevant tools before prompt execution
-- Replaces keyword matching with semantic understanding for better accuracy
-- **Use Case**: Enable semantic search for files, configurations, and automated tool discovery, improving search performance and reducing manual configuration effort
-
-**2. MassGen Terminal Evaluation** (@ncrispino)
+**1. MassGen Terminal Evaluation** (@ncrispino)
 - Issue: [#476](https://github.com/massgen/MassGen/issues/476)
 - Enable MassGen to evaluate and improve its own frontend/UI
 - Terminal session recording using asciinema for visual analysis
@@ -108,9 +97,6 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **Use Case**: Enable MassGen to analyze its own terminal interface, creating demonstration videos and documentation automatically, showcasing new features through automated workflows
 
 ### Success Criteria
-- ✅ Semtools semantic search outperforms keyword-based search
-- ✅ Tool discovery automation reduces manual configuration
-- ✅ Semantic search handles diverse document formats effectively
 - ✅ Terminal recording and playback system works reliably
 - ✅ Video understanding capabilities accurately analyze terminal sessions
 - ✅ Automated case study generation produces high-quality documentation
@@ -261,12 +247,6 @@ These features are being actively developed on **separate parallel tracks** and 
 - Enable custom tools to run in isolated Docker containers
 - Security isolation and portability for custom tool execution
 - **Target:** v0.1.15
-
-### Track: Semtools Integration (@ncrispino, nickcrispino)
-- Issue: [#465](https://github.com/massgen/MassGen/issues/465)
-- Semantic search for files, configs, and automated tool discovery
-- Replace keyword matching with semantic understanding
-- **Target:** v0.1.14
 
 ### Track: MassGen Terminal Evaluation (@ncrispino, nickcrispino)
 - Issue: [#476](https://github.com/massgen/MassGen/issues/476)
