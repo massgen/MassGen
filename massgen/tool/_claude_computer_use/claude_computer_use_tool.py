@@ -579,8 +579,9 @@ async def claude_computer_use(
             )
             page = await context.new_page()
 
-            # Navigate to a starting page
-            await page.goto("about:blank")
+            # Navigate to a starting page - use Google as a usable starting point
+            # Claude can then navigate to other sites by typing in the address bar or search
+            await page.goto("https://www.google.com", wait_until="networkidle", timeout=30000)
 
             environment_instance = page
 

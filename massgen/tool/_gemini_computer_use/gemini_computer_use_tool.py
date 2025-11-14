@@ -38,6 +38,14 @@ except ImportError:
     genai = None
     types = None
 
+try:
+    import docker
+
+    DOCKER_AVAILABLE = True
+except ImportError:
+    DOCKER_AVAILABLE = False
+    docker = None
+
 
 # Screen dimensions recommended by Gemini docs
 SCREEN_WIDTH = 1440
@@ -52,6 +60,338 @@ def denormalize_x(x: int, screen_width: int) -> int:
 def denormalize_y(y: int, screen_height: int) -> int:
     """Convert normalized y coordinate (0-1000) to actual pixel coordinate."""
     return int(y / 1000 * screen_height)
+
+
+def take_screenshot_docker(container, display: str = ":99") -> bytes:
+    """Take a screenshot from Docker container using scrot.
+
+    Args:
+        container: Docker container instance
+        display: X11 display number
+
+    Returns:
+        Screenshot as bytes
+    """
+    import time
+
+    # Remove old screenshot if exists
+    container.exec_run("rm -f /tmp/screenshot.png")
+
+    # Take screenshot with scrot (use environment parameter)
+    result = container.exec_run(
+        "scrot /tmp/screenshot.png",
+        environment={"DISPLAY": display},
+    )
+
+    if result.exit_code != 0:
+        logger.error(f"Screenshot command failed: {result.output}")
+        # Try alternative method with import
+        result = container.exec_run(
+            "import -window root /tmp/screenshot.png",
+            environment={"DISPLAY": display},
+        )
+        if result.exit_code != 0:
+            logger.error(f"Alternative screenshot also failed: {result.output}")
+            return b""
+
+    # Small delay to ensure file is written
+    time.sleep(0.2)
+
+    # Verify screenshot exists and has content
+    check_result = container.exec_run("ls -lh /tmp/screenshot.png")
+    logger.info(f"Screenshot file info: {check_result.output.decode()}")
+
+    # Read the screenshot
+    read_result = container.exec_run("cat /tmp/screenshot.png", stdout=True)
+    if read_result.exit_code != 0:
+        logger.error(f"Failed to read screenshot: {read_result.output}")
+        return b""
+
+    screenshot_bytes = read_result.output
+
+    # Verify we got actual image data
+    if len(screenshot_bytes) < 1000:  # PNG should be at least a few KB
+        logger.error(f"Screenshot too small ({len(screenshot_bytes)} bytes), likely invalid")
+        return b""
+
+    # Verify PNG header
+    if not screenshot_bytes.startswith(b"\x89PNG"):
+        logger.error("Screenshot does not have valid PNG header")
+        return b""
+
+    logger.info(f"Successfully captured screenshot: {len(screenshot_bytes)} bytes")
+    return screenshot_bytes
+
+
+def execute_docker_action(container, action_name: str, args: Dict[str, Any], screen_width: int, screen_height: int, display: str = ":99") -> Dict[str, Any]:
+    """Execute a Gemini action in Docker using xdotool.
+
+    Args:
+        container: Docker container instance
+        action_name: Name of the Gemini action
+        args: Action arguments
+        screen_width: Screen width in pixels
+        screen_height: Screen height in pixels
+        display: X11 display number
+
+    Returns:
+        Result dictionary
+    """
+    import time
+
+    result = {}
+    try:
+        if action_name == "open_web_browser":
+            # Browser should already be open
+            pass
+
+        elif action_name == "click_at":
+            x = args.get("x", 0)
+            y = args.get("y", 0)
+            actual_x = denormalize_x(x, screen_width)
+            actual_y = denormalize_y(y, screen_height)
+            logger.info(f"     Docker click at ({actual_x}, {actual_y})")
+            container.exec_run(
+                f"xdotool mousemove {actual_x} {actual_y} click 1",
+                environment={"DISPLAY": display},
+            )
+
+        elif action_name == "hover_at":
+            x = args.get("x", 0)
+            y = args.get("y", 0)
+            actual_x = denormalize_x(x, screen_width)
+            actual_y = denormalize_y(y, screen_height)
+            logger.info(f"     Docker hover at ({actual_x}, {actual_y})")
+            container.exec_run(
+                f"xdotool mousemove {actual_x} {actual_y}",
+                environment={"DISPLAY": display},
+            )
+
+        elif action_name == "type_text_at":
+            x = args.get("x", 0)
+            y = args.get("y", 0)
+            text = args.get("text", "")
+            press_enter = args.get("press_enter", True)
+            clear_before_typing = args.get("clear_before_typing", True)
+
+            actual_x = denormalize_x(x, screen_width)
+            actual_y = denormalize_y(y, screen_height)
+            logger.info(f"     Docker type '{text}' at ({actual_x}, {actual_y})")
+
+            # Click to focus
+            container.exec_run(
+                f"xdotool mousemove {actual_x} {actual_y} click 1",
+                environment={"DISPLAY": display},
+            )
+
+            if clear_before_typing:
+                # Select all and delete
+                container.exec_run("xdotool key ctrl+a", environment={"DISPLAY": display})
+                container.exec_run("xdotool key BackSpace", environment={"DISPLAY": display})
+
+            # Type text (escape special characters)
+            escaped_text = text.replace("'", "'\\''")
+            container.exec_run(
+                f"xdotool type '{escaped_text}'",
+                environment={"DISPLAY": display},
+            )
+
+            if press_enter:
+                container.exec_run("xdotool key Return", environment={"DISPLAY": display})
+
+        elif action_name == "key_combination":
+            keys = args.get("keys", "")
+            logger.info(f"     Docker press keys: {keys}")
+            # Convert to xdotool format (e.g., "Control+A" -> "ctrl+a")
+            xdotool_keys = keys.replace("Control", "ctrl").replace("Shift", "shift").replace("Alt", "alt")
+            container.exec_run(
+                f"xdotool key {xdotool_keys}",
+                environment={"DISPLAY": display},
+            )
+
+        elif action_name == "scroll_document":
+            direction = args.get("direction", "down")
+            logger.info(f"     Docker scroll document: {direction}")
+
+            if direction == "down":
+                cmd = "xdotool key Page_Down"
+            elif direction == "up":
+                cmd = "xdotool key Page_Up"
+            elif direction == "left":
+                cmd = "xdotool key Left Left Left"
+            elif direction == "right":
+                cmd = "xdotool key Right Right Right"
+            else:
+                cmd = "xdotool key Page_Down"
+
+            container.exec_run(cmd, environment={"DISPLAY": display})
+
+        elif action_name == "scroll_at":
+            x = args.get("x", 0)
+            y = args.get("y", 0)
+            direction = args.get("direction", "down")
+
+            actual_x = denormalize_x(x, screen_width)
+            actual_y = denormalize_y(y, screen_height)
+            logger.info(f"     Docker scroll at ({actual_x}, {actual_y}) {direction}")
+
+            # Move mouse to position
+            container.exec_run(
+                f"xdotool mousemove {actual_x} {actual_y}",
+                environment={"DISPLAY": display},
+            )
+
+            # Scroll with mouse wheel
+            if direction == "down":
+                cmd = "xdotool click 5 click 5 click 5"  # Scroll down
+            elif direction == "up":
+                cmd = "xdotool click 4 click 4 click 4"  # Scroll up
+            else:
+                cmd = "xdotool click 5 click 5 click 5"
+
+            container.exec_run(cmd, environment={"DISPLAY": display})
+
+        elif action_name == "navigate":
+            url = args.get("url", "")
+            logger.info(f"     Docker navigate to: {url}")
+            # Focus address bar and type URL
+            container.exec_run("xdotool key ctrl+l", environment={"DISPLAY": display})
+            time.sleep(0.5)
+            escaped_url = url.replace("'", "'\\''")
+            container.exec_run(
+                f"xdotool type '{escaped_url}'",
+                environment={"DISPLAY": display},
+            )
+            container.exec_run("xdotool key Return", environment={"DISPLAY": display})
+
+        elif action_name == "go_back":
+            logger.info("     Docker go back")
+            container.exec_run("xdotool key alt+Left", environment={"DISPLAY": display})
+
+        elif action_name == "go_forward":
+            logger.info("     Docker go forward")
+            container.exec_run("xdotool key alt+Right", environment={"DISPLAY": display})
+
+        elif action_name == "search":
+            logger.info("     Docker navigate to search")
+            # Navigate to Google
+            container.exec_run("xdotool key ctrl+l", environment={"DISPLAY": display})
+            time.sleep(0.5)
+            container.exec_run(
+                "xdotool type 'https://www.google.com'",
+                environment={"DISPLAY": display},
+            )
+            container.exec_run("xdotool key Return", environment={"DISPLAY": display})
+
+        elif action_name == "wait_5_seconds":
+            logger.info("     Docker wait 5 seconds")
+            time.sleep(5)
+
+        elif action_name == "drag_and_drop":
+            x = args.get("x", 0)
+            y = args.get("y", 0)
+            dest_x = args.get("destination_x", 0)
+            dest_y = args.get("destination_y", 0)
+
+            actual_x = denormalize_x(x, screen_width)
+            actual_y = denormalize_y(y, screen_height)
+            actual_dest_x = denormalize_x(dest_x, screen_width)
+            actual_dest_y = denormalize_y(dest_y, screen_height)
+
+            logger.info(f"     Docker drag from ({actual_x}, {actual_y}) to ({actual_dest_x}, {actual_dest_y})")
+            container.exec_run(
+                f"xdotool mousemove {actual_x} {actual_y} mousedown 1 mousemove {actual_dest_x} {actual_dest_y} mouseup 1",
+                environment={"DISPLAY": display},
+            )
+
+        else:
+            logger.warning(f"     Docker: Unimplemented function {action_name}")
+            result = {"error": f"Unimplemented function: {action_name}"}
+
+        # Small delay after action
+        time.sleep(1)
+
+    except Exception as e:
+        logger.error(f"Docker action {action_name} failed: {e}")
+        result = {"error": str(e)}
+
+    return result
+
+
+def execute_gemini_function_calls_docker(candidate, container, screen_width: int, screen_height: int, display: str = ":99"):
+    """Execute Gemini Computer Use function calls in Docker using xdotool.
+
+    Args:
+        candidate: Gemini response candidate
+        container: Docker container instance
+        screen_width: Screen width in pixels
+        screen_height: Screen height in pixels
+        display: X11 display number
+
+    Returns:
+        List of (function_name, result_dict) tuples
+    """
+    results = []
+    function_calls = []
+
+    for part in candidate.content.parts:
+        if part.function_call:
+            function_calls.append(part.function_call)
+
+    for function_call in function_calls:
+        fname = function_call.name
+        args = function_call.args
+        logger.info(f"  -> Executing Gemini action in Docker: {fname}")
+
+        action_result = execute_docker_action(container, fname, args, screen_width, screen_height, display)
+        results.append((fname, action_result))
+
+    return results
+
+
+def get_gemini_function_responses_docker(container, results, function_calls, display: str = ":99"):
+    """Capture screenshot from Docker and create Gemini function responses.
+
+    Args:
+        container: Docker container instance
+        results: List of (function_name, result_dict) tuples
+        function_calls: List of function call objects from candidate
+        display: X11 display number
+
+    Returns:
+        Tuple of (function_responses, screenshot_bytes)
+    """
+    screenshot_bytes = take_screenshot_docker(container, display)
+    function_responses = []
+
+    for (name, result), function_call in zip(results, function_calls):
+        # Gemini API requires URL field even for Docker environment
+        response_data = {"url": "about:blank"}  # Placeholder URL for Docker
+        response_data.update(result)
+
+        # Check if this function call has a safety decision in its args
+        try:
+            if hasattr(function_call, "args") and function_call.args is not None:
+                # Convert args to dict if it's not already
+                args_dict = dict(function_call.args) if hasattr(function_call.args, "__iter__") else function_call.args
+                if isinstance(args_dict, dict) and "safety_decision" in args_dict:
+                    safety_decision = args_dict["safety_decision"]
+                    logger.info(f"     Function {name} has safety decision: {safety_decision}")
+                    # Add safety acknowledgement to response
+                    response_data["safety_acknowledgement"] = "true"
+        except (TypeError, AttributeError) as e:
+            logger.debug(f"     Could not check safety decision for {name}: {e}")
+
+        # Create function response
+        function_responses.append(
+            types.FunctionResponse(
+                id=function_call.id,
+                name=name,
+                response=response_data,
+            ),
+        )
+
+    return function_responses, screenshot_bytes
 
 
 async def execute_gemini_function_calls(candidate, page, screen_width: int, screen_height: int):
@@ -222,27 +562,42 @@ async def execute_gemini_function_calls(candidate, page, screen_width: int, scre
     return results
 
 
-async def get_gemini_function_responses(page, results):
+async def get_gemini_function_responses(page, results, function_calls):
     """Capture screenshot and create Gemini function responses.
 
     Args:
         page: Playwright page instance
         results: List of (function_name, result_dict) tuples
+        function_calls: List of function call objects from candidate
 
     Returns:
-        List of Gemini FunctionResponse objects
+        Tuple of (function_responses, screenshot_bytes)
     """
     screenshot_bytes = await page.screenshot(type="png")
     current_url = page.url
     function_responses = []
 
-    for name, result in results:
+    for (name, result), function_call in zip(results, function_calls):
         response_data = {"url": current_url}
         response_data.update(result)
 
-        # Create function response with screenshot as inline data
+        # Check if this function call has a safety decision in its args
+        try:
+            if hasattr(function_call, "args") and function_call.args is not None:
+                # Convert args to dict if it's not already
+                args_dict = dict(function_call.args) if hasattr(function_call.args, "__iter__") else function_call.args
+                if isinstance(args_dict, dict) and "safety_decision" in args_dict:
+                    safety_decision = args_dict["safety_decision"]
+                    logger.info(f"     Function {name} has safety decision: {safety_decision}")
+                    # Add safety acknowledgement to response
+                    response_data["safety_acknowledgement"] = "true"
+        except (TypeError, AttributeError) as e:
+            logger.debug(f"     Could not check safety decision for {name}: {e}")
+
+        # Create function response
         function_responses.append(
             types.FunctionResponse(
+                id=function_call.id,
                 name=name,
                 response=response_data,
             ),
@@ -264,20 +619,20 @@ async def gemini_computer_use(
     excluded_functions: Optional[List[str]] = None,
 ) -> ExecutionResult:
     """
-    Execute a browser automation task using Google's Gemini 2.5 Computer Use model.
+    Execute a browser or Docker automation task using Google's Gemini 2.5 Computer Use model.
 
-    This tool implements browser control using Gemini's Computer Use API which allows
-    the model to autonomously control a browser to complete tasks.
+    This tool implements control using Gemini's Computer Use API which allows
+    the model to autonomously control a browser or Linux desktop to complete tasks.
 
     Args:
         task: Description of the task to perform
-        environment: Environment type - currently only "browser" is supported
+        environment: Environment type - "browser" or "linux" (Docker)
         display_width: Display width in pixels (default: 1440, recommended by Gemini)
         display_height: Display height in pixels (default: 900, recommended by Gemini)
         max_iterations: Maximum number of action iterations (default: 25)
         include_thoughts: Whether to include model's thinking process (default: True)
-        initial_url: Initial URL to navigate to (default: None, starts blank)
-        environment_config: Additional browser configuration
+        initial_url: Initial URL to navigate to (browser only, default: None)
+        environment_config: Additional configuration (browser: headless/browser_type, docker: container_name/display)
         agent_cwd: Agent's current working directory
         excluded_functions: List of function names to exclude from use
 
@@ -285,27 +640,38 @@ async def gemini_computer_use(
         ExecutionResult containing success status, action log, and results
 
     Examples:
-        # Simple search task
-        gemini_computer_use("Search for Python documentation on Google")
+        # Browser task
+        gemini_computer_use("Search for Python documentation on Google", environment="browser")
 
-        # With specific starting point
+        # Docker task
         gemini_computer_use(
-            "Find pricing information",
-            initial_url="https://ai.google.dev"
+            "Open Firefox and browse to GitHub",
+            environment="linux",
+            environment_config={"container_name": "cua-container", "display": ":99"}
         )
 
     Prerequisites:
         - GEMINI_API_KEY environment variable must be set
-        - Playwright must be installed: pip install playwright
-        - Browsers must be installed: playwright install
+        - For browser: pip install playwright && playwright install
+        - For Docker: Docker container with X11 and xdotool installed
     """
-    if not PLAYWRIGHT_AVAILABLE:
-        result = {
-            "success": False,
-            "operation": "gemini_computer_use",
-            "error": "Playwright not installed. Install with: pip install playwright && playwright install",
-        }
-        return ExecutionResult(output_blocks=[TextContent(data=json.dumps(result, indent=2))])
+    # Check environment-specific dependencies
+    if environment == "linux":
+        if not DOCKER_AVAILABLE:
+            result = {
+                "success": False,
+                "operation": "gemini_computer_use",
+                "error": "Docker not installed. Install with: pip install docker",
+            }
+            return ExecutionResult(output_blocks=[TextContent(data=json.dumps(result, indent=2))])
+    else:  # browser
+        if not PLAYWRIGHT_AVAILABLE:
+            result = {
+                "success": False,
+                "operation": "gemini_computer_use",
+                "error": "Playwright not installed. Install with: pip install playwright && playwright install",
+            }
+            return ExecutionResult(output_blocks=[TextContent(data=json.dumps(result, indent=2))])
 
     if not GENAI_AVAILABLE:
         result = {
@@ -339,40 +705,94 @@ async def gemini_computer_use(
         # Initialize Gemini client
         client = genai.Client(api_key=gemini_api_key)
 
-        # Initialize Playwright browser
-        logger.info("Initializing browser...")
-        playwright = await async_playwright().start()
-        browser_type = environment_config.get("browser_type", "chromium")
-        headless = environment_config.get("headless", True)  # Default to headless=True for server environments
+        # Initialize environment (browser or Docker)
+        container = None
+        display = None
+        page = None
+        playwright = None
+        browser = None
 
-        if browser_type == "chromium":
-            browser = await playwright.chromium.launch(headless=headless)
-        elif browser_type == "firefox":
-            browser = await playwright.firefox.launch(headless=headless)
-        elif browser_type == "webkit":
-            browser = await playwright.webkit.launch(headless=headless)
+        if environment == "linux":
+            # Docker environment
+            logger.info("Initializing Docker environment...")
+            container_name = environment_config.get("container_name", "cua-container")
+            display = environment_config.get("display", ":99")
+
+            docker_client = docker.from_env()
+            try:
+                container = docker_client.containers.get(container_name)
+                if container.status != "running":
+                    logger.info(f"Starting container {container_name}...")
+                    container.start()
+                logger.info(f"Using Docker container: {container_name} (display {display})")
+            except docker.errors.NotFound:
+                result = {
+                    "success": False,
+                    "operation": "gemini_computer_use",
+                    "error": f"Docker container '{container_name}' not found. Please create it first.",
+                }
+                return ExecutionResult(output_blocks=[TextContent(data=json.dumps(result, indent=2))])
+
+            # Take initial screenshot from Docker
+            initial_screenshot = take_screenshot_docker(container, display)
+
+            # Verify screenshot was captured
+            if not initial_screenshot or len(initial_screenshot) < 1000:
+                result = {
+                    "success": False,
+                    "operation": "gemini_computer_use",
+                    "error": f"Failed to capture screenshot from Docker container. Check if X11 display {display} is running and scrot is installed.",
+                }
+                return ExecutionResult(output_blocks=[TextContent(data=json.dumps(result, indent=2))])
+
         else:
-            browser = await playwright.chromium.launch(headless=headless)
+            # Browser environment
+            logger.info("Initializing browser...")
+            playwright = await async_playwright().start()
+            browser_type = environment_config.get("browser_type", "chromium")
+            headless = environment_config.get("headless", True)
 
-        context = await browser.new_context(viewport={"width": display_width, "height": display_height})
-        page = await context.new_page()
+            # Prepare launch options
+            launch_options = {"headless": headless}
 
-        # Navigate to initial URL or blank page
-        if initial_url:
-            logger.info(f"Navigating to initial URL: {initial_url}")
-            await page.goto(initial_url, wait_until="networkidle", timeout=10000)
-        else:
-            await page.goto("about:blank")
+            # If not headless and DISPLAY is set, log it
+            if not headless:
+                display_env = os.environ.get("DISPLAY")
+                if display_env:
+                    logger.info(f"Running browser with DISPLAY={display_env} (environment variable)")
+                else:
+                    logger.warning("headless=false but DISPLAY not set. Browser window may not be visible.")
 
-        logger.info(f"Initialized {browser_type} browser ({display_width}x{display_height})")
+            if browser_type == "chromium":
+                browser = await playwright.chromium.launch(**launch_options)
+            elif browser_type == "firefox":
+                browser = await playwright.firefox.launch(**launch_options)
+            elif browser_type == "webkit":
+                browser = await playwright.webkit.launch(**launch_options)
+            else:
+                browser = await playwright.chromium.launch(**launch_options)
+
+            context = await browser.new_context(viewport={"width": display_width, "height": display_height})
+            page = await context.new_page()
+
+            # Navigate to initial URL or blank page
+            if initial_url:
+                logger.info(f"Navigating to initial URL: {initial_url}")
+                await page.goto(initial_url, wait_until="networkidle", timeout=10000)
+            else:
+                await page.goto("about:blank")
+
+            logger.info(f"Initialized {browser_type} browser ({display_width}x{display_height})")
+
+            # Take initial screenshot from browser
+            initial_screenshot = await page.screenshot(type="png")
 
         # Configure Gemini with Computer Use tool
-        # Using dict-based configuration as the SDK may not have direct ComputerUse class
         config_params = {
             "tools": [
                 {
                     "computer_use": {
-                        "environment": "ENVIRONMENT_BROWSER",
+                        "environment": "ENVIRONMENT_BROWSER" if environment == "browser" else "ENVIRONMENT_BROWSER",
                     },
                 },
             ],
@@ -389,8 +809,7 @@ async def gemini_computer_use(
         config = types.GenerateContentConfig(**config_params)
 
         # Initialize conversation with task and screenshot
-        initial_screenshot = await page.screenshot(type="png")
-        logger.info(f"Task: {task}")
+        logger.info(f"Task: {task} (environment: {environment})")
 
         contents = [
             types.Content(
@@ -418,7 +837,18 @@ async def gemini_computer_use(
                     config=config,
                 )
 
+                # Check if response has candidates
+                if not response.candidates or len(response.candidates) == 0:
+                    logger.error("No candidates in response")
+                    raise Exception("No candidates returned from Gemini API")
+
                 candidate = response.candidates[0]
+
+                # Check if candidate has content
+                if not candidate.content or not candidate.content.parts:
+                    logger.error("No content or parts in candidate")
+                    raise Exception("Empty content returned from Gemini API")
+
                 contents.append(candidate.content)
 
                 # Check if task is complete
@@ -435,9 +865,17 @@ async def gemini_computer_use(
                     )
                     break
 
-                # Execute actions
+                # Execute actions based on environment
                 logger.info("Executing actions...")
-                results = await execute_gemini_function_calls(candidate, page, display_width, display_height)
+                if environment == "linux":
+                    # Docker execution
+                    results = execute_gemini_function_calls_docker(candidate, container, display_width, display_height, display)
+                else:
+                    # Browser execution
+                    results = await execute_gemini_function_calls(candidate, page, display_width, display_height)
+
+                # Extract function calls for safety decision handling
+                function_calls = [part.function_call for part in candidate.content.parts if part.function_call]
 
                 # Log actions
                 action_log.append(
@@ -449,7 +887,10 @@ async def gemini_computer_use(
 
                 # Capture new state
                 logger.info("Capturing state...")
-                function_responses, screenshot_bytes = await get_gemini_function_responses(page, results)
+                if environment == "linux":
+                    function_responses, screenshot_bytes = get_gemini_function_responses_docker(container, results, function_calls, display)
+                else:
+                    function_responses, screenshot_bytes = await get_gemini_function_responses(page, results, function_calls)
 
                 # Add function responses and screenshot to conversation
                 parts = [types.Part(function_response=fr) for fr in function_responses]
@@ -464,9 +905,14 @@ async def gemini_computer_use(
 
         finally:
             # Cleanup
-            logger.info("\nClosing browser...")
-            await browser.close()
-            await playwright.stop()
+            if environment == "linux":
+                logger.info("\nDocker environment cleanup complete")
+            else:
+                logger.info("\nClosing browser...")
+                if browser:
+                    await browser.close()
+                if playwright:
+                    await playwright.stop()
 
         # Prepare result
         if iteration_count >= max_iterations:
