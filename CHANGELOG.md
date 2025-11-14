@@ -7,16 +7,120 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.12 (November 14, 2025)** - System Prompt Refactoring, Semantic Search & Multi-Agent Computer Use
+Major system prompt architecture redesign with new semantic search skills (semtools/serena), local skill execution support, and enhanced multi-agent computer use capabilities with Docker integration and visualization.
+
 **v0.1.11 (November 12, 2025)** - Skills System, Memory MCP & Rate Limiting
 Modular skills system for enhanced agent prompting, MCP-based memory management with filesystem integration for advanced workflows, and multi-dimensional rate limiting for Gemini API calls.
 
 **v0.1.10 (November 10, 2025)** - Docker Configuration, Framework Streaming & Contributor Handbook
 Enhanced Docker configuration with nested credential and package management structures, framework interoperability streaming for LangGraph and SmoLAgent, improved parallel execution safety across all modes, and comprehensive contributor handbook at https://massgen.github.io/Handbook/.
 
-**v0.1.9 (November 7, 2025)** - Session Management & Computer Use Tools
-Complete session management system with conversation restoration, computer use automation tools for browser and desktop control, enhanced config builder with fuzzy model matching, and expanded backend support.
-
 ---
+
+## [0.1.12] - 2025-11-14
+
+### Added
+- **Semtools Skill**: Semantic search capabilities using embedding-based similarity matching
+  - New `massgen/skills/semtools/SKILL.md` for meaning-based code and document search (606 lines)
+  - Rust-based CLI for high-performance semantic search beyond keyword matching
+  - Workspace management for indexing large codebases with fast repeated searches
+  - Document parsing support for PDFs, DOCX, PPTX with optional API integration
+  - Discovery-focused search finding relevant code without knowing exact keywords
+  - Complements traditional ripgrep (keyword) and ast-grep (syntax) search tools
+
+- **Serena Skill**: Symbol-level code understanding via Language Server Protocol (LSP)
+  - New `massgen/skills/serena/SKILL.md` for IDE-like semantic code analysis (499 lines)
+  - Symbol discovery across 30+ programming languages (classes, functions, variables, types)
+  - Reference tracking to find all usage locations of symbols
+  - Precise code editing with surgical symbol-level insertions
+  - LSP-powered understanding of code structure, scope, and relationships
+  - Enables symbol-aware refactoring and navigation capabilities
+
+- **System Message Builder**: New modular system for constructing agent prompts
+  - New `massgen/system_message_builder.py` for flexible prompt composition (488 lines)
+  - Separates prompt construction logic from orchestrator
+  - Enables better organization and reusability of system prompt components
+  - Foundation for improved prompt engineering and customization
+
+### Changed
+- **System Prompt Architecture**: Complete refactoring for improved LLM attention and effectiveness
+  - Enhanced `massgen/system_prompt_sections.py` with hierarchical prompt structure (1286 lines)
+  - Reorganized prompt ordering to place critical instructions (skills, memory) at optimal positions
+  - Reduced message template redundancy in `message_templates.py` (-682 lines)
+  - Simplified orchestrator prompt assembly in `orchestrator.py` (-428 lines)
+  - Applied 2025 prompt engineering best practices: XML structure, attention management, priority signaling
+  - Improved skills and memory system visibility to agents through better positioning
+
+- **Skills System Refactoring**: Enhanced architecture with local execution support
+  - **Local Mode**: Skills can now execute directly without Docker containers
+  - **Directory Reorganization**: Moved file-search from `skills/always/file_search/` to `skills/file-search/`
+  - **Semantic Search Skills**: Promoted semtools and serena from optional to core skills directory
+  - Enhanced `massgen/filesystem_manager/skills_manager.py` for local execution support
+  - Enhanced `massgen/filesystem_manager/_code_execution_server.py` for local skill commands (+71 lines)
+  - Enhanced `massgen/filesystem_manager/_filesystem_manager.py` with local mode capabilities (+173 lines)
+  - Enhanced `massgen/filesystem_manager/_docker_manager.py` for skills integration (+59 lines)
+  - Updated `massgen/backend/claude_code.py` for local skill execution (+26 lines)
+
+- **Gemini Computer Use Tool**: Multi-agent support with Docker integration
+  - Enhanced `massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py` (949 lines total, +446 lines)
+  - Added Docker container support for browser and desktop automation
+  - New screenshot capture functions for Docker environments (`take_screenshot_docker`)
+  - New action execution system for Docker (`execute_docker_action`)
+  - X11 display integration with xdotool for precise control
+  - VNC compatibility for remote visualization and debugging
+  - Multi-agent coordination capabilities for collaborative computer use
+
+- **Browser Automation Tool**: Enhanced screenshot management
+  - Updated `massgen/tool/_browser_automation/browser_automation_tool.py` to save screenshots as files (+39 lines)
+  - New `output_filename` parameter to save screenshots directly to agent workspace
+  - Automatic workspace path resolution with `agent_cwd` parameter
+  - Reduces token usage by avoiding base64-encoded screenshot returns
+  - Better integration with file-based workflows and serena skill
+
+### Documentations, Configurations and Resources
+
+- **System Prompt Architecture Documentation**: Comprehensive design document for prompt refactoring
+  - New `docs/dev_notes/system_prompt_architecture_redesign.md` (593 lines)
+  - Documents LLM attention management and hierarchical structure principles
+  - Explains XML-based prompt engineering for Claude models
+  - Covers priority signaling and position-based emphasis strategies
+  - Implementation roadmap for future prompt improvements
+
+- **Computer Use Visualization Guide**: Multi-agent computer use documentation
+  - New `docs/backend/docs/COMPUTER_USE_VISUALIZATION.md` (455 lines)
+  - Covers VNC setup and remote visualization workflows
+  - Documents multi-agent coordination patterns for computer use
+  - Troubleshooting guide for Docker-based automation
+  - Architecture diagrams for computer use tool integration
+
+- **Skills Documentation Update**: Enhanced skills system guide
+  - Updated `docs/source/user_guide/skills.rst` with local mode documentation (+222 lines)
+  - Covers new semantic search skills (semtools/serena)
+  - Documents skill directory reorganization
+  - Local vs Docker execution trade-offs and best practices
+
+- **YAML Schema Documentation**: Configuration reference updates
+  - Updated `docs/source/reference/yaml_schema.rst` with skills configuration options (+36 lines)
+  - Documents local mode parameters and skill settings
+
+- **Computer Use Tools Guide**: Enhanced documentation
+  - Updated `docs/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md` with Gemini Docker support (+94 lines)
+  - Multi-agent computer use configuration examples
+  - VNC viewer setup instructions
+
+- **Configuration Examples**: New YAML configurations for v0.1.12 features
+  - `massgen/configs/tools/custom_tools/multi_agent_computer_use_example.yaml`: Multi-agent coordination for computer use (194 lines)
+  - `massgen/configs/tools/custom_tools/gemini_computer_use_docker_example.yaml`: Gemini with Docker automation (84 lines)
+  - Updated `massgen/configs/tools/custom_tools/simple_browser_automation_example.yaml`: File-based screenshot workflow
+
+- **VNC Viewer Script**: Automated VNC setup for computer use visualization
+  - New `scripts/enable_vnc_viewer.sh` for quick VNC configuration (40 lines)
+  - Streamlines Docker-based computer use debugging and monitoring
+
+### Technical Details
+- **Major Focus**: System prompt architecture refactoring, semantic search skills (semtools/serena), local skill execution, multi-agent computer use with Docker
+- **Contributors**: @ncrispino @franklinnwren @Henry-811 and the MassGen team
 
 ## [0.1.11] - 2025-11-12
 

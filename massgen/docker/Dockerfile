@@ -43,8 +43,9 @@ RUN pip install --no-cache-dir ast-grep-cli
 # Install openskills CLI for skills management
 # Anthropic skills are installed manually beforehand and added as a volume at runtime
 RUN npm install -g openskills
-# && \
-    # openskills install anthropics/skills --universal -y
+
+# Install semtools for semantic search (optional semtools skills)
+RUN npm install -g @llamaindex/semtools
 
 # Install GitHub CLI for authenticated git operations
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -80,6 +81,11 @@ RUN useradd -m -u 1000 -s /bin/bash massgen && \
 
 # Switch to non-root user
 USER massgen
+
+# Install uv (modern Python package installer for optional serena skill)
+# Enables uvx for running tools like serena on-demand without permanent installation
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/home/massgen/.local/bin:${PATH}"
 
 # Default command: Keep container running (overridden at runtime)
 CMD ["tail", "-f", "/dev/null"]

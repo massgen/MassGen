@@ -21,6 +21,9 @@ When enabled, agents can invoke skills via bash commands to access domain-specif
 .. note::
    Skills complement MCP tools but work via filesystem instead of MCP protocol. This provides better transparency and allows skills to be version-controlled.
 
+.. important::
+   **Model Recommendations**: Skills work best with frontier models (Claude Sonnet/Opus, GPT-5). Smaller models like gpt-5-mini and gpt-5-nano may not reliably recognize when to invoke skills or may skip skill invocation in favor of attempting tasks directly.
+
 Installation
 ============
 
@@ -36,11 +39,11 @@ Install openskills and Anthropic's skills collection:
 
 This creates ``.agent/skills/`` directory with all available skills.
 
-.. important::
-   Skills currently require Docker mode (``command_line_execution_mode: "docker"``). Local mode is not yet supported.
-
 .. note::
-   The Docker images include ripgrep and ast-grep for file search capabilities used by the built-in file search skill.
+   Skills work with both Docker mode (``command_line_execution_mode: "docker"``) and local mode (``command_line_execution_mode: "local"``).
+
+   - **Docker mode**: Skills and dependencies (ripgrep, ast-grep) are pre-installed in the container
+   - **Local mode**: You need to install dependencies manually (``brew install ripgrep ast-grep`` on macOS)
 
 Configuration
 =============
@@ -75,7 +78,7 @@ Enable skills in your YAML config:
 With Task Planning
 ------------------
 
-Combine skills with task planning:
+Combine skills with task planning (filesystem mode):
 
 .. code-block:: yaml
 
@@ -83,77 +86,267 @@ Combine skills with task planning:
      coordination:
        use_skills: true
        enable_agent_task_planning: true
+       task_planning_filesystem_mode: true  # Save tasks to tasks/ directory
 
-Organized Workspace
--------------------
+This creates a ``tasks/`` directory in the agent workspace:
 
-For cleaner organization, enable structured workspace:
+.. code-block:: text
+
+   agent_workspace/
+     └── tasks/
+         └── plan.json        # Task planning state
+
+With Memory System
+------------------
+
+Combine skills with filesystem-based memory:
 
 .. code-block:: yaml
 
    orchestrator:
      coordination:
        use_skills: true
-       organize_workspace: true  # Creates memory/ and workspace/ dirs
+       enable_memory_filesystem_mode: true
+
+This creates a two-tier memory structure:
+
+.. code-block:: text
+
+   agent_workspace/
+     └── memory/
+         ├── short_term/      # Auto-injected into system prompts
+         └── long_term/       # Load on-demand via MCP tools
+
+Complete Setup (All Features)
+------------------------------
+
+For full coordination capabilities:
+
+.. code-block:: yaml
+
+   orchestrator:
+     coordination:
+       use_skills: true
+       enable_agent_task_planning: true
+       task_planning_filesystem_mode: true
+       enable_memory_filesystem_mode: true
 
 This creates:
 
 .. code-block:: text
 
    agent_workspace/
-     ├── memory/              # Long-term context (memory skill)
-     └── workspace/           # Main working directory
+     ├── memory/
+     │   ├── short_term/
+     │   └── long_term/
+     └── tasks/
+         └── plan.json
 
 Built-in Skills
 ===============
 
-MassGen includes three built-in skills automatically available when ``use_skills: true``:
+MassGen includes built-in skills bundled in ``massgen/skills/``:
 
-Memory Skill
-------------
+* ``file-search`` - Fast text and structural code search (ripgrep/ast-grep)
+* ``serena`` - Symbol-level code understanding using LSP
+* ``semtools`` - Semantic search using embeddings
 
-Filesystem-based memory for storing context across turns.
+All skills are invoked the same way using ``openskills read <skill-name>``.
 
-**Usage:**
+.. note::
+   **Lightweight Guidance**: When command execution is enabled, agents automatically receive lightweight file search guidance (~30 lines) in their system prompt. For comprehensive documentation, invoke: ``openskills read file-search``
 
-.. code-block:: bash
-
-   # Save memory
-   echo "User prefers JSON format" > memory/preferences.txt
-
-   # Load memory
-   cat memory/context.txt
-
-   # View another agent's memories
-   # (Path shown in system prompt as "Shared Reference", typically temp_workspaces/)
-   cat temp_workspaces/agent1/memory/decisions.json
-
-**Best for:**
-
-* Storing user preferences
-* Saving important decisions
-* Maintaining context across multi-turn conversations
-
-File Search Skill
------------------
+File Search
+-----------
 
 Fast text and structural code search using ripgrep and ast-grep.
 
-**Usage:**
+**Lightweight Guidance (Always Available):**
+
+When command execution is enabled, agents automatically see basic usage:
 
 .. code-block:: bash
 
    # Text search with ripgrep
-   rg "function.*login" --type py
+   rg "pattern" --type py --type js
 
    # Structural search with ast-grep
-   sg --pattern 'class $NAME { $$$ }'
+   sg --pattern 'function $NAME($$$) { $$$ }' --lang js
+
+**Full Skill Content:**
+
+.. code-block:: bash
+
+   # Load comprehensive 280-line guide with targeting strategies
+   openskills read file-search
 
 **Best for:**
 
 * Finding code patterns
 * Analyzing codebases
 * Refactoring workflows
+* Fast keyword searches
+
+Serena
+------
+
+Symbol-level code understanding using Language Server Protocol (LSP). Provides IDE-like capabilities for finding symbols, tracking references, and making precise code edits.
+
+**Prerequisites:**
+
+.. code-block:: bash
+
+   # Use uvx to run serena on-demand (no permanent installation)
+   uvx --from git+https://github.com/oraios/serena serena --help
+
+   # Works in both Docker mode (uv pre-installed) and local mode
+   # For local mode, install uv first: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+**Invocation:**
+
+.. code-block:: bash
+
+   # Load serena skill guidance
+   openskills read serena
+
+**Core Capabilities:**
+
+* **find_symbol**: Locate class, function, or variable definitions
+* **find_referencing_symbols**: Find all locations where a symbol is used
+* **insert_after_symbol**: Make precise code insertions at symbol level
+
+**Usage:**
+
+.. code-block:: bash
+
+   # Read skill guidance
+   openskills read serena
+
+   # Find symbol definitions (after reading skill)
+   serena find_symbol --name 'UserService' --type class
+
+   # Find all references
+   serena find_referencing_symbols --name 'authenticate'
+
+   # Insert code at symbol location
+   serena insert_after_symbol --name 'MyClass' --type class --code '...'
+
+**Best for:**
+
+* Understanding symbol relationships and dependencies
+* Impact analysis before refactoring
+* Precise code insertions at symbol level
+* Tracking all usages of functions/classes
+* Working with large, complex codebases
+
+**Supported Languages:**
+
+Python, JavaScript, TypeScript, Rust, Go, Java, C/C++, C#, Ruby, PHP, and 20+ more languages through LSP.
+
+Semtools Skill
+--------------
+
+Semantic search using embedding-based similarity matching. Find code by meaning, not just keywords.
+
+**Prerequisites:**
+
+.. code-block:: bash
+
+   # Install via npm (recommended)
+   npm install -g @llamaindex/semtools
+
+   # Or via cargo
+   cargo install semtools
+
+   # Optional: For document parsing (PDF, DOCX, PPTX)
+   export LLAMA_CLOUD_API_KEY="your-key"
+
+**Invocation:**
+
+.. code-block:: bash
+
+   # Load semtools skill guidance
+   openskills read semtools
+
+**Core Capabilities:**
+
+* **Semantic Search**: Find code by meaning, not exact keywords
+* **Workspace Management**: Cache embeddings for fast repeated searches
+* **Document Parsing**: Convert PDFs, DOCX, PPTX to searchable text (optional)
+
+**Usage:**
+
+.. code-block:: bash
+
+   # Read skill guidance
+   openskills read semtools
+
+   # Semantic search by concept (after reading skill)
+   search "authentication logic" src/
+
+   # Search with more results
+   search "error handling" --top-k 10 --n-lines 5
+
+   # Create workspace for large codebases
+   workspace use my-project
+   export SEMTOOLS_WORKSPACE=my-project
+
+   # Parse documents (requires API key)
+   parse research_papers/*.pdf
+
+**Best for:**
+
+* Finding code when you know the concept but not the keywords
+* Discovering semantically similar implementations
+* Searching across different terminology/languages
+* Document analysis and research
+* Exploratory code discovery
+
+**Note:**
+
+* Semantic search works **locally** without API keys
+* Document parsing (PDF/DOCX) requires LlamaIndex Cloud API key
+* Embeddings are computed locally using model2vec
+
+Choosing Between Search Tools
+------------------------------
+
+MassGen provides three complementary search approaches:
+
++------------------+----------------------+------------------------+---------------------------+
+| Tool             | Search Type          | Best For               | Example                   |
++==================+======================+========================+===========================+
+| **file-search**  | Text/Syntax          | Exact keywords,        | Find "LoginService" class |
+| (ripgrep/ast-grep)|                     | code patterns          |                           |
++------------------+----------------------+------------------------+---------------------------+
+| **serena**       | Symbols/References   | Finding definitions,   | Track all uses of         |
+|                  |                      | tracking usage         | authenticate()            |
++------------------+----------------------+------------------------+---------------------------+
+| **semtools**     | Semantic/Meaning     | Concept discovery,     | Find "rate limiting"      |
+|                  |                      | similar code           | implementations           |
++------------------+----------------------+------------------------+---------------------------+
+
+**Search Strategy:**
+
+1. **Concept Discovery**: Use semtools to find relevant areas
+2. **Symbol Tracking**: Use serena to track precise definitions and references
+3. **Text Search**: Use file-search (ripgrep) for exact keyword follow-up
+
+**Example Workflow:**
+
+.. code-block:: bash
+
+   # 1. Discover authentication-related code semantically
+   search "user authentication" src/
+
+   # 2. Find exact class definition
+   uvx --from git+https://github.com/oraios/serena serena find_symbol --name 'AuthService' --type class
+
+   # 3. Track all references
+   uvx --from git+https://github.com/oraios/serena serena find_referencing_symbols --name 'AuthService'
+
+   # 4. Search for specific patterns
+   rg "AuthService\(" --type py src/
 
 External Skills
 ===============
@@ -253,8 +446,8 @@ Agents see available skills in their system prompt:
    </skill>
 
    <skill>
-   <name>memory</name>
-   <description>Filesystem-based memory operations...</description>
+   <name>file-search</name>
+   <description>Fast text and structural code search...</description>
    <location>builtin</location>
    </skill>
 
@@ -418,31 +611,32 @@ Complex Refactoring
 
 .. code-block:: yaml
 
-   # Config: Enable skills with task planning
+   # Config: Enable skills with task planning and memory
    coordination:
      use_skills: true
      enable_agent_task_planning: true
-     organize_workspace: true
+     task_planning_filesystem_mode: true
+     enable_memory_filesystem_mode: true
 
 **Agent workflow:**
 
-1. Use ``file_search`` skill to find all usages
+1. Use ``file-search`` skill to find all usages
 2. Store decisions in ``memory/`` for context
-3. Execute refactoring in ``workspace/``
+3. Execute refactoring in agent workspace
 
 Multi-Agent Collaboration
 --------------------------
 
 .. code-block:: yaml
 
-   # Config: Skills with shared workspace
+   # Config: Skills with memory for cross-agent sharing
    coordination:
      use_skills: true
-     organize_workspace: true
+     enable_memory_filesystem_mode: true
 
 **Agent collaboration:**
 
-1. Agent 1: Research using external skills, save findings to ``memory/``
+1. Agent 1: Research using external skills, save findings to ``memory/short_term/``
 2. Agent 2: Read Agent 1's memories from shared reference path (typically ``temp_workspaces/agent1/memory/``)
 3. Agent 2: Build upon findings using same skills
 
@@ -461,5 +655,7 @@ Examples
 ========
 
 * ``massgen/configs/skills/skills_basic.yaml`` - Basic skills usage
+* ``massgen/configs/skills/skills_semantic_search.yaml`` - Semantic search with serena and semtools
+* ``massgen/configs/skills/test_semantic_skills.yaml`` - Test configuration for semantic skills
 * ``massgen/configs/skills/skills_with_task_planning.yaml`` - With task planning
 * ``massgen/configs/skills/skills_organized_workspace.yaml`` - Organized workspace structure

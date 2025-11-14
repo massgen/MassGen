@@ -649,229 +649,44 @@ If the Docker container isn't running, agents receive a helpful error message wi
 Example 6: Computer Use Tools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**New in v0.1.8**: MassGen provides three computer use tools for browser and desktop automation, each optimized for different model providers and use cases.
+**New in v0.1.8**: MassGen provides browser and desktop automation tools for AI agents.
 
-.. note::
+MassGen offers three computer use tools optimized for different providers:
 
-   **Three Tools for Different Needs:**
+* ``gemini_computer_use`` - Google Gemini Computer Use (autonomous browser/desktop control)
+* ``claude_computer_use`` - Anthropic Claude Computer Use (thorough automation with enhanced actions)
+* ``browser_automation`` - Simple browser automation (works with ANY model: gpt-4.1, gpt-4o, etc.)
 
-   * ``gemini_computer_use`` - Google Gemini Computer Use (requires ``gemini-2.5-computer-use-preview-10-2025`` model)
-   * ``claude_computer_use`` - Anthropic Claude Computer Use (requires Claude 3.7 Sonnet or newer)
-   * ``browser_automation`` - Simple browser automation (works with ANY model: gpt-4.1, gpt-4o, etc.)
-
-**Example 6a: Google Gemini Computer Use (gemini_computer_use)**
-
-For users with access to Google's Gemini 2.5 Computer Use model:
+**Quick Example:**
 
 .. code-block:: bash
 
-   massgen \
-     --config massgen/configs/tools/custom_tools/gemini_computer_use_example.yaml \
-     "Go to cnn.com and get the top headline"
-
-**Config:** ``gemini_computer_use_example.yaml``
-
-.. code-block:: yaml
-
-   agents:
-     - id: "gemini_automation_agent"
-       backend:
-         type: "google"
-         model: "gemini-2.5-computer-use-preview-10-2025"  # Required!
-         custom_tools:
-           - name: ["gemini_computer_use"]
-             path: "massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py"
-             function: ["gemini_computer_use"]
-             default_params:
-               environment: "browser"
-               display_width: 1440
-               display_height: 900
-
-   ui:
-     display_type: "rich_terminal"
-     logging_enabled: true
-
-**Features:**
-
-* Native Gemini computer use API with built-in safety checks
-* Requires user confirmation for risky actions
-* Supports extensive action set (click, hover, type, scroll, drag-and-drop, etc.)
-* Fast execution (~1-2 seconds per action)
-* Browser-based automation
-
-**Supported Actions:**
-
-* ``open_web_browser`` - Open browser
-* ``click_at`` / ``hover_at`` - Click/hover at coordinates
-* ``type_text_at`` - Type text at coordinates
-* ``key_combination`` - Press key combinations
-* ``scroll_document`` / ``scroll_at`` - Scroll page or specific area
-* ``navigate`` / ``go_back`` / ``go_forward`` - Browser navigation
-* ``search`` - Go to search engine
-* ``wait_5_seconds`` - Wait for content
-* ``drag_and_drop`` - Drag elements
-
-**Example 6b: Anthropic Claude Computer Use (claude_computer_use)**
-
-For users with access to Claude 3.7 Sonnet or newer:
-
-.. code-block:: bash
-
-   massgen \
-     --config massgen/configs/tools/custom_tools/claude_computer_use_docker_example.yaml \
-     "Navigate to Wikipedia and search for 'Artificial Intelligence'"
-
-**Config:** ``claude_computer_use_docker_example.yaml``
-
-.. code-block:: yaml
-
-   agents:
-     - id: "claude_automation_agent"
-       backend:
-         type: "anthropic"
-         model: "claude-sonnet-4-5"  # Recommended!
-         betas: ["computer-use-2025-01-24"]
-         custom_tools:
-           - name: ["claude_computer_use"]
-             path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
-             function: ["claude_computer_use"]
-             preset_args:
-               environment: "linux"
-               environment_config:
-                 container_name: "cua-container"
-                 display: ":99"
-
-   ui:
-     display_type: "rich_terminal"
-     logging_enabled: true
-
-**Features:**
-
-* Anthropic's beta computer use API with enhanced actions
-* Extended action set: triple_click, mouse_down/up, hold_key, wait
-* Thorough but slower execution (~2-5 seconds per action)
-* Supports text editor and bash tools
-* Best for complex tasks requiring precision over speed
-* Browser and Linux desktop automation
-
-**Supported Actions:**
-
-**Standard Actions:**
-
-* ``screenshot`` - Capture current screen
-* ``mouse_move`` / ``left_click`` / ``right_click`` / ``middle_click`` / ``double_click`` - Mouse control
-* ``left_click_drag`` - Click and drag
-* ``type`` / ``key`` - Text input and key presses
-* ``scroll`` - Scroll up/down
-
-**Enhanced Actions (Claude-specific):**
-
-* ``triple_click`` - Triple-click to select lines
-* ``left_mouse_down`` / ``left_mouse_up`` - Precise drag control
-* ``hold_key`` - Hold key while performing action
-* ``wait`` - Wait for specified duration
-
-**Text Editor Actions:**
-
-* ``str_replace_based_edit_tool`` - File editing with find/replace
-* ``bash`` - Execute bash commands (if enabled)
-
-**Example 6c: Simple Browser Automation (browser_automation)**
-
-For users with **any model** (gpt-4.1, gpt-4o, gemini-2.5-flash, etc.):
-
-.. code-block:: bash
-
+   # Simple browser automation (any model)
    massgen \
      --config massgen/configs/tools/custom_tools/simple_browser_automation_example.yaml \
      "Go to Wikipedia and search for Jimmy Carter"
 
-**Config:** ``simple_browser_automation_example.yaml``
+   # Gemini Computer Use
+   massgen \
+     --config massgen/configs/tools/custom_tools/gemini_computer_use_example.yaml \
+     "Go to cnn.com and get the top headline"
 
-.. code-block:: yaml
-
-   agents:
-     - id: "browser_agent"
-       backend:
-         type: "openai"
-         model: "gpt-4.1"  # Can be ANY model!
-         custom_tools:
-           - name: ["browser_automation"]
-             path: "massgen/tool/_browser_automation/browser_automation_tool.py"
-             function: ["browser_automation"]
-
-   ui:
-     display_type: "rich_terminal"
-     logging_enabled: true
-
-**Features:**
-
-* Works with **any** model - no special requirements
-* Direct Playwright-based browser control
-* User explicitly controls each action (not autonomous)
-* Very fast execution (~1 second per action)
-* Simple action set: navigate, click, type, extract, screenshot
-* Best for simple automation and testing
-
-**Supported Actions:**
-
-* ``navigate`` - Go to URL
-* ``click`` - Click element by CSS selector
-* ``type`` - Type text into element
-* ``extract`` - Extract text from elements
-* ``screenshot`` - Capture page image
-
-**Example Usage:**
-
-.. code-block:: python
-
-   # Navigate to a page
-   await browser_automation(
-       task="Open Wikipedia",
-       url="https://en.wikipedia.org",
-       action="navigate"
-   )
-
-   # Type in search box
-   await browser_automation(
-       task="Search for Jimmy Carter",
-       action="type",
-       selector="input[name='search']",
-       text="Jimmy Carter"
-   )
-
-   # Click search button
-   await browser_automation(
-       task="Click search",
-       action="click",
-       selector="button[type='submit']"
-   )
-
-**When to Use Which Tool:**
-
-* **Use gemini_computer_use** when you have Google's Gemini 2.5 Computer Use and want fast autonomous workflows with built-in safety
-* **Use claude_computer_use** when you have Claude 3.7+ and need thorough, precise execution with enhanced actions
-* **Use browser_automation** when using standard models (gpt-4.1, gpt-4o) or want simple, explicit control
-
-**Requirements:**
-
-.. code-block:: bash
-
-   # Install Playwright (required for all computer use tools)
-   pip install playwright
-   playwright install
-
-   # Set API keys as needed
-   export GEMINI_API_KEY="your-key"        # For gemini_computer_use
-   export ANTHROPIC_API_KEY="your-key"     # For claude_computer_use
+   # Claude Computer Use
+   massgen \
+     --config massgen/configs/tools/custom_tools/claude_computer_use_docker_example.yaml \
+     "Navigate to Wikipedia and search for Artificial Intelligence"
 
 .. seealso::
 
-   * ``massgen/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md`` - Comprehensive guide with performance comparisons, action references, and migration paths
-   * ``massgen/tool/_computer_use/README.md`` - Technical implementation details
-   * ``massgen/tool/_computer_use/QUICKSTART.md`` - Quick start guide
+   For complete documentation on computer use tools including:
 
-For docker installation, we have prepared a script and a `guideline <https://github.com/massgen/MassGen/blob/main/scripts/computer_use_setup.md>` for you.
+   * Detailed tool comparisons and performance benchmarks
+   * Configuration examples for browser and Docker environments
+   * Visualization and monitoring with VNC/non-headless mode
+   * Multi-agent computer use coordination
+   * Troubleshooting and best practices
+
+   See :doc:`computer_use` - Complete Computer Use Tools guide
 
 Available Example Configs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

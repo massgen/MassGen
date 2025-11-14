@@ -1,5 +1,5 @@
 ---
-name: file_search
+name: file-search
 description: This skill should be used when agents need to search codebases for text patterns or structural code patterns. Provides fast search using ripgrep for text and ast-grep for syntax-aware code search.
 license: MIT
 ---
@@ -10,7 +10,7 @@ Search code efficiently using ripgrep for text patterns and ast-grep for structu
 
 ## Purpose
 
-The file_search skill provides access to two powerful search tools pre-installed in MassGen environments:
+The file-search skill provides access to two powerful search tools pre-installed in MassGen environments:
 
 1. **ripgrep (rg)**: Ultra-fast text search with regex support for finding strings, patterns, and text matches
 2. **ast-grep (sg)**: Syntax-aware structural search for finding code patterns based on abstract syntax trees
@@ -19,7 +19,7 @@ Use these tools to understand codebases, find usage patterns, analyze impact of 
 
 ## When to Use This Skill
 
-Use the file_search skill when:
+Use the file-search skill when:
 
 - Understanding a new codebase (finding entry points, key classes)
 - Finding all usages of a function, class, or variable before refactoring

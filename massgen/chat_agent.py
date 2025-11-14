@@ -856,12 +856,13 @@ class ConfigurableAgent(SingleAgent):
 
 def create_simple_agent(backend: LLMBackend, system_message: str = None, agent_id: str = None) -> SingleAgent:
     """Create a simple single agent."""
-    # Use MassGen evaluation system message if no custom system message provided
+    # Use simple default system message if none provided
     if system_message is None:
-        from .message_templates import MessageTemplates
+        import time
 
-        templates = MessageTemplates()
-        system_message = templates.evaluation_system_message()
+        system_message = f"""You are a helpful AI assistant. Provide clear, accurate, and comprehensive responses.
+
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
     return SingleAgent(backend=backend, agent_id=agent_id, system_message=system_message)
 
 

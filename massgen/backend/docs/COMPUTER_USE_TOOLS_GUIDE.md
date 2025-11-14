@@ -17,7 +17,7 @@ MassGen provides four separate tools for computer automation:
 |---------|----------------|----------------------|----------------------|---------------------|
 | **Model Support** | `computer-use-preview` only | `gemini-2.5-computer-use-preview-10-2025` only | `claude-3-7-sonnet-20250219` or newer | Any model (gpt-4.1, gpt-4o, etc.) |
 | **Provider** | OpenAI | Google | Anthropic | Any |
-| **Environments** | Browser, Linux/Docker, Mac, Windows | Browser only | Browser, Linux/Docker | Browser only |
+| **Environments** | Browser, Linux/Docker, Mac, Windows | Browser, Linux/Docker | Browser, Linux/Docker | Browser only |
 | **Implementation** | OpenAI hosted tool with CUA loop | Gemini native computer use API | Anthropic Computer Use API | Direct Playwright automation |
 | **Action Planning** | Autonomous multi-step | Autonomous multi-step | Autonomous multi-step | User directs each action |
 | **Complexity** | High (full agentic control) | High (full agentic control) | High (full agentic control) | Low (simple commands) |
@@ -88,10 +88,11 @@ Full implementation of Google's Gemini 2.5 Computer Use API that allows the mode
 - **MUST use `gemini-2.5-computer-use-preview-10-2025` model**
 - Will NOT work with other Gemini models or providers
 
-### Configuration File
-- `gemini_computer_use_example.yaml` - Uses Gemini 2.5 Computer Use model
+### Configuration Files
+- `gemini_computer_use_example.yaml` - Browser automation
+- `gemini_computer_use_docker_example.yaml` - Linux/Docker automation
 
-### Example YAML Config
+### Example YAML Config (Browser)
 ```yaml
 agents:
   - id: "gemini_automation_agent"
@@ -102,10 +103,13 @@ agents:
         - name: ["gemini_computer_use"]
           path: "massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py"
           function: ["gemini_computer_use"]
-          default_params:
+          preset_args:
             environment: "browser"
             display_width: 1440  # Recommended by Gemini
             display_height: 900  # Recommended by Gemini
+            environment_config:
+              headless: false  # Set to true for headless
+              browser_type: "chromium"
 ```
 
 ### How It Works
@@ -117,8 +121,9 @@ agents:
 
 ### Supported Environments
 - **Browser** - Playwright-based web automation (Chromium recommended)
+- **Linux/Docker** - Desktop automation in Docker container (xdotool)
 
-### Supported Actions
+### Supported Actions (Both Environments)
 - `open_web_browser` - Open browser
 - `click_at` - Click at coordinates (normalized 0-1000)
 - `hover_at` - Hover at coordinates
@@ -146,10 +151,32 @@ agents:
 - Web scraping with navigation
 - Automated testing
 
+### Example Docker Config
+```yaml
+agents:
+  - id: "gemini_desktop_agent"
+    backend:
+      type: "openai"  # Orchestration backend
+      model: "gpt-4.1"
+      custom_tools:
+        - name: ["gemini_computer_use"]
+          path: "massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py"
+          function: ["gemini_computer_use"]
+          preset_args:
+            environment: "linux"  # Use Docker
+            display_width: 1024
+            display_height: 768
+            max_iterations: 30
+            environment_config:
+              container_name: "cua-container"
+              display: ":99"
+```
+
 ### Prerequisites
-- `GOOGLE_API_KEY` environment variable
-- `pip install playwright && playwright install`
-- `pip install google-genai` (included in requirements.txt)
+- `GEMINI_API_KEY` environment variable
+- For browser: `pip install playwright && playwright install`
+- For Docker: Docker running + `./scripts/setup_docker_cua.sh`
+- `pip install google-genai docker` (included in requirements.txt)
 
 ## 3. claude_computer_use Tool
 
@@ -157,39 +184,53 @@ agents:
 Full implementation of Anthropic's Claude Computer Use API that allows the model to autonomously control a browser or desktop environment. Uses Claude's native computer use capabilities with the beta API.
 
 ### Model Requirement
-- **Recommended: `claude-3-7-sonnet-20250219`** (latest with computer use)
+- **Recommended: `claude-sonnet-4-5`** (latest with computer use)
 - **Compatible with Claude models supporting computer use**
 - Will NOT work with older Claude models
 
-### Configuration File
-- `claude_computer_use_docker_example.yaml` - Uses Claude 3.7 Sonnet
-- `claude_computer_use_browser_example.yaml` - Uses Claude 3.7 Sonnet
+### Configuration Files
+- `claude_computer_use_docker_example.yaml` - Docker/Linux automation
+- `claude_computer_use_browser_example.yaml` - Browser automation
 
-### Example YAML Config
+### Example YAML Config (Docker/Linux)
 ```yaml
 agents:
   - id: "claude_automation_agent"
     backend:
       type: "anthropic"
-      model: "claude-3-7-sonnet-20250219"  # Recommended!
+      model: "claude-sonnet-4-5"  # Recommended!
       custom_tools:
         - name: ["claude_computer_use"]
           path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
           function: ["claude_computer_use"]
           preset_args:
             environment: "linux"
+            display_width: 1024
+            display_height: 768
+            max_iterations: 25
             environment_config:
               container_name: "cua-container"
               display: ":99"
-            # For browser environment:
-            # environment: "linux"
-            # preset_args:
-            #   environment: "browser"
-            #   headless: true
-            # default_params:
-            #   display_width: 1024
-            #   display_height: 768
-            #   max_iterations: 25
+```
+
+### Example YAML Config (Browser)
+```yaml
+agents:
+  - id: "claude_browser_agent"
+    backend:
+      type: "anthropic"
+      model: "claude-sonnet-4-5"  # Recommended!
+      custom_tools:
+        - name: ["claude_computer_use"]
+          path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
+          function: ["claude_computer_use"]
+          preset_args:
+            environment: "browser"
+            display_width: 1024
+            display_height: 768
+            max_iterations: 25
+            headless: false  # Set to true for headless
+            browser_type: "chromium"
 ```
 
 ### How It Works
@@ -482,10 +523,13 @@ export GOOGLE_API_KEY="your-api-key"
 massgen --config gemini_computer_use_example.yaml
 ```
 
-### Quick Start with claude_computer_use (Claude 3.7)
+### Quick Start with claude_computer_use (Claude Sonnet 4.5)
 ```bash
 export ANTHROPIC_API_KEY="your-api-key"
+# For Docker/Linux
 massgen --config claude_computer_use_docker_example.yaml
+# For Browser (requires DISPLAY)
+DISPLAY=:20 massgen --config claude_computer_use_browser_example.yaml
 ```
 
 ### Quick Start with computer_use (computer-use-preview)

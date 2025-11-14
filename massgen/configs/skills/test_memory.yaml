@@ -13,7 +13,7 @@ agents:
   - id: "agent_b"
     backend:
       type: "gemini"
-      model: "gemini-2.5-flash"
+      model: "gemini-2.5-pro"
       cwd: "workspace2"  # Required for filesystem mode
       enable_mcp_command_line: true
       command_line_execution_mode: "docker"
@@ -23,5 +23,8 @@ orchestrator:
   agent_temporary_workspace: "temp_workspaces"
 
   coordination:
+    # Enable task planning
+    enable_agent_task_planning: true
+    task_planning_filesystem_mode: true
     # Enable memory filesystem mode
     enable_memory_filesystem_mode: true

@@ -13,6 +13,21 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install prerequisites for adding PPAs
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    wget \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Mozilla PPA for real Firefox (not snap)
+RUN add-apt-repository -y ppa:mozillateam/ppa
+
+# Set up apt preferences to prioritize Mozilla PPA
+RUN echo 'Package: *' > /etc/apt/preferences.d/mozilla-firefox && \
+    echo 'Pin: release o=LP-PPA-mozillateam' >> /etc/apt/preferences.d/mozilla-firefox && \
+    echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/mozilla-firefox
+
 # Install desktop environment and tools
 RUN apt-get update && apt-get install -y \
     xvfb \
@@ -20,10 +35,17 @@ RUN apt-get update && apt-get install -y \
     xfce4 \
     xfce4-terminal \
     firefox \
+    chromium-browser \
     scrot \
     xdotool \
     imagemagick \
+    xdg-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# Set Firefox as the default browser
+RUN update-alternatives --set x-www-browser /usr/bin/firefox && \
+    update-alternatives --set gnome-www-browser /usr/bin/firefox && \
+    xdg-settings set default-web-browser firefox.desktop
 
 # Set up X11
 ENV DISPLAY=:99

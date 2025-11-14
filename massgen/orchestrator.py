@@ -51,6 +51,7 @@ from .logger_config import (
 from .memory import ConversationMemory, PersistentMemoryBase
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
+from .system_message_builder import SystemMessageBuilder
 from .tool import get_post_evaluation_tools, get_workflow_tools
 from .utils import ActionType, AgentStatus, CoordinationStage
 
@@ -167,6 +168,8 @@ class Orchestrator(ChatAgent):
             voting_sensitivity=self.config.voting_sensitivity,
             answer_novelty_requirement=self.config.answer_novelty_requirement,
         )
+        # Create system message builder for all phases (coordination, presentation, post-evaluation)
+        self._system_message_builder: Optional[SystemMessageBuilder] = None  # Lazy initialization
         # Create workflow tools for agents (vote and new_answer) using new toolkit system
         self.workflow_tools = get_workflow_tools(
             valid_agent_ids=list(agents.keys()),
@@ -281,12 +284,17 @@ class Orchestrator(ChatAgent):
                 self._inject_planning_tools_for_all_agents()
                 logger.info("[Orchestrator] Planning tools injection complete")
 
-        # Inject memory tools if enabled
-        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_memory_filesystem_mode"):
-            if self.config.coordination_config.enable_memory_filesystem_mode:
-                logger.info(f"[Orchestrator] Injecting memory tools for {len(self.agents)} agents")
-                self._inject_memory_tools_for_all_agents()
-                logger.info("[Orchestrator] Memory tools injection complete")
+        # NOTE: Memory MCP tools have been disabled in favor of direct file operations
+        # Agents now use standard file tools (Read/Write/Edit) to manage memory files
+        # in workspace/memory/short_term/ and workspace/memory/long_term/
+        # See MemorySection in system_prompt_sections.py for guidance
+        #
+        # # Inject memory tools if enabled
+        # if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_memory_filesystem_mode"):
+        #     if self.config.coordination_config.enable_memory_filesystem_mode:
+        #         logger.info(f"[Orchestrator] Injecting memory tools for {len(self.agents)} agents")
+        #         self._inject_memory_tools_for_all_agents()
+        #         logger.info("[Orchestrator] Memory tools injection complete")
 
     async def _prepare_paraphrases_for_agents(self, question: str) -> None:
         """Generate and assign DSPy paraphrases for the current question."""
@@ -381,29 +389,27 @@ class Orchestrator(ChatAgent):
                 "Skills require command line execution to be enabled. " "Set enable_mcp_command_line: true in at least one agent's backend config.",
             )
 
-        # Check if skills directory exists and has skills
+        # Check if skills are available (external or built-in)
         skills_dir = Path(self.config.coordination_config.skills_directory)
-        logger.info(f"[Orchestrator] Checking skills directory: {skills_dir}")
+        logger.info(f"[Orchestrator] Checking skills configuration - directory: {skills_dir}")
 
-        if not skills_dir.exists():
-            raise RuntimeError(
-                f"Skills directory '{skills_dir}' does not exist. " f"Install openskills with 'npm i -g openskills', " f"then run 'openskills install anthropics/skills --universal -y'.",
-            )
+        # Check for external skills (from openskills)
+        has_external_skills = skills_dir.exists() and skills_dir.is_dir() and any(skills_dir.iterdir())
 
-        # Check if directory has any skills (allow both .agent/skills/ and built-in massgen/skills/)
-        has_external_skills = any(skills_dir.iterdir()) if skills_dir.is_dir() else False
+        # Check for built-in skills (bundled with MassGen)
         builtin_skills_dir = Path(__file__).parent / "skills"
-        has_builtin_skills = builtin_skills_dir.exists() and builtin_skills_dir.is_dir()
+        has_builtin_skills = builtin_skills_dir.exists() and any(builtin_skills_dir.iterdir())
 
+        # At least one type of skills must be available
         if not has_external_skills and not has_builtin_skills:
             raise RuntimeError(
-                f"Skills directory '{skills_dir}' is empty and no built-in skills found. "
-                f"Local users: Install openskills with 'npm i -g openskills', "
-                f"then run 'openskills install anthropics/skills --universal -y'. "
-                f"Docker users: Skills are pre-installed in the container.",
+                f"No skills found. To use skills:\n"
+                f"Install external skills: 'npm i -g openskills && openskills install anthropics/skills --universal -y'\n"
+                f"This creates '{skills_dir}' with skills like pdf, xlsx, pptx, etc.\n\n"
+                f"Built-in skills (file-search, serena, semtools) should be bundled with MassGen in {builtin_skills_dir}",
             )
 
-        logger.info(f"[Orchestrator] Skills configuration valid (external: {has_external_skills}, builtin: {has_builtin_skills})")
+        logger.info(f"[Orchestrator] Skills available (external: {has_external_skills}, builtin: {has_builtin_skills})")
 
     def _inject_planning_tools_for_all_agents(self) -> None:
         """
@@ -617,104 +623,6 @@ class Orchestrator(ChatAgent):
         }
 
         return config
-
-    def _get_all_memories(self) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """
-        Read all memories from all agents' workspaces.
-
-        Returns:
-            Tuple of (short_term_memories, long_term_memories)
-            Each is a list of memory dictionaries with keys:
-            - name, description, content, tier, agent_id, created, updated
-        """
-        from pathlib import Path
-
-        short_term_memories = []
-        long_term_memories = []
-
-        # Scan all agents' workspaces
-        for agent_id, agent in self.agents.items():
-            if not (hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager") and agent.backend.filesystem_manager):
-                continue
-
-            workspace = agent.backend.filesystem_manager.cwd
-            if not workspace:
-                continue
-
-            memory_dir = Path(workspace) / "memory"
-            if not memory_dir.exists():
-                continue
-
-            # Read short-term memories
-            short_term_dir = memory_dir / "short_term"
-            if short_term_dir.exists():
-                for mem_file in short_term_dir.glob("*.md"):
-                    try:
-                        memory_data = self._parse_memory_file(mem_file)
-                        if memory_data:
-                            short_term_memories.append(memory_data)
-                    except Exception as e:
-                        logger.warning(f"[Orchestrator] Failed to parse memory file {mem_file}: {e}")
-
-            # Read long-term memories
-            long_term_dir = memory_dir / "long_term"
-            if long_term_dir.exists():
-                for mem_file in long_term_dir.glob("*.md"):
-                    try:
-                        memory_data = self._parse_memory_file(mem_file)
-                        if memory_data:
-                            long_term_memories.append(memory_data)
-                    except Exception as e:
-                        logger.warning(f"[Orchestrator] Failed to parse memory file {mem_file}: {e}")
-
-        return short_term_memories, long_term_memories
-
-    @staticmethod
-    def _parse_memory_file(file_path: Path) -> Optional[Dict[str, Any]]:
-        """
-        Parse a memory markdown file with YAML frontmatter.
-
-        Args:
-            file_path: Path to the memory file
-
-        Returns:
-            Dictionary with memory data or None if parsing fails
-        """
-        try:
-            content = file_path.read_text()
-
-            # Split frontmatter from content
-            if not content.startswith("---"):
-                return None
-
-            parts = content.split("---", 2)
-            if len(parts) < 3:
-                return None
-
-            frontmatter_text = parts[1].strip()
-            memory_content = parts[2].strip()
-
-            # Parse frontmatter (simple key: value parser)
-            metadata = {}
-            for line in frontmatter_text.split("\n"):
-                line = line.strip()
-                if not line or ":" not in line:
-                    continue
-                key, value = line.split(":", 1)
-                metadata[key.strip()] = value.strip()
-
-            return {
-                "name": metadata.get("name", file_path.stem),
-                "description": metadata.get("description", ""),
-                "content": memory_content,
-                "tier": metadata.get("tier", "short_term"),
-                "agent_id": metadata.get("agent_id", "unknown"),
-                "created": metadata.get("created", ""),
-                "updated": metadata.get("updated", ""),
-            }
-        except Exception as e:
-            logger.error(f"[Orchestrator] Error parsing memory file {file_path}: {e}")
-            return None
 
     @staticmethod
     def _get_chunk_type_value(chunk) -> str:
@@ -2661,63 +2569,6 @@ Your answer:"""
             agent.backend.filesystem_manager.log_current_state("before execution")
 
         try:
-            # Get agent's custom system message if available
-            agent_system_message = agent.get_configurable_system_message()
-
-            # Append filesystem system message, if applicable
-            if agent.backend.filesystem_manager:
-                main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-                temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-                # Get context paths if available
-                context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-
-                # Add previous turns as read-only context paths (only n-2 and earlier)
-                previous_turns_context = self._get_previous_turns_context_paths()
-
-                # Filter to only show turn n-2 and earlier (agents start with n-1 in their workspace)
-                # Get current turn from previous_turns list
-                current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-                turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-
-                # Previous turn paths already registered in orchestrator constructor
-
-                # Check if workspace was pre-populated (has any previous turns)
-                workspace_prepopulated = len(previous_turns_context) > 0
-
-                # Check if image generation is enabled for this agent
-                enable_image_generation = False
-                if hasattr(agent, "config") and agent.config:
-                    enable_image_generation = agent.config.backend_params.get("enable_image_generation", False)
-                elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
-                    enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
-
-                # Extract command execution parameters
-                enable_command_execution = False
-                docker_mode = False
-                enable_sudo = False
-                if hasattr(agent, "config") and agent.config:
-                    enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
-                    docker_mode = agent.config.backend_params.get("command_line_execution_mode", "local") == "docker"
-                    enable_sudo = agent.config.backend_params.get("command_line_docker_enable_sudo", False)
-                elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
-                    enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
-                    docker_mode = agent.backend.backend_params.get("command_line_execution_mode", "local") == "docker"
-                    enable_sudo = agent.backend.backend_params.get("command_line_docker_enable_sudo", False)
-
-                filesystem_system_message = self.message_templates.filesystem_system_message(
-                    main_workspace=main_workspace,
-                    temp_workspace=temp_workspace,
-                    context_paths=context_paths,
-                    previous_turns=turns_to_show,
-                    workspace_prepopulated=workspace_prepopulated,
-                    enable_image_generation=enable_image_generation,
-                    agent_answers=answers,
-                    enable_command_execution=enable_command_execution,
-                    docker_mode=docker_mode,
-                    enable_sudo=enable_sudo,
-                )
-                agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
-
             # Normalize workspace paths in agent answers for better comparison from this agent's perspective
             normalized_answers = self._normalize_workspace_paths_in_answers(answers, agent_id) if answers else answers
 
@@ -2733,14 +2584,22 @@ Your answer:"""
             is_coordination_phase = self.workflow_phase == "coordinating"
             planning_mode_enabled = agent.backend.is_planning_mode_enabled() if is_coordination_phase else False
 
-            # Add planning mode instructions to system message if enabled
-            # Only add instructions if we have a coordination config with planning instruction
-            if planning_mode_enabled and self.config and hasattr(self.config, "coordination_config") and self.config.coordination_config and self.config.coordination_config.planning_mode_instruction:
-                planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
-                agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
-                print(f"📝 [{agent_id}] Adding planning mode instructions to system message", flush=True)
+            # Build new structured system message FIRST (before conversation building)
+            logger.info(f"[Orchestrator] Building structured system message for {agent_id}")
+            system_message = self._get_system_message_builder().build_coordination_message(
+                agent=agent,
+                agent_id=agent_id,
+                answers=normalized_answers,
+                planning_mode_enabled=planning_mode_enabled,
+                use_skills=hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills,
+                enable_memory=hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode,
+                enable_task_planning=self.config.coordination_config.enable_agent_task_planning,
+                previous_turns=self._previous_turns,
+            )
+            logger.info(f"[Orchestrator] Structured system message built for {agent_id} (length: {len(system_message)} chars)")
 
-            # Build conversation with context support
+            # Build conversation with context support (for user message and conversation history)
+            # We pass the NEW system_message so it gets tracked in context JSONs
             if conversation_context and conversation_context.get("conversation_history"):
                 # Use conversation context-aware building
                 conversation = self.message_templates.build_conversation_with_context(
@@ -2748,7 +2607,7 @@ Your answer:"""
                     conversation_history=conversation_context.get("conversation_history", []),
                     agent_summaries=normalized_answers,
                     valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
-                    base_system_message=agent_system_message,
+                    base_system_message=system_message,  # Use NEW structured message
                     paraphrase=paraphrase,
                 )
             else:
@@ -2757,7 +2616,7 @@ Your answer:"""
                     task=task,
                     agent_summaries=normalized_answers,
                     valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
-                    base_system_message=agent_system_message,
+                    base_system_message=system_message,  # Use NEW structured message
                     paraphrase=paraphrase,
                 )
 
@@ -2772,6 +2631,7 @@ Your answer:"""
                 conversation["user_message"] = restart_context + "\n\n" + conversation["user_message"]
 
             # Track all the context used for this agent execution
+            # Now conversation["system_message"] contains the NEW structured message
             self.coordination_tracker.track_agent_context(
                 agent_id,
                 answers,
@@ -2791,13 +2651,12 @@ Your answer:"""
                 agent_id,
                 "SEND",
                 {
-                    "system": conversation["system_message"],
+                    "system": conversation["system_message"],  # NEW structured message logged
                     "user": conversation["user_message"],
                 },
                 backend_name=backend_name,
             )
 
-            # Clean startup without redundant messages
             # Set planning mode on the agent's backend to control MCP tool execution
             if hasattr(agent.backend, "set_planning_mode"):
                 agent.backend.set_planning_mode(planning_mode_enabled)
@@ -2808,89 +2667,6 @@ Your answer:"""
 
             # Build proper conversation messages with system + user messages
             max_attempts = 3
-            # Add planning guidance if enabled
-            system_message = conversation["system_message"]
-            if self.config.coordination_config.enable_agent_task_planning:
-                # Check if filesystem mode is enabled and agent has workspace
-                filesystem_mode = (
-                    hasattr(self.config.coordination_config, "task_planning_filesystem_mode")
-                    and self.config.coordination_config.task_planning_filesystem_mode
-                    and hasattr(agent, "backend")
-                    and hasattr(agent.backend, "filesystem_manager")
-                    and agent.backend.filesystem_manager
-                    and agent.backend.filesystem_manager.cwd
-                )
-                planning_guidance = self.message_templates.get_planning_guidance(filesystem_mode=filesystem_mode)
-                system_message = system_message + planning_guidance
-
-            # Add memory system message if enabled
-            if hasattr(self.config.coordination_config, "enable_memory_filesystem_mode") and self.config.coordination_config.enable_memory_filesystem_mode:
-                short_term_memories, long_term_memories = self._get_all_memories()
-                if short_term_memories or long_term_memories:
-                    memory_message = self.message_templates.get_memory_system_message(
-                        short_term_memories=short_term_memories,
-                        long_term_memories=long_term_memories,
-                    )
-                    system_message = system_message + memory_message
-                    logger.info(f"[Orchestrator] Added {len(short_term_memories)} short-term and {len(long_term_memories)} long-term memories to system message")
-
-            # Add skills system message if enabled
-            if hasattr(self.config.coordination_config, "use_skills") and self.config.coordination_config.use_skills:
-                from pathlib import Path
-
-                from massgen.filesystem_manager.skills_manager import scan_skills
-
-                # Scan all available skills (external + built-in)
-                skills_dir = Path(self.config.coordination_config.skills_directory)
-                all_skills = scan_skills(skills_dir)
-
-                # Log what we found
-                builtin_count = len([s for s in all_skills if s["location"] == "builtin"])
-                project_count = len([s for s in all_skills if s["location"] == "project"])
-                logger.info(f"[Orchestrator] Scanned skills: {builtin_count} builtin, {project_count} project")
-                logger.info(f"[Orchestrator] Built-in skills found: {[s['name'] for s in all_skills if s['location'] == 'builtin']}")
-
-                # Only include external/project skills in the skills table
-                # Built-in skills are auto-loaded directly instead
-                skills = [s for s in all_skills if s["location"] == "project"]
-
-                # Auto-load built-in skills (from always/ and configured optional/)
-                # These are injected directly into system prompt, not listed in skills table
-                builtin_skills_to_load = []
-                if hasattr(self.config.coordination_config, "massgen_skills") and self.config.coordination_config.massgen_skills:
-                    configured_massgen_skills = set(self.config.coordination_config.massgen_skills)
-                    logger.info(f"[Orchestrator] Configured massgen_skills: {configured_massgen_skills}")
-
-                    # Load configured optional skills
-                    for skill in all_skills:
-                        if skill["location"] == "builtin" and skill["name"] in configured_massgen_skills:
-                            builtin_skills_to_load.append(skill)
-                            logger.info(f"[Orchestrator] Auto-loading MassGen skill: {skill['name']}")
-
-                # Load built-in skills content and inject directly
-                if builtin_skills_to_load:
-                    builtin_skills_base = Path(__file__).parent / "skills"
-                    for skill in builtin_skills_to_load:
-                        # Check both always/ and optional/ subdirectories
-                        for subdir in ["always", "optional"]:
-                            skill_md_path = builtin_skills_base / subdir / skill["name"] / "SKILL.md"
-                            if skill_md_path.exists():
-                                skill_content = skill_md_path.read_text(encoding="utf-8")
-                                # Strip YAML frontmatter and inject just the markdown content
-                                if skill_content.startswith("---"):
-                                    parts = skill_content.split("---", 2)
-                                    if len(parts) >= 3:
-                                        skill_content = parts[2].strip()
-                                system_message += f"\n\n<massgen_skill name=\"{skill['name']}\">\n{skill_content}\n</massgen_skill>"
-                                logger.info(f"[Orchestrator] Injected {skill['name']} SKILL.md content into system prompt")
-                                break
-
-                # Add skills table for external skills only
-                skills_msg = self.message_templates.skills_system_message(skills)
-                system_message = system_message + skills_msg
-                logger.info(f"[Orchestrator] Injected skills system message for {agent_id} ({len(skills)} external skills in table, {len(builtin_skills_to_load)} built-in skills auto-loaded)")
-                if skills:
-                    logger.info(f"[Orchestrator] Skills message content:\n{skills_msg[:2000]}")
 
             conversation_messages = [
                 {"role": "system", "content": system_message},
@@ -3645,7 +3421,7 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
         )
 
         # Get agent's configurable system message using the standard interface
-        agent_system_message = agent.get_configurable_system_message()
+        agent.get_configurable_system_message()
 
         # Check if image generation is enabled for this agent
         enable_image_generation = False
@@ -3694,15 +3470,19 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
             # Check if any context path has write permission
             has_irreversible_actions = any(cp.get("permission") == "write" for cp in context_paths)
 
-        # Build system message with workspace context if available
-        base_system_message = self.message_templates.final_presentation_system_message(
-            agent_system_message,
-            enable_image_generation,
-            enable_audio_generation,
-            enable_file_generation,
-            enable_video_generation,
-            has_irreversible_actions,
-            enable_command_execution,
+        # Build system message using section architecture
+        base_system_message = self._get_system_message_builder().build_presentation_message(
+            agent=agent,
+            all_answers=all_answers,
+            previous_turns=self._previous_turns,
+            enable_image_generation=enable_image_generation,
+            enable_audio_generation=enable_audio_generation,
+            enable_file_generation=enable_file_generation,
+            enable_video_generation=enable_video_generation,
+            has_irreversible_actions=has_irreversible_actions,
+            enable_command_execution=enable_command_execution,
+            docker_mode=docker_mode,
+            enable_sudo=enable_sudo,
         )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
@@ -3715,40 +3495,6 @@ INSTRUCTIONS FOR NEXT ATTEMPT:
         log_session_dir = get_log_session_dir()
         if log_session_dir:
             self.coordination_tracker.save_status_file(log_session_dir, orchestrator=self)
-
-        # Add workspace context information to system message if workspace was restored
-        if agent.backend.filesystem_manager and temp_workspace_path:
-            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-            # Get context paths if available
-            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-
-            # Add previous turns as read-only context paths (only n-2 and earlier)
-            previous_turns_context = self._get_previous_turns_context_paths()
-
-            # Filter to only show turn n-2 and earlier
-            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-
-            # Check if workspace was pre-populated
-            workspace_prepopulated = len(previous_turns_context) > 0
-
-            base_system_message = (
-                self.message_templates.filesystem_system_message(
-                    main_workspace=main_workspace,
-                    temp_workspace=temp_workspace,
-                    context_paths=context_paths,
-                    previous_turns=turns_to_show,
-                    workspace_prepopulated=workspace_prepopulated,
-                    enable_image_generation=enable_image_generation,
-                    agent_answers=all_answers,
-                    enable_command_execution=enable_command_execution,
-                    docker_mode=docker_mode,
-                    enable_sudo=enable_sudo,
-                )
-                + "\n\n## Instructions\n"
-                + base_system_message
-            )
 
         # Create conversation with system and user messages
         presentation_messages = [
@@ -3984,41 +3730,15 @@ FINAL ANSWER TO EVALUATE:
 Review this answer carefully and determine if it fully addresses the original task. Use your available tools to verify claims and check files as needed.
 Then call either submit(confirmed=True) if the answer is satisfactory, or restart_orchestration(reason, instructions) if improvements are needed."""
 
-        # Get agent's configurable system message
-        agent_system_message = agent.get_configurable_system_message()
+        # Get all answers for context
+        all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
 
-        # Build post-evaluation system message
-        base_system_message = self.message_templates.post_evaluation_system_message(agent_system_message)
-
-        # Add filesystem context if available (same as final presentation)
-        if agent.backend.filesystem_manager:
-            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
-            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
-            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
-            previous_turns_context = self._get_previous_turns_context_paths()
-            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
-            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
-            workspace_prepopulated = len(previous_turns_context) > 0
-
-            # Get all answers for context
-            all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
-
-            base_system_message = (
-                self.message_templates.filesystem_system_message(
-                    main_workspace=main_workspace,
-                    temp_workspace=temp_workspace,
-                    context_paths=context_paths,
-                    previous_turns=turns_to_show,
-                    workspace_prepopulated=workspace_prepopulated,
-                    enable_image_generation=False,
-                    agent_answers=all_answers,
-                    enable_command_execution=False,
-                    docker_mode=False,
-                    enable_sudo=False,
-                )
-                + "\n\n## Post-Evaluation Task\n"
-                + base_system_message
-            )
+        # Build post-evaluation system message using section architecture
+        base_system_message = self._get_system_message_builder().build_post_evaluation_message(
+            agent=agent,
+            all_answers=all_answers,
+            previous_turns=self._previous_turns,
+        )
 
         # Create evaluation messages
         evaluation_messages = [
@@ -4358,6 +4078,20 @@ Then call either submit(confirmed=True) if the answer is satisfactory, or restar
             elif "append_system_prompt" in backend_params:
                 return backend_params["append_system_prompt"]
         return None
+
+    def _get_system_message_builder(self) -> SystemMessageBuilder:
+        """Get or create the SystemMessageBuilder instance.
+
+        Returns:
+            SystemMessageBuilder instance initialized with orchestrator's config and state
+        """
+        if self._system_message_builder is None:
+            self._system_message_builder = SystemMessageBuilder(
+                config=self.config,
+                message_templates=self.message_templates,
+                agents=self.agents,
+            )
+        return self._system_message_builder
 
     def _clear_agent_workspaces(self) -> None:
         """

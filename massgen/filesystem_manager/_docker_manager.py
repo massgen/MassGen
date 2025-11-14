@@ -460,7 +460,7 @@ class DockerManager:
         context_paths: Optional[List[Dict[str, Any]]] = None,
         skills_directory: Optional[str] = None,
         massgen_skills: Optional[List[str]] = None,
-    ) -> str:
+    ) -> Optional[Path]:
         """
         Create and start a persistent Docker container for an agent.
 
@@ -477,16 +477,21 @@ class DockerManager:
             context_paths: List of context path dicts with 'path', 'permission', and optional 'name' keys
                           (each mounted at its host path)
             skills_directory: Path to skills directory (e.g., .agent/skills) to mount read-only
+            massgen_skills: List of MassGen built-in skills to enable (optional)
 
         Returns:
-            Container ID
+            Path to temporary merged skills directory if skills are enabled, None otherwise
 
         Raises:
             RuntimeError: If container creation fails
         """
         if agent_id in self.containers:
             logger.warning(f"⚠️ [Docker] Container for agent {agent_id} already exists")
-            return self.containers[agent_id].id
+            # Return existing skills directory if available
+            return self.temp_skills_dirs.get(agent_id)
+
+        # Track temp skills directory (None if skills not enabled)
+        temp_skills_dir_to_return = None
 
         # Ensure image exists
         self.ensure_image_exists()
@@ -568,29 +573,32 @@ class DockerManager:
                 else:
                     logger.warning(f"[Docker] User skills directory does not exist: {skills_path}")
 
-            # Copy massgen built-in skills
+            # Copy massgen built-in skills (flat structure in massgen/skills/)
             massgen_skills_base = Path(__file__).parent.parent / "skills"
 
-            # Always copy skills from massgen/skills/always/
-            always_dir = massgen_skills_base / "always"
-            if always_dir.exists():
-                for skill_dir in always_dir.iterdir():
-                    if skill_dir.is_dir():
-                        skill_dest = temp_skills_dir / skill_dir.name
-                        logger.info(f"[Docker] Adding always-available MassGen skill: {skill_dir.name}")
-                        shutil.copytree(skill_dir, skill_dest, dirs_exist_ok=True)
+            # Track which skills have been added to avoid duplicates
+            added_skills = set()
 
-            # Copy configured optional skills from massgen/skills/optional/
+            # If specific skills are requested, copy only those
             if massgen_skills:
-                optional_dir = massgen_skills_base / "optional"
                 for skill_name in massgen_skills:
-                    skill_source = optional_dir / skill_name
-                    if skill_source.exists():
+                    skill_source = massgen_skills_base / skill_name
+                    if skill_source.exists() and skill_source.is_dir():
                         skill_dest = temp_skills_dir / skill_name
-                        logger.info(f"[Docker] Adding optional MassGen skill: {skill_name}")
+                        logger.info(f"[Docker] Adding MassGen skill: {skill_name}")
                         shutil.copytree(skill_source, skill_dest, dirs_exist_ok=True)
+                        added_skills.add(skill_name)
                     else:
-                        logger.warning(f"[Docker] Optional MassGen skill not found: {skill_name} at {skill_source}")
+                        logger.warning(f"[Docker] MassGen skill not found: {skill_name} at {skill_source}")
+            else:
+                # If no specific skills requested, copy all built-in skills
+                if massgen_skills_base.exists():
+                    for skill_dir in massgen_skills_base.iterdir():
+                        if skill_dir.is_dir() and not skill_dir.name.startswith("."):
+                            skill_dest = temp_skills_dir / skill_dir.name
+                            logger.info(f"[Docker] Adding MassGen skill: {skill_dir.name}")
+                            shutil.copytree(skill_dir, skill_dest, dirs_exist_ok=True)
+                            added_skills.add(skill_dir.name)
 
             # Mount the temp merged directory to ~/.agent/skills
             container_skills_path = "/home/massgen/.agent/skills"
@@ -598,8 +606,18 @@ class DockerManager:
             mount_info.append(f"      {temp_skills_dir} → {container_skills_path} (ro, merged)")
             logger.info(f"[Docker] Mounted merged skills directory: {temp_skills_dir} → {container_skills_path}")
 
-            # Store temp dir for cleanup
+            # Scan and enumerate all skills in the merged directory
+            from .skills_manager import scan_skills
+
+            all_skills = scan_skills(temp_skills_dir)
+            logger.info(f"[Docker] Total skills loaded: {len(all_skills)}")
+            for skill in all_skills:
+                title = skill.get("title", skill.get("name", "Unknown"))
+                logger.info(f"[Docker]   - {skill['name']}: {title}")
+
+            # Store temp dir for cleanup and return
             self.temp_skills_dirs[agent_id] = temp_skills_dir
+            temp_skills_dir_to_return = temp_skills_dir
 
         # Add credential file mounts
         credential_mounts = self._build_credential_mounts()
@@ -664,7 +682,8 @@ class DockerManager:
                     logger.warning(f"⚠️ [Docker] Failed to pre-install packages: {e}")
                     # Don't fail container creation if pre-install fails
 
-            return container.id
+            # Return temp skills directory path (None if skills not enabled)
+            return temp_skills_dir_to_return
 
         except DockerException as e:
             logger.error(f"❌ [Docker] Failed to create container for agent {agent_id}: {e}")
