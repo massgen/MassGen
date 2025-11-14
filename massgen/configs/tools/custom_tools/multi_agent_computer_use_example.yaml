@@ -191,10 +191,5 @@ agents:
 
       Work efficiently - provide clear task descriptions to gemini_computer_use tool.
 
-# Coordination settings
-coordination:
-  enabled: true
-  strategy: "adaptive"  # Agents can communicate and share information
-
 display:
   type: "rich_terminal"
