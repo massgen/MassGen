@@ -14,7 +14,7 @@ Key Features:
 - ✅ MassGen workflow tool integration (new_answer, vote via system prompts)
 - ✅ Single persistent client with automatic session ID tracking
 - ✅ Cost tracking from server-side usage data
-- ✅ Docker execution mode: Bash tool disabled, execute_command MCP used instead
+- ✅ MCP command line mode: Bash tool disabled, execute_command MCP used instead (Docker or local)
 
 Architecture:
 - Uses ClaudeSDKClient with minimal functionality overlay
@@ -779,12 +779,15 @@ class ClaudeCodeBackend(LLMBackend):
         if base_system:
             system_parts.append(base_system)
 
-        # Add docker mode instruction if enabled
+        # Add MCP command line execution instruction if enabled
+        enable_mcp_command_line = self.config.get("enable_mcp_command_line", False)
         command_line_execution_mode = self.config.get("command_line_execution_mode", "local")
-        if command_line_execution_mode == "docker":
+        if enable_mcp_command_line:
             system_parts.append("\n--- Code Execution Environment ---")
             system_parts.append("- Use the execute_command MCP tool for all command execution")
-            system_parts.append("- The Bash tool is disabled in this mode")
+            system_parts.append("- The Bash tool is disabled - use execute_command instead")
+            if command_line_execution_mode == "docker":
+                system_parts.append("- Commands run in isolated Docker container")
             # Below is necessary bc Claude Code is automatically loaded with knowledge of the current git repo;
             # this prompt is a temporary workaround before running fully within docker
             system_parts.append(
@@ -1049,8 +1052,8 @@ class ClaudeCodeBackend(LLMBackend):
         v0.0.x behavior. In claude-agent-sdk v0.1.0+, system prompts default to empty,
         so we explicitly request the claude_code preset.
 
-        When command_line_execution_mode is set to "docker", the Bash tool is disabled
-        since execute_command provides all necessary command execution capabilities.
+        When enable_mcp_command_line is True, the native Bash tool is disabled
+        since execute_command MCP tool provides all command execution (Docker or local mode).
 
         Returns:
             ClaudeAgentOptions configured with provided parameters and
@@ -1205,16 +1208,18 @@ class ClaudeCodeBackend(LLMBackend):
                     "Bash(chown*)",
                 ]
 
-            # Disable Bash tool entirely when docker mode is enabled
-            # In docker mode, execute_command MCP tool provides all command execution
-            command_line_execution_mode = all_params.get("command_line_execution_mode", "local")
-            if command_line_execution_mode == "docker":
+            # Disable Bash tool entirely when MCP command_line is enabled
+            # This ensures we use execute_command MCP tool for all command execution (Docker or local)
+            # Benefits: unified code path, skills support, environment setup
+            enable_mcp_command_line = all_params.get("enable_mcp_command_line", False)
+            if enable_mcp_command_line:
                 disallowed_tools = list(all_params.get("disallowed_tools", []))
                 bash_related_tools = ["Bash", "BashOutput", "KillShell"]
                 for tool in bash_related_tools:
                     if tool not in disallowed_tools:
                         disallowed_tools.append(tool)
                 all_params["disallowed_tools"] = disallowed_tools
+                logger.info("[ClaudeCodeBackend] Disabled native Bash tools, using MCP execute_command instead")
 
             # Windows-specific handling: detect long prompts that exceed CreateProcess limit
             # Windows CreateProcess has ~8,191 char limit for entire command line

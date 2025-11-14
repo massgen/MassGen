@@ -460,7 +460,7 @@ class DockerManager:
         context_paths: Optional[List[Dict[str, Any]]] = None,
         skills_directory: Optional[str] = None,
         massgen_skills: Optional[List[str]] = None,
-    ) -> str:
+    ) -> Optional[Path]:
         """
         Create and start a persistent Docker container for an agent.
 
@@ -477,16 +477,21 @@ class DockerManager:
             context_paths: List of context path dicts with 'path', 'permission', and optional 'name' keys
                           (each mounted at its host path)
             skills_directory: Path to skills directory (e.g., .agent/skills) to mount read-only
+            massgen_skills: List of MassGen built-in skills to enable (optional)
 
         Returns:
-            Container ID
+            Path to temporary merged skills directory if skills are enabled, None otherwise
 
         Raises:
             RuntimeError: If container creation fails
         """
         if agent_id in self.containers:
             logger.warning(f"⚠️ [Docker] Container for agent {agent_id} already exists")
-            return self.containers[agent_id].id
+            # Return existing skills directory if available
+            return self.temp_skills_dirs.get(agent_id)
+
+        # Track temp skills directory (None if skills not enabled)
+        temp_skills_dir_to_return = None
 
         # Ensure image exists
         self.ensure_image_exists()
@@ -607,8 +612,9 @@ class DockerManager:
                 title = skill.get("title", skill.get("name", "Unknown"))
                 logger.info(f"[Docker]   - {skill['name']}: {title}")
 
-            # Store temp dir for cleanup
+            # Store temp dir for cleanup and return
             self.temp_skills_dirs[agent_id] = temp_skills_dir
+            temp_skills_dir_to_return = temp_skills_dir
 
         # Add credential file mounts
         credential_mounts = self._build_credential_mounts()
@@ -673,7 +679,8 @@ class DockerManager:
                     logger.warning(f"⚠️ [Docker] Failed to pre-install packages: {e}")
                     # Don't fail container creation if pre-install fails
 
-            return container.id
+            # Return temp skills directory path (None if skills not enabled)
+            return temp_skills_dir_to_return
 
         except DockerException as e:
             logger.error(f"❌ [Docker] Failed to create container for agent {agent_id}: {e}")
