@@ -78,7 +78,7 @@ Enable skills in your YAML config:
 With Task Planning
 ------------------
 
-Combine skills with task planning:
+Combine skills with task planning (filesystem mode):
 
 .. code-block:: yaml
 
@@ -86,26 +86,61 @@ Combine skills with task planning:
      coordination:
        use_skills: true
        enable_agent_task_planning: true
+       task_planning_filesystem_mode: true  # Save tasks to tasks/ directory
 
-Organized Workspace
--------------------
+This creates a ``tasks/`` directory in the agent workspace:
 
-For cleaner organization, enable structured workspace:
+.. code-block:: text
+
+   agent_workspace/
+     └── tasks/
+         └── plan.json        # Task planning state
+
+With Memory System
+------------------
+
+Combine skills with filesystem-based memory:
 
 .. code-block:: yaml
 
    orchestrator:
      coordination:
        use_skills: true
-       organize_workspace: true  # Creates memory/ and workspace/ dirs
+       enable_memory_filesystem_mode: true
+
+This creates a two-tier memory structure:
+
+.. code-block:: text
+
+   agent_workspace/
+     └── memory/
+         ├── short_term/      # Auto-injected into system prompts
+         └── long_term/       # Load on-demand via MCP tools
+
+Complete Setup (All Features)
+------------------------------
+
+For full coordination capabilities:
+
+.. code-block:: yaml
+
+   orchestrator:
+     coordination:
+       use_skills: true
+       enable_agent_task_planning: true
+       task_planning_filesystem_mode: true
+       enable_memory_filesystem_mode: true
 
 This creates:
 
 .. code-block:: text
 
    agent_workspace/
-     ├── memory/              # Long-term context (memory skill)
-     └── workspace/           # Main working directory
+     ├── memory/
+     │   ├── short_term/
+     │   └── long_term/
+     └── tasks/
+         └── plan.json
 
 Built-in Skills
 ===============
@@ -576,31 +611,32 @@ Complex Refactoring
 
 .. code-block:: yaml
 
-   # Config: Enable skills with task planning
+   # Config: Enable skills with task planning and memory
    coordination:
      use_skills: true
      enable_agent_task_planning: true
-     organize_workspace: true
+     task_planning_filesystem_mode: true
+     enable_memory_filesystem_mode: true
 
 **Agent workflow:**
 
 1. Use ``file-search`` skill to find all usages
 2. Store decisions in ``memory/`` for context
-3. Execute refactoring in ``workspace/``
+3. Execute refactoring in agent workspace
 
 Multi-Agent Collaboration
 --------------------------
 
 .. code-block:: yaml
 
-   # Config: Skills with shared workspace
+   # Config: Skills with memory for cross-agent sharing
    coordination:
      use_skills: true
-     organize_workspace: true
+     enable_memory_filesystem_mode: true
 
 **Agent collaboration:**
 
-1. Agent 1: Research using external skills, save findings to ``memory/``
+1. Agent 1: Research using external skills, save findings to ``memory/short_term/``
 2. Agent 2: Read Agent 1's memories from shared reference path (typically ``temp_workspaces/agent1/memory/``)
 3. Agent 2: Build upon findings using same skills
 

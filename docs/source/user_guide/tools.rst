@@ -9,6 +9,7 @@ MassGen provides a comprehensive tools ecosystem that enables AI agents to perfo
 
    * :doc:`mcp_integration` - External tools via Model Context Protocol
    * :doc:`custom_tools` - Custom Python functions as tools
+   * :doc:`computer_use` - Browser and desktop automation tools
 
 What Are Tools?
 ---------------
@@ -423,7 +424,7 @@ Detailed Guides
 
 For in-depth information on each tool system:
 
-.. grid:: 2
+.. grid:: 3
    :gutter: 3
 
    .. grid-item-card:: 🔌 MCP Integration
@@ -450,6 +451,18 @@ For in-depth information on each tool system:
 
       :doc:`Read the Custom Tools guide → <custom_tools>`
 
+   .. grid-item-card:: 🖥️ Computer Use
+
+      Browser and desktop automation tools
+
+      * Gemini Computer Use (Google)
+      * Claude Computer Use (Anthropic)
+      * Simple browser automation (any model)
+      * Visual feedback and screenshots
+      * Multi-agent coordination
+
+      :doc:`Read the Computer Use guide → <computer_use>`
+
 Related Documentation
 ---------------------
 
@@ -473,3 +486,4 @@ External Resources
 
    mcp_integration
    custom_tools
+   computer_use
