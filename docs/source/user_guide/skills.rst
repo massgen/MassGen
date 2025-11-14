@@ -157,11 +157,6 @@ Serena
 
 Symbol-level code understanding using Language Server Protocol (LSP). Provides IDE-like capabilities for finding symbols, tracking references, and making precise code edits.
 
-Serena Skill
-------------
-
-Symbol-level code understanding using Language Server Protocol (LSP). Provides IDE-like capabilities for finding symbols, tracking references, and making precise code edits.
-
 **Prerequisites:**
 
 .. code-block:: bash
@@ -172,16 +167,12 @@ Symbol-level code understanding using Language Server Protocol (LSP). Provides I
    # Works in both Docker mode (uv pre-installed) and local mode
    # For local mode, install uv first: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-**Configuration:**
+**Invocation:**
 
-.. code-block:: yaml
+.. code-block:: bash
 
-   orchestrator:
-     coordination:
-       use_skills: true
-       massgen_skills:
-         - "file_search"
-         - "serena"  # Enable serena skill
+   # Load serena skill guidance
+   openskills read serena
 
 **Core Capabilities:**
 
@@ -235,16 +226,12 @@ Semantic search using embedding-based similarity matching. Find code by meaning,
    # Optional: For document parsing (PDF, DOCX, PPTX)
    export LLAMA_CLOUD_API_KEY="your-key"
 
-**Configuration:**
+**Invocation:**
 
-.. code-block:: yaml
+.. code-block:: bash
 
-   orchestrator:
-     coordination:
-       use_skills: true
-       massgen_skills:
-         - "file_search"
-         - "semtools"  # Enable semtools skill
+   # Load semtools skill guidance
+   openskills read semtools
 
 **Core Capabilities:**
 
@@ -294,7 +281,7 @@ MassGen provides three complementary search approaches:
 +------------------+----------------------+------------------------+---------------------------+
 | Tool             | Search Type          | Best For               | Example                   |
 +==================+======================+========================+===========================+
-| **file_search**  | Text/Syntax          | Exact keywords,        | Find "LoginService" class |
+| **file-search**  | Text/Syntax          | Exact keywords,        | Find "LoginService" class |
 | (ripgrep/ast-grep)|                     | code patterns          |                           |
 +------------------+----------------------+------------------------+---------------------------+
 | **serena**       | Symbols/References   | Finding definitions,   | Track all uses of         |
@@ -308,7 +295,7 @@ MassGen provides three complementary search approaches:
 
 1. **Concept Discovery**: Use semtools to find relevant areas
 2. **Symbol Tracking**: Use serena to track precise definitions and references
-3. **Text Search**: Use file_search (ripgrep) for exact keyword follow-up
+3. **Text Search**: Use file-search (ripgrep) for exact keyword follow-up
 
 **Example Workflow:**
 
@@ -424,8 +411,8 @@ Agents see available skills in their system prompt:
    </skill>
 
    <skill>
-   <name>memory</name>
-   <description>Filesystem-based memory operations...</description>
+   <name>file-search</name>
+   <description>Fast text and structural code search...</description>
    <location>builtin</location>
    </skill>
 
@@ -597,7 +584,7 @@ Complex Refactoring
 
 **Agent workflow:**
 
-1. Use ``file_search`` skill to find all usages
+1. Use ``file-search`` skill to find all usages
 2. Store decisions in ``memory/`` for context
 3. Execute refactoring in ``workspace/``
 

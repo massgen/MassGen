@@ -338,15 +338,77 @@ class MemorySection(SystemPromptSection):
         """Build memory system instructions."""
         content_parts = []
 
-        # Header with emphasis on proactive usage
+        # Header with emphasis on proactive usage and persistence
         content_parts.append(
-            "## Memory System: Proactive Context Retention\n\n"
-            "You have access to a tiered memory system for retaining important context "
-            "across conversations. Use memory proactively to:\n"
-            "- Save key decisions and rationale\n"
-            "- Record important findings\n"
-            "- Build up knowledge over time\n"
-            "- Avoid re-discovering the same information",
+            "## Memory System: Workspace-Persistent Context\n\n"
+            "You have access to a filesystem-based memory system that persists across conversations "
+            "and is stored in your workspace. Memories are automatically saved to `workspace/memory/` "
+            "as markdown files and loaded on startup. Use memory proactively to:\n"
+            "- Save key decisions, preferences, and rationale\n"
+            "- Record important findings and patterns\n"
+            "- Build up knowledge over time within this workspace\n"
+            "- Avoid re-discovering the same information across tasks",
+        )
+
+        # Memory tiers explanation
+        content_parts.append(
+            "\n### Memory Tiers\n\n"
+            "**short_term** (Always in-context):\n"
+            "- Auto-injected into every agent's system prompt\n"
+            "- Use for: User preferences, current project context, frequently needed info\n"
+            "- Stored in: `workspace/memory/short_term/{name}.md`\n"
+            "- Examples: user_preferences.md, project_goals.md, coding_style.md\n\n"
+            "**long_term** (Load on-demand):\n"
+            "- Requires explicitly reading the file to bring into context\n"
+            "- Use for: Historical context, reference material, less frequently needed info\n"
+            "- Stored in: `workspace/memory/long_term/{name}.md`\n"
+            "- Examples: project_history.md, known_issues.md, architecture_decisions.md",
+        )
+
+        # When to save to memory - critical triggers
+        content_parts.append(
+            "\n### When to Save to Memory (Critical Triggers)\n\n"
+            "Save to memory when you encounter these patterns:\n\n"
+            "**User Information** → short_term:\n"
+            "- User shares name, preferences, or personal details\n"
+            "- User states coding style preferences (tabs/spaces, naming conventions)\n"
+            "- User mentions project goals, constraints, or requirements\n"
+            '- Example: "I prefer functional programming" → create `workspace/memory/short_term/code_preferences.md`\n\n'
+            "**Important Decisions** → short_term or long_term:\n"
+            "- Architectural decisions with rationale (why approach X over Y)\n"
+            "- Technology/library choices and reasoning\n"
+            "- Trade-offs discussed and conclusion reached\n"
+            '- Example: "Use React over Vue because team has more experience" → create `workspace/memory/long_term/tech_stack_decisions.md`\n\n'
+            "**Discoveries & Patterns** → long_term:\n"
+            "- Bug patterns affecting multiple files\n"
+            "- Recurring issues and their solutions\n"
+            "- Performance bottlenecks identified\n"
+            "- Code patterns that work well (or poorly) in this codebase\n"
+            "- Example: Found authentication bug in 3 endpoints → create `workspace/memory/long_term/known_issues.md`\n\n"
+            "**Tool & Workflow Patterns** → long_term:\n"
+            "- Successful tool usage sequences\n"
+            "- Build/deployment procedures specific to this project\n"
+            "- Testing strategies that work\n"
+            '- Example: "Always run lint before build" → append to `workspace/memory/long_term/workflow_patterns.md`\n\n'
+            "**AVOID saving:**\n"
+            "- Temporary state or ephemeral information\n"
+            "- Information already in code/docs (save insights about them instead)\n"
+            "- Specific file paths or line numbers (save high-level patterns instead)",
+        )
+
+        # Persistence explanation
+        content_parts.append(
+            "\n### Multi-Turn & Cross-Workspace Persistence\n\n"
+            "**Multi-turn persistence:**\n"
+            "- All memories persist across conversation turns automatically\n"
+            "- Memories are loaded from filesystem on agent startup\n"
+            "- Updates to memories are immediately saved to filesystem\n"
+            "- No special action needed - just create/update and they'll be there next turn\n\n"
+            "**Cross-workspace behavior:**\n"
+            "- Memories are scoped to the current workspace directory\n"
+            "- Each workspace has its own `workspace/memory/` directory\n"
+            "- To share memories across workspaces: manually copy .md files from one workspace's memory/ to another\n"
+            '- Consider creating a "global" workspace for user-level preferences used across projects',
         )
 
         # Short-term memory (full content if available)
@@ -379,19 +441,84 @@ class MemorySection(SystemPromptSection):
 
                 content_parts.append(f"| {mem_id} | {summary} | {created} |")
 
-        # Memory operations
+        # Memory file conventions and operations
         content_parts.append(
-            "\n### Memory Operations\n\n"
-            "**Available operations:**\n"
-            "- `create_memory(content, tier='short')` - Save new memory\n"
-            "- `load_memory(memory_id)` - Retrieve specific memory\n"
-            "- `search_memory(query)` - Search across all memories\n"
-            "- `update_memory(memory_id, content)` - Update existing memory\n\n"
-            "**Best practices:**\n"
-            "- Create memories for important decisions and findings\n"
-            "- Use descriptive content so memories are searchable\n"
-            "- Load relevant memories at the start of related tasks\n"
-            "- Update memories as context evolves",
+            "\n### Memory File Operations\n\n"
+            "Memories are simply markdown files in your workspace. Use standard file operations to manage them:\n\n"
+            "**File Structure:**\n"
+            "```\nworkspace/\n"
+            "└── memory/\n"
+            "    ├── short_term/\n"
+            "    │   ├── code_style.md\n"
+            "    │   └── user_preferences.md\n"
+            "    └── long_term/\n"
+            "        ├── architecture_decisions.md\n"
+            "        └── known_issues.md\n```\n\n"
+            "**File Naming:** Use descriptive, filesystem-safe names (lowercase, underscores, no spaces)\n\n"
+            "**File Format:** Markdown with optional YAML frontmatter for metadata:\n"
+            "```markdown\n---\ncreated: 2024-01-15\nupdated: 2024-01-15\n---\n# Code Style\n- Use snake_case for variables\n- Prefer functional style\n```\n\n"
+            "**Operations needed:**\n"
+            "- **Create memory:** Write a new file at `workspace/memory/short_term/code_style.md`\n"
+            "- **Read memory:** Read the file at `workspace/memory/long_term/architecture_decisions.md`\n"
+            "- **Update memory (append):** Edit the file to add new sections\n"
+            "- **Update memory (replace):** Overwrite the file with new content\n"
+            "- **List memories:** List/glob files in `workspace/memory/` to discover all memories\n"
+            "- **Delete memory:** Delete the file",
+        )
+
+        # Concrete usage examples
+        content_parts.append(
+            "\n### Usage Examples\n\n"
+            "**Example 1: User shares preference**\n"
+            '```\nUser: "I always use snake_case for variables"\n\n'
+            "→ Create file: workspace/memory/short_term/code_style.md\n"
+            "Content:\n"
+            "---\n"
+            "created: 2024-01-15\n"
+            "---\n"
+            "# Coding Style\n"
+            "- Variable naming: snake_case\n"
+            "- Function naming: snake_case\n```\n\n"
+            "**Example 2: Important architectural decision**\n"
+            "```\nAfter discussion about database choice:\n\n"
+            "→ Create file: workspace/memory/long_term/architecture_decisions.md\n"
+            "Content:\n"
+            "---\n"
+            "created: 2024-01-15\n"
+            "---\n"
+            "# Database Choice\n\n"
+            "**Decision:** PostgreSQL\n"
+            "**Rationale:** Need JSONB support for flexible schemas, team has PostgreSQL experience\n"
+            "**Date:** 2024-01-15\n```\n\n"
+            "**Example 3: Bug pattern discovered - append to existing memory**\n"
+            "```\nAfter finding another authentication bug:\n\n"
+            "→ Read file: workspace/memory/long_term/known_issues.md (to check what exists)\n"
+            "→ Edit file: workspace/memory/long_term/known_issues.md (append new issue)\n\n"
+            "Added content:\n"
+            "## Issue: Missing null checks\n"
+            "- Affected: auth middleware, user endpoints\n"
+            "- Fix: Add null guards before jwt.verify() calls\n"
+            "- Found: 2024-01-15\n```\n\n"
+            "**Example 4: Discover existing memories at task start**\n"
+            "```\nBefore starting a new feature:\n\n"
+            "→ List files in workspace/memory/ to see what exists\n"
+            "→ Read relevant long-term memories:\n"
+            "   - workspace/memory/long_term/architecture_decisions.md\n"
+            "   - workspace/memory/long_term/known_issues.md\n\n"
+            "Note: Short-term memories already shown in system prompt above\n```",
+        )
+
+        # Best practices
+        content_parts.append(
+            "\n### Best Practices\n\n"
+            "- **Start tasks by checking memories** - List files to discover memories, read them to load content\n"
+            "- **Use descriptive filenames** - Memory filenames should be clear and searchable (e.g., 'user_preferences.md', not 'temp1.md')\n"
+            "- **Append instead of replace** - If memory exists, edit to add new sections rather than overwriting\n"
+            "- **Markdown formatting** - Use markdown in content for better readability and structure\n"
+            '- **Include context** - Make memory content self-contained ("User prefers tabs over spaces" not just "tabs")\n'
+            "- **Short-term for frequent access** - Put regularly needed info in short_term/ directory\n"
+            "- **Long-term for reference** - Put historical context and reference material in long_term/ directory\n"
+            "- **Optional metadata** - Use YAML frontmatter for timestamps and other metadata, but it's not required",
         )
 
         return "\n".join(content_parts)

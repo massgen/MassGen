@@ -284,12 +284,17 @@ class Orchestrator(ChatAgent):
                 self._inject_planning_tools_for_all_agents()
                 logger.info("[Orchestrator] Planning tools injection complete")
 
-        # Inject memory tools if enabled
-        if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_memory_filesystem_mode"):
-            if self.config.coordination_config.enable_memory_filesystem_mode:
-                logger.info(f"[Orchestrator] Injecting memory tools for {len(self.agents)} agents")
-                self._inject_memory_tools_for_all_agents()
-                logger.info("[Orchestrator] Memory tools injection complete")
+        # NOTE: Memory MCP tools have been disabled in favor of direct file operations
+        # Agents now use standard file tools (Read/Write/Edit) to manage memory files
+        # in workspace/memory/short_term/ and workspace/memory/long_term/
+        # See MemorySection in system_prompt_sections.py for guidance
+        #
+        # # Inject memory tools if enabled
+        # if hasattr(self.config, "coordination_config") and hasattr(self.config.coordination_config, "enable_memory_filesystem_mode"):
+        #     if self.config.coordination_config.enable_memory_filesystem_mode:
+        #         logger.info(f"[Orchestrator] Injecting memory tools for {len(self.agents)} agents")
+        #         self._inject_memory_tools_for_all_agents()
+        #         logger.info("[Orchestrator] Memory tools injection complete")
 
     async def _prepare_paraphrases_for_agents(self, question: str) -> None:
         """Generate and assign DSPy paraphrases for the current question."""
