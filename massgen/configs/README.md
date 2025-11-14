@@ -227,7 +227,53 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.11 - Latest
+### v0.1.12 - Latest
+**New Features:** System Prompt Architecture Refactoring, Semantic Skills & Multi-Agent Computer Use
+
+**Configuration Files:**
+- `skills/skills_basic.yaml` - Enhanced skills system with semantic search and code understanding
+- `tools/custom_tools/multi_agent_computer_use_example.yaml` - Multi-agent computer automation with Claude (Docker) and Gemini (Browser)
+- `tools/custom_tools/gemini_computer_use_docker_example.yaml` - Gemini computer use with Docker integration
+- `tools/custom_tools/claude_computer_use_docker_example.yaml` - Claude computer use with Docker integration
+
+**Key Features:**
+- **System Prompt Architecture**: Complete refactoring with hierarchical structure, XML-based formatting for Claude, improved LLM attention management
+- **Semtools Skill**: Semantic search capabilities using embedding-based similarity for intelligent file and code discovery
+- **Serena Skill**: Symbol-level code understanding via LSP integration for precise code navigation and analysis
+- **Skills System Enhancements**: Local execution mode support enabling skills to run outside Docker environments
+- **Enhanced Computer Use**: Docker integration for Linux desktop automation with VNC visualization and X11 display support
+- **Multi-Agent Coordination**: Combined Claude (Docker/Linux) and Gemini (Browser) computer use for complex automation workflows
+- **Browser Automation**: Screenshot file saving with automatic persistence to workspace directories
+
+**Try It:**
+```bash
+# Install or upgrade
+pip install --upgrade massgen
+
+# Enhanced Skills System - semantic search and code understanding
+# Prerequisites: Docker daemon running (or install openskills locally)
+uv run massgen --config massgen/configs/skills/skills_basic.yaml \
+  "Create cool algorithmic art we can use in GitHub repo"
+
+# Multi-Agent Computer Use - Claude (Docker) + Gemini (Browser) coordination
+# Prerequisites:
+#   1. Set ANTHROPIC_API_KEY and GEMINI_API_KEY in .env
+#   2. Docker installed and running
+#   3. Run ./scripts/setup_docker_cua.sh for Claude Docker setup
+#   4. Install Playwright: pip install playwright && playwright install chromium
+uv run massgen --config massgen/configs/tools/custom_tools/multi_agent_computer_use_example.yaml \
+  "Search for latest Python releases online and create a summary document"
+
+# Gemini Computer Use with Docker - Linux desktop automation
+# Prerequisites:
+#   1. Set GEMINI_API_KEY in .env
+#   2. Docker running, run ./scripts/setup_docker_cua.sh
+#   3. pip install google-genai docker
+massgen --config massgen/configs/tools/custom_tools/gemini_computer_use_docker_example.yaml \
+  "Browse GitHub and find popular AI projects"
+```
+
+### v0.1.11
 **New Features:** Skills System, Memory MCP & Rate Limiting
 
 **Configuration Files:**

@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.11
+**Current Version:** v0.1.12
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** November 12, 2025
+**Last Updated:** November 14, 2025
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -41,18 +41,18 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.12** | 11/14/25 | Automatic MCP Tool Selection | @ncrispino | Intelligently select MCP tools based on task requirements |
-| | | Semtools/Serena Semantic Search Skill | @ncrispino | Implement semantic search capabilities as a reusable skill |
-| **v0.1.13** | 11/17/25 | Parallel File Operations | @ncrispino | Increase parallelism and standard efficiency evaluation |
-| | | Semtools Integration | @ncrispino | Semantic search for files, configs, and tool discovery |
-| **v0.1.14** | 11/19/25 | MassGen Terminal Evaluation | @ncrispino | Self-evaluation and improvement of frontend/UI |
+| **v0.1.13** | 11/17/25 | Automatic MCP Tool Selection | @ncrispino | Intelligently select MCP tools based on task requirements |
 | | | NLIP Integration | @qidanrui | Natural Language Integration Platform for hierarchy initialization and RL integration |
+| **v0.1.14** | 11/19/25 | Semtools Integration | @ncrispino | Semantic search for files, configs, and tool discovery |
+| | | MassGen Terminal Evaluation | @ncrispino | Self-evaluation and improvement of frontend/UI |
+| **v0.1.15** | 11/21/25 | Parallel File Operations | @ncrispino | Increase parallelism and standard efficiency evaluation |
+| | | Launch Custom Tools in Docker | @ncrispino | Enable custom tools to run in isolated Docker containers for security and portability |
 
 *All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📋 v0.1.12 - Intelligent Tool Selection & Semantic Search
+## 📋 v0.1.13 - Intelligent Tool Selection & NLIP Integration
 
 ### Features
 
@@ -65,26 +65,60 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Eliminates manual tool selection burden for users
 - **Use Case**: Intelligently select appropriate MCP tools (e.g., Playwright for web testing) based on task requirements, improving performance without requiring users to know which tools to include
 
-**2. Semtools/Serena Semantic Search Skill** (@ncrispino)
-- Issue: [#497](https://github.com/massgen/MassGen/issues/497)
-- Implement semtools and serena for advanced semantic search capabilities
-- Package as a reusable skill within the MassGen skills framework
-- Enable semantic understanding of code, documentation, and configuration files
-- Support for multiple embedding models and vector databases
-- Integration with existing file search and discovery mechanisms
-- **Use Case**: Provide intelligent semantic search across codebases, enabling agents to find relevant code and documentation based on meaning rather than just keywords
+**2. NLIP Integration** (@qidanrui)
+- PR: [#475](https://github.com/massgen/MassGen/pull/475) (Draft)
+- Natural Language Integration Platform for enhanced agent coordination
+- Hierarchy initialization for structured multi-agent systems
+- Reinforcement learning integration components
+- Advanced orchestration patterns with NLIP architecture
+- Foundation for sophisticated agent coordination strategies
+- **Use Case**: Enable advanced multi-agent coordination through NLIP's hierarchy and reinforcement learning capabilities, improving agent collaboration and decision-making
 
 ### Success Criteria
 - ✅ Automatic tool selection improves task performance vs manual selection
 - ✅ Context pollution reduced through filesystem-first approach
 - ✅ Tool selection adapts dynamically during execution
-- ✅ Semantic search skill successfully integrates with existing skills framework
-- ✅ Semantic search outperforms keyword-based search for code discovery
-- ✅ Support for multiple embedding models and configurable backends
+- ✅ NLIP hierarchy initialization works correctly
+- ✅ Reinforcement learning components integrate seamlessly
+- ✅ Advanced orchestration patterns demonstrate improved performance
 
 ---
 
-## 📋 v0.1.13 - Performance Optimization & Semantic Search
+## 📋 v0.1.14 - Semantic Search & Self-Evaluation
+
+### Features
+
+**1. Semtools Integration** (@ncrispino)
+- Issue: [#465](https://github.com/massgen/MassGen/issues/465)
+- Semantic search capabilities for file parsing and retrieval using [semtools](https://github.com/run-llama/semtools)
+- Semantic understanding for filesystem efficiency (PDFs, various document formats)
+- Intelligent configuration file and MCP tool discovery through semantic search
+- Automatic identification of relevant tools before prompt execution
+- Replaces keyword matching with semantic understanding for better accuracy
+- **Use Case**: Enable semantic search for files, configurations, and automated tool discovery, improving search performance and reducing manual configuration effort
+
+**2. MassGen Terminal Evaluation** (@ncrispino)
+- Issue: [#476](https://github.com/massgen/MassGen/issues/476)
+- Enable MassGen to evaluate and improve its own frontend/UI
+- Terminal session recording using asciinema for visual analysis
+- Automatic caption generation for recorded sessions
+- Video editing integration for demonstration materials
+- Comprehensive case study generation from terminal recordings
+- Self-improvement capabilities extended to frontend (currently backend-only via automation mode)
+- **Use Case**: Enable MassGen to analyze its own terminal interface, creating demonstration videos and documentation automatically, showcasing new features through automated workflows
+
+### Success Criteria
+- ✅ Semtools semantic search outperforms keyword-based search
+- ✅ Tool discovery automation reduces manual configuration
+- ✅ Semantic search handles diverse document formats effectively
+- ✅ Terminal recording and playback system works reliably
+- ✅ Video understanding capabilities accurately analyze terminal sessions
+- ✅ Automated case study generation produces high-quality documentation
+- ✅ MassGen successfully self-improves based on terminal analysis
+
+---
+
+## 📋 v0.1.15 - Performance Optimization & Docker Tools
 
 ### Features
 
@@ -97,14 +131,15 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - Comprehensive efficiency evaluation with standard metrics
 - **Use Case**: Increase parallelism and efficiency with standard evaluation metrics, reducing file operation latency in multi-agent workflows
 
-**2. Semtools Integration** (@ncrispino)
-- Issue: [#465](https://github.com/massgen/MassGen/issues/465)
-- Semantic search capabilities for file parsing and retrieval using [semtools](https://github.com/run-llama/semtools)
-- Semantic understanding for filesystem efficiency (PDFs, various document formats)
-- Intelligent configuration file and MCP tool discovery through semantic search
-- Automatic identification of relevant tools before prompt execution
-- Replaces keyword matching with semantic understanding for better accuracy
-- **Use Case**: Enable semantic search for files, configurations, and automated tool discovery, improving search performance and reducing manual configuration effort
+**2. Launch Custom Tools in Docker** (@ncrispino)
+- Issue: [#510](https://github.com/massgen/MassGen/issues/510)
+- Enable custom tools to run in isolated Docker containers
+- Automatic containerization of custom tool execution
+- Security isolation for untrusted or experimental tools
+- Improved portability across different environments
+- Resource management and cleanup for tool containers
+- Integration with existing Docker infrastructure
+- **Use Case**: Run custom tools in isolated Docker containers for enhanced security, enabling safe execution of untrusted code and ensuring consistent tool behavior across environments
 
 ### Success Criteria
 - ✅ Parallel file reads demonstrate measurable performance improvement
@@ -112,43 +147,10 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - ✅ Standard evaluation methodology implemented and documented
 - ✅ Benchmarking shows improvements in real-world scenarios
 - ✅ Feature maintains data consistency and safety
-- ✅ Semtools semantic search outperforms keyword-based search
-- ✅ Tool discovery automation reduces manual configuration
-- ✅ Semantic search handles diverse document formats effectively
-
----
-
-## 📋 v0.1.14 - Self-Evaluation & NLIP Integration
-
-### Features
-
-**1. MassGen Terminal Evaluation** (@ncrispino)
-- Issue: [#476](https://github.com/massgen/MassGen/issues/476)
-- Enable MassGen to evaluate and improve its own frontend/UI
-- Terminal session recording using asciinema for visual analysis
-- Automatic caption generation for recorded sessions
-- Video editing integration for demonstration materials
-- Comprehensive case study generation from terminal recordings
-- Self-improvement capabilities extended to frontend (currently backend-only via automation mode)
-- **Use Case**: Enable MassGen to analyze its own terminal interface, creating demonstration videos and documentation automatically, showcasing new features through automated workflows
-
-**2. NLIP Integration** (@qidanrui)
-- PR: [#475](https://github.com/massgen/MassGen/pull/475) (Draft)
-- Natural Language Integration Platform for enhanced agent coordination
-- Hierarchy initialization for structured multi-agent systems
-- Reinforcement learning integration components
-- Advanced orchestration patterns with NLIP architecture
-- Foundation for sophisticated agent coordination strategies
-- **Use Case**: Enable advanced multi-agent coordination through NLIP's hierarchy and reinforcement learning capabilities, improving agent collaboration and decision-making
-
-### Success Criteria
-- ✅ Terminal recording and playback system works reliably
-- ✅ Video understanding capabilities accurately analyze terminal sessions
-- ✅ Automated case study generation produces high-quality documentation
-- ✅ MassGen successfully self-improves based on terminal analysis
-- ✅ NLIP hierarchy initialization works correctly
-- ✅ Reinforcement learning components integrate seamlessly
-- ✅ Advanced orchestration patterns demonstrate improved performance
+- ✅ Custom tools successfully launch in Docker containers
+- ✅ Security isolation prevents tools from affecting host system
+- ✅ Automatic cleanup of Docker resources after tool execution
+- ✅ Tool execution performance comparable to native execution
 
 ---
 
@@ -221,23 +223,50 @@ These features are being actively developed on **separate parallel tracks** and 
 - Resume previous MassGen conversations with full context
 - **Status:** ✅ Completed in v0.1.9
 
+### Track: Semtools & Serena Skills (@ncrispino, nickcrispino)
+- PR: [#515](https://github.com/massgen/MassGen/pull/515)
+- Semantic search capabilities via semtools (embedding-based similarity)
+- Symbol-level code understanding via serena (LSP integration)
+- Package as reusable skills within MassGen framework
+- **Status:** ✅ Completed in v0.1.12
+
+### Track: System Prompt Architecture (@ncrispino, nickcrispino)
+- PR: [#515](https://github.com/massgen/MassGen/pull/515)
+- Complete refactoring of system prompt assembly
+- Hierarchical structure with improved LLM attention management
+- Skills system local execution support
+- **Status:** ✅ Completed in v0.1.12
+
+### Track: Multi-Agent Computer Use (@franklinnwren, zhichengren)
+- PR: [#513](https://github.com/massgen/MassGen/pull/513)
+- Enhanced Gemini computer use with Docker integration
+- Multi-agent coordination for computer automation
+- VNC visualization and debugging support
+- **Status:** ✅ Completed in v0.1.12
+
 ### Track: Automatic MCP Tool Selection (@ncrispino, nickcrispino)
 - Issue: [#414](https://github.com/massgen/MassGen/issues/414)
 - Intelligent selection of MCP tools based on task requirements
 - Filesystem-first approach to reduce context pollution
-- **Target:** v0.1.12
+- **Target:** v0.1.13
 
 ### Track: Parallel File Operations (@ncrispino, nickcrispino)
 - Issue: [#441](https://github.com/massgen/MassGen/issues/441)
 - Increase parallelism of file read operations
 - Standard efficiency evaluation and benchmarking methodology
-- **Target:** v0.1.13
+- **Target:** v0.1.15
+
+### Track: Launch Custom Tools in Docker (@ncrispino, nickcrispino)
+- Issue: [#510](https://github.com/massgen/MassGen/issues/510)
+- Enable custom tools to run in isolated Docker containers
+- Security isolation and portability for custom tool execution
+- **Target:** v0.1.15
 
 ### Track: Semtools Integration (@ncrispino, nickcrispino)
 - Issue: [#465](https://github.com/massgen/MassGen/issues/465)
 - Semantic search for files, configs, and automated tool discovery
 - Replace keyword matching with semantic understanding
-- **Target:** v0.1.13
+- **Target:** v0.1.14
 
 ### Track: MassGen Terminal Evaluation (@ncrispino, nickcrispino)
 - Issue: [#476](https://github.com/massgen/MassGen/issues/476)
@@ -249,7 +278,7 @@ These features are being actively developed on **separate parallel tracks** and 
 - PR: [#475](https://github.com/massgen/MassGen/pull/475) (Draft)
 - Natural Language Integration Platform for enhanced agent coordination
 - Hierarchy initialization and reinforcement learning integration
-- **Target:** v0.1.14
+- **Target:** v0.1.13
 
 ### Track: Coding Agent Enhancements (@ncrispino, nickcrispino)
 - PR: [#251](https://github.com/massgen/MassGen/pull/251)
@@ -331,5 +360,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 *This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** November 13, 2025
+**Last Updated:** November 14, 2025
 **Maintained By:** MassGen Team

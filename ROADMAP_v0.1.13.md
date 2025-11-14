@@ -1,19 +1,19 @@
-# MassGen v0.1.12 Roadmap
+# MassGen v0.1.13 Roadmap
 
 ## Overview
 
-Version 0.1.12 focuses on intelligent tool selection and semantic search capabilities, bringing key enhancements to the MassGen multi-agent coordination experience.
+Version 0.1.13 focuses on intelligent tool selection and NLIP integration, bringing key enhancements to the MassGen multi-agent coordination experience.
 
 - **Automatic MCP Tool Selection** (Required): 🔧 Intelligent selection of MCP tools based on task requirements
-- **Semtools/Serena Semantic Search Skill** (Required): 🔍 Implementation of semantic search capabilities as a reusable skill
+- **NLIP Integration** (Required): 🏗️ Natural Language Integration Platform for enhanced agent coordination
 
 ## Key Technical Priorities
 
 1. **Automatic MCP Tool Selection**: Intelligent selection of MCP tools before task execution based on user prompts
    **Use Case**: Intelligently select appropriate MCP tools (e.g., Playwright for web testing) based on task requirements, improving performance without requiring users to know which tools to include
 
-2. **Semtools/Serena Semantic Search Skill**: Advanced semantic search capabilities packaged as a reusable skill
-   **Use Case**: Provide intelligent semantic search across codebases, enabling agents to find relevant code and documentation based on meaning rather than just keywords
+2. **NLIP Integration**: Natural Language Integration Platform for enhanced agent coordination
+   **Use Case**: Enable advanced multi-agent coordination through NLIP's hierarchy and reinforcement learning capabilities, improving agent collaboration and decision-making
 
 ## Key Milestones
 
@@ -63,49 +63,49 @@ Version 0.1.12 focuses on intelligent tool selection and semantic search capabil
 
 ---
 
-### 🎯 Milestone 2: Semtools/Serena Semantic Search Skill (REQUIRED)
+### 🎯 Milestone 2: NLIP Integration (REQUIRED)
 
-**Goal**: Implement semantic search capabilities as a reusable skill within the MassGen skills framework
+**Goal**: Integrate Natural Language Integration Platform for enhanced agent coordination
 
-**Owner**: @ncrispino (nickcrispino on Discord)
+**Owner**: @qidanrui (danrui2020 on Discord)
 
-**Issue**: [#497](https://github.com/massgen/MassGen/issues/497)
+**PR**: [#475](https://github.com/massgen/MassGen/pull/475) (Draft)
 
-#### 2.1 Core Semantic Search Implementation
-- [ ] Implement semtools and serena for semantic search
-- [ ] Support for multiple embedding models
-- [ ] Vector database integration
-- [ ] Efficient indexing and retrieval mechanisms
-- [ ] Support for various file types and formats
+#### 2.1 NLIP Core Integration
+- [ ] Integrate NLIP platform into MassGen architecture
+- [ ] Setup NLIP dependencies and requirements
+- [ ] Configure NLIP communication interfaces
+- [ ] Establish connection protocols
+- [ ] Basic NLIP functionality testing
 
-#### 2.2 Skills Framework Integration
-- [ ] Package as a reusable skill within MassGen skills framework
-- [ ] Skill configuration and initialization
-- [ ] Integration with existing file search mechanisms
-- [ ] Compatibility with other skills
-- [ ] Documentation for skill usage
+#### 2.2 Hierarchy Initialization
+- [ ] Implement hierarchy initialization for structured multi-agent systems
+- [ ] Define agent hierarchy structures
+- [ ] Setup parent-child agent relationships
+- [ ] Configure hierarchy communication patterns
+- [ ] Test hierarchical coordination flows
 
-#### 2.3 Semantic Understanding Capabilities
-- [ ] Semantic understanding of code structures
-- [ ] Documentation and comment analysis
-- [ ] Configuration file comprehension
-- [ ] Cross-file semantic relationships
-- [ ] Context-aware search results
+#### 2.3 Reinforcement Learning Integration
+- [ ] Integrate RL components from NLIP
+- [ ] Setup reward mechanisms for agents
+- [ ] Implement learning feedback loops
+- [ ] Configure RL training parameters
+- [ ] Test RL-based agent improvements
 
-#### 2.4 Performance and Testing
-- [ ] Benchmark against keyword-based search
-- [ ] Optimize embedding generation and caching
-- [ ] Test with various codebases and languages
-- [ ] Validate search accuracy and relevance
+#### 2.4 Advanced Orchestration Patterns
+- [ ] Implement NLIP-based orchestration patterns
+- [ ] Create coordination strategies using NLIP
+- [ ] Setup sophisticated agent collaboration mechanisms
+- [ ] Optimize coordination efficiency
 - [ ] Documentation and usage examples
 
 **Success Criteria**:
-- ✅ Semantic search skill successfully integrates with existing skills framework
-- ✅ Semantic search outperforms keyword-based search for code discovery
-- ✅ Support for multiple embedding models and configurable backends
-- ✅ Efficient indexing and retrieval performance
-- ✅ Comprehensive documentation and examples provided
-- ✅ Works seamlessly with other MassGen skills
+- ✅ NLIP hierarchy initialization works correctly
+- ✅ Reinforcement learning components integrate seamlessly
+- ✅ Advanced orchestration patterns demonstrate improved performance
+- ✅ Agent collaboration is enhanced through NLIP
+- ✅ System stability maintained with NLIP integration
+- ✅ Comprehensive documentation provided
 
 ---
 
@@ -120,18 +120,18 @@ Version 0.1.12 focuses on intelligent tool selection and semantic search capabil
 - [ ] Context pollution reduced
 - [ ] Manual tool selection eliminated
 
-**Semtools/Serena Semantic Search:**
-- [ ] Semantic search skill implemented and integrated
-- [ ] Multiple embedding models supported
-- [ ] Vector database integration functional
-- [ ] Skills framework compatibility achieved
-- [ ] Performance benchmarks completed
+**NLIP Integration:**
+- [ ] NLIP platform integrated into MassGen
+- [ ] Hierarchy initialization functional
+- [ ] Reinforcement learning components working
+- [ ] Advanced orchestration patterns implemented
+- [ ] Agent coordination improved
 
 ### Performance Requirements
 - [ ] Tool selection is fast and efficient
-- [ ] Semantic search indexing is optimized
+- [ ] NLIP integration maintains system responsiveness
 - [ ] Overall system remains responsive
-- [ ] Embedding generation is performant
+- [ ] Coordination overhead is minimized
 
 ### Quality Requirements
 - [ ] All tests passing
@@ -139,7 +139,7 @@ Version 0.1.12 focuses on intelligent tool selection and semantic search capabil
 - [ ] Configuration examples provided
 - [ ] Error handling is robust
 - [ ] User-facing messages are clear
-- [ ] Search relevance is validated
+- [ ] NLIP integration stability verified
 
 ---
 
@@ -147,26 +147,26 @@ Version 0.1.12 focuses on intelligent tool selection and semantic search capabil
 
 ### Dependencies
 - **Automatic MCP Tool Selection**: MCP tool registry, filesystem abstraction, prompt analysis capabilities, dynamic tool loading system
-- **Semtools/Serena Semantic Search**: Skills framework, embedding models, vector database, semtools/serena libraries, filesystem access
+- **NLIP Integration**: NLIP platform, orchestrator system, hierarchy management, reinforcement learning components, agent communication protocols
 
 ### Risks & Mitigations
 1. **Tool Selection Accuracy**: *Mitigation*: Prompt analysis testing, fallback to manual selection, user feedback integration
-2. **Semantic Search Performance**: *Mitigation*: Caching strategies, optimized indexing, lazy loading, performance benchmarking
-3. **Embedding Model Compatibility**: *Mitigation*: Support multiple models, fallback options, clear documentation on model requirements
-4. **Skills Framework Integration**: *Mitigation*: Thorough testing with existing skills, clear API contracts, backward compatibility
-5. **Search Relevance**: *Mitigation*: Continuous tuning, user feedback loop, hybrid search fallback (semantic + keyword)
+2. **NLIP Integration Complexity**: *Mitigation*: Phased integration approach, comprehensive testing, clear API boundaries, rollback capabilities
+3. **Hierarchy Initialization**: *Mitigation*: Extensive testing with various agent configurations, clear documentation, fallback to flat orchestration
+4. **RL Component Stability**: *Mitigation*: Isolated RL module, extensive testing, gradual rollout, monitoring and alerting
+5. **Performance Overhead**: *Mitigation*: Performance profiling, optimization passes, lazy loading, caching strategies
 
 ---
 
-## Future Enhancements (Post-v0.1.12)
-
-### v0.1.13 Plans
-- **Parallel File Operations** (@ncrispino): Increase parallelism of file read operations with standard efficiency evaluation
-- **Semtools Integration** (@ncrispino): Semantic search for files, configs, and automated tool discovery
+## Future Enhancements (Post-v0.1.13)
 
 ### v0.1.14 Plans
+- **Semtools Integration** (@ncrispino): Semantic search for files, configs, and automated tool discovery
 - **MassGen Terminal Evaluation** (@ncrispino): Self-evaluation and improvement of frontend/UI through terminal recording
-- **NLIP Integration** (@qidanrui): Natural Language Integration Platform for hierarchy initialization and RL integration
+
+### v0.1.15 Plans
+- **Parallel File Operations** (@ncrispino): Increase parallelism of file read operations with standard efficiency evaluation
+- **Launch Custom Tools in Docker** (@ncrispino): Enable custom tools to run in isolated Docker containers for security and portability
 
 ### Long-term Vision
 - **Universal Rate Limiting**: Rate limiting for all backends (OpenAI, Claude, etc.)
@@ -181,9 +181,9 @@ Version 0.1.12 focuses on intelligent tool selection and semantic search capabil
 | Phase | Focus | Key Deliverables | Owner | Priority |
 |-------|-------|------------------|-------|----------|
 | Phase 1 | Tool Selection | Intelligent MCP tool selection, filesystem-first approach, dynamic refinement | @ncrispino | **REQUIRED** |
-| Phase 2 | Semantic Search | Semtools/serena implementation, skills framework integration, semantic capabilities | @ncrispino | **REQUIRED** |
+| Phase 2 | NLIP Integration | NLIP platform integration, hierarchy initialization, RL components, advanced orchestration | @qidanrui | **REQUIRED** |
 
-**Target Release**: November 14, 2025 (Friday @ 9am PT)
+**Target Release**: November 17, 2025 (Monday @ 9am PT)
 
 ---
 
@@ -199,17 +199,17 @@ Version 0.1.12 focuses on intelligent tool selection and semantic search capabil
 5. Add testing with various task types
 6. Document automatic tool selection behavior
 
-**Phase 2 - Semtools/Serena Semantic Search:**
-1. Implement semtools and serena integration (Issue #497)
-2. Create skill wrapper for semantic search
-3. Add support for multiple embedding models
-4. Integrate with vector database
-5. Add benchmarking and performance tests
-6. Document skill usage and configuration
+**Phase 2 - NLIP Integration:**
+1. Integrate NLIP platform into MassGen (PR #475)
+2. Implement hierarchy initialization system
+3. Add reinforcement learning components
+4. Create advanced orchestration patterns
+5. Add comprehensive testing and benchmarks
+6. Document NLIP usage and configuration
 
 ### For Users
 
-- v0.1.12 brings intelligent tool selection and semantic search capabilities:
+- v0.1.13 brings intelligent tool selection and NLIP integration:
 
   **Automatic MCP Tool Selection:**
   - No more manual tool selection required
@@ -219,13 +219,13 @@ Version 0.1.12 focuses on intelligent tool selection and semantic search capabil
   - Better performance with optimized tool sets
   - Filesystem-first approach for efficient tool discovery
 
-  **Semtools/Serena Semantic Search:**
-  - Advanced semantic search across codebases
-  - Find code based on meaning, not just keywords
-  - Support for multiple embedding models
-  - Integrated as a reusable skill
-  - Better code discovery and understanding
-  - Works with various file types and languages
+  **NLIP Integration:**
+  - Enhanced multi-agent coordination capabilities
+  - Hierarchical agent structures for complex workflows
+  - Reinforcement learning for improved agent performance
+  - Advanced orchestration patterns
+  - Better agent collaboration and decision-making
+  - Sophisticated coordination strategies
 
 ---
 
@@ -239,11 +239,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 **Contact Track Owners:**
 - Automatic MCP Tool Selection: @ncrispino on Discord (nickcrispino)
-- Semtools/Serena Semantic Search: @ncrispino on Discord (nickcrispino)
+- NLIP Integration: @qidanrui on Discord (danrui2020)
 
 ---
 
-*This roadmap reflects v0.1.12 priorities focusing on intelligent tool selection and semantic search capabilities.*
+*This roadmap reflects v0.1.13 priorities focusing on intelligent tool selection and NLIP integration.*
 
-**Last Updated:** November 13, 2025
+**Last Updated:** November 14, 2025
 **Maintained By:** MassGen Team
