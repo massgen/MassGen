@@ -8,6 +8,7 @@ It works with gpt-4.1, gpt-4o, Gemini, and other models.
 
 import base64
 import json
+from pathlib import Path
 from typing import Optional
 
 from massgen.logger_config import logger
@@ -29,6 +30,8 @@ async def browser_automation(
     text: Optional[str] = None,
     headless: bool = False,
     screenshot: bool = True,
+    output_filename: Optional[str] = None,
+    agent_cwd: Optional[str] = None,
     **kwargs,
 ) -> ExecutionResult:
     """
@@ -45,6 +48,8 @@ async def browser_automation(
         text: Text to type (for "type" action)
         headless: Run browser in headless mode
         screenshot: Take screenshot after action
+        output_filename: Optional filename to save screenshot in workspace (e.g., "screenshot.png")
+        agent_cwd: Agent's workspace directory (auto-injected by MassGen)
         **kwargs: Additional parameters
 
     Returns:
@@ -78,6 +83,14 @@ async def browser_automation(
             task="Get page title",
             action="extract",
             selector="h1"
+        )
+
+        # Save screenshot to workspace
+        result = await browser_automation(
+            task="Capture homepage",
+            url="http://localhost:3000",
+            action="screenshot",
+            output_filename="homepage.png"
         )
     """
     if not PLAYWRIGHT_AVAILABLE:
@@ -151,10 +164,30 @@ async def browser_automation(
             # Take screenshot if requested
             if screenshot:
                 screenshot_bytes = await page.screenshot()
-                screenshot_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
-                result_data["screenshot"] = screenshot_b64
-                result_data["screenshot_size"] = len(screenshot_bytes)
                 logger.info(f"Captured screenshot ({len(screenshot_bytes)} bytes)")
+
+                # Save screenshot to workspace if filename provided
+                if output_filename:
+                    # Use agent_cwd if provided (auto-injected by MassGen)
+                    if agent_cwd:
+                        workspace_dir = Path(agent_cwd)
+                    else:
+                        # Fallback: use current directory if agent_cwd not provided
+                        workspace_dir = Path.cwd()
+
+                    output_path = workspace_dir / output_filename
+                    output_path.write_bytes(screenshot_bytes)
+
+                    result_data["screenshot_saved"] = True
+                    result_data["screenshot_path"] = str(output_path)
+                    result_data["screenshot_filename"] = output_filename
+                    logger.info(f"Screenshot saved to: {output_path}")
+                else:
+                    # Only include base64 if not saving to file (avoid wasting tokens)
+                    screenshot_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
+                    result_data["screenshot"] = screenshot_b64
+                    result_data["screenshot_size"] = len(screenshot_bytes)
+                    result_data["note"] = "Provide output_filename parameter to save to workspace"
 
             # Get current URL and title
             result_data["current_url"] = page.url

@@ -39,18 +39,10 @@ def scan_skills(skills_dir: Path) -> List[Dict[str, str]]:
     if skills_dir.exists():
         skills.extend(_scan_directory(skills_dir, location="project"))
 
-    # Scan built-in skills from massgen/skills/always/ and massgen/skills/optional/
+    # Scan built-in skills from massgen/skills/ (flat structure)
     builtin_base = Path(__file__).parent.parent / "skills"
-
-    # Scan always/ subdirectory (always available)
-    always_dir = builtin_base / "always"
-    if always_dir.exists():
-        skills.extend(_scan_directory(always_dir, location="builtin"))
-
-    # Scan optional/ subdirectory (only available when configured)
-    optional_dir = builtin_base / "optional"
-    if optional_dir.exists():
-        skills.extend(_scan_directory(optional_dir, location="builtin"))
+    if builtin_base.exists():
+        skills.extend(_scan_directory(builtin_base, location="builtin"))
 
     return skills
 

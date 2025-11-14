@@ -81,11 +81,13 @@ def test_message_templates_post_evaluation():
     from massgen.message_templates import MessageTemplates
 
     templates = MessageTemplates()
-    assert hasattr(templates, "post_evaluation_system_message")
     assert hasattr(templates, "format_restart_context")
 
-    # Test method returns strings
-    post_eval_msg = templates.post_evaluation_system_message()
+    # Test post-evaluation section
+    from massgen.system_prompt_sections import PostEvaluationSection
+
+    post_eval_section = PostEvaluationSection()
+    post_eval_msg = post_eval_section.build_content()
     assert isinstance(post_eval_msg, str)
     assert "Post-Presentation Evaluation" in post_eval_msg
 

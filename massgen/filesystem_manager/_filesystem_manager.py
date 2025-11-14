@@ -117,6 +117,9 @@ class FilesystemManager:
             )
         self.enable_audio_generation = enable_audio_generation
 
+        # Store merged skills directory path for local mode
+        self.local_skills_directory = None
+
         # Initialize path permission manager
         self.path_permission_manager = PathPermissionManager(
             context_write_access_enabled=context_write_access_enabled,
@@ -198,7 +201,7 @@ class FilesystemManager:
         # Create Docker container if Docker mode enabled
         if self.docker_manager and self.agent_id:
             context_paths = self.path_permission_manager.get_context_paths()
-            self.docker_manager.create_container(
+            docker_skills_dir = self.docker_manager.create_container(
                 agent_id=self.agent_id,
                 workspace_path=self.cwd,
                 temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
@@ -207,6 +210,94 @@ class FilesystemManager:
                 massgen_skills=massgen_skills,
             )
             logger.info(f"[FilesystemManager] Docker container created for agent {self.agent_id}")
+
+            # Add Docker skills directory to allowed paths if created
+            if docker_skills_dir:
+                from ._base import Permission
+
+                self.path_permission_manager.add_path(docker_skills_dir, Permission.READ, "docker_skills")
+                logger.info(f"[Docker] Added skills directory to allowed paths: {docker_skills_dir}")
+
+        # Setup local skills if local mode enabled and skills configured
+        if self.enable_mcp_command_line and self.command_line_execution_mode == "local" and (skills_directory or massgen_skills):
+            self.setup_local_skills(skills_directory, massgen_skills)
+
+    def setup_local_skills(self, skills_directory: Optional[str] = None, massgen_skills: Optional[List[str]] = None) -> None:
+        """
+        Setup merged skills directory for local command line execution mode.
+
+        This mirrors Docker mode's skills merging logic, creating a temporary directory
+        that combines user's external skills with MassGen's built-in skills.
+
+        Args:
+            skills_directory: Path to user's skills directory (e.g., .agent/skills)
+            massgen_skills: List of MassGen built-in skills to enable
+        """
+        import shutil
+        import tempfile
+
+        if not (skills_directory or massgen_skills):
+            logger.debug("[FilesystemManager] No skills configured for local mode")
+            return
+
+        # Create temp directory for merged skills
+        temp_skills_dir = Path(tempfile.mkdtemp(prefix="massgen-skills-local-"))
+        logger.info(f"[Local] Creating temp merged skills directory: {temp_skills_dir}")
+
+        # Copy user's .agent/skills if it exists
+        if skills_directory:
+            skills_path = Path(skills_directory).resolve()
+            if skills_path.exists():
+                logger.info(f"[Local] Copying user skills from: {skills_path}")
+                shutil.copytree(skills_path, temp_skills_dir, dirs_exist_ok=True)
+            else:
+                logger.warning(f"[Local] User skills directory does not exist: {skills_path}")
+
+        # Copy massgen built-in skills (flat structure in massgen/skills/)
+        massgen_skills_base = Path(__file__).parent.parent / "skills"
+
+        # Track which skills have been added to avoid duplicates
+        added_skills = set()
+
+        # If specific skills are requested, copy only those
+        if massgen_skills:
+            for skill_name in massgen_skills:
+                skill_source = massgen_skills_base / skill_name
+                if skill_source.exists() and skill_source.is_dir():
+                    skill_dest = temp_skills_dir / skill_name
+                    logger.info(f"[Local] Adding MassGen skill: {skill_name}")
+                    shutil.copytree(skill_source, skill_dest, dirs_exist_ok=True)
+                    added_skills.add(skill_name)
+                else:
+                    logger.warning(f"[Local] MassGen skill not found: {skill_name} at {skill_source}")
+        else:
+            # If no specific skills requested, copy all built-in skills
+            if massgen_skills_base.exists():
+                for skill_dir in massgen_skills_base.iterdir():
+                    if skill_dir.is_dir() and not skill_dir.name.startswith("."):
+                        skill_dest = temp_skills_dir / skill_dir.name
+                        logger.info(f"[Local] Adding MassGen skill: {skill_dir.name}")
+                        shutil.copytree(skill_dir, skill_dest, dirs_exist_ok=True)
+                        added_skills.add(skill_dir.name)
+
+        # Store the merged skills directory path
+        self.local_skills_directory = temp_skills_dir
+
+        # Add skills directory to allowed paths (read-only)
+        from ._base import Permission
+
+        self.path_permission_manager.add_path(temp_skills_dir, Permission.READ, "local_skills")
+        logger.info(f"[Local] Added skills directory to allowed paths: {temp_skills_dir}")
+
+        # Scan and enumerate all skills in the merged directory
+        from .skills_manager import scan_skills
+
+        all_skills = scan_skills(temp_skills_dir)
+        logger.info(f"[Local] Merged skills directory ready at: {temp_skills_dir}")
+        logger.info(f"[Local] Total skills loaded: {len(all_skills)}")
+        for skill in all_skills:
+            title = skill.get("title", skill.get("name", "Unknown"))
+            logger.info(f"[Local]   - {skill['name']}: {title}")
 
     def setup_massgen_skill_directories(self, massgen_skills: list) -> None:
         """
@@ -270,9 +361,10 @@ class FilesystemManager:
 
     def update_backend_mcp_config(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Update MCP server configuration with agent_id after it's available.
+        Update MCP server configuration with agent_id and skills directory after they're available.
 
-        This should be called by the backend after setup_orchestration_paths() sets agent_id.
+        This should be called by the backend after setup_orchestration_paths() sets agent_id
+        and local_skills_directory.
 
         Args:
             backend_config: Backend configuration dict containing mcp_servers
@@ -280,29 +372,63 @@ class FilesystemManager:
         Returns:
             Updated backend configuration
         """
-        if not self.enable_mcp_command_line or self.command_line_execution_mode != "docker":
+        if not self.enable_mcp_command_line:
             return backend_config
 
         if not self.agent_id:
-            logger.warning("[FilesystemManager] agent_id not set, cannot update MCP config for Docker mode")
+            logger.warning("[FilesystemManager] agent_id not set, cannot update MCP config")
             return backend_config
 
-        # Update command_line MCP server config to include --agent-id and --instance-id
+        # Update command_line MCP server config
         mcp_servers = backend_config.get("mcp_servers", [])
-        for server in mcp_servers:
-            if isinstance(server, dict) and server.get("name") == "command_line":
+
+        # Handle both list format and Claude Code dict format
+        if isinstance(mcp_servers, dict):
+            # Claude Code dict format: {"command_line": {...}, "filesystem": {...}}
+            if "command_line" in mcp_servers:
+                server = mcp_servers["command_line"]
                 args = server.get("args", [])
-                # Check if --agent-id is already in args
-                if "--agent-id" not in args:
-                    args.extend(["--agent-id", self.agent_id])
+
+                # For Docker mode: add agent-id and instance-id
+                if self.command_line_execution_mode == "docker":
+                    if "--agent-id" not in args:
+                        args.extend(["--agent-id", self.agent_id])
+                        logger.info(f"[FilesystemManager] Updated command_line MCP server config with agent_id: {self.agent_id}")
+                    if self.instance_id and "--instance-id" not in args:
+                        args.extend(["--instance-id", self.instance_id])
+                        logger.info(f"[FilesystemManager] Updated command_line MCP server config with instance_id: {self.instance_id}")
+
+                # For local mode: add local-skills-directory if set
+                if self.command_line_execution_mode == "local" and self.local_skills_directory:
+                    if "--local-skills-directory" not in args:
+                        args.extend(["--local-skills-directory", str(self.local_skills_directory)])
+                        logger.info(f"[FilesystemManager] Updated command_line MCP server config with local_skills_directory: {self.local_skills_directory}")
+
+                server["args"] = args
+
+        elif isinstance(mcp_servers, list):
+            # List format: [{"name": "command_line", ...}, ...]
+            for server in mcp_servers:
+                if isinstance(server, dict) and server.get("name") == "command_line":
+                    args = server.get("args", [])
+
+                    # For Docker mode: add agent-id and instance-id
+                    if self.command_line_execution_mode == "docker":
+                        if "--agent-id" not in args:
+                            args.extend(["--agent-id", self.agent_id])
+                            logger.info(f"[FilesystemManager] Updated command_line MCP server config with agent_id: {self.agent_id}")
+                        if self.instance_id and "--instance-id" not in args:
+                            args.extend(["--instance-id", self.instance_id])
+                            logger.info(f"[FilesystemManager] Updated command_line MCP server config with instance_id: {self.instance_id}")
+
+                    # For local mode: add local-skills-directory if set
+                    if self.command_line_execution_mode == "local" and self.local_skills_directory:
+                        if "--local-skills-directory" not in args:
+                            args.extend(["--local-skills-directory", str(self.local_skills_directory)])
+                            logger.info(f"[FilesystemManager] Updated command_line MCP server config with local_skills_directory: {self.local_skills_directory}")
+
                     server["args"] = args
-                    logger.info(f"[FilesystemManager] Updated command_line MCP server config with agent_id: {self.agent_id}")
-                # Add instance-id if set (for Docker parallel execution)
-                if self.instance_id and "--instance-id" not in args:
-                    args.extend(["--instance-id", self.instance_id])
-                    server["args"] = args
-                    logger.info(f"[FilesystemManager] Updated command_line MCP server config with instance_id: {self.instance_id}")
-                break
+                    break
 
         return backend_config
 
@@ -461,6 +587,9 @@ class FilesystemManager:
 
         if self.command_line_blocked_commands:
             config["args"].extend(["--blocked-commands"] + self.command_line_blocked_commands)
+
+        # Note: --local-skills-directory is added later in update_backend_mcp_config()
+        # after setup_orchestration_paths() sets self.local_skills_directory
 
         return config
 
@@ -879,6 +1008,14 @@ class FilesystemManager:
         # Cleanup Docker container if Docker mode enabled
         if self.docker_manager and self.agent_id:
             self.docker_manager.cleanup(self.agent_id)
+
+        # Cleanup local skills directory if it exists
+        if self.local_skills_directory and self.local_skills_directory.exists():
+            try:
+                logger.info(f"[FilesystemManager] Cleaning up local skills directory: {self.local_skills_directory}")
+                shutil.rmtree(self.local_skills_directory)
+            except Exception as e:
+                logger.warning(f"[FilesystemManager] Failed to cleanup local skills directory: {e}")
 
         # Cleanup temporary workspace
         p = self.agent_temporary_workspace

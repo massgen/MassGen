@@ -288,6 +288,42 @@ Coordination Config
          PLANNING MODE: Describe intended actions.
          Do not execute during coordination phase.
 
+Skills System Config
+~~~~~~~~~~~~~~~~~~~~
+
+Enable the skills system for domain-specific guidance and workflows:
+
+.. code-block:: yaml
+
+   orchestrator:
+     coordination:
+       # Enable skills system
+       use_skills: true
+
+       # Optional: Skills discovery directory (default: .agent/skills)
+       skills_directory: ".agent/skills"
+
+       # Optional: Enable specific built-in MassGen skills
+       massgen_skills:
+         - "file_search"    # Always useful (ripgrep/ast-grep)
+         - "serena"         # Symbol-level code understanding (LSP)
+         - "semtools"       # Semantic search (embeddings)
+
+**Available Built-in Skills:**
+
+- ``file_search``: Fast text and structural code search (ripgrep/ast-grep)
+- ``serena``: Symbol-level code understanding using LSP (optional, requires installation)
+- ``semtools``: Semantic search using embeddings (optional, requires installation)
+
+**Notes:**
+
+- Skills require command line execution (``enable_mcp_command_line: true``)
+- Default skills (memory, file_search) are always available when ``use_skills: true``
+- Optional skills (serena, semtools) must be explicitly listed in ``massgen_skills``
+- External skills from ``openskills`` are discovered from ``skills_directory``
+
+See :ref:`user_guide_skills` for complete documentation.
+
 UI Configuration
 ----------------
 
