@@ -88,7 +88,6 @@ class APIParamsHandlerBase(ABC):
             "instance_id",
             # Rate limiting (handled by rate_limiter.py)
             "enable_rate_limit",
-
         }
 
     def build_base_api_params(

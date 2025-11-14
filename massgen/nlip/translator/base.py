@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Base Protocol Translator Interface.
 
@@ -6,7 +7,8 @@ for converting between NLIP messages and native tool formats.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Any, Dict
+
 from ..schema import NLIPToolCall, NLIPToolResult
 
 
@@ -19,7 +21,7 @@ class ProtocolTranslator(ABC):
     @abstractmethod
     async def nlip_to_native_call(
         self,
-        nlip_call: NLIPToolCall
+        nlip_call: NLIPToolCall,
     ) -> Dict[str, Any]:
         """
         Translate NLIP tool call to native tool format.
@@ -30,14 +32,13 @@ class ProtocolTranslator(ABC):
         Returns:
             Native tool call format
         """
-        pass
 
     @abstractmethod
     async def native_to_nlip_result(
         self,
         tool_id: str,
         tool_name: str,
-        native_result: Any
+        native_result: Any,
     ) -> NLIPToolResult:
         """
         Translate native tool result to NLIP format.
@@ -50,12 +51,11 @@ class ProtocolTranslator(ABC):
         Returns:
             NLIP tool result
         """
-        pass
 
     @abstractmethod
     async def nlip_to_native_params(
         self,
-        nlip_params: Dict[str, Any]
+        nlip_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
         Translate NLIP parameters to native format.
@@ -66,4 +66,3 @@ class ProtocolTranslator(ABC):
         Returns:
             Parameters in native format
         """
-        pass

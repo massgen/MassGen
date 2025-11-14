@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 NLIP (Natural Language Interaction Protocol) Integration for MassGen.
 
@@ -12,27 +13,25 @@ Main Components:
 - Token Tracker: Session token and conversation turn tracking
 """
 
+from .router import NLIPRouter
 from .schema import (
+    NLIPControlField,
+    NLIPFormatField,
     NLIPMessage,
+    NLIPMessageType,
     NLIPRequest,
     NLIPResponse,
-    NLIPMessageType,
-    NLIPControlField,
     NLIPTokenField,
-    NLIPFormatField,
     NLIPToolCall,
     NLIPToolResult,
 )
-
-from .router import NLIPRouter
 from .state_manager import NLIPStateManager
 from .token_tracker import NLIPTokenTracker
-
 from .translator import (
-    ProtocolTranslator,
-    MCPTranslator,
-    CustomToolTranslator,
     BuiltinToolTranslator,
+    CustomToolTranslator,
+    MCPTranslator,
+    ProtocolTranslator,
 )
 
 __all__ = [

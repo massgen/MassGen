@@ -1,12 +1,14 @@
+# -*- coding: utf-8 -*-
 """
 MCP Protocol Translator.
 
 Converts between NLIP messages and MCP (Model Context Protocol) format.
 """
 
-from typing import Dict, Any
-from .base import ProtocolTranslator
+from typing import Any, Dict
+
 from ..schema import NLIPToolCall, NLIPToolResult
+from .base import ProtocolTranslator
 
 
 class MCPTranslator(ProtocolTranslator):
@@ -17,7 +19,7 @@ class MCPTranslator(ProtocolTranslator):
 
     async def nlip_to_native_call(
         self,
-        nlip_call: NLIPToolCall
+        nlip_call: NLIPToolCall,
     ) -> Dict[str, Any]:
         """
         Convert NLIP tool call to MCP format.
@@ -35,14 +37,14 @@ class MCPTranslator(ProtocolTranslator):
             "id": nlip_call.tool_id,
             "name": nlip_call.tool_name,
             "input": nlip_call.parameters,
-            "parameters": nlip_call.parameters  # For compatibility
+            "parameters": nlip_call.parameters,  # For compatibility
         }
 
     async def native_to_nlip_result(
         self,
         tool_id: str,
         tool_name: str,
-        native_result: Any
+        native_result: Any,
     ) -> NLIPToolResult:
         """
         Convert MCP tool result to NLIP format.
@@ -72,13 +74,13 @@ class MCPTranslator(ProtocolTranslator):
             error=error,
             metadata={
                 "protocol": "mcp",
-                "original_format": "mcp_tool_result"
-            }
+                "original_format": "mcp_tool_result",
+            },
         )
 
     async def nlip_to_native_params(
         self,
-        nlip_params: Dict[str, Any]
+        nlip_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """MCP uses same parameter structure as NLIP."""
         return nlip_params

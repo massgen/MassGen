@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 NLIP State Manager.
 
@@ -5,9 +6,10 @@ Manages state for NLIP conversations and sessions, including context tokens,
 session tracking, and state persistence.
 """
 
-from typing import Dict, Any, Optional, List
 import asyncio
 from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
+
 from .schema import NLIPMessage
 
 
@@ -45,7 +47,7 @@ class NLIPStateManager:
     async def create_session(
         self,
         session_id: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Create new conversation session."""
         self._sessions[session_id] = {
@@ -53,13 +55,13 @@ class NLIPStateManager:
             "last_activity": datetime.utcnow(),
             "messages": [],
             "metadata": metadata or {},
-            "state": {}
+            "state": {},
         }
 
     async def update_session(
         self,
         session_id: str,
-        message: NLIPMessage
+        message: NLIPMessage,
     ) -> None:
         """Update session with new message."""
         if session_id not in self._sessions:
@@ -71,7 +73,7 @@ class NLIPStateManager:
 
     async def get_session_context(
         self,
-        session_id: str
+        session_id: str,
     ) -> Optional[Dict[str, Any]]:
         """Get context for a session."""
         return self._sessions.get(session_id)
@@ -79,17 +81,17 @@ class NLIPStateManager:
     async def store_context_token(
         self,
         token: str,
-        context: Dict[str, Any]
+        context: Dict[str, Any],
     ) -> None:
         """Store context associated with a token."""
         self._context_tokens[token] = {
             "context": context,
-            "created_at": datetime.utcnow()
+            "created_at": datetime.utcnow(),
         }
 
     async def retrieve_context_token(
         self,
-        token: str
+        token: str,
     ) -> Optional[Dict[str, Any]]:
         """Retrieve context for a token."""
         token_data = self._context_tokens.get(token)
@@ -97,7 +99,7 @@ class NLIPStateManager:
 
     async def cleanup_expired_sessions(
         self,
-        max_age_hours: int = 24
+        max_age_hours: int = 24,
     ) -> int:
         """Clean up sessions older than max_age_hours."""
         cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 NLIP Protocol Translators.
 
@@ -6,9 +7,9 @@ and native tool protocols.
 """
 
 from .base import ProtocolTranslator
-from .mcp_translator import MCPTranslator
-from .custom_translator import CustomToolTranslator
 from .builtin_translator import BuiltinToolTranslator
+from .custom_translator import CustomToolTranslator
+from .mcp_translator import MCPTranslator
 
 __all__ = [
     "ProtocolTranslator",

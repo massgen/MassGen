@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 NLIP Token Tracker.
 
@@ -5,8 +6,9 @@ Tracks and manages NLIP token fields for state management, including
 session IDs, context tokens, and conversation turns.
 """
 
-from typing import Dict, Any, Optional
 import uuid
+from typing import Any, Dict, Optional
+
 from .schema import NLIPTokenField
 
 
@@ -23,7 +25,7 @@ class NLIPTokenTracker:
     def create_session_token(
         self,
         agent_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> NLIPTokenField:
         """
         Create new session token for conversation.
@@ -42,7 +44,7 @@ class NLIPTokenTracker:
             session_id=session_id,
             context_token=context_token,
             state_token=None,
-            conversation_turn=0
+            conversation_turn=0,
         )
 
         # Store session info
@@ -50,7 +52,7 @@ class NLIPTokenTracker:
             "context_token": context_token,
             "agent_id": agent_id,
             "metadata": metadata or {},
-            "turn_count": 0
+            "turn_count": 0,
         }
 
         # Map context token to session
@@ -72,14 +74,14 @@ class NLIPTokenTracker:
 
     def get_session_info(
         self,
-        session_id: str
+        session_id: str,
     ) -> Optional[Dict[str, Any]]:
         """Get session information."""
         return self._session_tokens.get(session_id)
 
     def get_session_from_context_token(
         self,
-        context_token: str
+        context_token: str,
     ) -> Optional[str]:
         """Get session ID from context token."""
         return self._context_tokens.get(context_token)
