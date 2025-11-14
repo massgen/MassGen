@@ -73,52 +73,52 @@ def take_screenshot_docker(container, display: str = ":99") -> bytes:
         Screenshot as bytes
     """
     import time
-    
+
     # Remove old screenshot if exists
     container.exec_run("rm -f /tmp/screenshot.png")
-    
+
     # Take screenshot with scrot (use environment parameter)
     result = container.exec_run(
         "scrot /tmp/screenshot.png",
-        environment={"DISPLAY": display}
+        environment={"DISPLAY": display},
     )
-    
+
     if result.exit_code != 0:
         logger.error(f"Screenshot command failed: {result.output}")
         # Try alternative method with import
         result = container.exec_run(
             "import -window root /tmp/screenshot.png",
-            environment={"DISPLAY": display}
+            environment={"DISPLAY": display},
         )
         if result.exit_code != 0:
             logger.error(f"Alternative screenshot also failed: {result.output}")
             return b""
-    
+
     # Small delay to ensure file is written
     time.sleep(0.2)
-    
+
     # Verify screenshot exists and has content
     check_result = container.exec_run("ls -lh /tmp/screenshot.png")
     logger.info(f"Screenshot file info: {check_result.output.decode()}")
-    
+
     # Read the screenshot
     read_result = container.exec_run("cat /tmp/screenshot.png", stdout=True)
     if read_result.exit_code != 0:
         logger.error(f"Failed to read screenshot: {read_result.output}")
         return b""
-    
+
     screenshot_bytes = read_result.output
-    
+
     # Verify we got actual image data
     if len(screenshot_bytes) < 1000:  # PNG should be at least a few KB
         logger.error(f"Screenshot too small ({len(screenshot_bytes)} bytes), likely invalid")
         return b""
-    
+
     # Verify PNG header
-    if not screenshot_bytes.startswith(b'\x89PNG'):
+    if not screenshot_bytes.startswith(b"\x89PNG"):
         logger.error("Screenshot does not have valid PNG header")
         return b""
-    
+
     logger.info(f"Successfully captured screenshot: {len(screenshot_bytes)} bytes")
     return screenshot_bytes
 
@@ -138,6 +138,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
         Result dictionary
     """
     import time
+
     result = {}
     try:
         if action_name == "open_web_browser":
@@ -152,7 +153,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             logger.info(f"     Docker click at ({actual_x}, {actual_y})")
             container.exec_run(
                 f"xdotool mousemove {actual_x} {actual_y} click 1",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
 
         elif action_name == "hover_at":
@@ -163,7 +164,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             logger.info(f"     Docker hover at ({actual_x}, {actual_y})")
             container.exec_run(
                 f"xdotool mousemove {actual_x} {actual_y}",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
 
         elif action_name == "type_text_at":
@@ -180,7 +181,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             # Click to focus
             container.exec_run(
                 f"xdotool mousemove {actual_x} {actual_y} click 1",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
 
             if clear_before_typing:
@@ -192,7 +193,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             escaped_text = text.replace("'", "'\\''")
             container.exec_run(
                 f"xdotool type '{escaped_text}'",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
 
             if press_enter:
@@ -205,13 +206,13 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             xdotool_keys = keys.replace("Control", "ctrl").replace("Shift", "shift").replace("Alt", "alt")
             container.exec_run(
                 f"xdotool key {xdotool_keys}",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
 
         elif action_name == "scroll_document":
             direction = args.get("direction", "down")
             logger.info(f"     Docker scroll document: {direction}")
-            
+
             if direction == "down":
                 cmd = "xdotool key Page_Down"
             elif direction == "up":
@@ -222,7 +223,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
                 cmd = "xdotool key Right Right Right"
             else:
                 cmd = "xdotool key Page_Down"
-            
+
             container.exec_run(cmd, environment={"DISPLAY": display})
 
         elif action_name == "scroll_at":
@@ -237,7 +238,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             # Move mouse to position
             container.exec_run(
                 f"xdotool mousemove {actual_x} {actual_y}",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
 
             # Scroll with mouse wheel
@@ -247,7 +248,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
                 cmd = "xdotool click 4 click 4 click 4"  # Scroll up
             else:
                 cmd = "xdotool click 5 click 5 click 5"
-            
+
             container.exec_run(cmd, environment={"DISPLAY": display})
 
         elif action_name == "navigate":
@@ -259,7 +260,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             escaped_url = url.replace("'", "'\\''")
             container.exec_run(
                 f"xdotool type '{escaped_url}'",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
             container.exec_run("xdotool key Return", environment={"DISPLAY": display})
 
@@ -278,7 +279,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             time.sleep(0.5)
             container.exec_run(
                 "xdotool type 'https://www.google.com'",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
             container.exec_run("xdotool key Return", environment={"DISPLAY": display})
 
@@ -300,7 +301,7 @@ def execute_docker_action(container, action_name: str, args: Dict[str, Any], scr
             logger.info(f"     Docker drag from ({actual_x}, {actual_y}) to ({actual_dest_x}, {actual_dest_y})")
             container.exec_run(
                 f"xdotool mousemove {actual_x} {actual_y} mousedown 1 mousemove {actual_dest_x} {actual_dest_y} mouseup 1",
-                environment={"DISPLAY": display}
+                environment={"DISPLAY": display},
             )
 
         else:
@@ -370,11 +371,11 @@ def get_gemini_function_responses_docker(container, results, function_calls, dis
 
         # Check if this function call has a safety decision in its args
         try:
-            if hasattr(function_call, 'args') and function_call.args is not None:
+            if hasattr(function_call, "args") and function_call.args is not None:
                 # Convert args to dict if it's not already
-                args_dict = dict(function_call.args) if hasattr(function_call.args, '__iter__') else function_call.args
-                if isinstance(args_dict, dict) and 'safety_decision' in args_dict:
-                    safety_decision = args_dict['safety_decision']
+                args_dict = dict(function_call.args) if hasattr(function_call.args, "__iter__") else function_call.args
+                if isinstance(args_dict, dict) and "safety_decision" in args_dict:
+                    safety_decision = args_dict["safety_decision"]
                     logger.info(f"     Function {name} has safety decision: {safety_decision}")
                     # Add safety acknowledgement to response
                     response_data["safety_acknowledgement"] = "true"
@@ -582,11 +583,11 @@ async def get_gemini_function_responses(page, results, function_calls):
 
         # Check if this function call has a safety decision in its args
         try:
-            if hasattr(function_call, 'args') and function_call.args is not None:
+            if hasattr(function_call, "args") and function_call.args is not None:
                 # Convert args to dict if it's not already
-                args_dict = dict(function_call.args) if hasattr(function_call.args, '__iter__') else function_call.args
-                if isinstance(args_dict, dict) and 'safety_decision' in args_dict:
-                    safety_decision = args_dict['safety_decision']
+                args_dict = dict(function_call.args) if hasattr(function_call.args, "__iter__") else function_call.args
+                if isinstance(args_dict, dict) and "safety_decision" in args_dict:
+                    safety_decision = args_dict["safety_decision"]
                     logger.info(f"     Function {name} has safety decision: {safety_decision}")
                     # Add safety acknowledgement to response
                     response_data["safety_acknowledgement"] = "true"
@@ -734,7 +735,7 @@ async def gemini_computer_use(
 
             # Take initial screenshot from Docker
             initial_screenshot = take_screenshot_docker(container, display)
-            
+
             # Verify screenshot was captured
             if not initial_screenshot or len(initial_screenshot) < 1000:
                 result = {
@@ -753,7 +754,7 @@ async def gemini_computer_use(
 
             # Prepare launch options
             launch_options = {"headless": headless}
-            
+
             # If not headless and DISPLAY is set, log it
             if not headless:
                 display_env = os.environ.get("DISPLAY")
@@ -842,12 +843,12 @@ async def gemini_computer_use(
                     raise Exception("No candidates returned from Gemini API")
 
                 candidate = response.candidates[0]
-                
+
                 # Check if candidate has content
                 if not candidate.content or not candidate.content.parts:
                     logger.error("No content or parts in candidate")
                     raise Exception("Empty content returned from Gemini API")
-                
+
                 contents.append(candidate.content)
 
                 # Check if task is complete

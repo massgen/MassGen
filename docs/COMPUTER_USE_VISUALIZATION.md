@@ -201,17 +201,17 @@ from pathlib import Path
 
 async def claude_computer_use_with_logging(query: str, **kwargs):
     """Wrapper that saves screenshots during execution."""
-    
+
     # Create screenshots directory
     log_dir = Path("computer_use_logs") / datetime.now().strftime("%Y%m%d_%H%M%S")
     log_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Original function with logging
     from massgen.tool._claude_computer_use import claude_computer_use
-    
+
     # You can modify the tool to save screenshots
     result = await claude_computer_use(query, **kwargs)
-    
+
     return result
 ```
 

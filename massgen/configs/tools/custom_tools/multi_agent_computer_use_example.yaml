@@ -63,7 +63,7 @@ agents:
       #     type: "stdio"
       #     command: "npx"
       #     args: ["-y", "mcp-discord", "--config", "${DISCORD_BOT_TOKEN}"]
-      
+
       custom_tools:
         - name: ["claude_computer_use"]
           category: "automation"
@@ -126,7 +126,7 @@ agents:
       #     type: "stdio"
       #     command: "npx"
       #     args: ["-y", "mcp-discord", "--config", "${DISCORD_BOT_TOKEN}"]
-      
+
       custom_tools:
         - name: ["gemini_computer_use"]
           category: "automation"

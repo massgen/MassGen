@@ -8,7 +8,7 @@
 #
 # Usage (with visible browser):
 #   DISPLAY=:20 massgen --config gemini_computer_use_example.yaml
-#   
+#
 # Usage (headless mode):
 #   Set headless: true in environment_config below
 #
