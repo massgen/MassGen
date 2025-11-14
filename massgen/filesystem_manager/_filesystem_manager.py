@@ -56,8 +56,11 @@ class FilesystemManager:
         command_line_docker_cpu_limit: Optional[float] = None,
         command_line_docker_network_mode: str = "none",
         command_line_docker_enable_sudo: bool = False,
+        command_line_docker_credentials: Optional[Dict[str, Any]] = None,
+        command_line_docker_packages: Optional[Dict[str, Any]] = None,
         enable_audio_generation: bool = False,
         enable_file_generation: bool = False,
+        instance_id: Optional[str] = None,
     ):
         """
         Initialize FilesystemManager.
@@ -78,8 +81,12 @@ class FilesystemManager:
             command_line_docker_cpu_limit: CPU limit for Docker containers (e.g., 2.0 for 2 CPUs)
             command_line_docker_network_mode: Network mode for Docker containers (none/bridge/host)
             command_line_docker_enable_sudo: Enable sudo access in Docker containers (isolated from host system)
+            command_line_docker_credentials: Credential management configuration dict
+            command_line_docker_packages: Package management configuration dict
+            instance_id: Optional unique instance ID for parallel execution (used in Docker container naming)
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
+        self.instance_id = instance_id  # Unique instance ID for parallel execution
         self.enable_image_generation = enable_image_generation
         self.enable_mcp_command_line = enable_mcp_command_line
         self.command_line_allowed_commands = command_line_allowed_commands
@@ -90,6 +97,8 @@ class FilesystemManager:
         self.command_line_docker_cpu_limit = command_line_docker_cpu_limit
         self.command_line_docker_network_mode = command_line_docker_network_mode
         self.command_line_docker_enable_sudo = command_line_docker_enable_sudo
+        self.command_line_docker_credentials = command_line_docker_credentials
+        self.command_line_docker_packages = command_line_docker_packages
 
         # Initialize Docker manager if Docker mode enabled
         self.docker_manager = None
@@ -102,6 +111,9 @@ class FilesystemManager:
                 memory_limit=command_line_docker_memory_limit,
                 cpu_limit=command_line_docker_cpu_limit,
                 enable_sudo=command_line_docker_enable_sudo,
+                credentials=command_line_docker_credentials,
+                packages=command_line_docker_packages,
+                instance_id=instance_id,
             )
         self.enable_audio_generation = enable_audio_generation
 
@@ -151,6 +163,8 @@ class FilesystemManager:
         agent_id: str,
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
+        skills_directory: Optional[str] = None,
+        massgen_skills: Optional[List[str]] = None,
     ) -> None:
         """
         Setup orchestration-specific paths for snapshots and temporary workspace.
@@ -160,8 +174,12 @@ class FilesystemManager:
             agent_id: The agent identifier for this orchestration
             snapshot_storage: Base path for storing workspace snapshots
             agent_temporary_workspace: Base path for temporary workspace during context sharing
+            skills_directory: Path to skills directory to mount in Docker (e.g., .agent/skills)
         """
-        logger.info(f"[FilesystemManager.setup_orchestration_paths] Called for agent_id={agent_id}, snapshot_storage={snapshot_storage}, agent_temporary_workspace={agent_temporary_workspace}")
+        logger.info(
+            f"[FilesystemManager.setup_orchestration_paths] Called for agent_id={agent_id}, snapshot_storage={snapshot_storage}, "
+            f"agent_temporary_workspace={agent_temporary_workspace}, skills_directory={skills_directory}",
+        )
         self.agent_id = agent_id
 
         # Setup snapshot storage if provided
@@ -185,8 +203,70 @@ class FilesystemManager:
                 workspace_path=self.cwd,
                 temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
                 context_paths=context_paths,
+                skills_directory=skills_directory,
+                massgen_skills=massgen_skills,
             )
             logger.info(f"[FilesystemManager] Docker container created for agent {self.agent_id}")
+
+    def setup_massgen_skill_directories(self, massgen_skills: list) -> None:
+        """
+        Setup workspace directories based on enabled MassGen skills.
+
+        Creates directories only for skills that need them:
+        - "file_search": No directory needed
+
+        Note: The old "memory" skill has been removed. Use enable_memory_filesystem_mode
+        config option instead for filesystem-based memory.
+
+        When any skill directory is created, also creates workspace/ for main working files.
+
+        Args:
+            massgen_skills: List of MassGen skills to enable (e.g., ["file_search"])
+        """
+        if not massgen_skills:
+            logger.debug("[FilesystemManager] No MassGen skills configured, skipping directory setup")
+            return
+
+        # Define which skills need directories
+        SKILL_DIRECTORIES = {
+            # "file_search": no directory needed
+            # Note: "memory" skill removed - use enable_memory_filesystem_mode instead
+        }
+
+        # Determine which directories to create
+        dirs_to_create = []
+        for skill in massgen_skills:
+            if skill in SKILL_DIRECTORIES:
+                dirs_to_create.append(SKILL_DIRECTORIES[skill])
+
+        if not dirs_to_create:
+            logger.debug(f"[FilesystemManager] MassGen skills {massgen_skills} don't need directories")
+            return
+
+        logger.info(f"[FilesystemManager] Setting up directories for MassGen skills: {massgen_skills}")
+
+        # Create skill directories in current workspace
+        for dir_name in dirs_to_create:
+            skill_dir = self.cwd / dir_name
+            skill_dir.mkdir(exist_ok=True)
+            logger.info(f"[FilesystemManager] Created {dir_name}/ directory")
+
+        # Also create workspace/ directory for main working files
+        workspace_dir = self.cwd / "workspace"
+        workspace_dir.mkdir(exist_ok=True)
+        logger.info("[FilesystemManager] Created workspace/ directory")
+
+        # Also create in agent's temporary workspace if it exists
+        # This ensures other agents can see the organized structure
+        if self.agent_temporary_workspace:
+            for dir_name in dirs_to_create:
+                temp_dir = self.agent_temporary_workspace / dir_name
+                temp_dir.mkdir(exist_ok=True)
+
+            temp_workspace = self.agent_temporary_workspace / "workspace"
+            temp_workspace.mkdir(exist_ok=True)
+
+            logger.info(f"[FilesystemManager] Created organized structure in temp workspace: {self.agent_temporary_workspace}")
 
     def update_backend_mcp_config(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -207,7 +287,7 @@ class FilesystemManager:
             logger.warning("[FilesystemManager] agent_id not set, cannot update MCP config for Docker mode")
             return backend_config
 
-        # Update command_line MCP server config to include --agent-id
+        # Update command_line MCP server config to include --agent-id and --instance-id
         mcp_servers = backend_config.get("mcp_servers", [])
         for server in mcp_servers:
             if isinstance(server, dict) and server.get("name") == "command_line":
@@ -217,6 +297,11 @@ class FilesystemManager:
                     args.extend(["--agent-id", self.agent_id])
                     server["args"] = args
                     logger.info(f"[FilesystemManager] Updated command_line MCP server config with agent_id: {self.agent_id}")
+                # Add instance-id if set (for Docker parallel execution)
+                if self.instance_id and "--instance-id" not in args:
+                    args.extend(["--instance-id", self.instance_id])
+                    server["args"] = args
+                    logger.info(f"[FilesystemManager] Updated command_line MCP server config with instance_id: {self.instance_id}")
                 break
 
         return backend_config
@@ -361,6 +446,10 @@ class FilesystemManager:
         # Add agent ID for Docker mode
         if self.command_line_execution_mode == "docker" and self.agent_id:
             config["args"].extend(["--agent-id", self.agent_id])
+
+        # Add instance ID for Docker parallel execution
+        if self.command_line_execution_mode == "docker" and self.instance_id:
+            config["args"].extend(["--instance-id", self.instance_id])
 
         # Add sudo flag for Docker mode
         if self.command_line_execution_mode == "docker" and self.command_line_docker_enable_sudo:

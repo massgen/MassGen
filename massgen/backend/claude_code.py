@@ -1067,6 +1067,7 @@ class ClaudeCodeBackend(LLMBackend):
             "allowed_tools",
             "permission_mode",
             "custom_tools",  # Handled separately via SDK MCP server conversion
+            "instance_id",  # Used for Docker container naming, not for ClaudeAgentOptions
             # Note: system_prompt is NOT excluded - it's needed for internal workflow prompt injection
             # Validation prevents it from being set in YAML backend config
         }
@@ -1214,10 +1215,16 @@ class ClaudeCodeBackend(LLMBackend):
                         disallowed_tools.append(tool)
                 all_params["disallowed_tools"] = disallowed_tools
 
-            # Windows-specific handling: detect complex prompts that cause subprocess hang
-            if sys.platform == "win32" and len(workflow_system_prompt) > 200:
-                # Windows with complex prompt: use post-connection delivery to avoid hang
-                print("[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery")
+            # Windows-specific handling: detect long prompts that exceed CreateProcess limit
+            # Windows CreateProcess has ~8,191 char limit for entire command line
+            # Use conservative threshold of 4000 chars to account for other CLI arguments
+            WINDOWS_PROMPT_THRESHOLD = 4000
+            if sys.platform == "win32" and len(workflow_system_prompt) > WINDOWS_PROMPT_THRESHOLD:
+                # Windows with long prompt: delay system prompt delivery
+                # The prompt will be injected into the first user message (via stdin pipe) instead
+                logger.info(
+                    f"[ClaudeCodeBackend] Windows detected long system prompt " f"({len(workflow_system_prompt)} chars > {WINDOWS_PROMPT_THRESHOLD}), " "deferring delivery to first user message",
+                )
                 clean_params = {k: v for k, v in all_params.items() if k not in ["system_prompt"]}
                 client = self.create_client(**clean_params)
                 self._pending_system_prompt = workflow_system_prompt
@@ -1249,35 +1256,6 @@ class ClaudeCodeBackend(LLMBackend):
         if not client._transport:
             try:
                 await client.connect()
-
-                # If we have a pending system prompt, deliver it at system level using /system command
-                if hasattr(self, "_pending_system_prompt") and self._pending_system_prompt:
-                    try:
-                        # Use Claude Code's native /system command for proper system-level delivery
-                        system_command = f"/system {self._pending_system_prompt}"
-                        await client.query(system_command)
-
-                        # Consume the system response
-                        async for response in client.receive_response():
-                            if hasattr(response, "subtype") and response.subtype == "init":
-                                # This is the system initialization response
-                                break
-
-                        yield StreamChunk(
-                            type="content",
-                            content="[SYSTEM] Applied system instructions at system level\n",
-                            source="claude_code",
-                        )
-
-                        # Clear the pending prompt
-                        self._pending_system_prompt = None
-
-                    except Exception as sys_e:
-                        yield StreamChunk(
-                            type="content",
-                            content=f"[SYSTEM] Warning: System-level delivery failed: {str(sys_e)}\n",
-                            source="claude_code",
-                        )
 
             except Exception as e:
                 yield StreamChunk(
@@ -1350,6 +1328,22 @@ class ClaudeCodeBackend(LLMBackend):
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
+
+            # Windows workaround: Inject pending system prompt into first user message
+            # This avoids Windows CreateProcess command-line length limits
+            if hasattr(self, "_pending_system_prompt") and self._pending_system_prompt:
+                logger.info("[ClaudeCodeBackend] Injecting pending system prompt into first user message")
+                combined_query = f"""<system_instructions>
+
+                {self._pending_system_prompt}
+
+                </system_instructions>
+                ---
+                {combined_query}"""
+
+                # Clear the pending prompt after injection
+                self._pending_system_prompt = None
+
             log_backend_agent_message(
                 agent_id or "default",
                 "SEND",

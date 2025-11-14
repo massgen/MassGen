@@ -5,9 +5,16 @@ This tool demonstrates interoperability by wrapping HuggingFace's SmolAgent fram
 """
 
 import os
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, Dict, Generator, List
 
-from smolagents import CodeAgent, LiteLLMModel, tool
+from smolagents import (
+    ActionStep,
+    CodeAgent,
+    FinalAnswerStep,
+    LiteLLMModel,
+    PlanningStep,
+    tool,
+)
 
 from massgen.tool import context_params
 from massgen.tool._result import ExecutionResult, TextContent
@@ -16,7 +23,7 @@ from massgen.tool._result import ExecutionResult, TextContent
 def run_smolagent_lesson_planner_agent(
     messages: List[Dict[str, Any]],
     api_key: str,
-) -> str:
+) -> Generator[Dict[str, Any], None, None]:
     """
     Core SmolAgent lesson planner agent - pure SmolAgent implementation.
 
@@ -27,8 +34,8 @@ def run_smolagent_lesson_planner_agent(
         messages: Complete message history from orchestrator
         api_key: OpenAI API key for the agents
 
-    Returns:
-        The formatted lesson plan as a string
+    Yields:
+        Dict with 'type' ('log' or 'output') and 'content' (the message)
 
     Raises:
         Exception: Any errors during agent execution
@@ -111,6 +118,7 @@ def run_smolagent_lesson_planner_agent(
         tools=[get_curriculum_standards, create_lesson_plan, review_lesson_plan, format_lesson_plan],
         model=model,
         max_steps=10,
+        verbosity_level=0,  # only log errors
     )
 
     # Build the task from messages
@@ -126,10 +134,17 @@ def run_smolagent_lesson_planner_agent(
     task += "- Practice Activity (15-20 minutes)\n"
     task += "- Assessment/Closure (5-10 minutes)"
 
-    # Run the agent
-    result = agent.run(task)
-
-    return result
+    for step in agent.run(task, stream=True):
+        if isinstance(step, FinalAnswerStep):
+            yield {
+                "type": "output",
+                "content": step.output,
+            }
+        elif isinstance(step, ActionStep | PlanningStep):
+            yield {
+                "type": "log",
+                "content": step.model_output,
+            }
 
 
 @context_params("prompt")
@@ -160,17 +175,26 @@ async def smolagent_lesson_planner(
         return
 
     try:
-        # Call the core agent function with processed messages
-        lesson_plan = run_smolagent_lesson_planner_agent(
+        # Call the core agent function with processed messages and stream results
+        for result in run_smolagent_lesson_planner_agent(
             messages=prompt,
             api_key=api_key,
-        )
-
-        yield ExecutionResult(
-            output_blocks=[
-                TextContent(data=f"SmolAgent Lesson Planner Result:\n\n{lesson_plan}"),
-            ],
-        )
+        ):
+            if result["type"] == "log":
+                # Yield intermediate updates as logs
+                yield ExecutionResult(
+                    output_blocks=[
+                        TextContent(data=result["content"]),
+                    ],
+                    is_log=True,
+                )
+            else:  # type == "output"
+                # Yield final plan as actual output
+                yield ExecutionResult(
+                    output_blocks=[
+                        TextContent(data=f"SmolAgent Lesson Planner Result:\n\n{result['content']}"),
+                    ],
+                )
 
     except Exception as e:
         yield ExecutionResult(

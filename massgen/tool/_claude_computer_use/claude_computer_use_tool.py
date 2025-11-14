@@ -12,6 +12,7 @@ This tool implements browser/desktop control using Claude's Computer Use beta AP
 import asyncio
 import base64
 import os
+import time
 
 from dotenv import load_dotenv
 
@@ -34,6 +35,14 @@ try:
 except ImportError:
     ANTHROPIC_AVAILABLE = False
     Anthropic = None
+
+try:
+    import docker
+
+    DOCKER_AVAILABLE = True
+except ImportError:
+    DOCKER_AVAILABLE = False
+    docker = None
 
 
 # Screen dimensions recommended for Claude Computer Use
@@ -59,6 +68,228 @@ async def take_screenshot(page) -> str:
     """
     screenshot_bytes = await page.screenshot()
     return base64.b64encode(screenshot_bytes).decode("utf-8")
+
+
+def take_screenshot_docker(container, display: str = ":99") -> str:
+    """Take a screenshot from Docker container and return as base64 encoded string.
+
+    Args:
+        container: Docker container instance
+        display: X11 display number
+
+    Returns:
+        Base64 encoded screenshot
+    """
+    import io
+    import tarfile
+
+    # Use scrot to capture screenshot
+    result = container.exec_run("scrot -o /tmp/screenshot.png", environment={"DISPLAY": display})
+
+    if result.exit_code != 0:
+        logger.error(f"Failed to capture screenshot: {result.output.decode()}")
+        raise Exception(f"Screenshot capture failed: {result.output.decode()}")
+
+    # Read the screenshot file from container
+    bits, stat = container.get_archive("/tmp/screenshot.png")
+    file_obj = io.BytesIO()
+    for chunk in bits:
+        file_obj.write(chunk)
+    file_obj.seek(0)
+
+    # Extract from tar archive
+    tar = tarfile.open(fileobj=file_obj)
+    screenshot_file = tar.extractfile("screenshot.png")
+    screenshot_bytes = screenshot_file.read()
+
+    return base64.b64encode(screenshot_bytes).decode("utf-8")
+
+
+def execute_docker_tool_use(tool_use, container, screen_width: int, screen_height: int, display: str = ":99"):
+    """Execute Claude Computer Use tool actions using Docker/xdotool.
+
+    Args:
+        tool_use: Claude tool use block
+        container: Docker container instance
+        screen_width: Screen width in pixels
+        screen_height: Screen height in pixels
+        display: X11 display number
+
+    Returns:
+        Tuple of (is_screenshot, tool_result_content)
+    """
+    tool_name = tool_use.name
+    tool_input = tool_use.input
+
+    logger.info(f"  -> Executing Claude tool: {tool_name}")
+
+    try:
+        env = {"DISPLAY": display}
+
+        if tool_name == "computer":
+            action = tool_input.get("action")
+
+            if action == "screenshot":
+                screenshot_b64 = take_screenshot_docker(container, display)
+                logger.info("     Screenshot captured")
+                return True, screenshot_b64
+
+            elif action == "mouse_move":
+                coordinate = tool_input.get("coordinate", [0, 0])
+                x, y = coordinate[0], coordinate[1]
+                logger.info(f"     Moving mouse to ({x}, {y})")
+                container.exec_run(f"xdotool mousemove {x} {y}", environment=env)
+                return False, f"Moved mouse to ({x}, {y})"
+
+            elif action == "left_click":
+                coordinate = tool_input.get("coordinate", [0, 0])
+                x, y = coordinate[0], coordinate[1]
+                logger.info(f"     Left click at ({x}, {y})")
+                container.exec_run(f"xdotool mousemove {x} {y}", environment=env)
+                time.sleep(0.1)
+                container.exec_run("xdotool click 1", environment=env)
+                return False, f"Clicked at ({x}, {y})"
+
+            elif action == "right_click":
+                coordinate = tool_input.get("coordinate", [0, 0])
+                x, y = coordinate[0], coordinate[1]
+                logger.info(f"     Right click at ({x}, {y})")
+                container.exec_run(f"xdotool mousemove {x} {y}", environment=env)
+                time.sleep(0.1)
+                container.exec_run("xdotool click 3", environment=env)
+                return False, f"Right clicked at ({x}, {y})"
+
+            elif action == "middle_click":
+                coordinate = tool_input.get("coordinate", [0, 0])
+                x, y = coordinate[0], coordinate[1]
+                logger.info(f"     Middle click at ({x}, {y})")
+                container.exec_run(f"xdotool mousemove {x} {y}", environment=env)
+                time.sleep(0.1)
+                container.exec_run("xdotool click 2", environment=env)
+                return False, f"Middle clicked at ({x}, {y})"
+
+            elif action == "double_click":
+                coordinate = tool_input.get("coordinate", [0, 0])
+                x, y = coordinate[0], coordinate[1]
+                logger.info(f"     Double click at ({x}, {y})")
+                container.exec_run(f"xdotool mousemove {x} {y}", environment=env)
+                time.sleep(0.1)
+                container.exec_run("xdotool click --repeat 2 1", environment=env)
+                return False, f"Double clicked at ({x}, {y})"
+
+            elif action == "triple_click":
+                coordinate = tool_input.get("coordinate", [0, 0])
+                x, y = coordinate[0], coordinate[1]
+                logger.info(f"     Triple click at ({x}, {y})")
+                container.exec_run(f"xdotool mousemove {x} {y}", environment=env)
+                time.sleep(0.1)
+                container.exec_run("xdotool click --repeat 3 1", environment=env)
+                return False, f"Triple clicked at ({x}, {y})"
+
+            elif action == "left_click_drag":
+                start = tool_input.get("coordinate", [0, 0])
+                end = tool_input.get("end_coordinate", start)
+                logger.info(f"     Dragging from ({start[0]}, {start[1]}) to ({end[0]}, {end[1]})")
+                container.exec_run(f"xdotool mousemove {start[0]} {start[1]}", environment=env)
+                time.sleep(0.1)
+                container.exec_run("xdotool mousedown 1", environment=env)
+                time.sleep(0.1)
+                container.exec_run(f"xdotool mousemove {end[0]} {end[1]}", environment=env)
+                time.sleep(0.1)
+                container.exec_run("xdotool mouseup 1", environment=env)
+                return False, f"Dragged from ({start[0]}, {start[1]}) to ({end[0]}, {end[1]})"
+
+            elif action == "left_mouse_down":
+                coordinate = tool_input.get("coordinate", [0, 0])
+                x, y = coordinate[0], coordinate[1]
+                logger.info(f"     Mouse down at ({x}, {y})")
+                container.exec_run(f"xdotool mousemove {x} {y}", environment=env)
+                time.sleep(0.1)
+                container.exec_run("xdotool mousedown 1", environment=env)
+                return False, f"Mouse down at ({x}, {y})"
+
+            elif action == "left_mouse_up":
+                logger.info("     Mouse up")
+                container.exec_run("xdotool mouseup 1", environment=env)
+                return False, "Mouse up"
+
+            elif action == "type":
+                text = tool_input.get("text", "")
+                logger.info(f"     Typing: {text[:50]}...")
+                # Escape special characters for shell
+                escaped_text = text.replace("'", "'\\''")
+                container.exec_run(f"xdotool type '{escaped_text}'", environment=env)
+                return False, f"Typed text: {text[:50]}..."
+
+            elif action == "key":
+                key = tool_input.get("text", "")
+                logger.info(f"     Pressing key: {key}")
+                # Map key names to xdotool format
+                key_mapping = {
+                    "Return": "Return",
+                    "Enter": "Return",
+                    "Tab": "Tab",
+                    "Backspace": "BackSpace",
+                    "Delete": "Delete",
+                    "Escape": "Escape",
+                    "Space": "space",
+                }
+                key_to_press = key_mapping.get(key, key)
+                container.exec_run(f"xdotool key {key_to_press}", environment=env)
+                return False, f"Pressed key: {key}"
+
+            elif action == "hold_key":
+                key = tool_input.get("text", "")
+                logger.info(f"     Holding key: {key}")
+                container.exec_run(f"xdotool keydown {key}", environment=env)
+                return False, f"Holding key: {key}"
+
+            elif action == "scroll":
+                amount = tool_input.get("amount", 0)
+                logger.info(f"     Scrolling: {amount}")
+                # xdotool uses button 4 for up, 5 for down
+                if amount < 0:  # Scroll up
+                    clicks = abs(amount) // 10
+                    for _ in range(clicks):
+                        container.exec_run("xdotool click 4", environment=env)
+                elif amount > 0:  # Scroll down
+                    clicks = amount // 10
+                    for _ in range(clicks):
+                        container.exec_run("xdotool click 5", environment=env)
+                return False, f"Scrolled by {amount}"
+
+            elif action == "wait":
+                duration = tool_input.get("duration", 1)
+                logger.info(f"     Waiting {duration} seconds")
+                time.sleep(duration)
+                return False, f"Waited {duration} seconds"
+
+            elif action == "cursor_position":
+                return False, "Cursor position tracking not available in Docker environment"
+
+            else:
+                return False, f"Unknown computer action: {action}"
+
+        elif tool_name == "bash":
+            command = tool_input.get("command", "")
+            logger.info(f"     Executing bash: {command}")
+            result = container.exec_run(f"bash -c '{command}'", environment=env)
+            output = result.output.decode("utf-8", errors="replace")
+            logger.info(f"     Bash output: {output[:200]}...")
+            return False, f"Executed: {command}\nOutput: {output}"
+
+        elif tool_name == "str_replace_editor":
+            # Basic file editing support in Docker
+            file_path = tool_input.get("path", "")
+            logger.info(f"     File editor for: {file_path}")
+            return False, "File editing available - use bash tool for file operations in Docker environment"
+
+        else:
+            return False, f"Unknown tool: {tool_name}"
+
+    except Exception as e:
+        logger.error(f"Error executing {tool_name}: {e}")
+        return False, f"Error: {str(e)}"
 
 
 async def execute_claude_tool_use(tool_use, page, screen_width: int, screen_height: int):
@@ -239,32 +470,44 @@ async def claude_computer_use(
     max_iterations: int = 25,
     headless: bool = True,
     browser_type: str = "chromium",
+    environment_config: dict = None,
     **kwargs,
 ) -> ExecutionResult:
     """
-    Execute Claude Computer Use to automate browser or desktop tasks.
+    Execute Claude Computer Use to automate browser or Linux desktop tasks.
 
     Args:
         query: The task description for Claude to execute
-        environment: Environment type ("browser", "linux", "mac", "windows")
+        environment: Environment type ("browser" or "linux")
         display_width: Screen width in pixels (default: 1024)
         display_height: Screen height in pixels (default: 768)
         max_iterations: Maximum number of agent loop iterations (default: 25)
-        headless: Run browser in headless mode (default: True)
+        headless: Run browser in headless mode (default: True, ignored for Docker)
         browser_type: Browser to use - "chromium", "firefox", or "webkit" (default: "chromium")
+        environment_config: Additional configuration for the environment (e.g., container_name for Docker)
         **kwargs: Additional parameters
 
     Returns:
         ExecutionResult containing the final answer and any intermediate results
 
     Example:
+        >>> # Browser environment
         >>> result = await claude_computer_use(
         ...     query="Search for Python documentation on the web",
         ...     environment="browser",
         ...     display_width=1024,
         ...     display_height=768
         ... )
+        >>>
+        >>> # Linux/Docker environment
+        >>> result = await claude_computer_use(
+        ...     query="Edit the config.txt file",
+        ...     environment="linux",
+        ...     environment_config={"container_name": "claude-desktop"}
+        ... )
     """
+    if environment_config is None:
+        environment_config = {}
     # Force headless mode on Linux systems without DISPLAY
     import platform
 
@@ -274,8 +517,15 @@ async def claude_computer_use(
             headless = True
 
     # Check dependencies
-    if not PLAYWRIGHT_AVAILABLE:
+    if environment == "browser" and not PLAYWRIGHT_AVAILABLE:
         error_msg = "Playwright is not installed. Install with: pip install playwright && playwright install"
+        logger.error(error_msg)
+        return ExecutionResult(
+            output_blocks=[TextContent(data=error_msg)],
+        )
+
+    if environment == "linux" and not DOCKER_AVAILABLE:
+        error_msg = "Docker SDK is not installed. Install with: pip install docker"
         logger.error(error_msg)
         return ExecutionResult(
             output_blocks=[TextContent(data=error_msg)],
@@ -298,10 +548,10 @@ async def claude_computer_use(
             output_blocks=[TextContent(data=error_msg)],
         )
 
-    # Only browser environment is currently supported
-    if environment != "browser":
-        error_msg = f"Environment '{environment}' is not supported. Only 'browser' environment is currently available."
-        logger.warning(error_msg)
+    # Validate environment
+    if environment not in ["browser", "linux"]:
+        error_msg = f"Environment '{environment}' is not supported. Use 'browser' or 'linux'."
+        logger.error(error_msg)
         return ExecutionResult(
             output_blocks=[TextContent(data=error_msg)],
         )
@@ -312,19 +562,66 @@ async def claude_computer_use(
     # Initialize Anthropic client
     client = Anthropic(api_key=api_key)
 
-    # Initialize Playwright
-    playwright = await async_playwright().start()
+    # Initialize environment
+    environment_instance = None
+    cleanup_func = None
 
-    # Launch browser
-    browser_launcher = getattr(playwright, browser_type)
-    browser = await browser_launcher.launch(headless=headless)
-    context = await browser.new_context(
-        viewport={"width": display_width, "height": display_height},
-    )
-    page = await context.new_page()
+    try:
+        if environment == "browser":
+            # Initialize Playwright
+            playwright = await async_playwright().start()
 
-    # Navigate to a starting page
-    await page.goto("about:blank")
+            # Launch browser
+            browser_launcher = getattr(playwright, browser_type)
+            browser = await browser_launcher.launch(headless=headless)
+            context = await browser.new_context(
+                viewport={"width": display_width, "height": display_height},
+            )
+            page = await context.new_page()
+
+            # Navigate to a starting page
+            await page.goto("about:blank")
+
+            environment_instance = page
+
+            async def cleanup_browser():
+                await browser.close()
+                await playwright.stop()
+
+            cleanup_func = cleanup_browser
+
+            logger.info(f"Initialized {browser_type} browser ({display_width}x{display_height})")
+
+        elif environment == "linux":
+            # Initialize Docker container for Linux desktop automation
+            docker_client = docker.from_env()
+            container_name = environment_config.get("container_name", "claude-desktop-container")
+
+            # Try to get existing container or create new one
+            try:
+                container = docker_client.containers.get(container_name)
+                if container.status != "running":
+                    container.start()
+                    time.sleep(2)  # Wait for container to start
+                logger.info(f"Using existing Docker container: {container_name}")
+            except docker.errors.NotFound:
+                error_msg = f"Docker container not found: {container_name}. Please create and start the container first."
+                logger.error(error_msg)
+                return ExecutionResult(
+                    output_blocks=[TextContent(data=error_msg)],
+                )
+
+            environment_instance = container
+            cleanup_func = None  # Don't stop the container automatically
+
+            logger.info(f"Initialized Docker container: {container_name}")
+
+    except Exception as e:
+        error_msg = f"Failed to initialize {environment} environment: {str(e)}"
+        logger.error(error_msg)
+        return ExecutionResult(
+            output_blocks=[TextContent(data=error_msg)],
+        )
 
     try:
         # Claude Computer Use tool definitions (schema-less tools)
@@ -399,12 +696,25 @@ async def claude_computer_use(
                 tool_results = []
                 for block in response.content:
                     if block.type == "tool_use":
-                        is_screenshot, result = await execute_claude_tool_use(
-                            block,
-                            page,
-                            display_width,
-                            display_height,
-                        )
+                        # Execute tool based on environment type
+                        if environment == "browser":
+                            is_screenshot, result = await execute_claude_tool_use(
+                                block,
+                                environment_instance,
+                                display_width,
+                                display_height,
+                            )
+                        elif environment == "linux":
+                            is_screenshot, result = execute_docker_tool_use(
+                                block,
+                                environment_instance,
+                                display_width,
+                                display_height,
+                                environment_config.get("display", ":99"),
+                            )
+                        else:
+                            is_screenshot = False
+                            result = f"Unsupported environment: {environment}"
 
                         # Handle screenshot differently (return as image)
                         if is_screenshot:
@@ -466,8 +776,14 @@ async def claude_computer_use(
         )
 
     finally:
-        # Cleanup
-        await context.close()
-        await browser.close()
-        await playwright.stop()
+        # Cleanup environment
+        if cleanup_func:
+            try:
+                if asyncio.iscoroutinefunction(cleanup_func):
+                    await cleanup_func()
+                else:
+                    cleanup_func()
+                logger.info("Cleaned up environment")
+            except Exception as cleanup_error:
+                logger.error(f"Failed to cleanup environment: {cleanup_error}")
         logger.info("Claude Computer Use session ended")

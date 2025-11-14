@@ -9,7 +9,7 @@ deprecated patterns. Update to reflect current backend architecture.
 
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from .message_templates import MessageTemplates
@@ -44,6 +44,21 @@ class CoordinationConfig:
                                     to break down complex work, track progress, and coordinate
                                     based on dependencies.
         max_tasks_per_plan: Maximum number of tasks allowed in an agent's task plan.
+        task_planning_filesystem_mode: If True, task planning MCP writes tasks to tasks/ directory
+                                       in agent workspace for transparency and cross-agent visibility.
+        enable_memory_filesystem_mode: If True, enables filesystem-based memory system with two-tier
+                                       hierarchy (short-term and long-term). Memory MCP tools are
+                                       provided for creating/updating/loading memories. Short-term
+                                       memories auto-inject into all agents' system prompts. Long-term
+                                       memories load on-demand. Inspired by Letta's context hierarchy.
+        use_skills: If True, enables skills system using openskills. Agents can invoke skills
+                   via bash commands (openskills read <skill-name>). Requires command line
+                   execution to be enabled.
+        massgen_skills: List of MassGen built-in skills to enable. Available skills:
+                       - "file_search": File search skill (no dir needed)
+                       When workspace/ is needed for file operations, it is created automatically.
+        skills_directory: Path to the skills directory. Default is .agent/skills which is where
+                         openskills installs skills. This directory is scanned for available skills.
     """
 
     enable_planning_mode: bool = False
@@ -53,6 +68,11 @@ class CoordinationConfig:
     max_orchestration_restarts: int = 0
     enable_agent_task_planning: bool = False
     max_tasks_per_plan: int = 10
+    task_planning_filesystem_mode: bool = False
+    enable_memory_filesystem_mode: bool = False
+    use_skills: bool = False
+    massgen_skills: List[str] = field(default_factory=list)
+    skills_directory: str = ".agent/skills"
 
 
 @dataclass

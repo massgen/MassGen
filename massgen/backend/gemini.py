@@ -20,12 +20,14 @@ TECHNICAL SOLUTION:
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from ..api_params_handler._gemini_api_params_handler import GeminiAPIParamsHandler
+from ..configs.rate_limits import get_rate_limit_config
 from ..formatter._gemini_formatter import GeminiFormatter
 from ..logger_config import (
     log_backend_activity,
@@ -41,6 +43,7 @@ from .base_with_custom_tool_and_mcp import (
     ToolExecutionConfig,
 )
 from .gemini_utils import CoordinationResponse, PostEvaluationResponse
+from .rate_limiter import GlobalRateLimiter
 
 
 # Suppress Gemini SDK logger warning about non-text parts in response
@@ -109,6 +112,11 @@ class GeminiBackend(CustomToolAndMCPBackend):
         # Store Gemini-specific API key before calling parent init
         gemini_api_key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
+        # Extract and remove enable_rate_limit BEFORE calling parent init
+        # This prevents it from being stored in self.config and passed to Gemini SDK
+        enable_rate_limit = kwargs.pop("enable_rate_limit", False)
+        model_name = kwargs.get("model", "")
+
         # Call parent class __init__ - this initializes custom_tool_manager and MCP-related attributes
         super().__init__(gemini_api_key, **kwargs)
 
@@ -129,6 +137,55 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
         # Active tool result capture during manual tool execution
         self._active_tool_result_store: Optional[Dict[str, str]] = None
+
+        # Initialize multi-dimensional rate limiter for Gemini API
+        # Supports RPM (Requests Per Minute), TPM (Tokens Per Minute), RPD (Requests Per Day)
+        # Configuration loaded from massgen/config/rate_limits.yaml
+        # This is shared across ALL instances of the SAME MODEL
+
+        if enable_rate_limit:
+            # Load rate limits from configuration
+            rate_config = get_rate_limit_config()
+            limits = rate_config.get_limits("gemini", model_name)
+
+            # Create a unique provider key for the rate limiter
+            # Use the full model name to distinguish between different models
+            provider_key = f"gemini-{model_name}" if model_name else "gemini-default"
+
+            # Initialize multi-dimensional rate limiter
+            self.rate_limiter = GlobalRateLimiter.get_multi_limiter_sync(
+                provider=provider_key,
+                rpm=limits.get("rpm"),
+                tpm=limits.get("tpm"),
+                rpd=limits.get("rpd"),
+            )
+
+            # Log the active rate limits
+            active_limits = []
+            if limits.get("rpm"):
+                active_limits.append(f"RPM: {limits['rpm']}")
+            if limits.get("tpm"):
+                active_limits.append(f"TPM: {limits['tpm']:,}")
+            if limits.get("rpd"):
+                active_limits.append(f"RPD: {limits['rpd']}")
+
+            if active_limits:
+                logger.info(
+                    f"[Gemini] Multi-dimensional rate limiter enabled for '{model_name}': " f"{', '.join(active_limits)}",
+                )
+            else:
+                logger.info(f"[Gemini] No rate limits configured for '{model_name}'")
+        else:
+            # No rate limiting - use a pass-through limiter
+            self.rate_limiter = None
+            logger.info(f"[Gemini] Rate limiting disabled for '{model_name}'")
+
+    def _get_rate_limiter_context(self):
+        """Get rate limiter context manager (or nullcontext if rate limiting is disabled)."""
+        if self.rate_limiter is not None:
+            return self.rate_limiter
+        else:
+            return contextlib.nullcontext()
 
     def _setup_permission_hooks(self):
         """Override base class - Gemini uses session-based permissions, not function hooks."""
@@ -239,6 +296,10 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         content="✅ [MCP] Tools initialized",
                         source="mcp_tools",
                     )
+
+            # Remove enable_rate_limit from kwargs if present (it's already been consumed in __init__)
+            # This prevents it from being passed to Gemini SDK API calls
+            kwargs.pop("enable_rate_limit", None)
 
             # Merge constructor config with stream kwargs
             all_params = {**self.config, **kwargs}
@@ -417,11 +478,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
             # ====================================================================
             # Streaming Phase: Stream with simple function call detection
             # ====================================================================
-            stream = await client.aio.models.generate_content_stream(
-                model=model_name,
-                contents=full_content,
-                config=config,
-            )
+            # Use async streaming call with sessions/tools (with rate limiting if enabled)
+            async with self._get_rate_limiter_context():
+                stream = await client.aio.models.generate_content_stream(
+                    model=model_name,
+                    contents=full_content,
+                    config=config,
+                )
 
             # Simple list accumulation for function calls (no trackers)
             captured_function_calls = []
@@ -788,11 +851,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 last_continuation_chunk = None
 
                 while True:
-                    continuation_stream = await client.aio.models.generate_content_stream(
-                        model=model_name,
-                        contents=conversation_history,
-                        config=config,
-                    )
+                    # Use same config as before (with rate limiting if enabled)
+                    async with self._get_rate_limiter_context():
+                        continuation_stream = await client.aio.models.generate_content_stream(
+                            model=model_name,
+                            contents=conversation_history,
+                            config=config,
+                        )
                     stream = continuation_stream
 
                     new_function_calls = []
