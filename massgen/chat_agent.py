@@ -806,9 +806,30 @@ class ConfigurableAgent(SingleAgent):
         # ConfigurableAgent relies on backend_params for model configuration
 
         # Initialize NLIP router if enabled
-        if hasattr(config, 'enable_nlip') and config.enable_nlip:
-            tool_manager = getattr(self, '_tool_manager', None)
-            config.init_nlip_router(tool_manager=tool_manager)
+        if hasattr(config, "enable_nlip") and config.enable_nlip:
+            # Get ToolManager from backend
+            tool_manager = None
+            if hasattr(self.backend, "custom_tool_manager"):
+                tool_manager = self.backend.custom_tool_manager
+            else:
+                logger.warning(
+                    f"Backend {self.backend.__class__.__name__} does not have " f"custom_tool_manager. NLIP will be disabled.",
+                )
+                config.enable_nlip = False
+
+            if tool_manager:
+                mcp_executor = getattr(self.backend, "_execute_mcp_function_with_retry", None)
+                config.init_nlip_router(
+                    tool_manager=tool_manager,
+                    mcp_executor=mcp_executor,
+                )
+
+                # Inject NLIP router into backend
+                if hasattr(self.backend, "set_nlip_router"):
+                    self.backend.set_nlip_router(
+                        nlip_router=config.nlip_router,
+                        enabled=True,
+                    )
 
     def _get_backend_params(self) -> Dict[str, Any]:
         """Get backend parameters from config."""

@@ -133,19 +133,25 @@ class AgentConfig:
             )
         self._custom_system_instruction = value
 
-    def init_nlip_router(self, tool_manager: Optional[Any] = None) -> None:
+    def init_nlip_router(
+        self,
+        tool_manager: Optional[Any] = None,
+        mcp_executor: Optional[Any] = None,
+    ) -> None:
         """Initialize NLIP router if NLIP is enabled.
 
         Args:
             tool_manager: Optional tool manager instance to use with router
+            mcp_executor: Optional callable to execute MCP tools directly
         """
         if self.enable_nlip and self._nlip_router is None:
             from .nlip.router import NLIPRouter
 
             self._nlip_router = NLIPRouter(
                 tool_manager=tool_manager,
+                mcp_executor=mcp_executor,
                 enable_nlip=True,
-                config=self.nlip_config or {}
+                config=self.nlip_config or {},
             )
 
     @property

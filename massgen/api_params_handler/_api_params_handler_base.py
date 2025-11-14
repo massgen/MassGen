@@ -77,6 +77,10 @@ class APIParamsHandlerBase(ABC):
             "session_id",
             # MCP configuration (handled by base class for MCP backends)
             "mcp_servers",
+            # NLIP configuration belongs to MassGen routing, never provider APIs
+            "enable_nlip",
+            "nlip",
+            "nlip_config",
         }
 
     def build_base_api_params(

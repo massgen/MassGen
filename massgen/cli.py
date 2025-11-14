@@ -769,6 +769,18 @@ def create_agents_from_config(
                 f"📊 Context monitor created for {agent_config.agent_id}: " f"{context_monitor.context_window:,} tokens, " f"trigger={trigger_threshold*100:.0f}%, target={target_ratio*100:.0f}%",
             )
 
+        # Enable NLIP per-agent if configured in YAML
+        agent_nlip_section = agent_data.get("nlip") or {}
+        agent_enable_nlip = bool(agent_data.get("enable_nlip"))
+        if isinstance(agent_nlip_section, dict):
+            agent_enable_nlip = agent_enable_nlip or agent_nlip_section.get("enabled", False)
+
+        if agent_enable_nlip:
+            agent_config.enable_nlip = True
+            if isinstance(agent_nlip_section, dict) and agent_nlip_section:
+                agent_config.nlip_config = agent_nlip_section
+            logger.info(f"[CLI] NLIP enabled for agent {agent_config.agent_id} via config file")
+
         # Create per-agent memory objects if memory is enabled
         conversation_memory = None
         persistent_memory = None

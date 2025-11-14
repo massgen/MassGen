@@ -270,13 +270,14 @@ class Orchestrator(ChatAgent):
 
         for agent_id, agent in self.agents.items():
             # Check if agent is a ConfigurableAgent with NLIP config
-            if hasattr(agent, 'config'):
+            if hasattr(agent, "config"):
                 agent.config.enable_nlip = True
                 agent.config.nlip_config = self.nlip_config
 
                 # Initialize NLIP router for the agent
-                tool_manager = getattr(agent, '_tool_manager', None)
-                agent.config.init_nlip_router(tool_manager=tool_manager)
+                tool_manager = getattr(agent, "_tool_manager", None)
+                mcp_executor = getattr(getattr(agent, "backend", None), "_execute_mcp_function_with_retry", None)
+                agent.config.init_nlip_router(tool_manager=tool_manager, mcp_executor=mcp_executor)
 
                 logger.info(f"[Orchestrator] NLIP routing enabled for agent: {agent_id}")
 

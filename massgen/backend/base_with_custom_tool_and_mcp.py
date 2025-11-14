@@ -10,8 +10,10 @@ import asyncio
 import base64
 import json
 import mimetypes
+import uuid
 from abc import abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import (
     Any,
@@ -29,6 +31,14 @@ import httpx
 from pydantic import BaseModel
 
 from ..logger_config import log_backend_activity, logger
+from ..nlip.schema import (
+    NLIPControlField,
+    NLIPFormatField,
+    NLIPMessageType,
+    NLIPRequest,
+    NLIPTokenField,
+    NLIPToolCall,
+)
 from ..tool import ToolManager
 from ..utils import CoordinationStage
 from .base import LLMBackend, StreamChunk
@@ -242,6 +252,10 @@ class CustomToolAndMCPBackend(LLMBackend):
         # Store execution context for custom tool execution
         self._execution_context = None
 
+        # NLIP routing support (injected by agent configuration)
+        self._nlip_router = None
+        self._nlip_enabled = False
+
         # Register custom tools if provided
         custom_tools = kwargs.get("custom_tools", [])
         if custom_tools:
@@ -293,6 +307,121 @@ class CustomToolAndMCPBackend(LLMBackend):
         # Initialize backend name and agent ID for MCP operations
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
+
+    def set_nlip_router(self, nlip_router, enabled: bool = True) -> None:
+        """
+        Inject NLIP router for optional standardized tool communication.
+
+        Args:
+            nlip_router: NLIPRouter instance from agent config
+            enabled: Whether to use NLIP routing (default: True)
+        """
+        self._nlip_router = nlip_router
+        self._nlip_enabled = enabled
+        logger.info(f"[NLIP] Router injected, enabled={enabled}")
+
+    def _backend_call_to_nlip(self, call: Dict[str, Any]) -> Optional[NLIPToolCall]:
+        """
+        Convert backend tool call format to NLIP format with validation.
+
+        Args:
+            call: Backend format {"call_id", "name", "arguments"}
+
+        Returns:
+            NLIPToolCall or None if conversion fails
+        """
+        try:
+            # Validate required fields
+            call_id = call.get("call_id", "")
+            name = call.get("name", "")
+            if not call_id:
+                logger.error(f"[NLIP] Missing call_id in backend call: {call}")
+                return None
+            if not name:
+                logger.error(f"[NLIP] Missing name in backend call: {call}")
+                return None
+
+            # Parse arguments (handle both string and dict)
+            args = call.get("arguments", "{}")
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args) if args else {}
+                except json.JSONDecodeError as exc:
+                    snippet = args[:200] + "..." if len(args) > 200 else args
+                    logger.error(
+                        f"[NLIP] Failed to parse arguments for {name}: {exc}. " f"Invalid JSON (truncated): {snippet}",
+                    )
+                    return None
+            elif not isinstance(args, dict):
+                logger.error(f"[NLIP] Arguments must be string or dict, got {type(args)}")
+                return None
+
+            return NLIPToolCall(
+                tool_id=call_id,
+                tool_name=name,
+                parameters=args,
+                require_confirmation=False,
+            )
+        except Exception as exc:
+            logger.error(f"[NLIP] Conversion failed: {exc}")
+            return None
+
+    def _build_nlip_request(self, call: Dict[str, Any]) -> NLIPRequest:
+        """Construct an NLIP request payload for a backend tool call."""
+        if not self._nlip_router:
+            raise RuntimeError("NLIP router is not configured")
+
+        # Inject agent_cwd into arguments (same as standard path)
+        original_args = call.get("arguments", "{}")
+        arguments = json.loads(original_args or "{}") if isinstance(original_args, str) else dict(original_args or {})
+        if self.filesystem_manager and self.filesystem_manager.cwd:
+            if "agent_cwd" not in arguments or arguments.get("agent_cwd") is None:
+                arguments["agent_cwd"] = self.filesystem_manager.cwd
+                logger.debug(f"[NLIP] Injected agent_cwd: {self.filesystem_manager.cwd}")
+
+        call_with_cwd = call.copy()
+        call_with_cwd["arguments"] = json.dumps(arguments) if isinstance(original_args, str) else arguments
+
+        nlip_call = self._backend_call_to_nlip(call_with_cwd)
+        if not nlip_call:
+            raise ValueError("Failed to convert call to NLIP format")
+
+        execution_context: Dict[str, Any] = {}
+        if getattr(self, "_execution_context", None):
+            try:
+                execution_context = self._execution_context.model_dump()
+            except Exception as exc:
+                logger.warning(f"[NLIP] Failed to serialize execution context: {exc}")
+        else:
+            logger.debug("[NLIP] No execution context available when building NLIP request")
+
+        if self.filesystem_manager:
+            execution_context["filesystem"] = {
+                "cwd": getattr(self.filesystem_manager, "cwd", None),
+                "allowed_paths": getattr(self.filesystem_manager, "allowed_paths", []),
+            }
+
+        return NLIPRequest(
+            format=NLIPFormatField(
+                content_type="application/json",
+                schema_version="1.0",
+            ),
+            control=NLIPControlField(
+                message_type=NLIPMessageType.REQUEST,
+                message_id=str(uuid.uuid4()),
+                timestamp=datetime.utcnow().isoformat() + "Z",
+                timeout=300,
+            ),
+            token=NLIPTokenField(
+                session_id=f"backend_{id(self)}_{call.get('call_id')}",
+                conversation_turn=0,
+            ),
+            content={
+                "backend_execution": True,
+                "execution_context": execution_context,
+            },
+            tool_calls=[nlip_call],
+        )
 
     def supports_upload_files(self) -> bool:
         """Return True if the backend supports `upload_files` preprocessing."""
@@ -856,6 +985,204 @@ class CustomToolAndMCPBackend(LLMBackend):
             self._append_tool_error_message(updated_messages, call, error_msg, config.tool_type)
 
             processed_call_ids.add(call.get("call_id", ""))
+
+    async def _stream_tool_execution_via_nlip(
+        self,
+        call: Dict[str, Any],
+        config: ToolExecutionConfig,
+        updated_messages: List[Dict[str, Any]],
+        processed_call_ids: Set[str],
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Stream NLIP tool execution while mirroring native telemetry."""
+        if not self._nlip_router:
+            raise RuntimeError("NLIP router is not configured")
+
+        tool_name = call.get("name", "")
+        call_id = call.get("call_id", "")
+        arguments_str = call.get("arguments", "{}")
+
+        # Emit the same status + argument chunks as the native path
+        yield StreamChunk(
+            type=config.chunk_type,
+            status=config.status_called,
+            content=f"{config.emoji_prefix} Calling {tool_name}...",
+            source=f"{config.source_prefix}{tool_name}",
+        )
+
+        yield StreamChunk(
+            type=config.chunk_type,
+            status="function_call",
+            content=f"Arguments for Calling {tool_name}: {arguments_str}",
+            source=f"{config.source_prefix}{tool_name}",
+        )
+
+        request = self._build_nlip_request(call)
+
+        async for response in self._nlip_router.route_message(request):
+            chunk = self._convert_nlip_stream_chunk(response.content, config, tool_name)
+            if chunk:
+                yield chunk
+                continue
+
+            if response.tool_results:
+                matching_result = self._select_matching_tool_result(response.tool_results, call_id)
+                if not matching_result:
+                    continue
+
+                if matching_result.status == "error":
+                    error_msg = matching_result.error or "Unknown error"
+                    self._append_tool_error_message(updated_messages, call, error_msg, config.tool_type)
+                    processed_call_ids.add(call_id)
+                    yield StreamChunk(
+                        type=config.chunk_type,
+                        status=config.status_error,
+                        content=f"{config.error_emoji} {tool_name}: {error_msg}",
+                        source=f"{config.source_prefix}{tool_name}",
+                    )
+                    return
+
+                result_text = self._extract_nlip_result_text(matching_result, config.tool_type)
+                self._append_tool_result_message(updated_messages, call, result_text, config.tool_type)
+                processed_call_ids.add(call_id)
+
+                yield StreamChunk(
+                    type=config.chunk_type,
+                    status="function_call_output",
+                    content=f"Results for Calling {tool_name}: {result_text}",
+                    source=f"{config.source_prefix}{tool_name}",
+                )
+
+                yield StreamChunk(
+                    type=config.chunk_type,
+                    status=config.status_response,
+                    content=f"{config.success_emoji} {tool_name} completed",
+                    source=f"{config.source_prefix}{tool_name}",
+                )
+                return
+
+        raise Exception("NLIP router returned no result")
+
+    def _convert_nlip_stream_chunk(
+        self,
+        content: Optional[Dict[str, Any]],
+        config: ToolExecutionConfig,
+        tool_name: str,
+    ) -> Optional[StreamChunk]:
+        """Convert NLIP streaming payload into a StreamChunk."""
+        if not content:
+            logger.debug(f"[NLIP] No content in stream chunk for {tool_name}")
+            return None
+
+        stream_data = content.get("stream_chunk")
+        if not stream_data:
+            logger.debug(f"[NLIP] Missing stream_chunk entry for {tool_name}")
+            return None
+
+        if isinstance(stream_data, bytes):
+            content_str = stream_data.decode("utf-8", errors="replace")
+        elif isinstance(stream_data, (dict, list)):
+            content_str = json.dumps(stream_data)
+            if len(content_str) > 10000:
+                logger.warning(f"[NLIP] Large stream chunk ({len(content_str)} chars) for {tool_name}")
+                content_str = f"{content_str[:10000]}...[truncated]"
+        else:
+            content_str = str(stream_data)
+
+        status = "custom_tool_output" if config.tool_type == "custom" else "mcp_tool_output"
+        return StreamChunk(
+            type=config.chunk_type,
+            status=status,
+            content=content_str,
+            source=f"{config.source_prefix}{tool_name}",
+        )
+
+    @staticmethod
+    def _select_matching_tool_result(
+        tool_results: List[Any],
+        call_id: str,
+    ) -> Optional[Any]:
+        """Return the NLIPToolResult that matches the requested call_id."""
+        if not tool_results:
+            logger.error("[NLIP] No tool results available for selection")
+            return None
+
+        if not call_id:
+            logger.warning("[NLIP] No call_id provided for tool result selection; defaulting to first result")
+            return tool_results[0]
+
+        for result in tool_results:
+            if result.tool_id == call_id:
+                return result
+
+        available_ids = [result.tool_id for result in tool_results]
+        logger.error(
+            f"[NLIP] No tool result matched call_id={call_id}. " f"Available IDs: {available_ids}. Using first entry as fallback.",
+        )
+        return tool_results[0]
+
+    def _extract_nlip_result_text(self, tool_result: Any, tool_type: str) -> str:
+        """Extract human-readable text from NLIP tool results."""
+        raw_result = tool_result.result
+        tool_name = getattr(tool_result, "tool_name", "unknown_tool")
+
+        if isinstance(raw_result, str):
+            logger.debug(f"[NLIP] Extracted string result for {tool_name} ({len(raw_result)} chars)")
+            return raw_result
+
+        if isinstance(raw_result, dict) and "output" in raw_result:
+            output = str(raw_result["output"])
+            logger.debug(
+                f"[NLIP] Extracted dict['output'] result for {tool_name} ({len(output)} chars)",
+            )
+            return output
+
+        if isinstance(raw_result, (dict, list)):
+            content_payload = raw_result.get("content") if isinstance(raw_result, dict) else raw_result
+            content_text = self._extract_text_from_content(content_payload)
+            if content_text:
+                logger.debug(
+                    f"[NLIP] Extracted MCP-style content result for {tool_name} ({len(content_text)} chars)",
+                )
+                return content_text
+
+        if raw_result is None:
+            logger.warning(f"[NLIP] Tool {tool_name} returned None result")
+            return ""
+
+        logger.warning(
+            f"[NLIP] Falling back to stringified {type(raw_result).__name__} result " f"for {tool_name}",
+        )
+        fallback = json.dumps(raw_result, indent=2, ensure_ascii=False) if isinstance(raw_result, (dict, list)) else str(raw_result)
+        return fallback
+
+    @staticmethod
+    def _extract_text_from_content(content: Any) -> Optional[str]:
+        """Extract text from MCP-style content payload."""
+        if not content:
+            return None
+
+        if isinstance(content, list):
+            text_parts = []
+            for item in content:
+                if isinstance(item, dict):
+                    if "text" in item:
+                        text_parts.append(str(item["text"]))
+                    elif "type" in item and item["type"] == "text" and "content" in item:
+                        text_parts.append(str(item["content"]))
+                elif isinstance(item, str):
+                    text_parts.append(item)
+            return "\n".join(text_parts) if text_parts else None
+
+        if isinstance(content, dict):
+            if "text" in content:
+                return str(content["text"])
+            if "content" in content:
+                return CustomToolAndMCPBackend._extract_text_from_content(content["content"])
+
+        if isinstance(content, str):
+            return content
+
+        return None
 
     # MCP support methods
     async def _setup_mcp_tools(self) -> None:
