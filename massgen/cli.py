@@ -777,6 +777,18 @@ def create_agents_from_config(
                 f"📊 Context monitor created for {agent_config.agent_id}: " f"{context_monitor.context_window:,} tokens, " f"trigger={trigger_threshold*100:.0f}%, target={target_ratio*100:.0f}%",
             )
 
+        # Enable NLIP per-agent if configured in YAML
+        agent_nlip_section = agent_data.get("nlip") or {}
+        agent_enable_nlip = bool(agent_data.get("enable_nlip"))
+        if isinstance(agent_nlip_section, dict):
+            agent_enable_nlip = agent_enable_nlip or agent_nlip_section.get("enabled", False)
+
+        if agent_enable_nlip:
+            agent_config.enable_nlip = True
+            if isinstance(agent_nlip_section, dict) and agent_nlip_section:
+                agent_config.nlip_config = agent_nlip_section
+            logger.info(f"[CLI] NLIP enabled for agent {agent_config.agent_id} via config file")
+
         # Create per-agent memory objects if memory is enabled
         conversation_memory = None
         persistent_memory = None
@@ -1270,6 +1282,13 @@ async def run_question_with_history(
     # Get orchestrator parameters from config
     orchestrator_cfg = kwargs.get("orchestrator", {})
 
+    # Get orchestrator-level NLIP configuration
+    orchestrator_enable_nlip = orchestrator_cfg.get("enable_nlip", False)
+    orchestrator_nlip_config = orchestrator_cfg.get("nlip_config", {})
+
+    if orchestrator_enable_nlip:
+        logger.info("[CLI] Orchestrator-level NLIP enabled (will propagate to capable agents)")
+
     # Apply voting sensitivity if specified
     if "voting_sensitivity" in orchestrator_cfg:
         orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
@@ -1341,6 +1360,8 @@ async def run_question_with_history(
         winning_agents_history=winning_agents_history,  # Restore for memory sharing
         dspy_paraphraser=kwargs.get("dspy_paraphraser"),
         enable_rate_limit=kwargs.get("enable_rate_limit", False),
+        enable_nlip=orchestrator_enable_nlip,
+        nlip_config=orchestrator_nlip_config,
     )
     # Create a fresh UI instance for each question to ensure clean state
     ui = CoordinationUI(
@@ -1616,6 +1637,13 @@ async def run_single_question(
         # Get orchestrator parameters from config
         orchestrator_cfg = kwargs.get("orchestrator", {})
 
+        # Get orchestrator-level NLIP configuration
+        orchestrator_enable_nlip = orchestrator_cfg.get("enable_nlip", False)
+        orchestrator_nlip_config = orchestrator_cfg.get("nlip_config", {})
+
+        if orchestrator_enable_nlip:
+            logger.info("[CLI] Orchestrator-level NLIP enabled (will propagate to capable agents)")
+
         # Apply voting sensitivity if specified
         if "voting_sensitivity" in orchestrator_cfg:
             orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
@@ -1667,6 +1695,8 @@ async def run_single_question(
             agent_temporary_workspace=agent_temporary_workspace,
             dspy_paraphraser=kwargs.get("dspy_paraphraser"),
             enable_rate_limit=kwargs.get("enable_rate_limit", False),
+            enable_nlip=orchestrator_enable_nlip,
+            nlip_config=orchestrator_nlip_config,
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(

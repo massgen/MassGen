@@ -251,6 +251,11 @@ class GeminiBackend(CustomToolAndMCPBackend):
             current_stage=self.coordination_stage,
         )
 
+        if self._nlip_enabled:
+            logger.info(
+                f"[Gemini] NLIP routing enabled for agent {agent_id or self.agent_id}",
+            )
+
         # Track whether MCP tools were actually used in this turn
         mcp_used = False
 
@@ -716,13 +721,39 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 try:
                     # Execute custom tools
                     for call in custom_calls:
-                        async for chunk in self._execute_tool_with_logging(
-                            call,
-                            CUSTOM_TOOL_CONFIG,
-                            updated_messages,
-                            processed_call_ids,
-                        ):
-                            yield chunk
+                        if self._nlip_enabled and self._nlip_router:
+                            logger.info(f"[NLIP] Using NLIP routing for custom tool {call['name']}")
+                            try:
+                                async for chunk in self._stream_tool_execution_via_nlip(
+                                    call,
+                                    CUSTOM_TOOL_CONFIG,
+                                    updated_messages,
+                                    processed_call_ids,
+                                ):
+                                    yield chunk
+                            except Exception as exc:
+                                logger.warning(
+                                    f"[NLIP] Routing failed for {call['name']}: {exc}. " f"Falling back to direct execution.",
+                                )
+                                async for chunk in self._execute_tool_with_logging(
+                                    call,
+                                    CUSTOM_TOOL_CONFIG,
+                                    updated_messages,
+                                    processed_call_ids,
+                                ):
+                                    yield chunk
+                        else:
+                            reason = "disabled" if not self._nlip_enabled else "router unavailable"
+                            logger.info(
+                                f"[Custom Tool] Direct execution for {call['name']} (NLIP {reason})",
+                            )
+                            async for chunk in self._execute_tool_with_logging(
+                                call,
+                                CUSTOM_TOOL_CONFIG,
+                                updated_messages,
+                                processed_call_ids,
+                            ):
+                                yield chunk
 
                     # Check circuit breaker before MCP tool execution
                     if mcp_calls and not await self._check_circuit_breaker_before_execution():
@@ -741,13 +772,39 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         # Mark MCP as used when at least one MCP call is about to be executed
                         mcp_used = True
 
-                        async for chunk in self._execute_tool_with_logging(
-                            call,
-                            MCP_TOOL_CONFIG,
-                            updated_messages,
-                            processed_call_ids,
-                        ):
-                            yield chunk
+                        if self._nlip_enabled and self._nlip_router:
+                            logger.info(f"[NLIP] Using NLIP routing for MCP tool {call['name']}")
+                            try:
+                                async for chunk in self._stream_tool_execution_via_nlip(
+                                    call,
+                                    MCP_TOOL_CONFIG,
+                                    updated_messages,
+                                    processed_call_ids,
+                                ):
+                                    yield chunk
+                            except Exception as exc:
+                                logger.warning(
+                                    f"[NLIP] Routing failed for {call['name']}: {exc}. " f"Falling back to direct execution.",
+                                )
+                                async for chunk in self._execute_tool_with_logging(
+                                    call,
+                                    MCP_TOOL_CONFIG,
+                                    updated_messages,
+                                    processed_call_ids,
+                                ):
+                                    yield chunk
+                        else:
+                            reason = "disabled" if not self._nlip_enabled else "router unavailable"
+                            logger.info(
+                                f"[MCP Tool] Direct execution for {call['name']} (NLIP {reason})",
+                            )
+                            async for chunk in self._execute_tool_with_logging(
+                                call,
+                                MCP_TOOL_CONFIG,
+                                updated_messages,
+                                processed_call_ids,
+                            ):
+                                yield chunk
                 finally:
                     self._active_tool_result_store = None
 

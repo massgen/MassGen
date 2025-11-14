@@ -80,6 +80,10 @@ class APIParamsHandlerBase(ABC):
             "session_id",
             # MCP configuration (handled by base class for MCP backends)
             "mcp_servers",
+            # NLIP configuration belongs to MassGen routing, never provider APIs
+            "enable_nlip",
+            "nlip",
+            "nlip_config",
             # Parallelization
             "instance_id",
             # Rate limiting (handled by rate_limiter.py)

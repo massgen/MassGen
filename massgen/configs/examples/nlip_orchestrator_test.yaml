@@ -1,0 +1,47 @@
+# MassGen Configuration: Orchestrator-Level NLIP Test
+# This configuration file tests the orchestrator-level NLIP configuration by enabling NLIP for all capable agents.
+# Usage: massgen --config massgen/configs/examples/nlip_orchestrator_test.yaml "what's the sum of 123 and 456? and what's the weather in Tokyo?"
+
+agents:
+  # Agent 1: OpenAI GPT-5-nano with NLIP
+  - id: "gpt5_nano_agent"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      custom_tools:
+        - name: ["two_num_tool"]
+          category: "math"
+          path: "massgen/tool/_basic/_two_num_tool.py"
+          function: ["two_num_tool"]
+      mcp_servers:
+        - name: "weather"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@fak111/weather-mcp"]
+    system_message: |
+       You are an AI assistant with access to math and weather tools.
+  # Agent 2: Cerebras GLM 4.6
+  - id: "cerebras_glm_nlip_tools_test"
+    backend:
+      type: "chatcompletion"
+      base_url: "https://api.cerebras.ai/v1"
+      model: "zai-glm-4.6"
+      custom_tools:
+        - name: ["two_num_tool"]
+          category: "math"
+          path: "massgen/tool/_basic/_two_num_tool.py"
+          function: ["two_num_tool"]
+      mcp_servers:
+        - name: "weather"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@fak111/weather-mcp"]
+    system_message: |
+      You are an AI assistant with access to math and weather tools.
+
+orchestrator:
+  enable_nlip: true
+
+ui:
+  display_type: "simple"
+  logging_enabled: true

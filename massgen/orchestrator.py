@@ -131,6 +131,8 @@ class Orchestrator(ChatAgent):
         winning_agents_history: Optional[List[Dict[str, Any]]] = None,
         shared_conversation_memory: Optional[ConversationMemory] = None,
         shared_persistent_memory: Optional[PersistentMemoryBase] = None,
+        enable_nlip: bool = False,
+        nlip_config: Optional[Dict[str, Any]] = None,
         enable_rate_limit: bool = False,
     ):
         """
@@ -150,6 +152,8 @@ class Orchestrator(ChatAgent):
                                    Loaded from session storage to persist across orchestrator recreations
             shared_conversation_memory: Optional shared conversation memory for all agents
             shared_persistent_memory: Optional shared persistent memory for all agents
+            enable_nlip: Enable NLIP (Natural Language Interaction Protocol) support
+            nlip_config: Optional NLIP configuration
             enable_rate_limit: Whether to enable rate limiting and cooldown delays (default: False)
         """
         super().__init__(session_id, shared_conversation_memory, shared_persistent_memory)
@@ -295,6 +299,61 @@ class Orchestrator(ChatAgent):
         #         logger.info(f"[Orchestrator] Injecting memory tools for {len(self.agents)} agents")
         #         self._inject_memory_tools_for_all_agents()
         #         logger.info("[Orchestrator] Memory tools injection complete")
+
+        # NLIP Configuration
+        self.enable_nlip = enable_nlip
+        self.nlip_config = nlip_config or {}
+
+        # Initialize NLIP routers for agents if enabled
+        if self.enable_nlip:
+            self._init_nlip_routing()
+
+    def _init_nlip_routing(self) -> None:
+        """Initialize NLIP routing for all agents."""
+        logger.info(f"[Orchestrator] Initializing NLIP routing for {len(self.agents)} agents")
+
+        nlip_enabled_count = 0
+        nlip_skipped_count = 0
+
+        for agent_id, agent in self.agents.items():
+            # Check if agent has config
+            if not hasattr(agent, "config"):
+                logger.debug(f"[Orchestrator] Agent {agent_id} has no config, skipping NLIP")
+                nlip_skipped_count += 1
+                continue
+
+            # Check if backend supports NLIP (has custom_tool_manager)
+            backend = getattr(agent, "backend", None)
+            if not backend:
+                logger.debug(f"[Orchestrator] Agent {agent_id} has no backend, skipping NLIP")
+                nlip_skipped_count += 1
+                continue
+
+            tool_manager = getattr(backend, "custom_tool_manager", None)
+            if not tool_manager:
+                logger.info(f"[Orchestrator] Agent {agent_id} backend does not support NLIP (no custom_tool_manager), skipping")
+                nlip_skipped_count += 1
+                continue
+
+            # Backend supports NLIP, enable it
+            agent.config.enable_nlip = True
+            agent.config.nlip_config = self.nlip_config
+
+            # Initialize NLIP router for the agent
+            mcp_executor = getattr(backend, "_execute_mcp_function_with_retry", None)
+            agent.config.init_nlip_router(tool_manager=tool_manager, mcp_executor=mcp_executor)
+
+            # Inject NLIP router into backend
+            if hasattr(backend, "set_nlip_router"):
+                backend.set_nlip_router(
+                    nlip_router=agent.config.nlip_router,
+                    enabled=True,
+                )
+
+            logger.info(f"[Orchestrator] NLIP routing enabled for agent: {agent_id}")
+            nlip_enabled_count += 1
+
+        logger.info(f"[Orchestrator] NLIP initialization complete: {nlip_enabled_count} enabled, {nlip_skipped_count} skipped")
 
     async def _prepare_paraphrases_for_agents(self, question: str) -> None:
         """Generate and assign DSPy paraphrases for the current question."""

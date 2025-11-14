@@ -377,19 +377,62 @@ class ResponseBackend(CustomToolAndMCPBackend):
 
             # Execute custom tools using unified method
             for call in custom_calls:
-                async for chunk in self._execute_tool_with_logging(
-                    call,
-                    CUSTOM_TOOL_CONFIG,
-                    updated_messages,
-                    processed_call_ids,
-                ):
-                    yield TextStreamChunk(
-                        type=chunk_type_map.get(chunk.type, chunk.type),
-                        status=getattr(chunk, "status", None),
-                        content=getattr(chunk, "content", None),
-                        source=getattr(chunk, "source", None),
+                # Try NLIP path if enabled
+                if self._nlip_enabled and self._nlip_router:
+                    logger.info(f"[NLIP] Using NLIP routing for custom tool {call['name']}")
+                    try:
+                        async for chunk in self._stream_tool_execution_via_nlip(
+                            call,
+                            CUSTOM_TOOL_CONFIG,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield TextStreamChunk(
+                                type=chunk_type_map.get(chunk.type, chunk.type),
+                                status=getattr(chunk, "status", None),
+                                content=getattr(chunk, "content", None),
+                                source=getattr(chunk, "source", None),
+                            )
+                        functions_executed = True
+
+                    except Exception as e:
+                        # NLIP routing failed - fall back to direct execution
+                        logger.warning(
+                            f"[NLIP] Routing failed for {call['name']}: {e}. " f"Falling back to direct execution.",
+                        )
+
+                        async for chunk in self._execute_tool_with_logging(
+                            call,
+                            CUSTOM_TOOL_CONFIG,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield TextStreamChunk(
+                                type=chunk_type_map.get(chunk.type, chunk.type),
+                                status=getattr(chunk, "status", None),
+                                content=getattr(chunk, "content", None),
+                                source=getattr(chunk, "source", None),
+                            )
+                        functions_executed = True
+                else:
+                    # Direct execution (existing path)
+                    reason = "disabled" if not self._nlip_enabled else "router unavailable"
+                    logger.info(
+                        f"[Custom Tool] Direct execution for {call['name']} (NLIP {reason})",
                     )
-                functions_executed = True
+                    async for chunk in self._execute_tool_with_logging(
+                        call,
+                        CUSTOM_TOOL_CONFIG,
+                        updated_messages,
+                        processed_call_ids,
+                    ):
+                        yield TextStreamChunk(
+                            type=chunk_type_map.get(chunk.type, chunk.type),
+                            status=getattr(chunk, "status", None),
+                            content=getattr(chunk, "content", None),
+                            source=getattr(chunk, "source", None),
+                        )
+                    functions_executed = True
 
             # Check circuit breaker status before executing MCP functions
             if mcp_calls and not await super()._check_circuit_breaker_before_execution():
@@ -424,19 +467,62 @@ class ResponseBackend(CustomToolAndMCPBackend):
 
             # Execute MCP tools using unified method
             for call in mcp_calls:
-                async for chunk in self._execute_tool_with_logging(
-                    call,
-                    MCP_TOOL_CONFIG,
-                    updated_messages,
-                    processed_call_ids,
-                ):
-                    yield TextStreamChunk(
-                        type=chunk_type_map.get(chunk.type, chunk.type),
-                        status=getattr(chunk, "status", None),
-                        content=getattr(chunk, "content", None),
-                        source=getattr(chunk, "source", None),
+                # Try NLIP path if enabled
+                if self._nlip_enabled and self._nlip_router:
+                    logger.info(f"[NLIP] Using NLIP routing for MCP tool {call['name']}")
+                    try:
+                        async for chunk in self._stream_tool_execution_via_nlip(
+                            call,
+                            MCP_TOOL_CONFIG,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield TextStreamChunk(
+                                type=chunk_type_map.get(chunk.type, chunk.type),
+                                status=getattr(chunk, "status", None),
+                                content=getattr(chunk, "content", None),
+                                source=getattr(chunk, "source", None),
+                            )
+                        functions_executed = True
+
+                    except Exception as e:
+                        # NLIP routing failed - fall back to direct execution
+                        logger.warning(
+                            f"[NLIP] Routing failed for {call['name']}: {e}. " f"Falling back to direct execution.",
+                        )
+
+                        async for chunk in self._execute_tool_with_logging(
+                            call,
+                            MCP_TOOL_CONFIG,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield TextStreamChunk(
+                                type=chunk_type_map.get(chunk.type, chunk.type),
+                                status=getattr(chunk, "status", None),
+                                content=getattr(chunk, "content", None),
+                                source=getattr(chunk, "source", None),
+                            )
+                        functions_executed = True
+                else:
+                    # Direct execution
+                    reason = "disabled" if not self._nlip_enabled else "router unavailable"
+                    logger.info(
+                        f"[MCP Tool] Direct execution for {call['name']} (NLIP {reason})",
                     )
-                functions_executed = True
+                    async for chunk in self._execute_tool_with_logging(
+                        call,
+                        MCP_TOOL_CONFIG,
+                        updated_messages,
+                        processed_call_ids,
+                    ):
+                        yield TextStreamChunk(
+                            type=chunk_type_map.get(chunk.type, chunk.type),
+                            status=getattr(chunk, "status", None),
+                            content=getattr(chunk, "content", None),
+                            source=getattr(chunk, "source", None),
+                        )
+                    functions_executed = True
 
             # Ensure all captured function calls have results to prevent hanging
             for call in captured_function_calls:

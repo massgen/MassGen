@@ -361,15 +361,81 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
 
             # Execute custom tools using unified method
             for call in custom_calls:
-                async for chunk in self._execute_tool_with_logging(call, custom_tool_config, updated_messages, processed_call_ids):
-                    yield chunk
-                functions_executed = True
+                if self._nlip_enabled and self._nlip_router:
+                    logger.info(f"[NLIP] Using NLIP routing for custom tool {call['name']}")
+                    try:
+                        async for chunk in self._stream_tool_execution_via_nlip(
+                            call,
+                            custom_tool_config,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield chunk
+                        functions_executed = True
+                    except Exception as exc:
+                        logger.warning(
+                            f"[NLIP] Routing failed for {call['name']}: {exc}. " f"Falling back to direct execution.",
+                        )
+                        async for chunk in self._execute_tool_with_logging(
+                            call,
+                            custom_tool_config,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield chunk
+                        functions_executed = True
+                else:
+                    reason = "disabled" if not self._nlip_enabled else "router unavailable"
+                    logger.info(
+                        f"[Custom Tool] Direct execution for {call['name']} (NLIP {reason})",
+                    )
+                    async for chunk in self._execute_tool_with_logging(
+                        call,
+                        custom_tool_config,
+                        updated_messages,
+                        processed_call_ids,
+                    ):
+                        yield chunk
+                    functions_executed = True
 
             # Execute MCP tools using unified method
             for call in mcp_calls:
-                async for chunk in self._execute_tool_with_logging(call, mcp_tool_config, updated_messages, processed_call_ids):
-                    yield chunk
-                functions_executed = True
+                if self._nlip_enabled and self._nlip_router:
+                    logger.info(f"[NLIP] Using NLIP routing for MCP tool {call['name']}")
+                    try:
+                        async for chunk in self._stream_tool_execution_via_nlip(
+                            call,
+                            mcp_tool_config,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield chunk
+                        functions_executed = True
+                    except Exception as exc:
+                        logger.warning(
+                            f"[NLIP] Routing failed for {call['name']}: {exc}. " f"Falling back to direct execution.",
+                        )
+                        async for chunk in self._execute_tool_with_logging(
+                            call,
+                            mcp_tool_config,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield chunk
+                        functions_executed = True
+                else:
+                    reason = "disabled" if not self._nlip_enabled else "router unavailable"
+                    logger.info(
+                        f"[MCP Tool] Direct execution for {call['name']} (NLIP {reason})",
+                    )
+                    async for chunk in self._execute_tool_with_logging(
+                        call,
+                        mcp_tool_config,
+                        updated_messages,
+                        processed_call_ids,
+                    ):
+                        yield chunk
+                    functions_executed = True
 
             # Ensure all captured function calls have results to prevent hanging
             for call in captured_function_calls:
