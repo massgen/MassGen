@@ -27,7 +27,7 @@ import json
 import mimetypes
 import os
 from pathlib import Path
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Set, Tuple
 
 import anthropic
 import httpx
@@ -69,6 +69,10 @@ class ClaudeBackend(CustomToolAndMCPBackend):
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Override to ensure Files API cleanup happens after streaming completes."""
+        if self._nlip_enabled:
+            logger.info(
+                f"[Claude] NLIP routing enabled for agent {kwargs.get('agent_id', self.agent_id)}",
+            )
         try:
             async for chunk in super().stream_with_tools(messages, tools, **kwargs):
                 yield chunk
@@ -925,33 +929,83 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                     "call_id": tool_call["id"],  # Normalize "id" to "call_id"
                 }
 
+            processed_call_ids: Set[str] = set()
+
             # Execute custom tools using unified method
             for tool_call in custom_tool_calls:
-                # Normalize Claude tool call format to unified format
                 normalized_call = normalize_tool_call(tool_call)
 
-                # Use unified execution method
-                async for chunk in self._execute_tool_with_logging(
-                    normalized_call,
-                    CUSTOM_TOOL_CONFIG,
-                    updated_messages,
-                    set(),
-                ):
-                    yield chunk
+                if self._nlip_enabled and self._nlip_router:
+                    logger.info(f"[NLIP] Using NLIP routing for custom tool {normalized_call['name']}")
+                    try:
+                        async for chunk in self._stream_tool_execution_via_nlip(
+                            normalized_call,
+                            CUSTOM_TOOL_CONFIG,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield chunk
+                    except Exception as exc:
+                        logger.warning(
+                            f"[NLIP] Routing failed for {normalized_call['name']}: {exc}. " f"Falling back to direct execution.",
+                        )
+                        async for chunk in self._execute_tool_with_logging(
+                            normalized_call,
+                            CUSTOM_TOOL_CONFIG,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield chunk
+                else:
+                    reason = "disabled" if not self._nlip_enabled else "router unavailable"
+                    logger.info(
+                        f"[Custom Tool] Direct execution for {normalized_call['name']} (NLIP {reason})",
+                    )
+                    async for chunk in self._execute_tool_with_logging(
+                        normalized_call,
+                        CUSTOM_TOOL_CONFIG,
+                        updated_messages,
+                        processed_call_ids,
+                    ):
+                        yield chunk
 
             # Execute MCP tools using unified method
             for tool_call in mcp_tool_calls:
-                # Normalize Claude tool call format to unified format
                 normalized_call = normalize_tool_call(tool_call)
 
-                # Use unified execution method
-                async for chunk in self._execute_tool_with_logging(
-                    normalized_call,
-                    MCP_TOOL_CONFIG,
-                    updated_messages,
-                    set(),
-                ):
-                    yield chunk
+                if self._nlip_enabled and self._nlip_router:
+                    logger.info(f"[NLIP] Using NLIP routing for MCP tool {normalized_call['name']}")
+                    try:
+                        async for chunk in self._stream_tool_execution_via_nlip(
+                            normalized_call,
+                            MCP_TOOL_CONFIG,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield chunk
+                    except Exception as exc:
+                        logger.warning(
+                            f"[NLIP] Routing failed for {normalized_call['name']}: {exc}. " f"Falling back to direct execution.",
+                        )
+                        async for chunk in self._execute_tool_with_logging(
+                            normalized_call,
+                            MCP_TOOL_CONFIG,
+                            updated_messages,
+                            processed_call_ids,
+                        ):
+                            yield chunk
+                else:
+                    reason = "disabled" if not self._nlip_enabled else "router unavailable"
+                    logger.info(
+                        f"[MCP Tool] Direct execution for {normalized_call['name']} (NLIP {reason})",
+                    )
+                    async for chunk in self._execute_tool_with_logging(
+                        normalized_call,
+                        MCP_TOOL_CONFIG,
+                        updated_messages,
+                        processed_call_ids,
+                    ):
+                        yield chunk
 
             updated_messages = self._trim_message_history(updated_messages)
 
