@@ -13,14 +13,18 @@
 # 3. An agent loop that executes the tool actions (screenshots, mouse clicks, etc.)
 # 4. A sandboxed computing environment (Docker/VM recommended)
 #
-# Usage:
-#   massgen --config claude_computer_use_browser_example.yaml
+# Usage (with visible browser):
+#   DISPLAY=:20 massgen --config claude_computer_use_browser_example.yaml
+#
+# Usage (headless mode):
+#   Set headless: true in preset_args below
 #
 # Prerequisites:
 #   1. Set ANTHROPIC_API_KEY environment variable
 #   2. Implement claude_computer_use tool (similar to computer_use or gemini_computer_use)
 #   3. Playwright installed for browser control: pip install playwright && playwright install
-#   4. Virtual display setup (Xvfb) for desktop control
+#   4. For visible browser: DISPLAY environment variable must be set (e.g., DISPLAY=:20)
+#   5. For headless: No display needed
 #
 # Supported Models:
 #   - claude-sonnet-4-5 (recommended)
@@ -50,11 +54,10 @@ agents:
             Can control browser, take screenshots, click, type, scroll, and navigate.
           preset_args:
             environment: "browser"
-            headless: true
-          default_params:
             display_width: 1024
             display_height: 768
             max_iterations: 25
+            headless: false
             browser_type: "chromium"
         - name: ["understand_image"]
           category: "multimodal"
@@ -69,9 +72,8 @@ agents:
       - str_replace_editor: Edit files using search and replace
       - bash: Execute shell commands
 
-      **IMPORTANT: This system runs on a headless Linux server without X display.**
-      **You MUST always use headless: true when calling claude_computer_use.**
-      **Never set headless: false as it will fail without a display server.**
+      **IMPORTANT: Set DISPLAY environment variable (e.g., DISPLAY=:20) when running.**
+      **The browser will open visibly if DISPLAY is set, otherwise it runs headless.**
 
       **PERFORMANCE GUIDELINES:**
       - You have a limited number of iterations (usually 25-40)

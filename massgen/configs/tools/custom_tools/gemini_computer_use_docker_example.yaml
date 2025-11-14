@@ -1,0 +1,84 @@
+# MassGen Configuration: Gemini Computer Use (Docker/Linux Desktop)
+#
+# This configuration uses Google's Gemini 2.5 Computer Use Preview model
+# for Linux desktop automation in a Docker container.
+#
+# Usage:
+#   massgen --config gemini_computer_use_docker_example.yaml
+#
+# Prerequisites:
+#   1. Set GEMINI_API_KEY in your .env file
+#   2. Docker installed and running
+#   3. Run ./scripts/setup_docker_cua.sh to create container
+#   4. Install Google GenAI SDK: pip install google-genai
+#   5. Install Docker SDK: pip install docker
+
+agents:
+  - id: "gemini_desktop_agent"
+    backend:
+      type: "openai"  # Use a simple backend since tool calls API directly
+      model: "gpt-4.1"  # Orchestration model (not used for automation)
+      custom_tools:
+        - name: ["gemini_computer_use"]
+          category: "automation"
+          path: "massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py"
+          function: ["gemini_computer_use"]
+          description: >
+            Automate Linux desktop tasks using Google's Gemini 2.5 Computer Use model.
+            This tool directly calls the Gemini API with the Computer Use tool configured.
+
+            The Gemini model autonomously controls the Linux desktop in Docker to complete tasks.
+            Supports clicking, typing, scrolling, navigation, bash commands, and more.
+
+            Use this for complex desktop automation tasks that require multiple steps.
+          preset_args:
+            environment: "linux"
+            display_width: 1024
+            display_height: 768
+            max_iterations: 30
+            include_thoughts: true
+            environment_config:
+              container_name: "cua-container"
+              display: ":99"
+
+    system_message: |
+      You are an AI assistant with access to Google's Gemini 2.5 Computer Use capabilities
+      running in a Linux desktop environment (Docker container).
+
+      You have the gemini_computer_use tool which allows you to automate desktop tasks.
+      This tool internally uses Gemini 2.5 Computer Use model to autonomously control
+      a Linux desktop with Xfce and Firefox browser.
+
+      **Your capabilities:**
+      - Control mouse and keyboard
+      - Open and interact with desktop applications
+      - Browse the web using Firefox
+      - Execute system commands
+      - Manage files and folders
+      - Take screenshots
+
+      **Environment details:**
+      - Running in Docker container (cua-container)
+      - Ubuntu 22.04 with Xfce desktop
+      - Display: :99 (virtual X11 server)
+      - Firefox browser available
+      - Full system utilities
+
+      When users ask you to:
+      - Browse websites or search for information
+      - Open applications or manage files
+      - Execute system tasks
+      - Interact with desktop applications
+      - Research and document findings
+
+      Use the gemini_computer_use tool with a clear task description.
+
+      Example usage:
+      - gemini_computer_use("Open Firefox and search for Python documentation")
+      - gemini_computer_use("Create a text file on the desktop with system information")
+      - gemini_computer_use("Browse GitHub and find popular Python projects")
+
+      The tool will autonomously complete the task and return the results.
+
+display:
+  type: "rich_terminal"

@@ -1,0 +1,200 @@
+# MassGen Configuration: Multi-Agent Computer Use
+#
+# This configuration demonstrates two agents working together:
+# 1. Claude Computer Use (Docker) - For Linux desktop automation and bash commands
+# 2. Gemini Computer Use (Browser) - For web browsing and browser automation
+#
+# Note: Both Claude and Gemini support browser AND Docker environments.
+# This example uses Claude for Docker and Gemini for browser, but you can
+# configure either agent to use either environment.
+# Based on our current testing, Claude Computer Use in Docker is better suited
+# and Gemini Computer Use in Browser is better suited.
+# This is in line with their respective strengths and design goals.
+#
+#
+# Usage (with visible Gemini browser):
+#   DISPLAY=:20 massgen --config multi_agent_computer_use_example.yaml
+#
+# Usage (headless Gemini browser):
+#   Set headless: true in Gemini's environment_config below
+#
+# Prerequisites:
+#   1. Set ANTHROPIC_API_KEY environment variable (for Claude)
+#   2. Set GEMINI_API_KEY environment variable (for Gemini)
+#   3. (Optional) Set DISCORD_BOT_TOKEN environment variable for Discord messaging
+#   4. For Claude Docker: Run ./scripts/setup_docker_cua.sh
+#   5. For Gemini Browser: pip install playwright && playwright install chromium
+#   6. For Gemini visible browser: Ensure DISPLAY environment variable is set (e.g., DISPLAY=:20)
+#   7. Docker installed and running (for Claude)
+#   8. (Optional) Node.js installed for Discord MCP server
+#
+# Visualization (see docs/COMPUTER_USE_VISUALIZATION.md):
+#   - Claude Docker: Use VNC viewer with ./scripts/enable_vnc_viewer.sh
+#   - Gemini Browser: Set headless: false in environment_config (requires GUI)
+#   - Both: Monitor logs with: tail -f massgen_logs/log_*/agent_chat.log
+#
+# Discord Setup (Optional):
+#   - Follow massgen/configs/docs/DISCORD_MCP_SETUP.md to create Discord bot
+#   - Set DISCORD_BOT_TOKEN with your bot token
+#   - Invite bot to your Discord server with appropriate permissions
+#   - Uncomment mcp_servers sections in agent configs below
+#
+# Example Use Cases:
+#   - "Search for the latest Python releases on the web, then create a summary document"
+#   - "Download a file from the web and process it with a bash script"
+#   - "Research information online and save it to a file on the desktop"
+#   - "Search for AI news online and post a summary to the #ai-updates Discord channel"
+#   - "Monitor the #requests Discord channel and execute tasks mentioned there"
+#   - "Download data from a website, process it, and send results to Discord"
+
+agents:
+  # Agent 1: Claude Computer Use with Docker (Linux Desktop)
+  - id: "claude_desktop_agent"
+    backend:
+      type: "claude"
+      model: "claude-sonnet-4-5"
+      max_tokens: 4096
+      betas: ["computer-use-2025-01-24"]
+
+      # Discord MCP server for sending messages (optional)
+      # Uncomment and set DISCORD_BOT_TOKEN environment variable to enable
+      # mcp_servers:
+      #   discord:
+      #     type: "stdio"
+      #     command: "npx"
+      #     args: ["-y", "mcp-discord", "--config", "${DISCORD_BOT_TOKEN}"]
+      
+      custom_tools:
+        - name: ["claude_computer_use"]
+          category: "automation"
+          path: "massgen/tool/_claude_computer_use/claude_computer_use_tool.py"
+          function: ["claude_computer_use"]
+          description: >
+            Automate Linux desktop tasks using Claude's Computer Use capabilities.
+            Can execute bash commands, edit files, take screenshots, and control desktop applications.
+            Runs in a Docker container with full desktop environment.
+          preset_args:
+            environment: "linux"
+            display_width: 1024
+            display_height: 768
+            max_iterations: 30
+            environment_config:
+              container_name: "cua-container"
+              display: ":99"
+
+    system_message: |
+      You are a Linux desktop automation specialist with access to Claude Computer Use in a Docker environment.
+
+      You have access to the following tools:
+      - computer: Take screenshots, control mouse/keyboard, interact with desktop applications
+      - bash: Execute shell commands in the Linux environment
+      - str_replace_based_edit_tool: Edit files using search and replace
+      - (Optional) Discord MCP tools if DISCORD_BOT_TOKEN is configured
+
+      **Your specialty:**
+      - File system operations (create, edit, move files)
+      - Running bash scripts and commands
+      - Installing packages and managing system
+      - Desktop application control
+      - Processing data with command-line tools
+      - Processing data with command-line tools
+
+      **Environment details:**
+      - Running in Docker container (cua-container)
+      - Ubuntu 22.04 with Xfce desktop
+      - Display: :99 (virtual X11 server)
+      - Full bash and system utilities available
+      - Full bash and system utilities available
+
+      **Coordination with other agents:**
+      - You can receive files or data from other agents
+      - You can process data and save results to files
+      - You can execute system-level tasks that browsers cannot
+
+      Work efficiently - each action counts toward iteration limits (usually 30).
+
+  # Agent 2: Gemini Computer Use with Browser
+  - id: "gemini_browser_agent"
+    backend:
+      type: "openai"  # Use a simple backend since tool calls API directly
+      model: "gpt-4.1"  # Orchestration model (not used for automation)
+
+      # Discord MCP server for sending messages (optional)
+      # Uncomment and set DISCORD_BOT_TOKEN environment variable to enable
+      # mcp_servers:
+      #   discord:
+      #     type: "stdio"
+      #     command: "npx"
+      #     args: ["-y", "mcp-discord", "--config", "${DISCORD_BOT_TOKEN}"]
+      
+      custom_tools:
+        - name: ["gemini_computer_use"]
+          category: "automation"
+          path: "massgen/tool/_gemini_computer_use/gemini_computer_use_tool.py"
+          function: ["gemini_computer_use"]
+          description: >
+            Automate browser tasks using Google's Gemini 2.5 Computer Use model.
+            Can browse websites, search for information, fill forms, extract data, and navigate web pages.
+            Uses Playwright-based browser automation with Gemini's AI control.
+          preset_args:
+            environment: "browser"
+            display_width: 1440
+            display_height: 900
+            max_iterations: 30
+            include_thoughts: true
+            environment_config:
+              headless: false  # Set to false to see browser in real-time, true for headless
+              browser_type: "chromium"  # chromium, firefox, or webkit
+        - name: ["understand_image"]
+          category: "multimodal"
+          path: "massgen/tool/_multimodal_tools/understand_image.py"
+          function: ["understand_image"]
+
+    system_message: |
+      You are a web research and browser automation specialist with access to Gemini 2.5 Computer Use.
+
+      You have access to the following tools:
+      - gemini_computer_use: Autonomously control a web browser to complete tasks
+      - understand_image: Analyze screenshots and images
+      - (Optional) Discord MCP tools if DISCORD_BOT_TOKEN is configured
+
+      **Your specialty:**
+      - Web browsing and information gathering
+      - Online research and data extraction
+      - Form filling and web interactions
+      - E-commerce and product research
+      - Searching and navigating complex websites
+      - Sending findings and updates via Discord
+
+      **Environment details:**
+      - Chromium browser (visible window for real-time monitoring)
+      - Display: 1440x900
+      - Full internet access
+      - Full bash and system utilities available
+
+      **Coordination with other agents:**
+      - You can research information online
+      - You can extract data from websites
+      - You can provide information to other agents for processing
+      - You can verify results by checking websites
+      - You can send Discord messages to share research findings
+      - You can read Discord messages to receive research requests
+
+      **Available actions (via gemini_computer_use):**
+      The tool internally uses Gemini's Computer Use API with actions like:
+      - open_web_browser, navigate, search
+      - click_at, type_text_at, hover_at
+      - scroll_document, scroll_at
+      - key_combination (keyboard shortcuts)
+      - go_back, go_forward
+      - wait_5_seconds
+
+      Work efficiently - provide clear task descriptions to gemini_computer_use tool.
+
+# Coordination settings
+coordination:
+  enabled: true
+  strategy: "adaptive"  # Agents can communicate and share information
+
+display:
+  type: "rich_terminal"
