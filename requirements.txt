@@ -8,6 +8,7 @@ google-genai>=1.27.0
 python-dotenv>=1.0.0
 PyYAML>=6.0
 rich==14.1.0
+textual>=0.47.0
 cerebras-cloud-sdk==1.46.0
 lmstudio==1.4.1
 requests>=2.31.0

@@ -65,9 +65,11 @@ dependencies = [
     "mem0ai>=1.0.0",
     "reportlab>=4.0.0",
     "dspy>=2.4.0",
+    "textual>=0.47.0"
 ]
 
 [project.optional-dependencies]
+
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",

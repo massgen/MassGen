@@ -1,0 +1,199 @@
+/* Dark theme for Textual Terminal Display */
+
+Screen {
+    background: #1e1e1e;
+    color: #d4d4d4;
+}
+
+#main_container {
+    layout: horizontal;
+    background: #1e1e1e;
+    height: 100%;
+    padding: 0 1;
+}
+
+#agents_container {
+    layout: horizontal;
+    width: 75%;
+    height: 100%;
+}
+
+#orchestrator_panel {
+    width: 25%;
+    background: #252526;
+    border-left: solid #464647;
+    padding: 1;
+}
+
+/* Agent panels */
+AgentPanel {
+    background: #252526;
+    border: solid #464647;
+    margin: 1;
+    padding: 1;
+    width: 1fr;
+}
+
+/* Headers */
+HeaderWidget {
+    background: #007ACC;
+    color: #ffffff;
+    padding: 1;
+    height: 3;
+    dock: top;
+}
+
+#question_label {
+    color: #ffffff;
+    text-style: bold;
+}
+
+#restart_banner {
+    background: #ce9178;
+    color: #1e1e1e;
+    padding: 1;
+    margin-top: 1;
+}
+
+#restart_context {
+    background: #569cd6;
+    color: #ffffff;
+    padding: 1;
+}
+
+/* Agent headers */
+Label {
+    height: 1;
+    width: 100%;
+}
+
+RichLog {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    scrollbar-size: 1 1;
+}
+
+/* Status colors */
+.waiting {
+    color: #858585;
+}
+
+.working {
+    color: #569cd6;
+}
+
+.streaming {
+    color: #4ec9b0;
+}
+
+.completed {
+    color: #4ec9b0;
+}
+
+.error {
+    color: #f44747;
+}
+
+/* Content type colors */
+.tool {
+    color: #9cdcfe;
+}
+
+.status {
+    color: #ce9178;
+}
+
+.thinking {
+    color: #d4d4d4;
+}
+
+.presentation {
+    color: #c586c0;
+}
+
+/* Modals */
+ModalScreen {
+    align: center middle;
+}
+
+#presentation_container {
+    background: #252526;
+    border: thick #007ACC;
+    padding: 2;
+    width: 80%;
+    height: 80%;
+}
+
+#selector_container {
+    background: #252526;
+    border: thick #464647;
+    padding: 2;
+    width: 60%;
+    max-height: 80%;
+}
+
+#table_container {
+    background: #252526;
+    border: thick #464647;
+    padding: 2;
+    width: 90%;
+    height: 90%;
+}
+
+/* Buttons */
+Button {
+    background: #007ACC;
+    color: #ffffff;
+    margin-top: 1;
+}
+
+Button:hover {
+    background: #1e7fd1;
+}
+
+Button:focus {
+    text-style: bold;
+}
+
+/* Lists */
+ListView {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    height: auto;
+    max-height: 20;
+}
+
+ListItem {
+    background: transparent;
+    padding: 0 1;
+}
+
+ListItem:hover {
+    background: #2a2d2e;
+}
+
+/* TextArea */
+TextArea {
+    background: #1e1e1e;
+    color: #d4d4d4;
+}
+
+/* Scrollbars */
+Scrollbar {
+    background: #3c3c3c;
+}
+
+ScrollbarThumb {
+    background: #686868;
+}
+
+ScrollbarThumb:hover {
+    background: #9e9e9e;
+}
+
+/* Footer */
+Footer {
+    background: #007ACC;
+    color: #ffffff;
+    dock: bottom;
+}
