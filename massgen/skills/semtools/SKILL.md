@@ -54,44 +54,15 @@ Use the semtools skill when you need meaning-based search:
 - Speed is critical (ripgrep is faster for exact matches)
 - You're searching for specific symbols or references
 
-## Prerequisites
+## Available Commands
 
-Semtools is **pre-installed in MassGen Docker containers** - no setup required!
+Semtools provides three CLI commands you can use via `execute_command`:
 
-**In Docker mode (recommended):**
-```bash
-# semtools is pre-installed and ready to use
-# Provides: search, parse, workspace commands
-search --help
-parse --help
-workspace --help
-```
+- **`search`** - Semantic search across code and text files
+- **`workspace`** - Manage workspaces for caching embeddings
+- **`parse`** - Convert documents (PDF, DOCX, PPTX) to searchable text
 
-**In local mode:**
-```bash
-# Option 1: Install via npm (recommended)
-npm install -g @llamaindex/semtools
-
-# Option 2: Install via cargo (Rust)
-cargo install semtools
-
-# Verify installation
-search --version
-```
-
-**Optional: Document Parsing (LlamaParse)**
-
-To parse documents (PDF, DOCX, PPTX), you need a LlamaIndex Cloud API key:
-
-```bash
-# Get API key from https://cloud.llamaindex.ai
-export LLAMA_CLOUD_API_KEY="your-api-key"
-
-# Or configure via file
-echo '{"api_key": "your-api-key"}' > ~/.parse_config.json
-```
-
-**Note:** Semantic search works **without an API key**. Only document parsing requires LlamaParse.
+**All commands work out-of-the-box** in your execution environment. Document parsing requires the LLAMA_CLOUD_API_KEY environment variable to be set.
 
 ## Core Operations
 

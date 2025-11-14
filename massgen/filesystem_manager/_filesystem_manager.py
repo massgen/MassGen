@@ -253,39 +253,32 @@ class FilesystemManager:
             else:
                 logger.warning(f"[Local] User skills directory does not exist: {skills_path}")
 
-        # Copy massgen built-in skills
+        # Copy massgen built-in skills (flat structure in massgen/skills/)
         massgen_skills_base = Path(__file__).parent.parent / "skills"
 
         # Track which skills have been added to avoid duplicates
         added_skills = set()
 
-        # Always copy skills from massgen/skills/always/
-        always_dir = massgen_skills_base / "always"
-        if always_dir.exists():
-            for skill_dir in always_dir.iterdir():
-                if skill_dir.is_dir():
-                    skill_dest = temp_skills_dir / skill_dir.name
-                    logger.info(f"[Local] Adding always-available MassGen skill: {skill_dir.name}")
-                    shutil.copytree(skill_dir, skill_dest, dirs_exist_ok=True)
-                    added_skills.add(skill_dir.name)
-
-        # Copy configured optional skills from massgen/skills/optional/
-        # (skip if already added from always/)
+        # If specific skills are requested, copy only those
         if massgen_skills:
-            optional_dir = massgen_skills_base / "optional"
             for skill_name in massgen_skills:
-                if skill_name in added_skills:
-                    logger.debug(f"[Local] Skill {skill_name} already added from always/, skipping optional")
-                    continue
-
-                skill_source = optional_dir / skill_name
-                if skill_source.exists():
+                skill_source = massgen_skills_base / skill_name
+                if skill_source.exists() and skill_source.is_dir():
                     skill_dest = temp_skills_dir / skill_name
-                    logger.info(f"[Local] Adding optional MassGen skill: {skill_name}")
+                    logger.info(f"[Local] Adding MassGen skill: {skill_name}")
                     shutil.copytree(skill_source, skill_dest, dirs_exist_ok=True)
                     added_skills.add(skill_name)
                 else:
-                    logger.warning(f"[Local] Optional MassGen skill not found: {skill_name} at {skill_source}")
+                    logger.warning(f"[Local] MassGen skill not found: {skill_name} at {skill_source}")
+        else:
+            # If no specific skills requested, copy all built-in skills
+            if massgen_skills_base.exists():
+                for skill_dir in massgen_skills_base.iterdir():
+                    if skill_dir.is_dir() and not skill_dir.name.startswith("."):
+                        skill_dest = temp_skills_dir / skill_dir.name
+                        logger.info(f"[Local] Adding MassGen skill: {skill_dir.name}")
+                        shutil.copytree(skill_dir, skill_dest, dirs_exist_ok=True)
+                        added_skills.add(skill_dir.name)
 
         # Store the merged skills directory path
         self.local_skills_directory = temp_skills_dir

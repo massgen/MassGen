@@ -389,29 +389,27 @@ class Orchestrator(ChatAgent):
                 "Skills require command line execution to be enabled. " "Set enable_mcp_command_line: true in at least one agent's backend config.",
             )
 
-        # Check if skills are configured (external or built-in)
+        # Check if skills are available (external or built-in)
         skills_dir = Path(self.config.coordination_config.skills_directory)
-        massgen_skills = self.config.coordination_config.massgen_skills or []
-        logger.info(f"[Orchestrator] Checking skills configuration - directory: {skills_dir}, massgen_skills: {massgen_skills}")
+        logger.info(f"[Orchestrator] Checking skills configuration - directory: {skills_dir}")
 
-        # Check for external skills
+        # Check for external skills (from openskills)
         has_external_skills = skills_dir.exists() and skills_dir.is_dir() and any(skills_dir.iterdir())
 
-        # Check for built-in skills
+        # Check for built-in skills (bundled with MassGen)
         builtin_skills_dir = Path(__file__).parent / "skills"
-        has_builtin_skills = len(massgen_skills) > 0 and builtin_skills_dir.exists()
+        has_builtin_skills = builtin_skills_dir.exists() and any(builtin_skills_dir.iterdir())
 
-        # At least one type of skills must be configured
+        # At least one type of skills must be available
         if not has_external_skills and not has_builtin_skills:
             raise RuntimeError(
-                f"No skills configured. Either:\n"
-                f"1. Install external skills: 'npm i -g openskills && openskills install anthropics/skills --universal -y'\n"
-                f"   Skills directory '{skills_dir}' must exist and contain skills.\n"
-                f"2. Enable built-in MassGen skills: Set massgen_skills: ['file_search'] in coordination config.\n"
-                f"3. Use both external and built-in skills together.",
+                f"No skills found. To use skills:\n"
+                f"Install external skills: 'npm i -g openskills && openskills install anthropics/skills --universal -y'\n"
+                f"This creates '{skills_dir}' with skills like pdf, xlsx, pptx, etc.\n\n"
+                f"Built-in skills (file-search, serena, semtools) should be bundled with MassGen in {builtin_skills_dir}",
             )
 
-        logger.info(f"[Orchestrator] Skills configuration valid (external: {has_external_skills}, builtin: {has_builtin_skills})")
+        logger.info(f"[Orchestrator] Skills available (external: {has_external_skills}, builtin: {has_builtin_skills})")
 
     def _inject_planning_tools_for_all_agents(self) -> None:
         """

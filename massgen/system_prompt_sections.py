@@ -422,24 +422,26 @@ class MemorySection(SystemPromptSection):
             else:
                 content_parts.append("*No short-term memories yet*")
 
-        # Long-term memory (table format)
+        # Long-term memory (XML format)
         long_term = self.memory_config.get("long_term", [])
         if long_term:
             content_parts.append("\n### Long-Term Memory (Persistent)\n")
-            content_parts.append(
-                "| Memory ID | Summary | Created |\n" "|-----------|---------|---------|",
-            )
+            content_parts.append("<available_long_term_memories>")
 
             for memory in long_term:
                 mem_id = memory.get("id", "N/A")
                 summary = memory.get("summary", "No summary")
                 created = memory.get("created_at", "Unknown")
 
-                # Truncate long summaries
-                if len(summary) > 80:
-                    summary = summary[:77] + "..."
+                content_parts.append("")
+                content_parts.append("<memory>")
+                content_parts.append(f"<id>{mem_id}</id>")
+                content_parts.append(f"<summary>{summary}</summary>")
+                content_parts.append(f"<created>{created}</created>")
+                content_parts.append("</memory>")
 
-                content_parts.append(f"| {mem_id} | {summary} | {created} |")
+            content_parts.append("")
+            content_parts.append("</available_long_term_memories>")
 
         # Memory file conventions and operations
         content_parts.append(

@@ -3,7 +3,7 @@
 # Works great with LOCAL websites (localhost, file://) where crawl4ai doesn't work
 #
 # Usage:
-#   uv run massgen --config @examples/tools/custom_tools/simple_browser_automation_example "Navigate to http://localhost:3000 and analyze the page"
+#   uv run massgen --config @examples/tools/custom_tools/simple_browser_automation_example "Navigate to ag2.ai and analyze the page"
 #
 # Prerequisites:
 #   1. Set OPENAI_API_KEY in your .env file

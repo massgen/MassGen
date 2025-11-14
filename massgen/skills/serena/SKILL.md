@@ -8,32 +8,28 @@ license: MIT
 
 Navigate and manipulate code at the symbol level using IDE-like semantic analysis powered by Language Server Protocol (LSP).
 
-## Integration Options
+## How You Can Access Serena
 
-Serena can be used in two ways:
+You may have Serena available in one or both of these ways:
 
-1. **CLI commands** (via uvx) - Covered in this skill, good for simple workflows
-2. **MCP Server** (recommended) - Exposes all 30+ tools automatically via MCP protocol
+**Option 1: Direct MCP Tools** (if configured by your orchestrator)
+Check your available tools for:
+- `find_symbol`, `find_referencing_symbols` - Symbol lookup
+- `rename_symbol`, `replace_symbol_body` - Refactoring
+- `insert_after_symbol`, `insert_before_symbol` - Precise insertions
+- `onboarding`, `activate_project` - Project understanding
+- `write_memory`, `read_memory` - Save context
+- And 25+ more LSP-powered tools
 
-**For full access to all Serena capabilities**, consider using the MCP server approach:
-```yaml
-mcp_servers:
-  - name: "serena"
-    type: "stdio"
-    command: "uvx"
-    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
+If you see these tools, use them directly - they provide full Serena capabilities!
+
+**Option 2: CLI Commands** (always available via execute_command)
+You can run serena commands using:
+```bash
+execute_command("uvx --from git+https://github.com/oraios/serena serena <command>")
 ```
 
-See `massgen/configs/skills/serena_mcp_example.yaml` for a complete configuration.
-
-This skill documents the **core CLI commands** for strategic guidance. The MCP server provides additional tools like:
-- `rename_symbol` - Safe refactoring across codebase
-- `insert_before_symbol` - Insert before symbol definitions
-- `replace_symbol_body` - Replace symbol implementations
-- `onboarding` - Project structure analysis
-- Memory system (`write_memory`, `read_memory`, etc.)
-- Metacognitive tools (`think_about_*`)
-- And 20+ more tools
+This skill focuses on CLI usage patterns. If you have direct MCP tools, prefer those for better integration.
 
 ## Purpose
 
@@ -81,27 +77,7 @@ Use the serena skill when you need symbol-level code understanding:
 - You need faster, simpler pattern matching
 - Symbol-level precision isn't required
 
-## Prerequisites
-
-Serena is available via `uvx` - no installation required!
-
-**Usage (Docker and Local):**
-```bash
-# Use uvx to run serena on-demand (no permanent installation)
-uvx --from git+https://github.com/oraios/serena serena --help
-
-# This works in both Docker mode (uv pre-installed) and local mode (install uv first)
-```
-
-**First-time local setup (if uv not installed):**
-```bash
-# Install uv package manager
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Then use uvx as shown above
-```
-
-**Language Server Requirements:**
+## Language Support
 
 Serena uses LSP servers for semantic analysis. Most common languages are supported out-of-the-box:
 - Python (pyright, jedi)
@@ -110,8 +86,9 @@ Serena uses LSP servers for semantic analysis. Most common languages are support
 - Go (gopls)
 - Java (jdtls)
 - C/C++ (clangd)
+- C#, Ruby, PHP, Kotlin, Swift, Scala, and 15+ more
 
-See [Serena documentation](https://oraios.github.io/serena) for full language support and setup.
+The LSP servers provide symbol information for the language you're working with.
 
 ## Core Operations
 
