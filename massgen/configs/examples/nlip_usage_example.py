@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 NLIP Usage Example for MassGen
 
@@ -6,15 +7,19 @@ with MassGen agents and orchestrator.
 """
 
 import asyncio
-from massgen import ConfigurableAgent, Orchestrator
-from massgen.agent_config import AgentConfig
-from massgen.nlip import (
-    NLIPMessage, NLIPRequest, NLIPResponse, NLIPToolCall,
-    NLIPControlField, NLIPTokenField, NLIPFormatField,
-    NLIPMessageType
-)
 import uuid
 from datetime import datetime
+
+from massgen.agent_config import AgentConfig
+from massgen.nlip import (
+    NLIPControlField,
+    NLIPFormatField,
+    NLIPMessage,
+    NLIPMessageType,
+    NLIPRequest,
+    NLIPTokenField,
+    NLIPToolCall,
+)
 
 
 async def example_1_basic_nlip_agent():
@@ -27,16 +32,16 @@ async def example_1_basic_nlip_agent():
     config = AgentConfig(
         backend_params={
             "type": "openai",
-            "model": "gpt-4o-mini"
+            "model": "gpt-4o-mini",
         },
         agent_id="nlip_agent_1",
         enable_nlip=True,
         nlip_config={
             "router": {
                 "enable_message_tracking": True,
-                "session_timeout_hours": 24
-            }
-        }
+                "session_timeout_hours": 24,
+            },
+        },
     )
 
     print(f"✓ Created AgentConfig with NLIP enabled: {config.enable_nlip}")
@@ -58,7 +63,7 @@ async def example_2_nlip_router_direct():
     router = NLIPRouter(
         tool_manager=None,  # Would pass actual tool manager in real usage
         enable_nlip=True,
-        config={}
+        config={},
     )
 
     print(f"✓ Created NLIPRouter, enabled: {router.is_enabled()}")
@@ -68,17 +73,17 @@ async def example_2_nlip_router_direct():
         format=NLIPFormatField(
             content_type="application/json",
             encoding="utf-8",
-            schema_version="1.0"
+            schema_version="1.0",
         ),
         control=NLIPControlField(
             message_type=NLIPMessageType.REQUEST,
             message_id=str(uuid.uuid4()),
-            timestamp=datetime.utcnow().isoformat() + "Z"
+            timestamp=datetime.utcnow().isoformat() + "Z",
         ),
         token=NLIPTokenField(
             session_id="example_session",
             context_token=str(uuid.uuid4()),
-            conversation_turn=1
+            conversation_turn=1,
         ),
         content={"query": "Example query"},
         tool_calls=[
@@ -86,9 +91,9 @@ async def example_2_nlip_router_direct():
                 tool_id="call_1",
                 tool_name="example_tool",
                 parameters={"param1": "value1"},
-                require_confirmation=False
-            )
-        ]
+                require_confirmation=False,
+            ),
+        ],
     )
 
     print(f"✓ Created NLIP request with message_id: {request.control.message_id}")
@@ -110,9 +115,9 @@ async def example_3_multi_agent_nlip():
             enable_nlip=True,
             nlip_config={
                 "router": {
-                    "enable_message_tracking": True
-                }
-            }
+                    "enable_message_tracking": True,
+                },
+            },
         )
         agent_configs.append(config)
         print(f"✓ Created config for agent_{i} with NLIP enabled")
@@ -138,7 +143,7 @@ async def example_4_nlip_message_structure():
     format_field = NLIPFormatField(
         content_type="application/json",
         encoding="utf-8",
-        schema_version="1.0"
+        schema_version="1.0",
     )
     print(f"✓ Format field: {format_field.content_type}, version {format_field.schema_version}")
 
@@ -146,14 +151,14 @@ async def example_4_nlip_message_structure():
         message_type=NLIPMessageType.REQUEST,
         message_id=str(uuid.uuid4()),
         timestamp=datetime.utcnow().isoformat() + "Z",
-        priority=5
+        priority=5,
     )
     print(f"✓ Control field: type={control_field.message_type}, priority={control_field.priority}")
 
     token_field = NLIPTokenField(
         session_id="session_123",
         context_token="ctx_456",
-        conversation_turn=3
+        conversation_turn=3,
     )
     print(f"✓ Token field: session={token_field.session_id}, turn={token_field.conversation_turn}")
 
@@ -161,9 +166,9 @@ async def example_4_nlip_message_structure():
         format=format_field,
         control=control_field,
         token=token_field,
-        content={"message": "Example content"}
+        content={"message": "Example content"},
     )
-    print(f"✓ Complete NLIP message created")
+    print(f"✓ Complete NLIP message: type={message.control.message_type}, session={message.token.session_id}")
 
 
 async def main():
