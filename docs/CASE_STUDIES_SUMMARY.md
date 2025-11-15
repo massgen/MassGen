@@ -10,7 +10,7 @@ MassGen is focused on **case-driven development**. Each case study demonstrates 
 
 | Title | Version | Short Description | Status | Link |
 |-------|---------|-------------------|--------|------|
-| **Session Management & Computer Use Tools** | v0.1.9 | Complete session state tracking and restoration for multi-turn conversations, computer use automation tools (Claude/Gemini/OpenAI) for browser and desktop control, enhanced config builder with fuzzy model matching | ✅ Ready | [📄 Guide](massgen/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md) |
+| **Session Management & Computer Use Tools** | v0.1.9 | Complete session state tracking and restoration for multi-turn conversations, computer use automation tools (Claude/Gemini/OpenAI) for browser and desktop control, enhanced config builder with fuzzy model matching | ✅ Ready | [📄 Guide](../massgen/backend/docs/COMPUTER_USE_TOOLS_GUIDE.md) |
 | **Automation Mode Enables Meta Self-Analysis** | v0.1.8 | Automation infrastructure with `--automation` flag providing clean structured output, enabling agents to run nested MassGen experiments and analyze results for meta-level self-analysis | ✅ Ready | [📄 Case Study](source/examples/case_studies/meta-self-analysis-automation-mode.md) · [🎥 Video](https://youtu.be/W60TT7NwJSk) |
 | **Agent Task Planning & Background Execution** | v0.1.7 | MCP-based task management with dependency tracking, background shell execution for long-running commands, and preemption-based coordination for improved multi-agent workflows | ✅ Ready | Documentation in v0.1.7 changelog |
 | **Persistent Memory with Semantic Retrieval** | v0.1.5 | Research-to-implementation workflow demonstrating memory system with automatic fact extraction, vector storage, and semantic retrieval across multi-turn sessions | ✅ Ready | [📄 Case Study](source/examples/case_studies/multi-turn-persistent-memory.md) · [🎥 Video](https://youtu.be/wWxxFgyw40Y) |
@@ -154,7 +154,7 @@ For contributors who want to create their own case studies:
 ### Case Study Creation Process
 
 1. **Issues First**: Submit a GitHub issue for case studies, add label `case study`
-   - Use template: https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/case-study-template.md
+   - Use template: https://github.com/massgen/MassGen/blob/main/docs/case_studies/case-study-template.md
 
 2. **Planning Phase**:
    - Write prompt
@@ -272,7 +272,7 @@ We want this to be a community document:
 We welcome community contributions! To create your own case study:
 
 1. **Submit GitHub Issue**: Use the `case study` label
-   - Template: https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/case-study-template.md
+   - Template: https://github.com/massgen/MassGen/blob/main/docs/case_studies/case-study-template.md
 
 2. **Planning Phase**:
    - Define prompt and expected behavior
@@ -303,7 +303,7 @@ For detailed development roadmap and upcoming features, see **[ROADMAP.md](../RO
 
 - **Documentation**: [https://docs.massgen.ai](https://docs.massgen.ai)
 - **Case Studies Online**: [https://docs.massgen.ai/en/latest/examples/case_studies.html](https://docs.massgen.ai/en/latest/examples/case_studies.html)
-- **GitHub Repository**: [https://github.com/Leezekun/MassGen](https://github.com/Leezekun/MassGen)
+- **GitHub Repository**: [https://github.com/massgen/MassGen](https://github.com/massgen/MassGen)
 - **Website**: [https://massgen.ai](https://massgen.ai)
 - **Case Studies Portal**: [https://case.massgen.ai](https://case.massgen.ai)
 
