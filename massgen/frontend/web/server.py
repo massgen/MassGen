@@ -1037,6 +1037,9 @@ def create_app(
             elif backend_type == "copilot":
                 # Copilot always shows - works with gh CLI login, no API key needed
                 has_api_key = True
+            elif backend_type == "codex":
+                # Codex always shows - works with OAuth (codex login) or OPENAI_API_KEY
+                has_api_key = True
             elif caps.env_var:
                 api_key = os.getenv(caps.env_var, "")
                 # Check it's not empty and not a placeholder from .env.example
