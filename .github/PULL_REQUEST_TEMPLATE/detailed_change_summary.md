@@ -23,7 +23,7 @@ If UI changes (if applicable)
 - [ ] Tests pass locally
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow convention
-- [ ] PR targets `dev/v0.1.57` branch (or `main` if dev branch doesn't exist yet)
+- [ ] PR targets a `dev/*` branch (or `main` if dev branch doesn't exist yet)
 
 ---
 
