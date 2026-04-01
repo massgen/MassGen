@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MassGen Experiment: Cherry Blossoms SVG</title>
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --surface: #1a1a2e;
+    --border: #2a2a4a;
+    --text: #e0e0f0;
+    --muted: #8888aa;
+    --accent: #7c5cbf;
+    --cc: #6b8aff;
+    --codex: #50c878;
+    --winner: #ffd700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.4rem; margin: 2.5rem 0 1rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  .prompt-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; font-style: italic; color: #c8c8e0; margin-bottom: 1rem; }
+  .agents { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem; }
+  .agent-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+  .agent-card.cc { border-left: 4px solid var(--cc); }
+  .agent-card.codex { border-left: 4px solid var(--codex); }
+  .agent-name { font-weight: 700; font-size: 1.1rem; }
+  .agent-name.cc { color: var(--cc); }
+  .agent-name.codex { color: var(--codex); }
+  .agent-meta { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .badge-winner { background: rgba(255,215,0,0.15); color: var(--winner); border: 1px solid rgba(255,215,0,0.3); }
+  .badge-lost { background: rgba(255,80,80,0.1); color: #ff8888; border: 1px solid rgba(255,80,80,0.2); }
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .svg-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .svg-panel h3 { padding: 0.75rem 1rem 0; }
+  .svg-panel object, .svg-panel iframe { width: 100%; height: 320px; border: none; background: white; }
+  .svg-panel-full object { width: 100%; height: 400px; border: none; background: white; }
+  .svg-panel-full { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .timeline { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+  .event { display: flex; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .event:last-child { border-bottom: none; }
+  .event-id { color: var(--muted); font-size: 0.8rem; min-width: 2.5rem; padding-top: 0.15rem; }
+  .event-icon { font-size: 1.1rem; min-width: 1.5rem; text-align: center; }
+  .event-desc { flex: 1; font-size: 0.9rem; }
+  .event-agent { font-weight: 600; }
+  .event-agent.cc { color: var(--cc); }
+  .event-agent.codex { color: var(--codex); }
+  .vote-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+  .vote-result { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; }
+  .vote-reason { background: rgba(255,255,255,0.03); border-left: 3px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; border-radius: 0 4px 4px 0; font-size: 0.85rem; color: #b0b0cc; }
+  .vote-reason strong { color: var(--text); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; }
+  .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+  .finding { background: rgba(124,92,191,0.08); border: 1px solid rgba(124,92,191,0.25); border-radius: 8px; padding: 1.25rem; margin-top: 1rem; }
+  .finding-title { font-weight: 700; color: var(--accent); margin-bottom: 0.5rem; }
+  code { background: rgba(255,255,255,0.06); padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85em; }
+  @media (max-width: 700px) {
+    .agents, .comparison, .stats { grid-template-columns: 1fr; }
+    h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>MassGen Experiment: Cherry Blossoms SVG</h1>
+<p class="subtitle">Multi-agent generation with Claude Code + Codex &mdash; March 31, 2026</p>
+
+<h2>Prompt</h2>
+<div class="prompt-box">
+  Generate cherry-blossoms.svg with two side-by-side scenes: left scene shows cherry blossoms at UW campus in Seattle with Drumheller Fountain, right scene shows cherry blossoms at a famous Tokyo temple. Use pink and white blossoms, detailed architecture, soft watercolor style. The SVG should be 1200x600px.
+</div>
+
+<h2>Agents</h2>
+<div class="agents">
+  <div class="agent-card cc">
+    <div class="agent-name cc">Agent 1 &mdash; Claude Code <span class="badge badge-winner">Winner</span></div>
+    <div class="agent-meta">
+      Model: claude-sonnet-4-6<br>
+      Backend: claude_code<br>
+      Rounds: 3 (generate, vote, final checkout)<br>
+      Result: 629-line hand-authored SVG with watercolor filters, Gothic architecture, detailed fountain
+    </div>
+  </div>
+  <div class="agent-card codex">
+    <div class="agent-name codex">Agent 2 &mdash; Codex <span class="badge badge-lost">Lost</span></div>
+    <div class="agent-meta">
+      Model: gpt-5.4<br>
+      Backend: codex (native)<br>
+      Rounds: 2 (generate, vote)<br>
+      Result: Postcard-panel concept with Python generator, but 44 blossom elements had unresolved <code>{x}</code>, <code>{y}</code> template placeholders
+    </div>
+  </div>
+</div>
+
+<h2>Initial Outputs &mdash; Side by Side</h2>
+<div class="comparison">
+  <div class="svg-panel">
+    <h3 class="agent-name cc" style="padding-left:1rem">Claude Code</h3>
+    <object data="cc-initial.svg" type="image/svg+xml">CC SVG</object>
+  </div>
+  <div class="svg-panel">
+    <h3 class="agent-name codex" style="padding-left:1rem">Codex</h3>
+    <object data="codex-initial.svg" type="image/svg+xml">Codex SVG</object>
+  </div>
+</div>
+
+<h2>Coordination Timeline</h2>
+<div class="timeline">
+  <div class="event">
+    <span class="event-id">E1</span>
+    <span class="event-icon">&#x1F4AD;</span>
+    <span class="event-desc"><span class="event-agent cc">CC</span> starts streaming (no prior context)</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E2</span>
+    <span class="event-icon">&#x1F4AD;</span>
+    <span class="event-desc"><span class="event-agent codex">Codex</span> starts streaming (no prior context)</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E3</span>
+    <span class="event-icon">&#x2728;</span>
+    <span class="event-desc"><span class="event-agent cc">CC</span> submits answer <strong>agent1.1</strong> &mdash; 629-line hand-authored SVG</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E5</span>
+    <span class="event-icon">&#x1F501;</span>
+    <span class="event-desc"><span class="event-agent cc">CC</span> restart triggered &rarr; enters vote phase with context [agent1.1]</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E7</span>
+    <span class="event-icon">&#x1F5F3;</span>
+    <span class="event-desc"><span class="event-agent cc">CC</span> votes for <strong>agent1.1</strong> (own answer &mdash; only option at this point)</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E8</span>
+    <span class="event-icon">&#x2728;</span>
+    <span class="event-desc"><span class="event-agent codex">Codex</span> submits answer <strong>agent2.1</strong> &mdash; postcard-panel SVG with Python generator</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E10</span>
+    <span class="event-icon">&#x1F501;</span>
+    <span class="event-desc"><span class="event-agent codex">Codex</span> restart triggered &rarr; enters vote phase with context [agent1.1, agent2.1]</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E12</span>
+    <span class="event-icon">&#x1F5F3;</span>
+    <span class="event-desc"><span class="event-agent cc">CC</span> votes for <strong>agent1.1</strong> &mdash; "Agent2's SVG has 44 blossom elements with unresolved template placeholders"</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E13</span>
+    <span class="event-icon">&#x1F5F3;</span>
+    <span class="event-desc"><span class="event-agent codex">Codex</span> votes for <strong>agent1.1</strong> &mdash; "Verified both SVGs; agent2 has hundreds of unresolved placeholders rendering as black artifacts"</span>
+  </div>
+  <div class="event">
+    <span class="event-id">E14</span>
+    <span class="event-icon">&#x1F3AF;</span>
+    <span class="event-desc"><span class="event-agent cc">CC</span> selected as winner &rarr; produces final answer <strong>agent1.final</strong></span>
+  </div>
+</div>
+
+<h2>Vote Results</h2>
+<div class="vote-box">
+  <div class="vote-result" style="color: var(--winner)">CC wins 2&ndash;0</div>
+  <p>Both agents voted for CC's output (agent1.1). The vote was unanimous.</p>
+  <div class="vote-reason">
+    <strong>CC's vote:</strong> "Agent1 has a complete, detailed 629-line SVG with proper architecture (Suzzallo Library Gothic facade, Drumheller Fountain with water jets, 5-story pagoda, torii gate), watercolor filters, and actual cherry blossom canopy elements. Agent2's SVG has a critical defect: all 44 blossom &lt;use&gt; elements contain literal template placeholders ({x}, {y}, {rot}, {scale}, {color}, {opacity}) that were never substituted with actual values."
+  </div>
+  <div class="vote-reason">
+    <strong>Codex's vote:</strong> "Verified both SVGs from source and rendered output. Agent1's deliverable is a coherent, on-spec 1200x600 illustration with recognizable UW Drumheller Fountain and a Tokyo temple scene in the requested soft pink watercolor style. Agent2 has a nice postcard-panel concept, but its main SVG contains hundreds of unresolved template placeholders that render as obvious black artifact blobs."
+  </div>
+</div>
+
+<h2>Winner</h2>
+<div class="svg-panel-full">
+  <h3 style="padding: 0.75rem 1rem 0; color: var(--winner)">Final Output &mdash; Claude Code (agent1.final)</h3>
+  <object data="final.svg" type="image/svg+xml" style="width:100%; height:400px; background:white;">Final SVG</object>
+</div>
+
+<h2>Stats</h2>
+<div class="stats">
+  <div class="stat">
+    <div class="stat-value">2</div>
+    <div class="stat-label">Agents</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">6</div>
+    <div class="stat-label">Total Rounds</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">2&ndash;0</div>
+    <div class="stat-label">Vote (CC wins)</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">$4.95</div>
+    <div class="stat-label">Estimated Cost</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">3.8M</div>
+    <div class="stat-label">Input Tokens</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">102K</div>
+    <div class="stat-label">Output Tokens</div>
+  </div>
+</div>
+
+<h2>Experiment Notes</h2>
+<div class="finding">
+  <div class="finding-title">Finding: <code>--cwd-context rw</code> and shadow workspaces</div>
+  <p>An earlier run (demo5) used <code>--cwd-context rw</code>, which creates <code>massgen_shadow_*</code> temp directories for file isolation. This caused Codex to write SVGs to the shadow dir instead of its assigned workspace, making them appear "missing" from logs. The ChangeApplier successfully copied files back to the project root, but the logs workspace snapshot didn't capture them.</p>
+  <p style="margin-top:0.5rem">This run (demo6) omitted <code>--cwd-context rw</code>, and both agents' SVGs were properly persisted in snapshots, workspaces, and logs.</p>
+</div>
+
+<div style="margin-top:3rem; padding-top:1rem; border-top:1px solid var(--border); color:var(--muted); font-size:0.8rem; text-align:center">
+  Generated by <a href="https://sutando.ai" style="color:var(--accent)">Sutando</a> using <a href="https://massgen.ai" style="color:var(--accent)">MassGen</a>
+</div>
+
+</div>
+</body>
+</html>

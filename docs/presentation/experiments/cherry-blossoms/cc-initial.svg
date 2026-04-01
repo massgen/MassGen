@@ -1,0 +1,697 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600">
+  <defs>
+    <!-- Watercolor soft blur filter -->
+    <filter id="wc" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.065" numOctaves="3" seed="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
+      <feGaussianBlur in="displaced" stdDeviation="1.2" result="blurred"/>
+      <feComposite in="blurred" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="2"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Sky gradients -->
+    <linearGradient id="skyL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b0cce0"/>
+      <stop offset="35%" stop-color="#d8e8f4"/>
+      <stop offset="70%" stop-color="#eddff0"/>
+      <stop offset="100%" stop-color="#f5e6ef"/>
+    </linearGradient>
+    <linearGradient id="skyR" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#aec8e0"/>
+      <stop offset="35%" stop-color="#d4e4f0"/>
+      <stop offset="70%" stop-color="#eadaf0"/>
+      <stop offset="100%" stop-color="#f2e0ee"/>
+    </linearGradient>
+
+    <!-- Ground -->
+    <linearGradient id="groundL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c8d8a0"/>
+      <stop offset="100%" stop-color="#a0b870"/>
+    </linearGradient>
+    <linearGradient id="groundR" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#90a868"/>
+      <stop offset="100%" stop-color="#6a8448"/>
+    </linearGradient>
+
+    <!-- Fountain pool -->
+    <radialGradient id="pool" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#c4dff0" stop-opacity="0.95"/>
+      <stop offset="60%" stop-color="#88b8d8" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#5090b8" stop-opacity="0.7"/>
+    </radialGradient>
+
+    <!-- Canopy pinks -->
+    <radialGradient id="cpink" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#ffe0ec"/>
+      <stop offset="45%" stop-color="#ffb8ce"/>
+      <stop offset="100%" stop-color="#ff90aa" stop-opacity="0.6"/>
+    </radialGradient>
+    <radialGradient id="cwhite" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#fff8fb"/>
+      <stop offset="45%" stop-color="#ffe8f2"/>
+      <stop offset="100%" stop-color="#ffd0e4" stop-opacity="0.65"/>
+    </radialGradient>
+    <radialGradient id="cdeep" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#ffd0e4"/>
+      <stop offset="50%" stop-color="#ff98bc"/>
+      <stop offset="100%" stop-color="#ee6898" stop-opacity="0.55"/>
+    </radialGradient>
+
+    <!-- Stone architecture -->
+    <linearGradient id="stone" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0%" stop-color="#ddd4c0"/>
+      <stop offset="50%" stop-color="#c8bc9c"/>
+      <stop offset="100%" stop-color="#b0a080"/>
+    </linearGradient>
+    <linearGradient id="stoneShad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#b0a080"/>
+      <stop offset="100%" stop-color="#d8caa8"/>
+    </linearGradient>
+
+    <!-- Pagoda roof -->
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c02000"/>
+      <stop offset="60%" stop-color="#8a1400"/>
+      <stop offset="100%" stop-color="#600c00"/>
+    </linearGradient>
+    <linearGradient id="roofBody" x1="0" y1="0" x2="0.1" y2="1">
+      <stop offset="0%" stop-color="#c82800"/>
+      <stop offset="100%" stop-color="#a01e00"/>
+    </linearGradient>
+
+    <!-- Water shimmer gradient -->
+    <linearGradient id="waterShimmer" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a0ccec" stop-opacity="0.3"/>
+      <stop offset="30%" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="60%" stop-color="#a0ccec" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#c0dff5" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <!-- Clip paths -->
+    <clipPath id="clipL"><rect x="0" y="0" width="600" height="600"/></clipPath>
+    <clipPath id="clipR"><rect x="600" y="0" width="600" height="600"/></clipPath>
+
+    <!-- Vignette -->
+    <radialGradient id="vig" cx="50%" cy="50%" r="70%">
+      <stop offset="55%" stop-color="transparent"/>
+      <stop offset="100%" stop-color="#b090a0" stop-opacity="0.3"/>
+    </radialGradient>
+  </defs>
+
+
+  <!-- ════════════════════════════════════════════
+       LEFT SCENE  –  UW Seattle / Drumheller Fountain
+       ════════════════════════════════════════════ -->
+  <g clip-path="url(#clipL)">
+
+    <!-- Sky wash -->
+    <rect x="0" y="0" width="600" height="600" fill="url(#skyL)"/>
+
+    <!-- Soft watercolor sky blush clouds -->
+    <ellipse cx="120" cy="80" rx="130" ry="55" fill="#ffe0ec" opacity="0.18" filter="url(#softBlur)"/>
+    <ellipse cx="400" cy="60" rx="160" ry="60" fill="#e8d8f4" opacity="0.18" filter="url(#softBlur)"/>
+    <ellipse cx="550" cy="100" rx="90" ry="40" fill="#ffd8e8" opacity="0.15" filter="url(#softBlur)"/>
+
+    <!-- Distant tree line wash -->
+    <path d="M0,300 Q60,265 120,275 Q180,258 240,268 Q300,250 360,262 Q420,248 480,260 Q540,248 600,255 L600,310 Q540,300 480,308 Q420,298 360,308 Q300,296 240,308 Q180,298 120,308 Q60,298 0,308 Z"
+          fill="#b8d0a0" opacity="0.35" filter="url(#softBlur)"/>
+
+    <!-- Background cherry blossom haze -->
+    <ellipse cx="60"  cy="235" rx="75"  ry="52" fill="#ffcce0" opacity="0.28" filter="url(#softBlur)"/>
+    <ellipse cx="190" cy="215" rx="95"  ry="62" fill="#ffd8e8" opacity="0.32" filter="url(#softBlur)"/>
+    <ellipse cx="370" cy="222" rx="85"  ry="55" fill="#ffcce0" opacity="0.28" filter="url(#softBlur)"/>
+    <ellipse cx="540" cy="208" rx="70"  ry="48" fill="#ffd4e4" opacity="0.28" filter="url(#softBlur)"/>
+
+    <!-- ── Suzzallo Library style Gothic building ── -->
+    <!-- Building main body -->
+    <rect x="148" y="158" width="304" height="230" fill="url(#stone)" filter="url(#wc)"/>
+    <!-- Side shading -->
+    <rect x="148" y="158" width="304" height="230" fill="url(#stoneShad)" opacity="0.15"/>
+
+    <!-- Gothic parapet crenellation along top -->
+    <rect x="148" y="140" width="304" height="22" fill="#ccc0a0"/>
+    <g fill="#bbb090">
+      <rect x="152" y="128" width="18" height="16"/>
+      <rect x="178" y="128" width="18" height="16"/>
+      <rect x="204" y="128" width="18" height="16"/>
+      <rect x="230" y="128" width="18" height="16"/>
+      <rect x="256" y="128" width="18" height="16"/>
+      <rect x="282" y="128" width="18" height="16"/>
+      <rect x="308" y="128" width="18" height="16"/>
+      <rect x="334" y="128" width="18" height="16"/>
+      <rect x="360" y="128" width="18" height="16"/>
+      <rect x="386" y="128" width="18" height="16"/>
+      <rect x="412" y="128" width="18" height="16"/>
+      <rect x="438" y="128" width="18" height="16"/>
+    </g>
+
+    <!-- Side towers -->
+    <rect x="148" y="100" width="45" height="62" fill="#d0c49a"/>
+    <rect x="407" y="100" width="45" height="62" fill="#d0c49a"/>
+    <!-- Tower tops (pyramidal) -->
+    <polygon points="148,100 170,72 193,100" fill="#bbb080"/>
+    <polygon points="407,100 429,72 452,100" fill="#bbb080"/>
+    <!-- Tower windows -->
+    <rect x="158" y="108" width="12" height="20" fill="#7888a0" rx="2"/>
+    <rect x="178" y="108" width="12" height="20" fill="#7888a0" rx="2"/>
+    <path d="M158,108 Q164,98 170,108" fill="#9090b0"/>
+    <path d="M178,108 Q184,98 190,108" fill="#9090b0"/>
+    <rect x="418" y="108" width="12" height="20" fill="#7888a0" rx="2"/>
+    <rect x="438" y="108" width="12" height="20" fill="#7888a0" rx="2"/>
+    <path d="M418,108 Q424,98 430,108" fill="#9090b0"/>
+    <path d="M438,108 Q444,98 450,108" fill="#9090b0"/>
+
+    <!-- Flying buttresses suggestion -->
+    <line x1="148" y1="250" x2="125" y2="290" stroke="#c0b090" stroke-width="6" opacity="0.7"/>
+    <line x1="148" y1="220" x2="118" y2="260" stroke="#c0b090" stroke-width="4" opacity="0.5"/>
+    <line x1="452" y1="250" x2="475" y2="290" stroke="#c0b090" stroke-width="6" opacity="0.7"/>
+    <line x1="452" y1="220" x2="482" y2="260" stroke="#c0b090" stroke-width="4" opacity="0.5"/>
+
+    <!-- Gothic arched windows (row 1) -->
+    <g fill="#7888a8" opacity="0.75">
+      <rect x="163" y="168" width="22" height="38"/>
+      <path d="M163,168 Q174,152 185,168" fill="#8898b8"/>
+      <rect x="196" y="168" width="22" height="38"/>
+      <path d="M196,168 Q207,152 218,168" fill="#8898b8"/>
+      <rect x="229" y="168" width="22" height="38"/>
+      <path d="M229,168 Q240,152 251,168" fill="#8898b8"/>
+      <rect x="262" y="168" width="22" height="38"/>
+      <path d="M262,168 Q273,152 284,168" fill="#8898b8"/>
+      <rect x="295" y="168" width="22" height="38"/>
+      <path d="M295,168 Q306,152 317,168" fill="#8898b8"/>
+      <rect x="328" y="168" width="22" height="38"/>
+      <path d="M328,168 Q339,152 350,168" fill="#8898b8"/>
+      <rect x="361" y="168" width="22" height="38"/>
+      <path d="M361,168 Q372,152 383,168" fill="#8898b8"/>
+      <rect x="394" y="168" width="22" height="38"/>
+      <path d="M394,168 Q405,152 416,168" fill="#8898b8"/>
+      <rect x="427" y="168" width="22" height="38"/>
+      <path d="M427,168 Q438,152 449,168" fill="#8898b8"/>
+    </g>
+
+    <!-- Gothic arched windows (row 2, slightly larger) -->
+    <g fill="#6878a0" opacity="0.65">
+      <rect x="163" y="222" width="28" height="52"/>
+      <path d="M163,222 Q177,204 191,222" fill="#7888b0"/>
+      <rect x="202" y="222" width="28" height="52"/>
+      <path d="M202,222 Q216,204 230,222" fill="#7888b0"/>
+      <rect x="241" y="222" width="28" height="52"/>
+      <path d="M241,222 Q255,204 269,222" fill="#7888b0"/>
+      <rect x="280" y="222" width="28" height="52"/>
+      <path d="M280,222 Q294,204 308,222" fill="#7888b0"/>
+      <rect x="319" y="222" width="28" height="52"/>
+      <path d="M319,222 Q333,204 347,222" fill="#7888b0"/>
+      <rect x="358" y="222" width="28" height="52"/>
+      <path d="M358,222 Q372,204 386,222" fill="#7888b0"/>
+      <rect x="397" y="222" width="28" height="52"/>
+      <path d="M397,222 Q411,204 425,222" fill="#7888b0"/>
+    </g>
+
+    <!-- Central entrance arch -->
+    <rect x="258" y="290" width="84" height="98" fill="#9a8868"/>
+    <path d="M258,290 Q300,255 342,290" fill="#a89878"/>
+    <!-- Door detail -->
+    <rect x="272" y="320" width="24" height="68" fill="#3a2810"/>
+    <rect x="304" y="320" width="24" height="68" fill="#3a2810"/>
+    <!-- Arch tracery lines -->
+    <path d="M268,290 Q300,262 332,290" fill="none" stroke="#c0b088" stroke-width="2" opacity="0.5"/>
+
+    <!-- Building shadow / depth -->
+    <rect x="148" y="158" width="20" height="230" fill="#000000" opacity="0.06"/>
+
+    <!-- ── Ground Lawn ── -->
+    <rect x="0" y="388" width="600" height="212" fill="url(#groundL)" filter="url(#wc)"/>
+    <!-- Lawn highlight -->
+    <ellipse cx="300" cy="420" rx="250" ry="40" fill="#d8e8a8" opacity="0.3" filter="url(#softBlur)"/>
+
+    <!-- Path to fountain -->
+    <rect x="262" y="388" width="76" height="110" fill="#c8c0a0" opacity="0.5" rx="4"/>
+
+    <!-- ── Drumheller Fountain ── -->
+    <!-- Outer shadow/reflection -->
+    <ellipse cx="300" cy="480" rx="158" ry="62" fill="#6090b0" opacity="0.2" filter="url(#softBlur)"/>
+    <!-- Pool water -->
+    <ellipse cx="300" cy="474" rx="148" ry="58" fill="url(#pool)" filter="url(#wc)"/>
+    <!-- Pool rim (stone curb) -->
+    <ellipse cx="300" cy="474" rx="148" ry="58" fill="none" stroke="#aabcc8" stroke-width="5" opacity="0.7"/>
+    <ellipse cx="300" cy="474" rx="142" ry="54" fill="none" stroke="#ccdde8" stroke-width="2" opacity="0.5"/>
+    <!-- Water shimmer highlights -->
+    <ellipse cx="285" cy="465" rx="45" ry="14" fill="url(#waterShimmer)" opacity="0.7"/>
+    <ellipse cx="330" cy="480" rx="30" ry="10" fill="#ffffff" opacity="0.2"/>
+    <ellipse cx="260" cy="480" rx="20" ry="6" fill="#ffffff" opacity="0.18"/>
+    <!-- Petal reflections in pool -->
+    <ellipse cx="268" cy="472" rx="6" ry="2" fill="#ffbbdd" opacity="0.4" transform="rotate(-10,268,472)"/>
+    <ellipse cx="338" cy="468" rx="5" ry="2" fill="#ffaac8" opacity="0.35" transform="rotate(15,338,468)"/>
+
+    <!-- Fountain pedestal -->
+    <ellipse cx="300" cy="455" rx="22" ry="9" fill="#c8b888"/>
+    <rect x="291" y="420" width="18" height="37" fill="#d0c090"/>
+    <ellipse cx="300" cy="420" rx="26" ry="10" fill="#dcd0a8"/>
+    <ellipse cx="300" cy="418" rx="18" ry="7" fill="#ccc0a0"/>
+
+    <!-- Fountain water jets -->
+    <!-- Central tall jet -->
+    <path d="M299,416 C297,390 296,365 299,338 C302,365 303,390 301,416 Z" fill="#b8dcf4" opacity="0.75"/>
+    <path d="M300,415 Q299,378 300,340 Q301,378 300,415" fill="#d8eff8" opacity="0.5"/>
+    <!-- Upper spray droplets at top of center jet -->
+    <circle cx="299" cy="338" r="3" fill="#d8eef8" opacity="0.7"/>
+    <circle cx="301" cy="342" r="2" fill="#e8f4fc" opacity="0.6"/>
+    <circle cx="297" cy="344" r="2" fill="#e0f0f8" opacity="0.6"/>
+
+    <!-- Mid-ring jets (8 jets angled out) -->
+    <path d="M300,415 Q285,393 266,374" stroke="#b0d0ec" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <path d="M300,415 Q315,393 334,374" stroke="#b0d0ec" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <path d="M300,415 Q278,395 256,379" stroke="#a8c8e4" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M300,415 Q322,395 344,379" stroke="#a8c8e4" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M300,415 Q282,396 262,384" stroke="#a0c0dc" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M300,415 Q318,396 338,384" stroke="#a0c0dc" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M300,415 Q300,396 300,378" stroke="#b8d8f0" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+    <!-- Spray endpoints -->
+    <circle cx="266" cy="374" r="2.5" fill="#d0e8f8" opacity="0.8"/>
+    <circle cx="334" cy="374" r="2.5" fill="#d0e8f8" opacity="0.8"/>
+    <circle cx="256" cy="379" r="2" fill="#c8e4f4" opacity="0.7"/>
+    <circle cx="344" cy="379" r="2" fill="#c8e4f4" opacity="0.7"/>
+    <circle cx="262" cy="384" r="2" fill="#c0ddf0" opacity="0.65"/>
+    <circle cx="338" cy="384" r="2" fill="#c0ddf0" opacity="0.65"/>
+
+    <!-- Low outer ring spray (wider arcs) -->
+    <path d="M300,418 Q270,405 245,398" stroke="#90b8d8" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M300,418 Q330,405 355,398" stroke="#90b8d8" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M300,420 Q268,410 242,408" stroke="#88b0d0" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+    <path d="M300,420 Q332,410 358,408" stroke="#88b0d0" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+
+    <!-- ── Cherry blossom trees ── -->
+    <!-- FAR LEFT tree (partially cut off) -->
+    <path d="M-10,580 Q0,530 8,480 Q14,440 20,400 Q25,368 30,338" stroke="#7a5030" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path d="M30,338 Q38,308 46,285" stroke="#7a5030" stroke-width="5" fill="none"/>
+    <path d="M30,338 Q20,310 14,285" stroke="#7a5030" stroke-width="4" fill="none"/>
+    <ellipse cx="32" cy="258" rx="72" ry="65" fill="url(#cpink)" opacity="0.85" filter="url(#wc)"/>
+    <ellipse cx="18" cy="272" rx="52" ry="48" fill="#ffcce0" opacity="0.6"/>
+    <ellipse cx="48" cy="255" rx="60" ry="54" fill="#ffd4e6" opacity="0.55"/>
+    <ellipse cx="28" cy="244" rx="65" ry="58" fill="#ffbbcc" opacity="0.35" filter="url(#softBlur)"/>
+
+    <!-- LEFT MAIN tree -->
+    <path d="M105,580 Q108,530 112,478 Q115,440 118,400 Q122,368 126,335" stroke="#7a5030" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M126,335 Q134,305 143,278" stroke="#7a5030" stroke-width="6" fill="none"/>
+    <path d="M126,335 Q115,306 108,280" stroke="#7a5030" stroke-width="5" fill="none"/>
+    <path d="M126,335 Q138,315 150,300" stroke="#7a5030" stroke-width="4" fill="none"/>
+    <!-- Lower branch -->
+    <path d="M118,400 Q100,380 88,362" stroke="#7a5030" stroke-width="4" fill="none"/>
+    <ellipse cx="78" cy="352" rx="38" ry="34" fill="#ffcce0" opacity="0.72"/>
+    <!-- Canopy -->
+    <ellipse cx="132" cy="250" rx="90" ry="80" fill="url(#cpink)" opacity="0.88" filter="url(#wc)"/>
+    <ellipse cx="112" cy="265" rx="65" ry="60" fill="#ffcce0" opacity="0.62"/>
+    <ellipse cx="150" cy="248" rx="72" ry="65" fill="#ffd8e8" opacity="0.58"/>
+    <ellipse cx="128" cy="238" rx="80" ry="72" fill="#ffbbcc" opacity="0.38" filter="url(#softBlur)"/>
+    <!-- Blossom clusters detail -->
+    <g opacity="0.75">
+      <circle cx="110" cy="238" r="6" fill="#ffd8ee"/>
+      <circle cx="130" cy="225" r="5" fill="#ffc0d8"/>
+      <circle cx="150" cy="240" r="6" fill="#ffd4e8"/>
+      <circle cx="118" cy="258" r="5" fill="#ffc8dc"/>
+      <circle cx="145" cy="255" r="5" fill="#ffd8ee"/>
+      <circle cx="96" cy="252" r="4" fill="#ffcce4"/>
+      <circle cx="138" cy="268" r="4" fill="#ffb8d0"/>
+    </g>
+
+    <!-- Small MID-LEFT tree -->
+    <path d="M208,560 Q210,528 213,498 Q216,472 219,448 Q221,430 223,412" stroke="#6a4422" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M223,412 Q228,390 234,372" stroke="#6a4422" stroke-width="4" fill="none"/>
+    <path d="M223,412 Q216,390 211,372" stroke="#6a4422" stroke-width="3" fill="none"/>
+    <ellipse cx="224" cy="352" rx="52" ry="46" fill="url(#cwhite)" opacity="0.82" filter="url(#wc)"/>
+    <ellipse cx="218" cy="362" rx="40" ry="36" fill="#ffeef4" opacity="0.65"/>
+    <ellipse cx="232" cy="348" rx="46" ry="42" fill="#ffe8f2" opacity="0.6"/>
+
+    <!-- Small MID-RIGHT tree -->
+    <path d="M392,560 Q390,528 387,498 Q384,472 381,448 Q379,430 377,412" stroke="#6a4422" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M377,412 Q372,390 366,372" stroke="#6a4422" stroke-width="4" fill="none"/>
+    <path d="M377,412 Q384,390 389,372" stroke="#6a4422" stroke-width="3" fill="none"/>
+    <ellipse cx="376" cy="352" rx="52" ry="46" fill="url(#cpink)" opacity="0.82" filter="url(#wc)"/>
+    <ellipse cx="382" cy="362" rx="40" ry="36" fill="#ffd0e4" opacity="0.65"/>
+    <ellipse cx="370" cy="348" rx="46" ry="42" fill="#ffccdc" opacity="0.6"/>
+
+    <!-- RIGHT MAIN tree -->
+    <path d="M510,580 Q507,530 504,478 Q501,440 498,400 Q495,368 492,335" stroke="#7a5030" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M492,335 Q484,305 477,278" stroke="#7a5030" stroke-width="6" fill="none"/>
+    <path d="M492,335 Q502,306 509,280" stroke="#7a5030" stroke-width="5" fill="none"/>
+    <path d="M492,335 Q480,315 470,300" stroke="#7a5030" stroke-width="4" fill="none"/>
+    <!-- Lower branch -->
+    <path d="M498,400 Q516,380 528,362" stroke="#7a5030" stroke-width="4" fill="none"/>
+    <ellipse cx="538" cy="352" rx="38" ry="34" fill="#ffd8e8" opacity="0.72"/>
+    <!-- Canopy -->
+    <ellipse cx="486" cy="250" rx="90" ry="80" fill="url(#cwhite)" opacity="0.88" filter="url(#wc)"/>
+    <ellipse cx="505" cy="265" rx="66" ry="60" fill="#ffeef6" opacity="0.62"/>
+    <ellipse cx="470" cy="248" rx="74" ry="65" fill="#ffe8f4" opacity="0.58"/>
+    <ellipse cx="488" cy="238" rx="82" ry="72" fill="#ffd8e8" opacity="0.38" filter="url(#softBlur)"/>
+    <!-- Blossom clusters detail -->
+    <g opacity="0.75">
+      <circle cx="490" cy="238" r="6" fill="#fff4fa"/>
+      <circle cx="468" cy="225" r="5" fill="#ffeaf4"/>
+      <circle cx="508" cy="242" r="6" fill="#fff0f8"/>
+      <circle cx="478" cy="258" r="5" fill="#ffe4f0"/>
+      <circle cx="502" cy="255" r="5" fill="#fff4fa"/>
+      <circle cx="462" cy="252" r="4" fill="#ffd8ec"/>
+      <circle cx="488" cy="270" r="4" fill="#ffe0ee"/>
+    </g>
+
+    <!-- FAR RIGHT tree (partially cut off) -->
+    <path d="M614,580 Q610,530 607,480 Q604,440 601,400 Q598,368 595,338" stroke="#7a5030" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <ellipse cx="592" cy="258" rx="72" ry="65" fill="url(#cdeep)" opacity="0.82" filter="url(#wc)"/>
+    <ellipse cx="578" cy="272" rx="52" ry="48" fill="#ffccdc" opacity="0.6"/>
+
+    <!-- Scattered petals on ground -->
+    <g opacity="0.65">
+      <ellipse cx="168" cy="528" rx="5" ry="2.2" fill="#ffaac8" transform="rotate(-18,168,528)"/>
+      <ellipse cx="215" cy="515" rx="4.5" ry="2" fill="#ffbbcc" transform="rotate(25,215,515)"/>
+      <ellipse cx="258" cy="530" rx="5" ry="2.2" fill="#ffaac0" transform="rotate(-8,258,530)"/>
+      <ellipse cx="300" cy="520" rx="4" ry="2" fill="#ffbbdd" transform="rotate(35,300,520)"/>
+      <ellipse cx="345" cy="512" rx="5" ry="2.2" fill="#ffaacc" transform="rotate(-22,345,512)"/>
+      <ellipse cx="398" cy="525" rx="4.5" ry="2" fill="#ffbbcc" transform="rotate(12,398,525)"/>
+      <ellipse cx="445" cy="518" rx="5" ry="2.2" fill="#ffaac8" transform="rotate(-30,445,518)"/>
+      <ellipse cx="490" cy="530" rx="4" ry="2" fill="#ffbbdd" transform="rotate(18,490,530)"/>
+      <ellipse cx="140" cy="510" rx="4.5" ry="2" fill="#ffccdd" transform="rotate(40,140,510)"/>
+      <ellipse cx="530" cy="510" rx="4" ry="2" fill="#ffbbcc" transform="rotate(-14,530,510)"/>
+    </g>
+
+    <!-- Falling petals (in air) -->
+    <g opacity="0.72">
+      <ellipse cx="152" cy="340" rx="4.5" ry="2" fill="#ffbbdd" transform="rotate(22,152,340)"/>
+      <ellipse cx="195" cy="358" rx="3.5" ry="1.8" fill="#ffc8d8" transform="rotate(-14,195,358)"/>
+      <ellipse cx="240" cy="318" rx="4.5" ry="2" fill="#ffaac8" transform="rotate(38,240,318)"/>
+      <ellipse cx="172" cy="390" rx="3.5" ry="1.8" fill="#ffbbdd" transform="rotate(-28,172,390)"/>
+      <ellipse cx="445" cy="328" rx="4.5" ry="2" fill="#ffd0e4" transform="rotate(14,445,328)"/>
+      <ellipse cx="475" cy="360" rx="3.5" ry="1.8" fill="#ffbbcc" transform="rotate(-22,475,360)"/>
+      <ellipse cx="395" cy="308" rx="4.5" ry="2" fill="#ffcce0" transform="rotate(32,395,308)"/>
+      <ellipse cx="330" cy="290" rx="4" ry="1.8" fill="#ffaac8" transform="rotate(-10,330,290)"/>
+      <ellipse cx="280" cy="340" rx="3.5" ry="1.8" fill="#ffbbdd" transform="rotate(44,280,340)"/>
+      <ellipse cx="420" cy="390" rx="4" ry="1.8" fill="#ffcce0" transform="rotate(-34,420,390)"/>
+    </g>
+
+    <!-- Scene label -->
+    <rect x="0" y="570" width="600" height="30" fill="#f5eaee" opacity="0.6"/>
+    <text x="300" y="590" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+          font-size="14" fill="#6a3850" opacity="0.9" letter-spacing="1">
+      UW Seattle — Drumheller Fountain
+    </text>
+  </g>
+
+
+  <!-- ════════════════════════════════════════════
+       RIGHT SCENE  –  Tokyo / Senso-ji Pagoda
+       ════════════════════════════════════════════ -->
+  <g clip-path="url(#clipR)">
+
+    <!-- Sky wash -->
+    <rect x="600" y="0" width="600" height="600" fill="url(#skyR)"/>
+
+    <!-- Soft clouds / sky blush -->
+    <ellipse cx="720"  cy="75" rx="120" ry="50" fill="#ffe8f0" opacity="0.18" filter="url(#softBlur)"/>
+    <ellipse cx="980"  cy="55" rx="150" ry="55" fill="#e0d8f4" opacity="0.17" filter="url(#softBlur)"/>
+    <ellipse cx="1160" cy="95" rx="85"  ry="38" fill="#ffd8e8" opacity="0.15" filter="url(#softBlur)"/>
+
+    <!-- Misty distant mountains -->
+    <path d="M600,360 Q660,290 740,310 Q820,278 900,298 Q990,262 1080,285 Q1150,268 1200,285
+             L1200,390 L600,390 Z" fill="#b0c4d8" opacity="0.22" filter="url(#softBlur)"/>
+    <path d="M600,390 Q680,335 770,352 Q860,318 940,338 Q1020,308 1100,328 Q1160,315 1200,328
+             L1200,408 L600,408 Z" fill="#c0ced8" opacity="0.18" filter="url(#softBlur)"/>
+
+    <!-- Background blossom haze -->
+    <ellipse cx="635"  cy="230" rx="72" ry="52" fill="#ffd0e0" opacity="0.28" filter="url(#softBlur)"/>
+    <ellipse cx="730"  cy="210" rx="90" ry="62" fill="#ffcce0" opacity="0.32" filter="url(#softBlur)"/>
+    <ellipse cx="1105" cy="220" rx="82" ry="58" fill="#ffd4e4" opacity="0.28" filter="url(#softBlur)"/>
+    <ellipse cx="1185" cy="238" rx="68" ry="50" fill="#ffcce0" opacity="0.28" filter="url(#softBlur)"/>
+
+    <!-- ── 5-story Senso-ji style Pagoda ── -->
+    <!-- BASE PLATFORM -->
+    <rect x="825" y="448" width="150" height="16" fill="#c8b888" rx="2"/>
+    <rect x="818" y="464" width="164" height="12" fill="#b8a878" rx="2"/>
+    <rect x="808" y="476" width="184" height="14" fill="#a89868" rx="3"/>
+
+    <!-- STORY 1 (bottom) -->
+    <rect x="835" y="390" width="130" height="58" fill="url(#roofBody)"/>
+    <!-- Story 1 windows/door -->
+    <rect x="868" y="408" width="26" height="40" fill="#2a1600" rx="2"/>
+    <rect x="906" y="408" width="26" height="40" fill="#2a1600" rx="2"/>
+    <rect x="848" y="415" width="14" height="22" fill="#2a1600" rx="1"/>
+    <rect x="938" y="415" width="14" height="22" fill="#2a1600" rx="1"/>
+    <!-- Story 1 beam line -->
+    <rect x="832" y="388" width="136" height="7" fill="#8a1400"/>
+    <!-- ROOF 1 (large, dramatic eave) -->
+    <path d="M785,388 Q900,358 1015,388 L1008,381 Q900,353 792,381 Z" fill="url(#roof)"/>
+    <!-- Eave upcurve tips -->
+    <path d="M785,388 Q775,378 778,366" stroke="#7a1200" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M1015,388 Q1025,378 1022,366" stroke="#7a1200" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- Roof underside detail -->
+    <path d="M792,381 Q900,351 1008,381 L1015,388 Q900,358 785,388 Z" fill="#c82800" opacity="0.4"/>
+
+    <!-- STORY 2 -->
+    <rect x="848" y="335" width="104" height="55" fill="url(#roofBody)"/>
+    <!-- Story 2 windows -->
+    <rect x="876" y="350" width="18" height="30" fill="#2a1600" rx="1"/>
+    <rect x="906" y="350" width="18" height="30" fill="#2a1600" rx="1"/>
+    <rect x="860" y="356" width="10" height="18" fill="#2a1600" rx="1"/>
+    <rect x="930" y="356" width="10" height="18" fill="#2a1600" rx="1"/>
+    <!-- Story 2 beam -->
+    <rect x="845" y="333" width="110" height="7" fill="#8a1400"/>
+    <!-- ROOF 2 -->
+    <path d="M800,333 Q900,306 1000,333 L993,327 Q900,302 807,327 Z" fill="url(#roof)"/>
+    <path d="M800,333 Q790,324 793,313" stroke="#7a1200" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M1000,333 Q1010,324 1007,313" stroke="#7a1200" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M807,327 Q900,300 993,327 L1000,333 Q900,306 800,333 Z" fill="#c82800" opacity="0.38"/>
+
+    <!-- STORY 3 -->
+    <rect x="860" y="282" width="80" height="53" fill="url(#roofBody)"/>
+    <!-- Story 3 windows -->
+    <rect x="882" y="297" width="14" height="25" fill="#2a1600" rx="1"/>
+    <rect x="904" y="297" width="14" height="25" fill="#2a1600" rx="1"/>
+    <!-- Story 3 beam -->
+    <rect x="857" y="280" width="86" height="7" fill="#8a1400"/>
+    <!-- ROOF 3 -->
+    <path d="M818,280 Q900,256 982,280 L976,275 Q900,252 824,275 Z" fill="url(#roof)"/>
+    <path d="M818,280 Q808,271 811,262" stroke="#7a1200" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M982,280 Q992,271 989,262" stroke="#7a1200" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M824,275 Q900,250 976,275 L982,280 Q900,256 818,280 Z" fill="#c82800" opacity="0.36"/>
+
+    <!-- STORY 4 -->
+    <rect x="872" y="230" width="56" height="52" fill="url(#roofBody)"/>
+    <!-- Story 4 windows -->
+    <rect x="886" y="245" width="10" height="22" fill="#2a1600" rx="1"/>
+    <rect x="904" y="245" width="10" height="22" fill="#2a1600" rx="1"/>
+    <!-- Story 4 beam -->
+    <rect x="869" y="228" width="62" height="7" fill="#8a1400"/>
+    <!-- ROOF 4 -->
+    <path d="M836,228 Q900,207 964,228 L958,223 Q900,203 842,223 Z" fill="url(#roof)"/>
+    <path d="M836,228 Q827,220 830,211" stroke="#7a1200" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M964,228 Q973,220 970,211" stroke="#7a1200" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M842,223 Q900,201 958,223 L964,228 Q900,207 836,228 Z" fill="#c82800" opacity="0.34"/>
+
+    <!-- STORY 5 (top) -->
+    <rect x="882" y="180" width="36" height="50" fill="url(#roofBody)"/>
+    <!-- Story 5 tiny window -->
+    <rect x="893" y="195" width="7" height="18" fill="#2a1600" rx="1"/>
+    <rect x="900" y="195" width="7" height="18" fill="#2a1600" rx="1"/>
+    <!-- Story 5 beam -->
+    <rect x="879" y="178" width="42" height="6" fill="#8a1400"/>
+    <!-- ROOF 5 -->
+    <path d="M852,178 Q900,160 948,178 L943,174 Q900,157 857,174 Z" fill="url(#roof)"/>
+    <path d="M852,178 Q844,171 847,163" stroke="#7a1200" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M948,178 Q956,171 953,163" stroke="#7a1200" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M857,174 Q900,155 943,174 L948,178 Q900,160 852,178 Z" fill="#c82800" opacity="0.32"/>
+
+    <!-- SPIRE / SORIN -->
+    <rect x="897" y="115" width="6" height="65" fill="#9a7828"/>
+    <!-- Spire rings (suien) -->
+    <ellipse cx="900" cy="114" r="7"   fill="#c8a030"/>
+    <ellipse cx="900" cy="105" r="5.5" fill="#b89028"/>
+    <ellipse cx="900" cy="97"  r="4.8" fill="#b09020"/>
+    <ellipse cx="900" cy="90"  r="4.2" fill="#a88020"/>
+    <ellipse cx="900" cy="84"  r="3.8" fill="#a87818"/>
+    <ellipse cx="900" cy="79"  r="3.4" fill="#986810"/>
+    <ellipse cx="900" cy="75"  r="2.5" fill="#906008"/>
+    <!-- Tip -->
+    <path d="M899,74 Q900,68 901,74" fill="#808000"/>
+
+    <!-- ── Torii Gate ── -->
+    <!-- Left post (hashira) -->
+    <rect x="758" y="395" width="13" height="115" fill="#cc2200" rx="2"/>
+    <!-- Right post -->
+    <rect x="886" y="395" width="13" height="115" fill="#cc2200" rx="2"/>
+    <!-- Top beam - kasagi (slightly wider, upturned ends) -->
+    <path d="M748,388 Q757,385 770,388 L886,388 Q896,385 910,388 Q896,382 886,385 L770,385 Q757,382 748,388 Z"
+          fill="#bb1e00"/>
+    <rect x="748" y="382" width="162" height="11" fill="#cc2200" rx="2"/>
+    <!-- Kasagi end caps -->
+    <path d="M748,382 Q742,379 745,374" stroke="#aa1800" stroke-width="2" fill="none"/>
+    <path d="M910,382 Q916,379 913,374" stroke="#aa1800" stroke-width="2" fill="none"/>
+    <!-- Lower beam (nuki) -->
+    <rect x="761" y="404" width="135" height="9" fill="#bb1e00" rx="1"/>
+    <!-- Post caps (gakozuka) -->
+    <rect x="756" y="386" width="17" height="9" fill="#992000" rx="1"/>
+    <rect x="884" y="386" width="17" height="9" fill="#992000" rx="1"/>
+    <!-- Wedge pegs (kusabi) on nuki -->
+    <rect x="792" y="402" width="5" height="13" fill="#881800"/>
+    <rect x="860" y="402" width="5" height="13" fill="#881800"/>
+
+    <!-- ── Stone Lanterns ── -->
+    <!-- Left lantern (toro) -->
+    <rect x="746" y="472" width="18" height="8" fill="#b0a888" rx="1"/><!-- base -->
+    <rect x="750" y="454" width="10" height="18" fill="#c0b890" rx="1"/><!-- shaft -->
+    <path d="M749,454 L751,446 L764,446 L766,454 Z" fill="#b8b088"/><!-- cap -->
+    <rect x="753" y="443" width="9" height="5" fill="#a8a078" rx="1"/>
+    <!-- Lantern fire box -->
+    <rect x="748" y="456" width="14" height="14" fill="#ffe8a0" opacity="0.6" rx="1"/>
+    <rect x="748" y="456" width="14" height="14" fill="none" stroke="#a89868" stroke-width="1.5" rx="1"/>
+    <!-- Right lantern -->
+    <rect x="893" y="472" width="18" height="8" fill="#b0a888" rx="1"/>
+    <rect x="897" y="454" width="10" height="18" fill="#c0b890" rx="1"/>
+    <path d="M896,454 L898,446 L911,446 L913,454 Z" fill="#b8b088"/>
+    <rect x="900" y="443" width="9" height="5" fill="#a8a078" rx="1"/>
+    <rect x="895" y="456" width="14" height="14" fill="#ffe8a0" opacity="0.6" rx="1"/>
+    <rect x="895" y="456" width="14" height="14" fill="none" stroke="#a89868" stroke-width="1.5" rx="1"/>
+
+    <!-- ── Ground and stone path ── -->
+    <rect x="600" y="490" width="600" height="110" fill="url(#groundR)" filter="url(#wc)"/>
+    <!-- Path from gate to steps -->
+    <path d="M840,600 Q848,550 856,510 Q862,492 868,482" stroke="#c8b880" stroke-width="32" fill="none" opacity="0.45" stroke-linecap="round"/>
+    <path d="M960,600 Q952,550 944,510 Q938,492 932,482" stroke="#c8b880" stroke-width="32" fill="none" opacity="0.45" stroke-linecap="round"/>
+    <path d="M900,600 Q900,550 900,510 Q900,492 900,482" stroke="#d4c890" stroke-width="52" fill="none" opacity="0.3" stroke-linecap="round"/>
+    <!-- Stone pavers -->
+    <g opacity="0.6">
+      <ellipse cx="878" cy="525" rx="20" ry="9" fill="#d4cc98" transform="rotate(-5,878,525)"/>
+      <ellipse cx="900" cy="545" rx="22" ry="9" fill="#ccc490" transform="rotate(3,900,545)"/>
+      <ellipse cx="922" cy="522" rx="20" ry="9" fill="#d4cc98" transform="rotate(6,922,522)"/>
+      <ellipse cx="886" cy="558" rx="17" ry="7" fill="#ccc490" transform="rotate(-4,886,558)"/>
+      <ellipse cx="914" cy="560" rx="18" ry="7" fill="#d4cc98" transform="rotate(7,914,560)"/>
+      <ellipse cx="870" cy="540" rx="15" ry="6" fill="#ccc490" transform="rotate(-8,870,540)"/>
+      <ellipse cx="930" cy="542" rx="16" ry="6" fill="#d4cc98" transform="rotate(5,930,542)"/>
+    </g>
+    <!-- Moss/grass patches -->
+    <ellipse cx="800" cy="510" rx="30" ry="12" fill="#7a9848" opacity="0.4" filter="url(#softBlur)"/>
+    <ellipse cx="1005" cy="515" rx="28" ry="11" fill="#7a9848" opacity="0.4" filter="url(#softBlur)"/>
+    <ellipse cx="640" cy="535" rx="35" ry="14" fill="#8a9858" opacity="0.35" filter="url(#softBlur)"/>
+    <ellipse cx="1160" cy="530" rx="30" ry="12" fill="#8a9858" opacity="0.35" filter="url(#softBlur)"/>
+
+    <!-- ── Cherry blossom trees flanking pagoda ── -->
+    <!-- FAR LEFT tree (partial) -->
+    <path d="M600,600 Q604,548 608,498 Q612,458 616,420 Q619,390 622,358" stroke="#7a5030" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M622,358 Q628,328 634,300" stroke="#7a5030" stroke-width="5" fill="none"/>
+    <path d="M622,358 Q614,328 608,300" stroke="#7a5030" stroke-width="4" fill="none"/>
+    <ellipse cx="624" cy="272" rx="80" ry="72" fill="url(#cdeep)" opacity="0.85" filter="url(#wc)"/>
+    <ellipse cx="610" cy="286" rx="60" ry="55" fill="#ffccdc" opacity="0.62"/>
+    <ellipse cx="636" cy="268" rx="68" ry="62" fill="#ffb8cc" opacity="0.55"/>
+
+    <!-- LEFT MAIN tree -->
+    <path d="M705,600 Q708,548 712,498 Q715,456 719,418 Q722,386 726,352" stroke="#7a5030" stroke-width="11" fill="none" stroke-linecap="round"/>
+    <path d="M726,352 Q734,320 742,290" stroke="#7a5030" stroke-width="6" fill="none"/>
+    <path d="M726,352 Q716,322 709,292" stroke="#7a5030" stroke-width="5" fill="none"/>
+    <path d="M726,352 Q740,330 752,314" stroke="#6a4020" stroke-width="4" fill="none"/>
+    <!-- Left overhanging branch toward pagoda -->
+    <path d="M719,418 Q740,398 760,380" stroke="#7a5030" stroke-width="4" fill="none"/>
+    <ellipse cx="772" cy="370" rx="42" ry="36" fill="#ffcce0" opacity="0.68"/>
+    <!-- Main canopy -->
+    <ellipse cx="732" cy="258" rx="100" ry="90" fill="url(#cpink)" opacity="0.88" filter="url(#wc)"/>
+    <ellipse cx="714" cy="272" rx="74" ry="68" fill="#ffcce0" opacity="0.62"/>
+    <ellipse cx="750" cy="256" rx="80" ry="72" fill="#ffd4e4" opacity="0.58"/>
+    <ellipse cx="728" cy="244" rx="90" ry="80" fill="#ffaac4" opacity="0.36" filter="url(#softBlur)"/>
+    <!-- Blossom clusters detail -->
+    <g opacity="0.78">
+      <circle cx="712" cy="242" r="7" fill="#ffd4e8"/>
+      <circle cx="734" cy="228" r="6" fill="#ffbcd8"/>
+      <circle cx="752" cy="244" r="7" fill="#ffcce0"/>
+      <circle cx="718" cy="262" r="5" fill="#ffc4d8"/>
+      <circle cx="746" cy="260" r="6" fill="#ffd4e8"/>
+      <circle cx="700" cy="256" r="5" fill="#ffcce0"/>
+      <circle cx="760" cy="268" r="5" fill="#ffb8cc"/>
+    </g>
+
+    <!-- RIGHT MAIN tree -->
+    <path d="M1095,600 Q1092,548 1088,498 Q1085,456 1081,418 Q1078,386 1074,352" stroke="#7a5030" stroke-width="11" fill="none" stroke-linecap="round"/>
+    <path d="M1074,352 Q1066,320 1058,290" stroke="#7a5030" stroke-width="6" fill="none"/>
+    <path d="M1074,352 Q1084,322 1091,292" stroke="#7a5030" stroke-width="5" fill="none"/>
+    <path d="M1074,352 Q1060,330 1048,314" stroke="#6a4020" stroke-width="4" fill="none"/>
+    <!-- Right overhanging branch toward pagoda -->
+    <path d="M1081,418 Q1060,398 1040,380" stroke="#7a5030" stroke-width="4" fill="none"/>
+    <ellipse cx="1028" cy="370" rx="42" ry="36" fill="#ffe8f4" opacity="0.68"/>
+    <!-- Main canopy -->
+    <ellipse cx="1068" cy="258" rx="100" ry="90" fill="url(#cwhite)" opacity="0.88" filter="url(#wc)"/>
+    <ellipse cx="1086" cy="272" rx="76" ry="68" fill="#fff0f8" opacity="0.62"/>
+    <ellipse cx="1050" cy="256" rx="82" ry="72" fill="#ffe8f4" opacity="0.58"/>
+    <ellipse cx="1070" cy="244" rx="92" ry="80" fill="#ffd8ec" opacity="0.36" filter="url(#softBlur)"/>
+    <!-- Blossom clusters detail -->
+    <g opacity="0.78">
+      <circle cx="1088" cy="242" r="7" fill="#fff4fa"/>
+      <circle cx="1066" cy="228" r="6" fill="#ffe8f4"/>
+      <circle cx="1048" cy="244" r="7" fill="#fff0f8"/>
+      <circle cx="1082" cy="262" r="5" fill="#ffe4f0"/>
+      <circle cx="1054" cy="260" r="6" fill="#fff4fa"/>
+      <circle cx="1100" cy="256" r="5" fill="#ffe0ee"/>
+      <circle cx="1040" cy="268" r="5" fill="#ffd8ec"/>
+    </g>
+
+    <!-- FAR RIGHT tree (partial) -->
+    <path d="M1200,600 Q1196,548 1192,498 Q1188,458 1184,420 Q1181,390 1178,358" stroke="#7a5030" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <ellipse cx="1176" cy="272" rx="80" ry="72" fill="url(#cpink)" opacity="0.85" filter="url(#wc)"/>
+    <ellipse cx="1190" cy="286" rx="60" ry="55" fill="#ffcce0" opacity="0.62"/>
+
+    <!-- Scattered ground petals -->
+    <g opacity="0.65">
+      <ellipse cx="808" cy="497" rx="5" ry="2.2" fill="#ffaac8" transform="rotate(-20,808,497)"/>
+      <ellipse cx="845" cy="488" rx="4.5" ry="2" fill="#ffbbcc" transform="rotate(28,845,488)"/>
+      <ellipse cx="952" cy="493" rx="5" ry="2.2" fill="#ffaac0" transform="rotate(-10,952,493)"/>
+      <ellipse cx="996" cy="502" rx="4" ry="2" fill="#ffbbdd" transform="rotate(34,996,502)"/>
+      <ellipse cx="680" cy="520" rx="5" ry="2.2" fill="#ffaacc" transform="rotate(-24,680,520)"/>
+      <ellipse cx="1125" cy="515" rx="4.5" ry="2" fill="#ffbbcc" transform="rotate(14,1125,515)"/>
+      <ellipse cx="740" cy="508" rx="5" ry="2.2" fill="#ffaac8" transform="rotate(-32,740,508)"/>
+      <ellipse cx="1060" cy="510" rx="4" ry="2" fill="#ffbbdd" transform="rotate(20,1060,510)"/>
+    </g>
+
+    <!-- Falling petals (in air) -->
+    <g opacity="0.72">
+      <ellipse cx="762" cy="348" rx="4.5" ry="2" fill="#ffbbdd" transform="rotate(20,762,348)"/>
+      <ellipse cx="802" cy="335" rx="3.5" ry="1.8" fill="#ffccd8" transform="rotate(-16,802,335)"/>
+      <ellipse cx="845" cy="368" rx="4.5" ry="2" fill="#ffaac8" transform="rotate(36,845,368)"/>
+      <ellipse cx="775" cy="395" rx="3.5" ry="1.8" fill="#ffbbdd" transform="rotate(-26,775,395)"/>
+      <ellipse cx="1022" cy="342" rx="4.5" ry="2" fill="#ffe0f0" transform="rotate(16,1022,342)"/>
+      <ellipse cx="1060" cy="362" rx="3.5" ry="1.8" fill="#ffcce0" transform="rotate(-24,1060,362)"/>
+      <ellipse cx="980" cy="318" rx="4.5" ry="2" fill="#ffd8ec" transform="rotate(38,980,318)"/>
+      <ellipse cx="950" cy="375" rx="3.5" ry="1.8" fill="#ffe0f0" transform="rotate(-12,950,375)"/>
+      <ellipse cx="860" cy="302" rx="4" ry="1.8" fill="#ffbbdd" transform="rotate(44,860,302)"/>
+      <ellipse cx="940" cy="290" rx="4" ry="1.8" fill="#ffcce0" transform="rotate(-8,940,290)"/>
+    </g>
+
+    <!-- Scene label -->
+    <rect x="600" y="570" width="600" height="30" fill="#f5eaee" opacity="0.6"/>
+    <text x="900" y="590" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+          font-size="14" fill="#6a3850" opacity="0.9" letter-spacing="1">
+      Senso-ji Temple — Tokyo
+    </text>
+  </g>
+
+
+  <!-- ════════════════════════════════════════════
+       GLOBAL FINISHING TOUCHES
+       ════════════════════════════════════════════ -->
+
+  <!-- Center divider -->
+  <line x1="600" y1="0" x2="600" y2="600" stroke="#c8a0b8" stroke-width="2" opacity="0.55"/>
+
+  <!-- Vignette overlay -->
+  <rect x="0" y="0" width="1200" height="600" fill="url(#vig)"/>
+
+  <!-- Outer border double-line -->
+  <rect x="0" y="0" width="1200" height="600" fill="none" stroke="#c0a0b8" stroke-width="4" opacity="0.5"/>
+  <rect x="6" y="6" width="1188" height="588" fill="none" stroke="#e8d0dc" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Title banner at top -->
+  <rect x="420" y="0" width="360" height="38" fill="#f5e8ef" opacity="0.75"/>
+  <text x="600" y="26" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="18" fill="#804060" opacity="0.92" letter-spacing="4" font-style="italic">
+    ✿  Cherry Blossoms  ✿
+  </text>
+</svg>

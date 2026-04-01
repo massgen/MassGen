@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" role="img" aria-labelledby="title desc">
+  <title id="title">Cherry blossoms at UW Seattle and Tokyo temple</title>
+  <desc id="desc">A soft watercolor style illustration with side-by-side scenes of cherry blossoms at the University of Washington campus with Drumheller Fountain and at Sensō-ji-inspired temple architecture in Tokyo.</desc>
+  <defs>
+    <linearGradient id="paperBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8f1ea"/>
+      <stop offset="100%" stop-color="#f3eadf"/>
+    </linearGradient>
+    <linearGradient id="leftSky" x1="0" y1="0" x2="0.1" y2="1">
+      <stop offset="0%" stop-color="#dfeefa"/>
+      <stop offset="42%" stop-color="#f7eef5"/>
+      <stop offset="100%" stop-color="#eef1df"/>
+    </linearGradient>
+    <linearGradient id="rightSky" x1="0" y1="0" x2="0.1" y2="1">
+      <stop offset="0%" stop-color="#dce9f8"/>
+      <stop offset="42%" stop-color="#f9edf3"/>
+      <stop offset="100%" stop-color="#efe4d4"/>
+    </linearGradient>
+    <linearGradient id="leftGround" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bfd1b3"/>
+      <stop offset="100%" stop-color="#92a77f"/>
+    </linearGradient>
+    <linearGradient id="rightGround" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d3c4aa"/>
+      <stop offset="100%" stop-color="#b59f7e"/>
+    </linearGradient>
+    <filter id="paperGrain" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="7" result="noise"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.05"/>
+      </feComponentTransfer>
+    </filter>
+    <filter id="washBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <filter id="panelShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#896d6a" flood-opacity="0.16"/>
+    </filter>
+    <filter id="bloom" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+    <clipPath id="leftClip"><rect x="40" y="40" width="520" height="520" rx="26"/></clipPath>
+    <clipPath id="rightClip"><rect x="640" y="40" width="520" height="520" rx="26"/></clipPath>
+    <symbol id="blossom" viewBox="-18 -18 36 36">
+      <circle cx="0" cy="0" r="11.8" fill="currentColor" opacity="0.12" filter="url(#bloom)"/>
+      <g fill="currentColor" opacity="0.9">
+        <ellipse cx="0" cy="-7" rx="5.6" ry="8.4"/>
+        <ellipse cx="6.6" cy="-2.2" rx="5.6" ry="8.4" transform="rotate(72 6.6 -2.2)"/>
+        <ellipse cx="4.2" cy="5.8" rx="5.6" ry="8.4" transform="rotate(144 4.2 5.8)"/>
+        <ellipse cx="-4.2" cy="5.8" rx="5.6" ry="8.4" transform="rotate(-144 -4.2 5.8)"/>
+        <ellipse cx="-6.6" cy="-2.2" rx="5.6" ry="8.4" transform="rotate(-72 -6.6 -2.2)"/>
+      </g>
+      <g fill="#fffefe" opacity="0.18">
+        <ellipse cx="0" cy="-6.4" rx="2.8" ry="3.6"/>
+        <ellipse cx="5.8" cy="-1.8" rx="2.8" ry="3.6" transform="rotate(72 5.8 -1.8)"/>
+      </g>
+      <circle r="3.8" fill="#f3c56d" opacity="0.8"/>
+      <circle cx="-1.4" cy="0.6" r="0.95" fill="#a16b4a" opacity="0.72"/>
+      <circle cx="1.1" cy="-0.4" r="0.95" fill="#a16b4a" opacity="0.72"/>
+      <circle cx="0.4" cy="1.8" r="0.95" fill="#a16b4a" opacity="0.72"/>
+    </symbol>
+    <symbol id="petal" viewBox="-8 -8 16 16">
+      <path d="M0 -6 C4 -6 5 -1 0 6 C-5 -1 -4 -6 0 -6 Z"/>
+    </symbol>
+    <style>
+      .wash { filter:url(#washBlur); }
+      .inkfill { stroke:#6e5e67; stroke-opacity:0.26; stroke-width:1.2; stroke-linejoin:round; }
+      .branch { fill:none; stroke:#6e4b49; stroke-width:8; stroke-linecap:round; stroke-opacity:0.74; }
+      .branch-shadow { fill:none; stroke:#a88583; stroke-width:14; stroke-linecap:round; stroke-opacity:0.2; filter:url(#washBlur); }
+    </style>
+  </defs>
+  <rect width="1200" height="600" fill="url(#paperBg)"/>
+  <rect x="0" y="0" width="1200" height="600" fill="#ffffff" opacity="0.7" filter="url(#paperGrain)"/>
+  <g class="wash">
+    <ellipse cx="188" cy="72" rx="160" ry="48" fill="#f3dbe7" opacity="0.16"/>
+    <ellipse cx="1002" cy="92" rx="170" ry="54" fill="#e7edf8" opacity="0.2"/>
+    <ellipse cx="602" cy="542" rx="260" ry="42" fill="#efd9d8" opacity="0.1"/>
+  </g>
+  <g filter="url(#panelShadow)">
+    <rect x="40" y="40" width="520" height="520" rx="26" fill="#fffaf4" opacity="0.95"/>
+    <rect x="640" y="40" width="520" height="520" rx="26" fill="#fffaf4" opacity="0.95"/>
+  </g>
+  <rect x="40" y="40" width="520" height="520" rx="26" fill="none" stroke="#ffffff" stroke-opacity="0.72" stroke-width="6"/>
+  <rect x="640" y="40" width="520" height="520" rx="26" fill="none" stroke="#ffffff" stroke-opacity="0.72" stroke-width="6"/>
+
+<g clip-path="url(#leftClip)">
+  <g transform="translate(40 40)">
+    <rect width="520" height="520" fill="url(#leftSky)"/>
+    <g class="wash">
+      <ellipse cx="130" cy="84" rx="148" ry="98" fill="#f8d8e6" opacity="0.24" transform="rotate(-8 130 84)"/>
+      <ellipse cx="402" cy="110" rx="146" ry="110" fill="#d9eaf6" opacity="0.34" transform="rotate(7 402 110)"/>
+      <ellipse cx="246" cy="200" rx="220" ry="118" fill="#fff7f3" opacity="0.25"/>
+      <ellipse cx="258" cy="426" rx="230" ry="98" fill="#dfe9d5" opacity="0.26"/>
+    </g>
+    <path d="M0 262 C72 222 122 232 176 212 C226 194 290 210 340 188 C398 164 448 184 520 154 L520 304 L0 304 Z" fill="#c8d4da" opacity="0.52" class="wash"/>
+    <path d="M0 296 C96 262 172 278 252 250 C338 222 430 246 520 216 L520 340 L0 340 Z" fill="#dfe7e2" opacity="0.58"/>
+    <path d="M0 312 C94 290 168 300 230 284 C306 262 396 286 520 254 L520 520 L0 520 Z" fill="url(#leftGround)"/>
+    <path d="M42 352 C150 318 334 320 476 350" fill="none" stroke="#ece7da" stroke-width="20" stroke-linecap="round" opacity="0.72" class="wash"/>
+    <path d="M194 520 L236 366 L286 366 L328 520 Z" fill="#eee5d5" opacity="0.86"/>
+    <path d="M214 520 L245 388 L277 388 L307 520 Z" fill="#f5f0e6" opacity="0.84"/>
+
+    <g transform="translate(118 132)">
+      <ellipse cx="142" cy="66" rx="158" ry="52" fill="#f8e9e2" opacity="0.42" class="wash"/>
+      <rect x="0" y="82" width="56" height="130" rx="4" fill="#d7c4c0" class="inkfill"/>
+      <rect x="224" y="82" width="56" height="130" rx="4" fill="#d7c4c0" class="inkfill"/>
+      <rect x="56" y="100" width="168" height="112" fill="#d7c4c0" class="inkfill"/>
+      <path d="M34 98 Q140 18 246 98 L232 116 Q140 66 48 116 Z" fill="#766c87" class="inkfill"/>
+      <path d="M48 116 Q140 82 232 116 L222 130 Q140 102 58 130 Z" fill="#645876" opacity="0.92"/>
+      <path d="M-8 76 L28 36 L66 76 L58 92 Q28 72 -2 92 Z" fill="#7a6f89" class="inkfill"/>
+      <path d="M214 76 L252 36 L288 76 L282 92 Q252 72 222 92 Z" fill="#7a6f89" class="inkfill"/>
+      <path d="M8 48 L28 18 L48 48 L42 60 Q28 46 14 60 Z" fill="#8d7f96" opacity="0.95"/>
+      <path d="M232 48 L252 18 L272 48 L266 60 Q252 46 238 60 Z" fill="#8d7f96" opacity="0.95"/>
+      <path d="M12 212 L32 122 L40 122 L22 212 Z" fill="#c3b2b2" opacity="0.75"/>
+      <path d="M258 212 L240 122 L248 122 L268 212 Z" fill="#c3b2b2" opacity="0.75"/>
+      <g fill="#5b5462" opacity="0.55">
+        <rect x="12" y="102" width="8" height="18" rx="2"/><rect x="24" y="102" width="8" height="18" rx="2"/><rect x="36" y="102" width="8" height="18" rx="2"/>
+        <rect x="12" y="128" width="8" height="18" rx="2"/><rect x="24" y="128" width="8" height="18" rx="2"/><rect x="36" y="128" width="8" height="18" rx="2"/>
+        <rect x="236" y="102" width="8" height="18" rx="2"/><rect x="248" y="102" width="8" height="18" rx="2"/><rect x="260" y="102" width="8" height="18" rx="2"/>
+        <rect x="236" y="128" width="8" height="18" rx="2"/><rect x="248" y="128" width="8" height="18" rx="2"/><rect x="260" y="128" width="8" height="18" rx="2"/>
+        <rect x="76" y="126" width="12" height="32" rx="3"/><rect x="98" y="126" width="12" height="32" rx="3"/><rect x="120" y="126" width="12" height="32" rx="3"/>
+        <rect x="148" y="126" width="12" height="32" rx="3"/><rect x="170" y="126" width="12" height="32" rx="3"/><rect x="192" y="126" width="12" height="32" rx="3"/>
+      </g>
+      <path d="M118 212 v-34 q0-20 22-20 q22 0 22 20 v34 z" fill="#605568" opacity="0.6"/>
+      <g stroke="#8d7e84" stroke-opacity="0.36" stroke-width="2" fill="none">
+        <path d="M56 100 L76 210"/><path d="M224 100 L204 210"/>
+        <path d="M140 100 V212"/>
+      </g>
+    </g>
+
+    <g transform="translate(164 318)">
+      <ellipse cx="96" cy="46" rx="102" ry="38" fill="#7aa6c4" opacity="0.18" class="wash"/>
+      <ellipse cx="96" cy="48" rx="86" ry="32" fill="#96c6df" opacity="0.68"/>
+      <ellipse cx="96" cy="48" rx="90" ry="35" fill="none" stroke="#8c7b78" stroke-width="6" opacity="0.62"/>
+      <ellipse cx="96" cy="48" rx="76" ry="24" fill="none" stroke="#f4f0eb" stroke-width="5" opacity="0.52"/>
+      <path d="M94 12 q6 -12 12 0 l3 26 q6 28 -15 28 q-20 0 -13 -28 z" fill="#d9ddd8" opacity="0.76"/>
+      <path d="M96 0 C86 20 90 10 88 46 M96 0 C100 20 104 12 106 46 M96 4 C96 18 96 18 96 54" fill="none" stroke="#edf6ff" stroke-width="4" stroke-linecap="round" opacity="0.82"/>
+      <path d="M96 4 C80 28 76 34 66 56 M96 8 C112 28 118 34 128 56" fill="none" stroke="#edf6ff" stroke-width="2.8" stroke-linecap="round" opacity="0.62"/>
+      <ellipse cx="96" cy="42" rx="28" ry="10" fill="#dff2fb" opacity="0.74"/>
+    </g>
+
+    <g opacity="0.55">
+      <ellipse cx="98" cy="304" rx="34" ry="54" fill="#c1d2b8" class="wash"/>
+      <ellipse cx="422" cy="308" rx="34" ry="50" fill="#c0d3b7" class="wash"/>
+      <rect x="94" y="314" width="7" height="52" rx="3" fill="#84645e" opacity="0.65"/>
+      <rect x="418" y="320" width="7" height="48" rx="3" fill="#84645e" opacity="0.65"/>
+    </g>
+
+    <g>
+      <path class="branch-shadow" d="M-18 54 C68 12 122 64 188 94 C226 112 262 110 298 102"/>
+      <path class="branch" d="M-18 58 C66 18 120 68 186 96 C224 112 260 114 304 108"/>
+      <path class="branch-shadow" d="M542 48 C458 10 404 52 358 94 C332 118 304 126 278 132"/>
+      <path class="branch" d="M540 54 C456 16 404 58 358 98 C332 120 306 128 278 136"/>
+      <path class="branch-shadow" d="M28 196 C56 166 70 146 86 128"/>
+      <path class="branch" d="M30 200 C56 170 72 148 88 132"/>
+      <path class="branch-shadow" d="M482 204 C456 174 444 152 430 136"/>
+      <path class="branch" d="M480 206 C454 176 442 154 428 138"/>
+      <use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+      <use href="#petal" transform="translate(116 246) rotate(28) scale(0.55)" fill="#f9d7e4" opacity="0.6" />
+<use href="#petal" transform="translate(166 212) rotate(-22) scale(0.48)" fill="#fff9fc" opacity="0.58" />
+<use href="#petal" transform="translate(210 258) rotate(14) scale(0.44)" fill="#f8d3e2" opacity="0.55" />
+<use href="#petal" transform="translate(320 214) rotate(-18) scale(0.52)" fill="#fffbfd" opacity="0.52" />
+<use href="#petal" transform="translate(386 252) rotate(32) scale(0.56)" fill="#f7d2e0" opacity="0.58" />
+<use href="#petal" transform="translate(424 198) rotate(-24) scale(0.46)" fill="#fff9fb" opacity="0.5" />
+<use href="#petal" transform="translate(286 302) rotate(12) scale(0.5)" fill="#f7d4e2" opacity="0.48" />
+<use href="#petal" transform="translate(348 336) rotate(-16) scale(0.46)" fill="#fffbfd" opacity="0.42" />
+<use href="#petal" transform="translate(138 336) rotate(20) scale(0.42)" fill="#f7d5e3" opacity="0.42" />
+    </g>
+
+    <g opacity="0.5" fill="#fff7f7">
+      <circle cx="192" cy="430" r="3"/><circle cx="214" cy="438" r="2.4"/><circle cx="336" cy="446" r="2.6"/>
+    </g>
+  </g>
+</g>
+
+
+<g clip-path="url(#rightClip)">
+  <g transform="translate(640 40)">
+    <rect width="520" height="520" fill="url(#rightSky)"/>
+    <g class="wash">
+      <ellipse cx="110" cy="92" rx="160" ry="104" fill="#f9dde8" opacity="0.3" transform="rotate(-10 110 92)"/>
+      <ellipse cx="392" cy="94" rx="150" ry="108" fill="#dfe9fa" opacity="0.32" transform="rotate(6 392 94)"/>
+      <ellipse cx="252" cy="186" rx="214" ry="114" fill="#fff6ef" opacity="0.26"/>
+      <ellipse cx="278" cy="416" rx="240" ry="104" fill="#eadfce" opacity="0.24"/>
+    </g>
+    <path d="M0 294 C72 266 142 276 216 246 C284 218 356 232 430 210 C468 200 496 190 520 178 L520 326 L0 326 Z" fill="#d9ddd7" opacity="0.56"/>
+    <path d="M0 316 C120 286 222 300 320 276 C398 256 452 262 520 244 L520 520 L0 520 Z" fill="url(#rightGround)"/>
+    <path d="M72 516 C154 426 206 392 260 368 C322 340 388 332 452 344" fill="none" stroke="#efe6d6" stroke-width="22" stroke-linecap="round" opacity="0.76" class="wash"/>
+
+    <g transform="translate(328 146) scale(0.82)">
+      <ellipse cx="82" cy="174" rx="86" ry="32" fill="#f2dfd7" opacity="0.42" class="wash"/>
+      <rect x="54" y="112" width="56" height="126" fill="#efe3d6" opacity="0.92"/>
+      <path d="M38 110 Q82 80 126 110 L116 122 Q82 104 48 122 Z" fill="#4f5369"/>
+      <rect x="58" y="84" width="48" height="36" fill="#f2e6da" opacity="0.94"/>
+      <path d="M28 82 Q82 46 136 82 L124 96 Q82 76 40 96 Z" fill="#555a70"/>
+      <rect x="62" y="58" width="40" height="28" fill="#f5eadf" opacity="0.95"/>
+      <path d="M18 56 Q82 18 146 56 L132 70 Q82 48 32 70 Z" fill="#5a5f76"/>
+      <rect x="66" y="34" width="32" height="24" fill="#f6efe5" opacity="0.95"/>
+      <path d="M10 32 Q82 -6 154 32 L138 46 Q82 26 26 46 Z" fill="#60647b"/>
+      <rect x="71" y="8" width="22" height="24" fill="#f7efe2" opacity="0.96"/>
+      <path d="M0 6 Q82 -34 164 6 L146 20 Q82 0 18 20 Z" fill="#676b83"/>
+      <path d="M82 -8 V-34" stroke="#d4b36d" stroke-width="4" stroke-linecap="round"/>
+      <path d="M82 -34 l6 14 l-6 8 l-6 -8 z" fill="#d7b56c"/>
+      <g fill="#b98f4b" opacity="0.65">
+        <circle cx="82" cy="10" r="3"/><circle cx="82" cy="36" r="3"/><circle cx="82" cy="60" r="3"/>
+      </g>
+      <g fill="#6f3640" opacity="0.34">
+        <rect x="68" y="124" width="8" height="96"/><rect x="88" y="124" width="8" height="96"/>
+      </g>
+    </g>
+
+    <g transform="translate(88 168)">
+      <ellipse cx="158" cy="118" rx="168" ry="64" fill="#f4dfd8" opacity="0.5" class="wash"/>
+      <path d="M24 112 Q158 16 292 112 L272 130 Q158 82 44 130 Z" fill="#4d5568" class="inkfill"/>
+      <path d="M40 128 Q158 92 276 128 L266 142 Q158 114 50 142 Z" fill="#3f4757" opacity="0.94"/>
+      <path d="M44 94 Q158 24 272 94 L254 108 Q158 66 62 108 Z" fill="#636a80" opacity="0.86"/>
+      <rect x="62" y="136" width="192" height="112" fill="#cc604f" class="inkfill"/>
+      <rect x="54" y="244" width="208" height="20" fill="#8a4d42" opacity="0.76"/>
+      <rect x="86" y="136" width="18" height="120" fill="#9c433d" opacity="0.9"/>
+      <rect x="138" y="136" width="18" height="120" fill="#9c433d" opacity="0.9"/>
+      <rect x="190" y="136" width="18" height="120" fill="#9c433d" opacity="0.9"/>
+      <path d="M112 136 h92 v72 h-92 z" fill="#f2eadf" opacity="0.88"/>
+      <g stroke="#a14f45" stroke-width="3" opacity="0.56">
+        <path d="M112 160 h92"/><path d="M112 182 h92"/><path d="M112 204 h92"/>
+        <path d="M134 136 v72"/><path d="M156 136 v72"/><path d="M178 136 v72"/>
+      </g>
+      <path d="M152 164 q6 -10 12 0 v42 h-12 z" fill="#bc8f54" opacity="0.84"/>
+      <ellipse cx="158" cy="160" rx="26" ry="22" fill="#c43730" opacity="0.82"/>
+      <rect x="152" y="150" width="12" height="74" fill="#bf8c48" opacity="0.7"/>
+      <path d="M58 246 L102 286 L214 286 L258 246" fill="#8e5248" opacity="0.74"/>
+      <g stroke="#f2e7da" stroke-opacity="0.44" stroke-width="2" fill="none">
+        <path d="M72 112 L86 248"/><path d="M244 112 L230 248"/>
+        <path d="M158 112 V248"/>
+      </g>
+      <g fill="#d8cab6" opacity="0.84">
+        <rect x="18" y="222" width="18" height="64" rx="4"/><rect x="280" y="222" width="18" height="64" rx="4"/>
+      </g>
+      <path d="M27 220 q12 -26 18 0 q-9 16 -18 0 z" fill="#b8a87a" opacity="0.78"/>
+      <path d="M289 220 q12 -26 18 0 q-9 16 -18 0 z" fill="#b8a87a" opacity="0.78"/>
+    </g>
+
+    <g opacity="0.58">
+      <ellipse cx="58" cy="332" rx="38" ry="60" fill="#c7d0ba" class="wash"/>
+      <ellipse cx="462" cy="318" rx="42" ry="64" fill="#c6cfba" class="wash"/>
+      <rect x="54" y="340" width="8" height="62" rx="3" fill="#7d6059" opacity="0.66"/>
+      <rect x="458" y="328" width="8" height="74" rx="3" fill="#7d6059" opacity="0.66"/>
+    </g>
+
+    <g>
+      <path class="branch-shadow" d="M-18 86 C54 42 108 70 166 102 C214 128 266 128 320 114"/>
+      <path class="branch" d="M-18 90 C56 48 108 74 166 106 C214 130 266 130 322 118"/>
+      <path class="branch-shadow" d="M548 44 C474 22 428 56 388 94 C352 126 310 138 268 144"/>
+      <path class="branch" d="M546 48 C474 26 428 60 390 98 C354 128 312 140 270 148"/>
+      <path class="branch-shadow" d="M504 238 C480 206 468 184 454 166"/>
+      <path class="branch" d="M502 240 C478 208 466 186 452 168"/>
+      <path class="branch-shadow" d="M32 212 C56 188 70 166 82 144"/>
+      <path class="branch" d="M34 214 C58 190 72 168 84 146"/>
+      <use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+<use href="#blossom" transform="translate({x} {y}) rotate({rot}) scale({scale})" style="color:{color}" opacity="{opacity}" />
+      <use href="#petal" transform="translate(126 248) rotate(-18) scale(0.5)" fill="#f7d1e0" opacity="0.58" />
+<use href="#petal" transform="translate(178 214) rotate(20) scale(0.46)" fill="#fff9fc" opacity="0.54" />
+<use href="#petal" transform="translate(256 238) rotate(-24) scale(0.44)" fill="#f8d4e2" opacity="0.5" />
+<use href="#petal" transform="translate(332 206) rotate(14) scale(0.54)" fill="#fffbfd" opacity="0.52" />
+<use href="#petal" transform="translate(388 258) rotate(-16) scale(0.52)" fill="#f9d7e4" opacity="0.58" />
+<use href="#petal" transform="translate(438 224) rotate(26) scale(0.48)" fill="#fff8fb" opacity="0.54" />
+<use href="#petal" transform="translate(284 308) rotate(-12) scale(0.46)" fill="#f8d2e1" opacity="0.44" />
+<use href="#petal" transform="translate(208 340) rotate(22) scale(0.42)" fill="#fffbfd" opacity="0.4" />
+<use href="#petal" transform="translate(472 322) rotate(-18) scale(0.5)" fill="#f8d6e4" opacity="0.45" />
+    </g>
+
+    <g fill="#f4efe4" opacity="0.7">
+      <circle cx="192" cy="414" r="3.2"/><circle cx="244" cy="452" r="2.4"/><circle cx="328" cy="430" r="2.8"/>
+    </g>
+  </g>
+</g>
+
+</svg>
