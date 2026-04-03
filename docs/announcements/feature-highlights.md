@@ -11,7 +11,7 @@ Update this when major new features ship.
 
 ## Feature Highlights
 
-🧠Supports diverse backends — Access open-source and proprietary models (local, Gemini 3.1 Pro, GPT-5.4, Claude 4.6 Opus/Sonnet, GLM-5, Grok 4.1) and agents (Claude Code, Codex, Gemini CLI, GitHub Copilot). 👉 More Info: https://docs.massgen.ai/en/latest/user_guide/backends.html
+🧠Supports diverse backends — Access open-source and proprietary models (local, Gemini 3.1 Pro, GPT-5.4, Claude 4.6 Opus/Sonnet, GLM-5, Grok 4.20) and agents (Claude Code, Codex, Gemini CLI, GitHub Copilot). 👉 More Info: https://docs.massgen.ai/en/latest/user_guide/backends.html
 
 🤖Build collaborative multi-agent teams — Agents work in parallel, share workspaces, and vote to converge on the best solution. Checklist-gated quality rounds with opinionated evaluation criteria drive iterative refinement. Subagents, decomposition, and checkpoint delegation for complex tasks. 👉 More Info: https://docs.massgen.ai/en/latest/user_guide/concepts.html#multi-agent-coordination
 
@@ -33,7 +33,7 @@ Update this when major new features ship.
 
 ## Feature Highlights (LinkedIn)
 
-🧠Supports diverse backends — Access open-source and proprietary models (local, Gemini 3.1 Pro, GPT-5.4, Claude 4.6 Opus/Sonnet, GLM-5, Grok 4.1) and agents (Claude Code, Codex, Gemini CLI, GitHub Copilot). 👉 More Info: https://lnkd.in/gdXw-ZiN
+🧠Supports diverse backends — Access open-source and proprietary models (local, Gemini 3.1 Pro, GPT-5.4, Claude 4.6 Opus/Sonnet, GLM-5, Grok 4.20) and agents (Claude Code, Codex, Gemini CLI, GitHub Copilot). 👉 More Info: https://lnkd.in/gdXw-ZiN
 
 🤖Build collaborative multi-agent teams — Agents work in parallel, share workspaces, and vote to converge on the best solution. Checklist-gated quality rounds with opinionated evaluation criteria drive iterative refinement. Subagents, decomposition, and checkpoint delegation for complex tasks. 👉 More Info: https://lnkd.in/gTH5prec
 
