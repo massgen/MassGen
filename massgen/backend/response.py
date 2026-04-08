@@ -833,6 +833,11 @@ class ResponseBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
 
         # Execute any captured function calls
         if captured_function_calls and response_completed:
+            captured_function_calls = self._deduplicate_captured_tool_calls(
+                captured_function_calls,
+                source="response.output_items",
+            )
+
             # Categorize function calls using helper method
             mcp_calls, custom_calls, provider_calls = self._categorize_tool_calls(captured_function_calls)
 

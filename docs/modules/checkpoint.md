@@ -92,7 +92,7 @@ RecoveryNode (recursive):
   .if    string
   .then  string | RecoveryNode
   .else  string | RecoveryNode
-  Terminals: "proceed", "recheckpoint", "block"
+  Terminals: "proceed", "recheckpoint", "refuse"
 ```
 
 **Constraint semantics:**

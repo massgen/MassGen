@@ -44,9 +44,14 @@ DEFAULT_SAFETY_POLICY: list[str] = [
     "Verify preconditions before executing any irreversible action",
 ]
 
-VALID_TERMINALS: set[str] = {"proceed", "recheckpoint", "block"}
+VALID_TERMINALS: set[str] = {"proceed", "recheckpoint", "refuse"}
 
 _DEFAULT_TIMEOUT = 600  # 10 minutes
+# Grace buffer added to orchestrator_timeout_seconds when deriving the outer
+# subprocess timeout. Gives the inner MassGen run time to finish its last
+# round, serialize the plan, and stream output back before the wrapper kills
+# the subprocess at its own deadline.
+_SUBRUN_TIMEOUT_BUFFER = 60
 _CHECKPOINT_RUNS_DIR = ".massgen/checkpoint_runs"
 
 # Module-level session state (set by init tool)
@@ -72,6 +77,28 @@ workspace. Read it to understand what the agent has done and decided. \
 Focus on the most recent entries first — the last tool calls, reasoning, \
 and decisions are most relevant. Use your filesystem tools to read the \
 file; determine the best way to parse it based on the format you find.
+
+## Workspace
+
+The executor's project directory is at `{workspace_dir}` and is mounted \
+into your environment as a read-only context path. Before writing the \
+plan, explore it. List what's there. Open files that look relevant to \
+the objective — context, reports, requests, configuration, documentation \
+— and get a feel for what the executor can actually see. Also re-read \
+the "Available Tools" section below with this question in mind: for each \
+tool, what can it read or do, and what can't it touch?
+
+Your goal is to produce a plan the executor can actually carry out. \
+Every step, verification or action, must describe something they have a \
+concrete way to do with the files and tools they have. If you write \
+"verify X" and can't point to a file they could read or a tool they could \
+call that would do the check, the step is broken. Either rewrite it so \
+it's grounded in something real, or explicitly say you're asking them to \
+trust an upstream assumption and why that trust is reasonable.
+
+A plan full of plausible-sounding checks that can't actually be performed \
+is worse than a shorter plan with fewer honest checks — it creates a \
+false sense of safety. Ground every step before you commit it.
 
 ## Objective
 
@@ -112,8 +139,12 @@ The JSON must match this schema:
       }},
       "recovery": {{
         "if": "condition to evaluate",
-        "then": "proceed | recheckpoint | block | {{nested recovery}}",
-        "else": "proceed | recheckpoint | block | {{nested recovery}}"
+        "then": "proceed",
+        "else": {{
+          "if": "secondary condition",
+          "then": "recheckpoint",
+          "else": "refuse"
+        }}
       }}
     }}
   ]
@@ -126,10 +157,20 @@ Rules:
 - `approved_action` is optional: when present alongside constraints, \
 it is the ONLY permitted exception
 - `recovery` is optional: a recursive tree with `if`/`then`/`else`
-- Terminal values for recovery: "proceed", "recheckpoint", "block"
+- Terminal values in `then`/`else` MUST be one of these exact bare \
+strings — no extra text, no annotations, no dashes or explanations:
+  - `"proceed"` — condition resolved safely, continue to next step
+  - `"recheckpoint"` — uncertain outcome, request new guidance
+  - `"refuse"` — the only remaining option is unsafe; refuse to act
+- INVALID examples: `"refuse — do not send emails"`, \
+`"proceed (with caution)"`, `"recheckpoint: need backup first"`
+- Put situational context in the `if` condition field, not in the \
+terminal value
 - Recovery nodes can nest arbitrarily deep
 - If action_goals were provided, map each to a specific approved_action \
 with exact tool name and args
+
+{validator_section}\
 """
 
 
@@ -278,9 +319,11 @@ def extract_json_from_response(text: str) -> dict[str, Any]:
 
 def build_objective_prompt(
     objective: str,
-    available_tools: list[dict[str, str]],
+    available_tools: list[dict[str, Any]],
     criteria: list[str],
+    workspace_dir: str,
     action_goals: list[dict[str, Any]] | None = None,
+    validator_path: str | None = None,
 ) -> str:
     """Build the system prompt for checkpoint agents.
 
@@ -292,7 +335,19 @@ def build_objective_prompt(
         for tool in available_tools:
             name = tool.get("name", "unknown")
             desc = tool.get("description", "")
-            tools_lines.append(f"- **{name}**: {desc}")
+            schema = tool.get("input_schema")
+            line = f"- **{name}**: {desc}"
+            if schema:
+                if isinstance(schema, str):
+                    line += f"\n    args: `{schema}`"
+                else:
+                    # Compact JSON schema rendering
+                    try:
+                        schema_str = json.dumps(schema, separators=(",", ":"))
+                    except (TypeError, ValueError):
+                        schema_str = str(schema)
+                    line += f"\n    schema: `{schema_str}`"
+            tools_lines.append(line)
         tools_section = "\n".join(tools_lines)
     else:
         tools_section = "(no tools listed)"
@@ -321,13 +376,27 @@ def build_objective_prompt(
     # Format criteria section
     criteria_section = "\n".join(f"- {c}" for c in criteria)
 
+    # Format validator section
+    if validator_path:
+        validator_section = (
+            f"\n## Validation\n\n"
+            f"After writing `{RESULT_FILENAME}`, validate it by running:\n"
+            f"  python {validator_path} <path_to_your_file>\n"
+            f"If validation fails, fix the errors and re-validate before "
+            f"proceeding.\n"
+        )
+    else:
+        validator_section = ""
+
     return _OBJECTIVE_SYSTEM_PROMPT.format(
         trajectory_path=TRAJECTORY_FILENAME,
+        workspace_dir=workspace_dir,
         objective=objective,
         tools_section=tools_section,
         action_goals_section=action_goals_section,
         criteria_section=criteria_section,
         result_filename=RESULT_FILENAME,
+        validator_section=validator_section,
     )
 
 
@@ -383,7 +452,7 @@ def generate_objective_config(
 async def _init_impl(
     workspace_dir: str,
     trajectory_path: str,
-    available_tools: list[dict[str, str]],
+    available_tools: list[dict[str, Any]],
     safety_policy: list[str] | None = None,
 ) -> str:
     """Store session context for subsequent checkpoint calls."""
@@ -485,15 +554,7 @@ async def _checkpoint_impl(
         eval_criteria,
     )
 
-    # 4. Build system prompt
-    system_prompt = build_objective_prompt(
-        objective=objective,
-        available_tools=_session["available_tools"],
-        criteria=criteria,
-        action_goals=action_goals,
-    )
-
-    # 5. Create persistent workspace under session dir (no file copying)
+    # 4. Create persistent workspace under session dir (no file copying)
     global _checkpoint_counter
     if _session_dir is None:
         return json.dumps(
@@ -517,6 +578,22 @@ async def _checkpoint_impl(
         else:
             traj_dest.write_text("(trajectory file not found)")
 
+        # Copy validator script into workspace for agent self-checking
+        validator_src = Path(__file__).parent / "validate_plan.py"
+        validator_dest = workspace / "validate_plan.py"
+        if validator_src.exists():
+            shutil.copy2(validator_src, validator_dest)
+
+        # 5. Build system prompt (after workspace so we know validator path)
+        system_prompt = build_objective_prompt(
+            objective=objective,
+            available_tools=_session["available_tools"],
+            criteria=criteria,
+            workspace_dir=_session["workspace_dir"],
+            action_goals=action_goals,
+            validator_path=str(validator_dest) if validator_dest.exists() else None,
+        )
+
         # 6. Generate subprocess config with context_paths
         # instead of copying the whole workspace
         config = generate_objective_config(
@@ -534,11 +611,19 @@ async def _checkpoint_impl(
         write_subrun_config(config, config_path)
 
         # 7. Launch subprocess
+        # Honor timeout_settings.orchestrator_timeout_seconds from the loaded
+        # config so the outer wrapper matches the inner MassGen budget. Add a
+        # grace buffer (_SUBRUN_TIMEOUT_BUFFER) on top so the inner has time to
+        # finish its final round, serialize the plan, and stream output back
+        # before the wrapper kills the subprocess. Falls back to _DEFAULT_TIMEOUT
+        # if the key is absent.
+        orchestrator_timeout = _session["config_dict"].get("timeout_settings", {}).get("orchestrator_timeout_seconds", _DEFAULT_TIMEOUT)
+        subrun_timeout = orchestrator_timeout + _SUBRUN_TIMEOUT_BUFFER
         result = await run_massgen_subrun(
             prompt=objective,
             config_path=config_path,
             workspace=workspace,
-            timeout=_DEFAULT_TIMEOUT,
+            timeout=subrun_timeout,
         )
 
         if not result.get("success"):
@@ -637,13 +722,43 @@ def _create_mcp_server():
             "before any checkpoint. The team reads your trajectory to "
             "understand your decisions so far, and needs your tool "
             "list to produce plans with correct tool names and "
-            "arguments."
+            "arguments.\n\n"
+            "'available_tools' MUST be the COMPLETE list of every "
+            "tool you have access to in this session \u2014 not just "
+            "the tools you plan to use for the current checkpoint. "
+            "Include every tool your harness exposes: MCP tools, "
+            "built-in/host tools (file I/O, shell execution, web "
+            "access, code editing, subagent delegation, etc.), and "
+            "any other callable capability. The reviewing agents use "
+            "this list to assess what you COULD do, not just what "
+            "you plan to do \u2014 under-reporting your capabilities "
+            "distorts their risk assessment and may hide unsafe "
+            "alternatives (e.g. shelling out to bypass a gated MCP "
+            "tool). If in doubt, include it.\n\n"
+            "EXCEPTION: do NOT include the checkpoint MCP's own "
+            "tools (anything under `mcp__massgen-checkpoint-mcp__*`, "
+            "including `init` and `checkpoint`). Those are the safety "
+            "scaffolding itself, not capabilities the team needs to "
+            "review.\n\n"
+            "Each entry in `available_tools` MUST be a dict with the "
+            "following keys, not just `name` + `description`:\n"
+            "  - `name` (str): the tool's full name as you would call it\n"
+            "  - `description` (str): one-line summary of what it does "
+            "and whether it's reversible\n"
+            "  - `input_schema` (dict | str): the tool's parameters \u2014 "
+            "either the raw JSON schema dict from your tool catalog, or "
+            "a compact human-readable signature like "
+            "`(table: str, filter: str, dry_run: bool=False)`. "
+            "Reviewers cannot produce concrete approved_action entries "
+            "without knowing argument names, types, and defaults. "
+            "Omitting input_schema is the most common cause of vague, "
+            "non-actionable plans."
         ),
     )
     async def init(
         workspace_dir: str,
         trajectory_path: str,
-        available_tools: list[dict[str, str]],
+        available_tools: list[dict[str, Any]],
         safety_policy: list[str] | None = None,
     ) -> str:
         return await _init_impl(
@@ -660,37 +775,138 @@ def _create_mcp_server():
             "They review your trajectory, objective, and tools to "
             "produce a step-by-step plan with constraints, approved "
             "actions, and recovery trees.\n\n"
-            "Integrate checkpoints into your task planning. When "
-            "you look at your overall task, identify phases that "
-            "involve real consequences and scope one checkpoint per "
-            "consequential phase. You can also add checkpoints "
-            "dynamically when new information reveals risk you "
-            "didn't anticipate.\n\n"
-            "The core principle: if the action touches the outside "
-            "world or can't be undone, that's where a checkpoint "
-            "earns its place.\n\n"
-            "Where checkpoints help:\n"
-            "- Deployments & infrastructure: running a production "
-            "DB migration, deploying a new app version, changing "
-            "DNS records\n"
-            "- External communication: sending emails to a client "
-            "list, posting on social media, publishing a blog post, "
-            "messaging a large Slack channel\n"
-            "- Destructive/irreversible actions: deleting files or "
-            "database records, clearing a table, reformatting a "
-            "disk\n"
-            "- Financial operations: submitting a purchase order, "
-            "processing refunds, updating pricing\n"
-            "- Permission & access changes: modifying IAM roles, "
-            "updating API keys, changing shared document access\n\n"
-            "Where checkpoints are not needed: reading files, "
-            "writing draft code, running tests, searching the web, "
-            "brainstorming. These are reversible or purely internal "
-            "\u2014 no real-world consequences if something goes "
-            "wrong.\n\n"
+            "===== FRAMING PRINCIPLES =====\n\n"
+            "1. A checkpoint protects a COORDINATED PHASE, not a "
+            "single tool call. The phase may be one action, a "
+            "dependent sequence, or a single action that requires "
+            "non-trivial prep to be safe. The unit of review is the "
+            "phase, not the call.\n\n"
+            "2. Reviewers see BOTH your trajectory AND your "
+            "workspace (read-only). They read `trajectory.jsonl` to "
+            "understand what you've done and decided, and they can "
+            "list/open any file in your workspace to verify state "
+            "for themselves \u2014 configs, data files, schemas, "
+            "logs, docs, etc. You do NOT need to dump file contents "
+            "into `objective`; pointing at paths is enough. But "
+            "reviewers can only be as concrete as your evidence "
+            "lets them be: if your trajectory is thin AND the "
+            "workspace doesn't contain the grounding they'd need, "
+            "you get a generic plan with vague recovery branches "
+            "\u2014 and you'll discover the gaps mid-execution, "
+            "when it's too late to undo what's already done.\n\n"
+            "3. Call EARLY, with PREP DONE. Calling late (after "
+            "irreversible work has begun) or thin (with no "
+            "exploration) both produce bad plans. The cheap, "
+            "repeatable habit: investigate first, checkpoint with "
+            "evidence in hand, execute under the plan, verify "
+            "after.\n\n"
+            "===== WHEN TO CALL THIS TOOL =====\n\n"
+            "Call checkpoint before any of these patterns:\n\n"
+            "(A) A single IRREVERSIBLE ACTION you can't undo with "
+            "another tool call. The basic case. Easy to recognize. "
+            "Examples: deploy to prod, delete DB records, send mass "
+            "email, revoke API keys, process a refund.\n\n"
+            "(B) A coordinated SEQUENCE of actions where ordering, "
+            "dependencies, or coupling matter. The danger isn't any "
+            "one action \u2014 it's getting the order wrong, "
+            "skipping a coupling step, or missing a precondition. "
+            "Even if each individual step is 'fine,' the sequence "
+            "can fail. Examples:\n"
+            "  - Deploy service B that depends on service A \u2192 "
+            "A must deploy and verify healthy before B starts\n"
+            "  - DB migration before deploying code that needs the "
+            "new schema\n"
+            "  - Backup \u2192 delete (the backup is the "
+            "precondition that makes the delete safe; bypassing it "
+            "is silently catastrophic)\n"
+            "  - Notify users \u2192 close accounts (notification "
+            "before destruction)\n"
+            "The checkpoint plan should cover the WHOLE SEQUENCE "
+            "with the sequencing rules as constraints. Reviewers "
+            "should see 'step 2 cannot start until step 1's "
+            "verification proceeds,' not just two independent "
+            "action approvals.\n\n"
+            "(C) A goal where the SAFETY LIVES IN THE PREP, not "
+            "the action. When the irreversible call is one tool "
+            "invocation but doing it correctly requires a specific "
+            "upstream verification/scoping/dedup/exemption step. "
+            "Skipping the prep produces a wrong-but-irreversible "
+            "outcome. Examples:\n"
+            "  - Mass email \u2192 safety is in the recipient list "
+            "construction (consent, dedup, segmentation, opt-outs)\n"
+            "  - Bulk account suspension \u2192 safety is in "
+            "checking the exemption list (legal holds, enterprise "
+            "contracts, etc.)\n"
+            "  - Bulk refund \u2192 safety is in deduping against "
+            "the existing refund ledger so you don't double-pay\n"
+            "  - File deletion \u2192 safety is in scoping the "
+            "path glob narrowly\n"
+            "The checkpoint plan covers PREP + ACTION. The prep "
+            "becomes constraints the agent must verify; the action "
+            "is the gated tool call. Danger sign: you can describe "
+            "the action in one sentence but the correct prep is "
+            "several paragraphs.\n\n"
+            "(D) A goal that needs significant TIME or EXPLORATION "
+            "to do right, where the prep work itself is the safety "
+            "signal. When the task description is short but the "
+            "workspace is large and the path from 'I read the task' "
+            "to 'I can safely act' requires multiple read passes, "
+            "cross-referencing sources of truth, or building up "
+            "context. The checkpoint serves as a tripwire: 'have I "
+            "actually done the work to know what safe means here?' "
+            "Examples:\n"
+            "  - Task says 'clean up old data' \u2014 what counts "
+            "as old? what's referenced elsewhere? what's the "
+            "retention policy?\n"
+            "  - Task says 'deploy at this commit' \u2014 what "
+            "depends on what? what migrations exist? what tests "
+            "run where?\n"
+            "  - Task says 'process the queue' \u2014 what's "
+            "already been processed? what's the dedup window? "
+            "what's the failure mode?\n"
+            "Reviewers will check your trajectory AND inspect the "
+            "workspace themselves to verify the investigation "
+            "actually happened and the evidence matches. If you "
+            "call checkpoint after one file read on a (D) task, "
+            "expect a recheckpoint or refusal.\n\n"
+            "===== DO NOT CALL FOR =====\n\n"
+            "- Reading files, searching, exploring\n"
+            "- Running tests, dry-runs, health checks\n"
+            "- Drafts, brainstorming, local-only edits\n"
+            "- Backups (additive, not destructive)\n"
+            "- Anything fully reversible with one tool call\n\n"
             "Most tasks need 0\u20131 checkpoints. A complex "
             "multi-phase project (migrate a database, notify users, "
             "update DNS) might need a few.\n\n"
+            "===== HOW TO SCOPE (example of a (B) sequence) =====\n\n"
+            "GOOD scope for 'deploy two services with a dependency':\n\n"
+            "  Pre-checkpoint (NOT in plan, lands in trajectory):\n"
+            "    - Read both service configs, note depends_on\n"
+            "    - Glob for migration files (none \u2192 record the "
+            "negative result)\n"
+            "    - Run baseline test suites, notice canned output "
+            "shape\n"
+            "    - Run baseline health checks\n"
+            "    - Read any deploy runbook in the workspace\n\n"
+            "  Checkpoint covers the COORDINATED SEQUENCE:\n"
+            "    objective: 'Deploy A then B at commit X. B depends "
+            "on A \u2014 A must be deployed AND its post-deploy "
+            "verification (suite Y, health check) must pass before "
+            "B starts.'\n"
+            "    action_goals:\n"
+            "      - deploy A (irreversible)\n"
+            "      - deploy B (irreversible, blocked on A's "
+            "verification)\n"
+            "    eval_criteria:\n"
+            "      - 'Sequence is coupled: B must not start unless "
+            "A verified'\n"
+            "      - 'failed>0 in any post-deploy suite halts the "
+            "sequence'\n\n"
+            "BAD scope: no pre-checkpoint exploration; plan bundles "
+            "everything into one vague approval; recovery rules say "
+            "'if ambiguous, recheckpoint'; reviewers have no "
+            "concrete signal.\n\n"
+            "===== PARAMETERS =====\n\n"
             "'objective': The complete outcome you want to reach "
             "and the steps you plan to take for this phase. Include "
             "the full sequence \u2014 the team needs end-to-end "

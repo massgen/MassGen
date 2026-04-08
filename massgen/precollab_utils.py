@@ -75,17 +75,28 @@ def build_subagent_parent_context_paths(
     Resolves the parent workspace and any ``context_paths`` entries from
     the agent backend configs into a deduplicated list of absolute
     ``{"path": ..., "permission": "read"}`` dicts.
+
+    Inherited relative paths are anchored to the MassGen process cwd, matching
+    how the parent orchestrator resolves them via
+    ``FilesystemManager.add_context_paths`` (see
+    ``_path_permission_manager.py:add_context_paths``). Anchoring against the
+    parent agent's workspace produces bogus paths like
+    ``<parent_ws>/<relative_from_parent_config>``, which the spawned subagent's
+    own config validator then rejects with "Context paths not found", killing
+    the subprocess before any model call.
     """
     base_workspace = Path(parent_workspace).resolve()
+    inherited_anchor = Path.cwd().resolve()
+
     context_paths: list[dict[str, str]] = []
     seen: set[str] = set()
 
-    def _add_path(raw_path: str | None) -> None:
+    def _add_path(raw_path: str | None, anchor: Path) -> None:
         if not raw_path:
             return
         try:
             path_obj = Path(raw_path)
-            resolved = path_obj.resolve() if path_obj.is_absolute() else (base_workspace / path_obj).resolve()
+            resolved = path_obj.resolve() if path_obj.is_absolute() else (anchor / path_obj).resolve()
         except Exception:
             return
         path_str = str(resolved)
@@ -94,7 +105,8 @@ def build_subagent_parent_context_paths(
         seen.add(path_str)
         context_paths.append({"path": path_str, "permission": "read"})
 
-    _add_path(str(base_workspace))
+    # Parent agent's workspace — always included as a read-only context path.
+    _add_path(str(base_workspace), base_workspace)
 
     for config in agent_configs:
         if not isinstance(config, dict):
@@ -107,9 +119,9 @@ def build_subagent_parent_context_paths(
             continue
         for entry in inherited_paths:
             if isinstance(entry, str):
-                _add_path(entry)
+                _add_path(entry, inherited_anchor)
             elif isinstance(entry, dict):
                 raw_path = entry.get("path")
-                _add_path(str(raw_path).strip() if raw_path else None)
+                _add_path(str(raw_path).strip() if raw_path else None, inherited_anchor)
 
     return context_paths

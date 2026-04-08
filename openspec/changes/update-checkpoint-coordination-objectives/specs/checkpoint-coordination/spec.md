@@ -77,7 +77,7 @@ Objective mode output SHALL include the criteria applied, and an ordered plan wi
 - **WHEN** a plan step includes a `recovery` field
 - **THEN** it SHALL be a `RecoveryNode` with an `if` condition and `then`/`else` branches
 - **AND** each branch SHALL be either a terminal value or another `RecoveryNode`
-- **AND** terminal values SHALL be one of: `"proceed"`, `"recheckpoint"`, `"block"`
+- **AND** terminal values SHALL be one of: `"proceed"`, `"recheckpoint"`, `"refuse"`
 
 ### Requirement: Subprocess Execution Model
 Checkpoint SHALL execute as a subprocess in both delegation and objective modes.

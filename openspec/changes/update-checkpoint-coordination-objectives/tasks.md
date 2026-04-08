@@ -13,7 +13,7 @@
 - [ ] 2.3 Write failing test: `checkpoint(objective=...)` launches subprocess with correct config (workspace, trajectory, tools injected)
 - [ ] 2.4 Write failing test: output matches `{criteria_applied, plan}` schema — each step has description, optional constraints, optional approved_action, optional recovery
 - [ ] 2.5 Write failing test: `approved_action` present only on steps where a constraint would otherwise block the capability
-- [ ] 2.6 Write failing test: RecoveryNode terminals are one of `proceed`, `recheckpoint`, `block`
+- [ ] 2.6 Write failing test: RecoveryNode terminals are one of `proceed`, `recheckpoint`, `refuse`
 - [ ] 2.7 Write failing test: installed console script `massgen-checkpoint-mcp` is present after `pip install`
 
 ### Implementation

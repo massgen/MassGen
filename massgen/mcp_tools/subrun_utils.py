@@ -254,7 +254,14 @@ async def run_massgen_subrun(
     if answer_file is None:
         answer_file = workspace / "answer.txt"
 
-    # Build command
+    # Build command.
+    #
+    # --no-parse-at-references: checkpoint/subrun objectives are AI-generated
+    # and routinely contain literal '@' characters (commit SHAs, emails, file
+    # URLs, CSS @media, etc.) that must NOT be misinterpreted as @path context
+    # references. Context paths for subruns are passed explicitly via config,
+    # not through prompt parsing. Same rationale as SubagentOrchestratorConfig
+    # defaulting parse_at_references=False.
     cmd = [
         "uv",
         "run",
@@ -263,6 +270,7 @@ async def run_massgen_subrun(
         str(config_path),
         "--automation",
         "--no-session-registry",
+        "--no-parse-at-references",
         "--output-file",
         str(answer_file),
         prompt,

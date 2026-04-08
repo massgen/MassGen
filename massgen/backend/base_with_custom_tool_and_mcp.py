@@ -16,6 +16,7 @@ import types
 import uuid
 from abc import abstractmethod
 from collections.abc import AsyncGenerator, Callable
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -2326,6 +2327,115 @@ class CustomToolAndMCPBackend(LLMBackend):
                 provider_calls.append(call)
 
         return mcp_calls, custom_calls, provider_calls
+
+    @staticmethod
+    def _tool_argument_completeness_score(arguments: Any) -> int:
+        """Return a rough completeness score for a tool arguments payload."""
+        if arguments is None:
+            return 0
+        if isinstance(arguments, str):
+            return len(arguments.strip())
+        if isinstance(arguments, (dict, list)):
+            try:
+                return len(json.dumps(arguments, ensure_ascii=False))
+            except (TypeError, ValueError):
+                return len(str(arguments))
+        return len(str(arguments))
+
+    def _deduplicate_standard_tool_calls(
+        self,
+        tool_calls: list[dict[str, Any]],
+        *,
+        source: str,
+    ) -> list[dict[str, Any]]:
+        """Deduplicate OpenAI-style tool calls by ID while keeping the richest payload."""
+        deduplicated: list[dict[str, Any]] = []
+        calls_by_id: dict[str, dict[str, Any]] = {}
+        duplicate_ids: set[str] = set()
+
+        for tool_call in tool_calls:
+            call_id = str(tool_call.get("id", "") or "").strip()
+            if not call_id:
+                deduplicated.append(tool_call)
+                continue
+
+            existing = calls_by_id.get(call_id)
+            if existing is None:
+                stored_call = deepcopy(tool_call)
+                calls_by_id[call_id] = stored_call
+                deduplicated.append(stored_call)
+                continue
+
+            duplicate_ids.add(call_id)
+
+            if not existing.get("type") and tool_call.get("type"):
+                existing["type"] = tool_call["type"]
+
+            existing_function = existing.setdefault("function", {})
+            new_function = tool_call.get("function", {})
+            if not isinstance(existing_function, dict):
+                existing_function = {}
+                existing["function"] = existing_function
+            if not isinstance(new_function, dict):
+                new_function = {}
+
+            if not existing_function.get("name") and new_function.get("name"):
+                existing_function["name"] = new_function["name"]
+
+            existing_args = existing_function.get("arguments")
+            new_args = new_function.get("arguments")
+            if self._tool_argument_completeness_score(new_args) > self._tool_argument_completeness_score(existing_args):
+                existing_function["arguments"] = new_args
+
+        if duplicate_ids:
+            duplicate_list = ", ".join(sorted(duplicate_ids))
+            logger.warning(
+                f"[ToolCalls] Deduplicated {len(duplicate_ids)} duplicate tool_call id(s) from {source}: {duplicate_list}",
+            )
+
+        return deduplicated
+
+    def _deduplicate_captured_tool_calls(
+        self,
+        captured_calls: list[dict[str, Any]],
+        *,
+        source: str,
+    ) -> list[dict[str, Any]]:
+        """Deduplicate backend-normalized tool calls by call_id."""
+        deduplicated: list[dict[str, Any]] = []
+        calls_by_id: dict[str, dict[str, Any]] = {}
+        duplicate_ids: set[str] = set()
+
+        for call in captured_calls:
+            call_id = str(call.get("call_id", "") or "").strip()
+            if not call_id:
+                deduplicated.append(call)
+                continue
+
+            existing = calls_by_id.get(call_id)
+            if existing is None:
+                stored_call = deepcopy(call)
+                calls_by_id[call_id] = stored_call
+                deduplicated.append(stored_call)
+                continue
+
+            duplicate_ids.add(call_id)
+
+            if not existing.get("name") and call.get("name"):
+                existing["name"] = call["name"]
+
+            existing_args = existing.get("arguments")
+            new_args = call.get("arguments")
+            if self._tool_argument_completeness_score(new_args) > self._tool_argument_completeness_score(existing_args):
+                existing["arguments"] = new_args
+
+        if duplicate_ids:
+            duplicate_list = ", ".join(sorted(duplicate_ids))
+            logger.warning(
+                f"[ToolCalls] Deduplicated {len(duplicate_ids)} duplicate captured tool_call id(s) from {source}: {duplicate_list}",
+            )
+
+        return deduplicated
 
     @abstractmethod
     def _append_tool_result_message(

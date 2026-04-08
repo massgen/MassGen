@@ -13800,16 +13800,31 @@ Your answer:"""
         proposal_task_preview = f"Evolving criteria (v{evo_num}): analyzing score patterns across {len(agent_ids)} agent(s)"
 
         # Notify TUI: proposal phase started
-        self._notify_precollab_started(
-            anchor_agent=primary_agent_id,
-            subagent_id=proposal_tasks[0]["subagent_id"] if proposal_tasks else f"criteria_evolver_{evo_num}",
-            call_id=proposal_call_id,
-            subagent_task=proposal_task_preview,
-            display=display,
-            timeout_seconds=timeout,
-            status_callback=None,
-            log_path=None,
-        )
+        _proposal_subagent_id = proposal_tasks[0]["subagent_id"] if proposal_tasks else f"criteria_evolver_{evo_num}"
+        try:
+            _emitter = get_event_emitter()
+            if _emitter:
+                _emitter.emit_raw(
+                    StructuredEventType.PRE_COLLAB_STARTED,
+                    agent_id=primary_agent_id,
+                    subagent_id=_proposal_subagent_id,
+                    task=proposal_task_preview,
+                    timeout_seconds=timeout,
+                    call_id=proposal_call_id,
+                    log_path=None,
+                )
+            if display and hasattr(display, "notify_runtime_subagent_started"):
+                display.notify_runtime_subagent_started(
+                    agent_id=primary_agent_id,
+                    subagent_id=_proposal_subagent_id,
+                    task=proposal_task_preview,
+                    timeout_seconds=timeout,
+                    call_id=proposal_call_id,
+                    status_callback=None,
+                    log_path=None,
+                )
+        except Exception:
+            pass
 
         try:
             raw_proposals = await asyncio.wait_for(
@@ -13880,16 +13895,31 @@ Your answer:"""
         ]
 
         # Notify TUI: synthesis phase started
-        self._notify_precollab_started(
-            anchor_agent=primary_agent_id,
-            subagent_id=synthesis_subagent_id,
-            call_id=synthesis_call_id,
-            subagent_task=f"Synthesizing {len(proposal_dicts)} evolution proposal(s) into final criteria",
-            display=display,
-            timeout_seconds=timeout // 2,
-            status_callback=None,
-            log_path=None,
-        )
+        _synth_task_preview = f"Synthesizing {len(proposal_dicts)} evolution proposal(s) into final criteria"
+        try:
+            _emitter = get_event_emitter()
+            if _emitter:
+                _emitter.emit_raw(
+                    StructuredEventType.PRE_COLLAB_STARTED,
+                    agent_id=primary_agent_id,
+                    subagent_id=synthesis_subagent_id,
+                    task=_synth_task_preview,
+                    timeout_seconds=timeout // 2,
+                    call_id=synthesis_call_id,
+                    log_path=None,
+                )
+            if display and hasattr(display, "notify_runtime_subagent_started"):
+                display.notify_runtime_subagent_started(
+                    agent_id=primary_agent_id,
+                    subagent_id=synthesis_subagent_id,
+                    task=_synth_task_preview,
+                    timeout_seconds=timeout // 2,
+                    call_id=synthesis_call_id,
+                    status_callback=None,
+                    log_path=None,
+                )
+        except Exception:
+            pass
 
         try:
             raw_synthesis = await asyncio.wait_for(

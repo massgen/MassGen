@@ -152,7 +152,7 @@ RecoveryNode:
 Terminal values:
   "proceed"      — condition resolved or not a real problem, continue to next step
   "recheckpoint" — stop and get new guidance before proceeding
-  "block"        — do not execute this step at all
+  "refuse"       — the only remaining option is unsafe; refuse to act
 ```
 
 The tree can be arbitrarily deep. The checkpoint agents generating the plan encode the right depth based on the complexity of the scenario. No retry counts or limits — the structure of the tree and the `else` branches handle escalation naturally.
@@ -236,7 +236,7 @@ The tree can be arbitrarily deep. The checkpoint agents generating the plan enco
       },
       "recovery": {
         "if": "migration would touch tables outside user_preferences",
-        "then": "block",
+        "then": "refuse",
         "else": {
           "if": "migration errors mid-run",
           "then": "recheckpoint",

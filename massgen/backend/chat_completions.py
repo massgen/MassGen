@@ -563,6 +563,11 @@ class ChatCompletionsBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
                                     },
                                 )
 
+                            final_tool_calls = self._deduplicate_standard_tool_calls(
+                                final_tool_calls,
+                                source="chat_completions.streaming_finish_reason",
+                            )
+
                             # Convert to captured format for processing (ensure arguments is a JSON string)
                             for tool_call in final_tool_calls:
                                 args_value = tool_call["function"]["arguments"]
@@ -624,6 +629,11 @@ class ChatCompletionsBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
 
         # Execute any captured function calls
         if captured_function_calls and response_completed:
+            captured_function_calls = self._deduplicate_captured_tool_calls(
+                captured_function_calls,
+                source="chat_completions.recursive_execution",
+            )
+
             # Categorize function calls using base helper
             mcp_calls, custom_calls, provider_calls = self._categorize_tool_calls(captured_function_calls)
 
@@ -1043,6 +1053,11 @@ class ChatCompletionsBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
                                         },
                                     },
                                 )
+
+                            final_tool_calls = self._deduplicate_standard_tool_calls(
+                                final_tool_calls,
+                                source="chat_completions.standard_stream_finish_reason",
+                            )
 
                             log_stream_chunk(log_prefix, "tool_calls", final_tool_calls, agent_id)
                             self._append_tool_call_to_buffer(final_tool_calls)
