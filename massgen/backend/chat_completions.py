@@ -249,6 +249,71 @@ class ChatCompletionsBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
         """
         return api_params
 
+    def _deduplicate_tool_calls_in_messages(
+        self,
+        messages: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Deduplicate tool calls by ID to avoid 'duplicate tool_call id' errors in providers like Minimax.
+        
+        When recursively calling the API with updated_messages that contains assistant messages
+        with tool_calls from prior iterations, we need to filter out tool_call IDs that were
+        already seen in earlier messages to prevent the provider from seeing duplicate IDs.
+        
+        Args:
+            messages: List of message dicts potentially containing tool_calls
+            
+        Returns:
+            Messages with deduplicated tool_calls
+        """
+        if not messages:
+            return messages
+        
+        seen_tool_call_ids = set()
+        result_messages = []
+        
+        for msg in messages:
+            # Make a copy to avoid modifying the original
+            msg_copy = dict(msg)
+            
+            # If this message has tool_calls, filter out any IDs we've already seen
+            if "tool_calls" in msg_copy and isinstance(msg_copy["tool_calls"], list):
+                seen_before = []
+                new_tool_calls = []
+                
+                for tool_call in msg_copy["tool_calls"]:
+                    tool_call_id = tool_call.get("id")
+                    if tool_call_id:
+                        if tool_call_id in seen_tool_call_ids:
+                            seen_before.append(tool_call_id)
+                        else:
+                            seen_tool_call_ids.add(tool_call_id)
+                            new_tool_calls.append(tool_call)
+                    else:
+                        # Keep tool calls without IDs (shouldn't happen but be safe)
+                        new_tool_calls.append(tool_call)
+                
+                # Log if we filtered any tool calls
+                if seen_before:
+                    logger.debug(
+                        f"Filtered {len(seen_before)} duplicate tool_call IDs from assistant message: {seen_before}",
+                    )
+                
+                # Only include tool_calls in the message if we have any left
+                if new_tool_calls:
+                    msg_copy["tool_calls"] = new_tool_calls
+                else:
+                    # Remove tool_calls key entirely if empty
+                    msg_copy.pop("tool_calls", None)
+            
+            # Track tool_call_ids from tool result messages too
+            if msg.get("role") == "tool" and "tool_call_id" in msg:
+                seen_tool_call_ids.add(msg["tool_call_id"])
+            
+            result_messages.append(msg_copy)
+        
+        return result_messages
+
+
     async def _stream_with_custom_and_mcp_tools(
         self,
         current_messages: list[dict[str, Any]],
@@ -784,6 +849,9 @@ class ChatCompletionsBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
                 updated_messages = self._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
+                # Deduplicate tool_call IDs before recursive API call to prevent provider errors
+                updated_messages = self._deduplicate_tool_calls_in_messages(updated_messages)
+
                 async for chunk in self._stream_with_custom_and_mcp_tools(updated_messages, tools, client, **kwargs):
                     yield chunk
             else:
