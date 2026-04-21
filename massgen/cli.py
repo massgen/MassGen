@@ -3586,6 +3586,7 @@ def _parse_coordination_config(coord_cfg: dict[str, Any]) -> "CoordinationConfig
         broadcast_sensitivity=coord_cfg.get("broadcast_sensitivity", "medium"),
         response_depth=coord_cfg.get("response_depth", "medium"),
         broadcast_timeout=coord_cfg.get("broadcast_timeout", 300),
+        shadow_timeout=coord_cfg.get("shadow_timeout", 90),
         broadcast_wait_by_default=coord_cfg.get("broadcast_wait_by_default", True),
         max_broadcasts_per_agent=coord_cfg.get("max_broadcasts_per_agent", 10),
         task_planning_filesystem_mode=coord_cfg.get("task_planning_filesystem_mode", False),

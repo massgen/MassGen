@@ -1,0 +1,83 @@
+agents:
+  - id: agent_a
+    backend:
+      type: claude_code
+      model: claude-sonnet-4-6
+      cwd: workspace
+      exclude_file_operation_mcps: true
+      enable_code_based_tools: false
+      enable_mcp_command_line: true
+      command_line_execution_mode: docker
+      command_line_docker_image: massgen/mcp-runtime-sudo:latest
+      command_line_docker_network_mode: bridge
+      command_line_docker_enable_sudo: true
+      reasoning:
+        effort: high
+        summary: auto
+
+  - id: agent_b
+    backend:
+      type: openrouter
+      model: x-ai/grok-4.20
+      cwd: workspace
+      exclude_file_operation_mcps: true
+      enable_code_based_tools: false
+      enable_mcp_command_line: true
+      command_line_execution_mode: docker
+      command_line_docker_image: massgen/mcp-runtime-sudo:latest
+      command_line_docker_network_mode: bridge
+      command_line_docker_enable_sudo: true
+
+  - id: agent_c
+    backend:
+      type: openrouter
+      model: "moonshotai/kimi-k2.5"
+      provider_order: ['deepinfra', 'inceptron/int4']
+      cwd: workspace
+      exclude_file_operation_mcps: true
+      enable_code_based_tools: false
+      enable_mcp_command_line: true
+      command_line_execution_mode: docker
+      command_line_docker_image: massgen/mcp-runtime-sudo:latest
+      command_line_docker_network_mode: bridge
+      command_line_docker_enable_sudo: true
+
+orchestrator:
+  snapshot_storage: snapshots
+  agent_temporary_workspace: temp_workspaces
+  voting_sensitivity: balanced
+  answer_novelty_requirement: balanced
+  max_new_answers_per_agent: 3
+  fairness_enabled: true
+  fairness_lead_cap_answers: 2
+  max_midstream_injections_per_round: 2
+  defer_peer_updates_until_restart: true
+  allow_midstream_peer_updates_before_checklist_submit: true
+  enable_multimodal_tools: false
+  skip_final_presentation: true
+  coordination:
+    max_orchestration_restarts: 1
+    learning_capture_mode: final_only
+    fast_iteration_mode: true
+    enable_changedoc: false
+    enable_agent_task_planning: true
+    task_planning_filesystem_mode: false
+    enable_memory_filesystem_mode: false
+    write_mode: auto
+    broadcast: agents
+    broadcast_sensitivity: medium
+    broadcast_timeout: 90
+    shadow_timeout: 60
+    response_depth: low
+  context_paths: []
+  coordination_mode: voting
+
+timeout_settings:
+  orchestrator_timeout_seconds: 10800
+  initial_round_timeout_seconds: 3600
+  subsequent_round_timeout_seconds: 3600
+  round_timeout_grace_seconds: 600
+
+ui:
+  display_type: textual_terminal
+  logging_enabled: true

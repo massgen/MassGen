@@ -36,7 +36,8 @@ def configure_openrouter_extra_body(
 ) -> dict[str, Any] | None:
     """Configure extra_body for OpenRouter API requests.
 
-    Handles cost tracking and web search plugin configuration with validation.
+    Handles cost tracking, provider routing, and web search plugin configuration
+    with validation.
 
     Args:
         api_params: API parameters dict (modified in place)
@@ -46,7 +47,8 @@ def configure_openrouter_extra_body(
         The extra_body dict if OpenRouter detected, None otherwise
 
     Raises:
-        ValueError: If engine is invalid or max_results is not a positive integer
+        ValueError: If engine is invalid, max_results is not a positive integer,
+            or provider_order is not a list of strings
     """
     base_url = all_params.get("base_url", "")
     if "openrouter.ai" not in base_url.lower():
@@ -58,6 +60,19 @@ def configure_openrouter_extra_body(
 
     # Enable cost tracking in usage response
     extra_body["usage"] = {"include": True}
+
+    # Configure provider routing order
+    # See: https://openrouter.ai/docs/features/provider-routing
+    provider_order = all_params.get("provider_order")
+    if provider_order is not None:
+        if not isinstance(provider_order, list) or not all(isinstance(p, str) for p in provider_order):
+            raise ValueError(
+                f"OpenRouter provider_order must be a list of provider slug strings, got: {provider_order}",
+            )
+        if "provider" not in extra_body:
+            extra_body["provider"] = {}
+        extra_body["provider"]["order"] = provider_order
+        logger.info(f"[OpenRouter] Provider order set: {provider_order}")
 
     # Enable web search via plugins array
     if all_params.get("enable_web_search", False):

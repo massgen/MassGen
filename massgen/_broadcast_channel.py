@@ -181,24 +181,28 @@ class BroadcastChannel:
         simplified system prompt. They generate responses without interrupting
         the parent agent's work.
 
+        Design: shadow tasks are fired as asyncio.create_task (fire-and-forget)
+        so this method returns immediately, allowing wait_for_responses()'s
+        broadcast_timeout to actually function as a guard. Each shadow task has
+        its own per-task timeout (shadow_timeout) so a single slow/hung LLM call
+        cannot block the entire broadcast indefinitely.
+
         Args:
             request_id: ID of the broadcast request
         """
-        import asyncio
-
         from .shadow_agent import ShadowAgentSpawner, inject_informational_to_parent
 
         broadcast = self.active_broadcasts[request_id]
         spawner = ShadowAgentSpawner(self.orchestrator)
 
-        async def spawn_shadow_for_agent(target_id: str, target_agent) -> tuple:
-            """Spawn shadow agent and return (target_id, response)."""
-            try:
-                response = await spawner.spawn_and_respond(target_agent, broadcast)
-                return (target_id, response, None)
-            except Exception as e:
-                logger.error(f"[{target_id}] Shadow agent error: {e}")
-                return (target_id, None, str(e))
+        # Resolve per-shadow timeout from coordination config (default: 90s)
+        shadow_timeout: int = 90
+        try:
+            shadow_timeout = int(
+                getattr(self.orchestrator.config.coordination_config, "shadow_timeout", 90)
+            )
+        except Exception:
+            pass
 
         # Get target agents based on broadcast.target_agents (if specified)
         if broadcast.target_agents:
@@ -218,48 +222,81 @@ class BroadcastChannel:
 
         if not target_agents:
             logger.warning(f"[Broadcast] No target agents for broadcast from {broadcast.sender_agent_id}")
+            # FIX: set the event so wait_for_responses() doesn't block for broadcast_timeout
+            async with self._lock:
+                broadcast.status = BroadcastStatus.COMPLETE
+            if request_id in self.response_events:
+                self.response_events[request_id].set()
             return
 
         logger.info(
-            f"[Broadcast] Spawning {len(target_agents)} shadow agents in parallel " f"for broadcast from {broadcast.sender_agent_id}",
+            f"[Broadcast] Spawning {len(target_agents)} shadow agents in parallel "
+            f"for broadcast from {broadcast.sender_agent_id} "
+            f"(shadow_timeout={shadow_timeout}s each)",
         )
 
-        # Spawn all shadow agents in parallel
-        tasks = [spawn_shadow_for_agent(target_id, target_agent) for target_id, target_agent in target_agents]
+        async def shadow_task_with_collect(target_id: str, target_agent) -> None:
+            """Run one shadow agent, collect its response, inject to parent.
 
-        results = await asyncio.gather(*tasks)
+            Each shadow has an individual timeout (shadow_timeout). On timeout
+            or error a placeholder response is collected so the broadcast can
+            still complete within broadcast_timeout.
 
-        # Process results: collect responses and inject informational messages
-        for target_id, response, error in results:
-            if error:
-                # Record error as response
-                await self.collect_response(
-                    request_id=request_id,
-                    responder_id=f"shadow_{target_id}",
-                    content=f"[Error: {error}]",
-                    is_human=False,
+            Note: collect_response calls are guarded against the case where
+            cleanup_broadcast() has already removed the request (e.g. broadcast_timeout
+            fired and the caller cleaned up before this task finished).
+            """
+            async def _safe_collect(content: str) -> None:
+                """Collect response, silently ignoring post-cleanup races."""
+                try:
+                    await self.collect_response(
+                        request_id=request_id,
+                        responder_id=f"shadow_{target_id}",
+                        content=content,
+                        is_human=False,
+                    )
+                except ValueError:
+                    # broadcast was already cleaned up (timeout fired) — ignore
+                    logger.debug(
+                        f"[Broadcast] Shadow {target_id} tried to collect after cleanup "
+                        f"(broadcast {request_id[:8]}... already removed) — ignoring",
+                    )
+
+            try:
+                response = await asyncio.wait_for(
+                    spawner.spawn_and_respond(target_agent, broadcast),
+                    timeout=shadow_timeout,
                 )
-                continue
+                await _safe_collect(response)
+                # Inject informational message to parent agent
+                parent_agent = self.orchestrator.agents.get(target_id)
+                if parent_agent:
+                    await inject_informational_to_parent(parent_agent, broadcast, response)
 
-            # Collect the shadow agent's response
-            await self.collect_response(
-                request_id=request_id,
-                responder_id=f"shadow_{target_id}",
-                content=response,
-                is_human=False,
-            )
-
-            # Inject informational message to parent agent
-            target_agent = self.orchestrator.agents.get(target_id)
-            if target_agent:
-                await inject_informational_to_parent(
-                    target_agent,
-                    broadcast,
-                    response,
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"[Broadcast] Shadow for {target_id} timed out after {shadow_timeout}s "
+                    f"(broadcast {request_id[:8]}...)",
                 )
+                await _safe_collect(
+                    f"[Shadow agent timed out after {shadow_timeout}s — no response available]"
+                )
+
+            except Exception as e:
+                logger.error(f"[Broadcast] Shadow for {target_id} failed: {e}")
+                await _safe_collect(f"[Shadow agent error: {e}]")
+
+        # Fire all shadow tasks concurrently and return immediately.
+        # collect_response inside each task sets the response_events when the last
+        # response arrives. wait_for_responses()'s broadcast_timeout is now the
+        # real upper bound for the entire broadcast.
+        for target_id, target_agent in target_agents:
+            asyncio.create_task(shadow_task_with_collect(target_id, target_agent))
 
         logger.info(
-            f"[Broadcast] All shadow agents completed for broadcast {request_id[:8]}...",
+            f"[Broadcast] {len(target_agents)} shadow task(s) launched for "
+            f"broadcast {request_id[:8]}... — returning to caller, "
+            f"broadcast_timeout will guard completion",
         )
 
     async def wait_for_responses(

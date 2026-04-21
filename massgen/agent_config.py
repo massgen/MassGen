@@ -201,7 +201,8 @@ class CoordinationConfig:
     broadcast: Any = False  # False | "agents" | "human"
     broadcast_sensitivity: str = "medium"  # "low" | "medium" | "high" - Used in BroadcastCommunicationSection system prompts
     response_depth: str = "medium"  # "low" | "medium" | "high" - Controls test-time compute scaling for shadow agents
-    broadcast_timeout: int = 300
+    broadcast_timeout: int = 90   # Max seconds to wait for ALL broadcast responses (was 300)
+    shadow_timeout: int = 90      # Max seconds for a single shadow agent LLM call
     broadcast_wait_by_default: bool = True
     max_broadcasts_per_agent: int = 10
     task_planning_filesystem_mode: bool = False
@@ -325,6 +326,14 @@ class CoordinationConfig:
             # Warn if timeout is very low
             if self.broadcast_timeout < 30:
                 logger.warning(f"Broadcast timeout is very low ({self.broadcast_timeout}s). Agents may not have enough time to respond.")
+
+            # Warn if shadow_timeout exceeds broadcast_timeout (shadow would never be cut by broadcast guard)
+            if self.shadow_timeout > self.broadcast_timeout:
+                logger.warning(
+                    f"shadow_timeout ({self.shadow_timeout}s) > broadcast_timeout ({self.broadcast_timeout}s). "
+                    "The broadcast_timeout guard may fire before individual shadow timeouts. "
+                    "Consider setting shadow_timeout <= broadcast_timeout.",
+                )
 
     def _validate_drift_conflict_policy(self):
         """Validate drift conflict policy for isolated change apply."""
