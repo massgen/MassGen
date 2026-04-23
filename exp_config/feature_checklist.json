@@ -1,0 +1,242 @@
+[
+  {
+    "id": "marketplace_search_match",
+    "name": "Marketplace search and match",
+    "description": "Guests can search for rental listings by location, dates, price range, or amenities. Results are filtered and ranked. Includes listing browsing/discovery UI or API.",
+    "detection": {
+      "file_patterns": ["*search*", "*listing*", "*browse*", "*discover*", "*marketplace*"],
+      "import_keywords": ["search", "filter", "listing", "property"],
+      "route_patterns": ["/search", "/listings", "/browse", "/properties"],
+      "schema_keywords": ["location", "price", "amenities", "availability", "dates"],
+      "code_keywords": ["search", "filter", "query", "listings", "properties"]
+    }
+  },
+  {
+    "id": "booking_lifecycle_management",
+    "name": "Booking lifecycle management",
+    "description": "Full booking state machine: inquiry → pending → confirmed → active/in-stay → completed, with cancellation and status transitions modelled in code.",
+    "detection": {
+      "file_patterns": ["*booking*", "*reservation*", "*stay*"],
+      "import_keywords": ["booking", "reservation", "status"],
+      "route_patterns": ["/book", "/booking", "/reservation", "/cancel", "/confirm"],
+      "schema_keywords": ["status", "confirmed", "pending", "cancelled", "completed", "inquiry", "active"],
+      "code_keywords": ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED", "IN_STAY", "inquiry", "state_machine", "transition"]
+    }
+  },
+  {
+    "id": "multi_stay_support",
+    "name": "Multi-stay support",
+    "description": "A guest can have multiple simultaneous or sequential bookings/trips. The data model supports multiple bookings per user.",
+    "detection": {
+      "file_patterns": ["*booking*", "*trip*", "*stay*"],
+      "import_keywords": ["bookings", "trips"],
+      "route_patterns": ["/bookings", "/trips", "/my-stays"],
+      "schema_keywords": ["user_id", "guest_id", "bookings", "trips"],
+      "code_keywords": ["get_bookings", "user_bookings", "list_bookings", "all_bookings", "multiple"]
+    }
+  },
+  {
+    "id": "long_lived_interactions",
+    "name": "Long-lived interactions",
+    "description": "Conversations, message threads, or activity timelines persist across sessions.",
+    "detection": {
+      "file_patterns": ["*message*", "*conversation*", "*thread*", "*history*", "*timeline*", "*activity*"],
+      "import_keywords": ["message", "conversation", "history", "thread"],
+      "route_patterns": ["/messages", "/conversation", "/history", "/timeline", "/activity"],
+      "schema_keywords": ["message", "thread_id", "conversation_id", "history", "timestamp", "created_at"],
+      "code_keywords": ["messages", "conversation", "history", "thread", "persist"]
+    }
+  },
+  {
+    "id": "guest_agent_pre_trip",
+    "name": "Guest agent — pre-trip planning",
+    "description": "An AI agent on the guest side that autonomously helps find properties or sends pre-trip proposals before check-in.",
+    "detection": {
+      "file_patterns": ["*guest_agent*", "*guest-agent*", "*guestagent*", "*pre_trip*", "*pretrip*"],
+      "import_keywords": ["guest_agent", "GuestAgent"],
+      "route_patterns": ["/guest-agent", "/guest/agent", "/agent/guest"],
+      "schema_keywords": ["preferences", "recommendation", "proposal", "pre_trip"],
+      "code_keywords": ["GuestAgent", "guest_agent", "pre_trip", "find_property", "recommend", "suggest_booking"]
+    }
+  },
+  {
+    "id": "guest_agent_during_stay",
+    "name": "Guest agent — during-stay monitoring",
+    "description": "The guest-side agent detects issues, monitors the active stay, and can propose resolutions during the stay period.",
+    "detection": {
+      "file_patterns": ["*guest_agent*", "*guest-agent*", "*monitor*", "*during_stay*"],
+      "import_keywords": ["monitor", "detect", "issue"],
+      "route_patterns": ["/monitor", "/issue", "/complaint", "/agent/monitor"],
+      "schema_keywords": ["issue", "complaint", "monitor", "during_stay", "active_stay"],
+      "code_keywords": ["monitor", "detect_issue", "during_stay", "noise_complaint", "maintenance", "resolve"]
+    }
+  },
+  {
+    "id": "guest_agent_post_stay",
+    "name": "Guest agent — post-stay resolution and learning",
+    "description": "After checkout, the guest agent handles reviews, refund requests, or learns from stay feedback.",
+    "detection": {
+      "file_patterns": ["*review*", "*refund*", "*post_stay*", "*feedback*", "*guest_agent*"],
+      "import_keywords": ["review", "refund", "feedback"],
+      "route_patterns": ["/review", "/refund", "/feedback", "/post-stay"],
+      "schema_keywords": ["review", "rating", "refund", "feedback", "post_stay", "checkout"],
+      "code_keywords": ["post_stay", "review", "refund", "feedback", "learn", "rating", "checkout"]
+    }
+  },
+  {
+    "id": "host_agent_listing_management",
+    "name": "Host agent — listing management",
+    "description": "A host-side AI agent that manages property listings: updating availability, setting descriptions, or automating listing decisions.",
+    "detection": {
+      "file_patterns": ["*host_agent*", "*host-agent*", "*hostagent*", "*listing*"],
+      "import_keywords": ["host_agent", "HostAgent", "listing"],
+      "route_patterns": ["/host-agent", "/host/agent", "/agent/host", "/listing/manage"],
+      "schema_keywords": ["availability", "calendar", "description", "listing_id"],
+      "code_keywords": ["HostAgent", "host_agent", "update_listing", "availability", "calendar", "manage_listing"]
+    }
+  },
+  {
+    "id": "host_agent_pricing_adaptation",
+    "name": "Host agent — dynamic pricing",
+    "description": "The host agent detects demand signals and proposes or automatically applies price adjustments.",
+    "detection": {
+      "file_patterns": ["*pricing*", "*price*", "*host_agent*", "*dynamic*"],
+      "import_keywords": ["pricing", "price", "demand"],
+      "route_patterns": ["/pricing", "/price", "/host/pricing"],
+      "schema_keywords": ["price", "base_price", "dynamic_price", "demand", "occupancy"],
+      "code_keywords": ["dynamic_pricing", "adjust_price", "demand", "occupancy", "pricing_strategy", "price_update"]
+    }
+  },
+  {
+    "id": "host_agent_guest_communication",
+    "name": "Host agent — guest communication",
+    "description": "The host agent drafts or sends messages to guests, responds to inquiries, or handles communication on behalf of the host.",
+    "detection": {
+      "file_patterns": ["*host_agent*", "*communication*", "*message*", "*respond*"],
+      "import_keywords": ["message", "communicate", "respond"],
+      "route_patterns": ["/host/message", "/host/communicate", "/agent/message"],
+      "schema_keywords": ["message", "reply", "communication", "inquiry"],
+      "code_keywords": ["send_message", "respond_inquiry", "draft_message", "host_communicate", "reply"]
+    }
+  },
+  {
+    "id": "host_agent_turnover_coordination",
+    "name": "Host agent — turnover coordination",
+    "description": "The host agent manages check-in/check-out logistics: cleaning schedules, key handover, buffer time between bookings.",
+    "detection": {
+      "file_patterns": ["*turnover*", "*cleaning*", "*checkin*", "*checkout*", "*host_agent*"],
+      "import_keywords": ["turnover", "cleaning", "checkin", "checkout"],
+      "route_patterns": ["/checkin", "/checkout", "/turnover", "/cleaning"],
+      "schema_keywords": ["check_in", "check_out", "cleaning", "turnover", "buffer"],
+      "code_keywords": ["turnover", "cleaning_schedule", "check_in", "check_out", "key_handover", "buffer_time"]
+    }
+  },
+  {
+    "id": "host_agent_issue_handling",
+    "name": "Host agent — issue handling",
+    "description": "The host agent detects and responds to problems during a stay and proposes compensations or resolutions.",
+    "detection": {
+      "file_patterns": ["*host_agent*", "*issue*", "*complaint*", "*damage*", "*incident*"],
+      "import_keywords": ["issue", "complaint", "damage", "incident"],
+      "route_patterns": ["/issue", "/complaint", "/damage", "/incident", "/host/issue"],
+      "schema_keywords": ["issue", "damage", "complaint", "resolution", "compensation"],
+      "code_keywords": ["handle_issue", "detect_problem", "compensation", "damage_report", "resolve_complaint"]
+    }
+  },
+  {
+    "id": "agent_to_agent_negotiation",
+    "name": "Agent-to-agent negotiation",
+    "description": "The guest agent and host agent communicate directly with each other to negotiate requests.",
+    "detection": {
+      "file_patterns": ["*negotiat*", "*agent_comm*", "*inter_agent*", "*agent_message*"],
+      "import_keywords": ["negotiate", "agent_comm", "inter_agent"],
+      "route_patterns": ["/negotiate", "/agent/negotiate", "/agent/message"],
+      "schema_keywords": ["negotiation", "counter_offer", "agent_request", "inter_agent"],
+      "code_keywords": ["negotiate", "agent_to_agent", "inter_agent", "counter_offer", "send_to_agent", "agent_message", "negotiation"]
+    }
+  },
+  {
+    "id": "dispute_escalation",
+    "name": "Dispute escalation",
+    "description": "When agents or users cannot reach agreement, the dispute is escalated to an admin or mediation process.",
+    "detection": {
+      "file_patterns": ["*dispute*", "*escalat*", "*mediat*", "*admin*"],
+      "import_keywords": ["dispute", "escalate", "mediate"],
+      "route_patterns": ["/dispute", "/escalate", "/mediation", "/admin/dispute"],
+      "schema_keywords": ["dispute", "escalated", "mediation", "admin_review"],
+      "code_keywords": ["escalate", "dispute", "mediation", "admin_review", "unresolved", "escalation"]
+    }
+  },
+  {
+    "id": "approval_gate",
+    "name": "Human approval gate",
+    "description": "Agents propose actions but humans must explicitly approve or reject before the action is taken.",
+    "detection": {
+      "file_patterns": ["*approv*", "*proposal*", "*consent*", "*confirm*"],
+      "import_keywords": ["approve", "proposal", "consent"],
+      "route_patterns": ["/approve", "/reject", "/proposal", "/consent", "/confirm"],
+      "schema_keywords": ["approved", "rejected", "pending_approval", "proposal", "consent"],
+      "code_keywords": ["approve", "reject", "proposal", "pending_approval", "human_approval", "consent", "PENDING_APPROVAL"]
+    }
+  },
+  {
+    "id": "transparency",
+    "name": "Transparency of agent interactions",
+    "description": "Users can see what the agents have done: an activity log, audit trail, event timeline, or notification feed.",
+    "detection": {
+      "file_patterns": ["*audit*", "*log*", "*timeline*", "*activity*", "*notification*", "*event*"],
+      "import_keywords": ["audit", "activity_log", "timeline", "notification"],
+      "route_patterns": ["/activity", "/audit", "/timeline", "/log", "/notifications"],
+      "schema_keywords": ["audit_log", "activity", "event", "timeline", "notification", "agent_action"],
+      "code_keywords": ["audit_log", "activity_log", "timeline", "log_action", "notification", "event_log"]
+    }
+  },
+  {
+    "id": "mobile_first",
+    "name": "Mobile-first interaction model",
+    "description": "The frontend is designed for mobile: responsive CSS, viewport meta tag, mobile-friendly UI framework, or a PWA manifest.",
+    "detection": {
+      "file_patterns": ["*tailwind*", "*.css", "manifest.json", "manifest.webmanifest", "*responsive*"],
+      "import_keywords": ["tailwind", "responsive", "viewport", "mobile"],
+      "route_patterns": [],
+      "schema_keywords": ["viewport", "manifest", "pwa"],
+      "code_keywords": ["viewport", "responsive", "tailwind", "mobile", "sm:", "md:", "lg:", "manifest", "@media"]
+    }
+  },
+  {
+    "id": "persistent_state",
+    "name": "Persistent shared state",
+    "description": "Platform state persists to a database or durable store rather than only living in memory.",
+    "detection": {
+      "file_patterns": ["*database*", "*db*", "*.sqlite", "*.db", "*migration*", "*schema*", "*model*"],
+      "import_keywords": ["sqlite3", "sqlalchemy", "prisma", "mongoose", "sequelize", "drizzle", "typeorm", "pg", "psycopg"],
+      "route_patterns": [],
+      "schema_keywords": ["id", "created_at", "updated_at", "PRIMARY KEY", "FOREIGN KEY", "INTEGER", "TEXT"],
+      "code_keywords": ["sqlite", "postgresql", "database", "db", "session", "commit", "migrate", "schema", "model"]
+    }
+  },
+  {
+    "id": "roles_guest_host_admin",
+    "name": "Guest/Host/Admin role support",
+    "description": "The system supports at least three distinct roles (guest, host, admin) with different permissions or views.",
+    "detection": {
+      "file_patterns": ["*role*", "*auth*", "*permission*", "*user*"],
+      "import_keywords": ["role", "permission", "auth"],
+      "route_patterns": ["/admin", "/host", "/guest", "/role"],
+      "schema_keywords": ["role", "GUEST", "HOST", "ADMIN", "permission", "user_type"],
+      "code_keywords": ["GUEST", "HOST", "ADMIN", "role", "permission", "user_role", "is_admin", "is_host"]
+    }
+  },
+  {
+    "id": "continuous_agent_loop",
+    "name": "Continuous monitor-detect-propose-approve-act-confirm loop",
+    "description": "Agents follow a structured decision loop: monitor → detect → propose → approve → act → confirm.",
+    "detection": {
+      "file_patterns": ["*agent*", "*loop*", "*monitor*", "*workflow*"],
+      "import_keywords": ["monitor", "detect", "propose", "approve"],
+      "route_patterns": ["/agent/run", "/agent/loop", "/agent/cycle"],
+      "schema_keywords": ["monitor", "detect", "propose", "approve", "act", "confirm"],
+      "code_keywords": ["monitor", "detect", "propose", "approve", "act", "confirm", "loop", "cycle", "run_loop", "agent_loop", "continuous"]
+    }
+  }
+]
