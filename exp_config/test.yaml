@@ -1,8 +1,8 @@
 agent:
   id: agent_a
   backend:
-    type: "openrouter"
-    model: "x-ai/grok-4.20"
+    type: claude_code
+    model: claude-sonnet-4-6
     cwd: "workspace"
     enable_code_based_tools: true
     exclude_file_operation_mcps: true
@@ -11,6 +11,9 @@ agent:
     command_line_docker_image: ghcr.io/massgen/mcp-runtime-sudo:v0.1.79
     command_line_docker_network_mode: bridge
     command_line_docker_enable_sudo: true
+    reasoning:
+        effort: high
+        summary: auto
 
 ui:
   display_type: "textual_terminal"

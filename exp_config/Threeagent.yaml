@@ -8,7 +8,7 @@ agents:
       enable_code_based_tools: false
       enable_mcp_command_line: true
       command_line_execution_mode: docker
-      command_line_docker_image: massgen/mcp-runtime-sudo:latest
+      command_line_docker_image: ghcr.io/massgen/mcp-runtime-sudo:v0.1.79
       command_line_docker_network_mode: bridge
       command_line_docker_enable_sudo: true
       reasoning:
@@ -24,7 +24,7 @@ agents:
       enable_code_based_tools: false
       enable_mcp_command_line: true
       command_line_execution_mode: docker
-      command_line_docker_image: massgen/mcp-runtime-sudo:latest
+      command_line_docker_image: ghcr.io/massgen/mcp-runtime-sudo:v0.1.79
       command_line_docker_network_mode: bridge
       command_line_docker_enable_sudo: true
 
@@ -38,7 +38,7 @@ agents:
       enable_code_based_tools: false
       enable_mcp_command_line: true
       command_line_execution_mode: docker
-      command_line_docker_image: massgen/mcp-runtime-sudo:latest
+      command_line_docker_image: ghcr.io/massgen/mcp-runtime-sudo:v0.1.79
       command_line_docker_network_mode: bridge
       command_line_docker_enable_sudo: true
 
