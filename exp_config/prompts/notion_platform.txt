@@ -1,0 +1,38 @@
+TASK: Build a Notion Platform
+
+Build a full-stack Notion clone called "NoteFlow". The goal is to replicate Notion's complete feature set as a production-ready collaborative workspace web application.
+
+Build every feature listed below:
+
+Workspace & Pages:
+- Create personal and team workspaces, nested pages, page icons, cover images, breadcrumbs, slash commands, page duplication, soft delete/trash, restore pages, favorites, recent pages, shared pages, page locking, full-width pages, small text mode, page comments, backlinks, synced blocks, table of contents, page history/versioning, page templates, page verification, published pages, SEO metadata, and custom page URLs.
+
+Editor:
+- Rich text editor with block-based editing.
+- Support paragraphs, headings, bullet lists, numbered lists, to-do lists, toggle lists, quotes, callouts, dividers, code blocks with syntax highlighting, inline code, equations/LaTeX, tables, columns, embeds, bookmarks, images, videos, audio, PDFs, file uploads, mentions, dates, reminders, emoji, inline comments, annotations, text color/background color, drag-and-drop block reordering, multi-block selection, copy/paste with structure preservation, markdown shortcuts, slash menu, keyboard shortcuts, collaborative cursor presence, real-time multiplayer editing, and offline draft recovery.
+
+Collaboration:
+- Real-time collaboration across pages and databases, presence indicators, user cursors, inline comments, page discussions, threaded comments, comment resolution, mentions, task assignments, notifications, edit history, activity feed, permission-aware collaboration, shared links, guest access, invite by email, workspace roles, page-level permissions, database-level permissions, public sharing controls, domain-restricted sharing, and expiring links.
+
+Tasks & Project Management:
+- Task databases, assignees, due dates, priorities, status workflows, recurring tasks, reminders, dependencies, sub-items, project templates, dashboards, my tasks view, team task views, milestone tracking, timeline dependencies, progress tracking, linked project docs, calendar integration, and workload views.
+
+Search & Knowledge Management:
+- Global search across pages, databases, comments, and attachments.
+- Support full-text search, semantic search, filters by workspace/page/person/date/type, quick switcher, recent searches, backlinks, graph-like relationship discovery, search ranking, search snippets, and search permissions trimming.
+
+File & Media Management:
+- Upload and attach files to pages and database rows.
+- Support images, PDFs, docs, spreadsheets, video embeds, audio embeds, bookmarks, preview cards, drag-and-drop upload, storage quotas, file version replacement, CDN delivery, signed URLs, and permissions-aware file access.
+
+Notifications:
+- In-app and email notifications for mentions, comments, assignments, page shares, reminders, database updates, task due dates, workspace invites, and AI job completions.
+- Include notification inbox, read/unread state, batching, digests, and notification preferences.
+
+Authentication & Identity:
+- Email/password login, OAuth (Google/GitHub), magic links, 2FA (TOTP), session management, device/session list, avatar/profile management, workspace switching, SSO/SAML for enterprise, SCIM provisioning, and audit-friendly identity metadata.
+
+Import/Export:
+- Import from Markdown, HTML, CSV, DOCX, and common workspace formats.
+- Export pages/databases as Markdown, PDF, HTML, CSV, and JSON.
+- Preserve hierarchy, attachments, metadata, relations, and formatting as much as possible.

@@ -1,0 +1,218 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 650" role="img" aria-labelledby="title desc">
+  <title id="title">Sorting Visualization: How Bubble Sort Works</title>
+  <desc id="desc">An educational animated SVG that shows bubble sort comparing adjacent bars and swapping them until the list is sorted.</desc>
+
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .panel-soft { fill: #eff6ff; stroke: #bfdbfe; stroke-width: 2; }
+      .chart-frame { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .grid { stroke: #e2e8f0; stroke-width: 1; }
+      .axis { stroke: #64748b; stroke-width: 2; }
+      .bar { fill: #3b82f6; }
+      .settled { fill: #22c55e; }
+      .compare-box { fill: none; stroke: #f59e0b; stroke-width: 6; rx: 22; }
+      .shadow { filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.18)); }
+      .title { font: 700 34px 'Inter', 'Segoe UI', sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 18px 'Inter', 'Segoe UI', sans-serif; fill: #334155; }
+      .section { font: 700 18px 'Inter', 'Segoe UI', sans-serif; fill: #0f172a; }
+      .body { font: 500 16px 'Inter', 'Segoe UI', sans-serif; fill: #334155; }
+      .small { font: 500 14px 'Inter', 'Segoe UI', sans-serif; fill: #475569; }
+      .label { font: 700 28px 'Inter', 'Segoe UI', sans-serif; fill: #0f172a; text-anchor: middle; }
+      .index { font: 600 15px 'Inter', 'Segoe UI', sans-serif; fill: #475569; text-anchor: middle; }
+      .caption { font: 700 22px 'Inter', 'Segoe UI', sans-serif; fill: #0f172a; }
+      .mono { font: 600 16px 'SFMono-Regular', 'Consolas', monospace; fill: #0f172a; }
+      .legend-swatch { stroke: #0f172a; stroke-opacity: 0.08; }
+      .pointer { stroke: #f59e0b; stroke-width: 5; stroke-linecap: round; }
+    </style>
+
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1100" height="650" />
+
+  <text class="title" x="60" y="55">How Bubble Sort Works</text>
+  <text class="subtitle" x="60" y="84">Compare neighboring values. If the left one is larger, swap them so bigger values "bubble" right.</text>
+
+  <rect class="chart-frame" x="50" y="110" width="640" height="400" rx="24" />
+  <line class="grid" x1="70" y1="470" x2="670" y2="470" />
+  <line class="grid" x1="70" y1="395" x2="670" y2="395" />
+  <line class="grid" x1="70" y1="320" x2="670" y2="320" />
+  <line class="grid" x1="70" y1="245" x2="670" y2="245" />
+  <line class="grid" x1="70" y1="170" x2="670" y2="170" />
+  <line class="axis" x1="70" y1="470" x2="670" y2="470" />
+  <text class="small" x="80" y="140">Bars represent values in the list: [5, 1, 4, 2, 3]</text>
+  <text class="small" x="75" y="475" transform="rotate(-90 75 475)">value</text>
+
+  <rect x="82" y="126" width="0" height="336" fill="#dcfce7" opacity="0.5" rx="18">
+    <animate attributeName="x" dur="20s" repeatCount="indefinite" keyTimes="0;0.40;0.72;0.92;1" values="632;632;522;302;82" />
+    <animate attributeName="width" dur="20s" repeatCount="indefinite" keyTimes="0;0.40;0.72;0.92;1" values="0;80;190;410;550" />
+  </rect>
+  <text class="small" x="625" y="155" text-anchor="end">sorted side</text>
+
+  <rect class="compare-box" x="65" y="120" width="210" height="350" opacity="0.96">
+    <animate attributeName="x" dur="20s" repeatCount="indefinite"
+      keyTimes="0;0.08;0.16;0.24;0.32;0.40;0.48;0.56;0.64;0.72;0.84;0.92;1"
+      values="65;65;175;285;395;395;65;175;285;285;65;175;175" />
+  </rect>
+
+  <line class="pointer" x1="170" y1="100" x2="170" y2="78" marker-end="url(#arrowhead)">
+    <animate attributeName="x1" dur="20s" repeatCount="indefinite"
+      keyTimes="0;0.08;0.16;0.24;0.32;0.40;0.48;0.56;0.64;0.72;0.84;0.92;1"
+      values="170;170;280;390;500;500;170;280;390;390;170;280;280" />
+    <animate attributeName="x2" dur="20s" repeatCount="indefinite"
+      keyTimes="0;0.08;0.16;0.24;0.32;0.40;0.48;0.56;0.64;0.72;0.84;0.92;1"
+      values="170;170;280;390;500;500;170;280;390;390;170;280;280" />
+  </line>
+  <text class="small" x="124" y="70">current comparison</text>
+
+  <!-- Bar: 5 -->
+  <g class="shadow">
+    <g>
+      <animateTransform attributeName="transform" type="translate" dur="20s" repeatCount="indefinite"
+        keyTimes="0;0.08;0.16;0.24;0.32;0.40;0.48;0.56;0.64;0.72;0.84;0.92;1"
+        values="80 0;80 0;190 0;300 0;410 0;520 0;520 0;520 0;520 0;520 0;520 0;520 0;520 0" />
+      <rect class="bar" x="0" y="140" width="80" height="330" rx="18">
+        <animate attributeName="fill" dur="20s" repeatCount="indefinite"
+          keyTimes="0;0.08;0.40;1"
+          values="#3b82f6;#f59e0b;#22c55e;#22c55e" />
+      </rect>
+      <text class="label" x="40" y="126">5</text>
+    </g>
+  </g>
+
+  <!-- Bar: 1 -->
+  <g class="shadow">
+    <g>
+      <animateTransform attributeName="transform" type="translate" dur="20s" repeatCount="indefinite"
+        keyTimes="0;0.08;0.16;0.24;0.32;0.40;0.48;0.56;0.64;0.72;0.84;0.92;1"
+        values="190 0;190 0;80 0;80 0;80 0;80 0;80 0;80 0;80 0;80 0;80 0;80 0;80 0" />
+      <rect class="bar" x="0" y="380" width="80" height="90" rx="18">
+        <animate attributeName="fill" dur="20s" repeatCount="indefinite"
+          keyTimes="0;0.08;0.16;0.48;0.56;0.92;1"
+          values="#3b82f6;#f59e0b;#3b82f6;#f59e0b;#3b82f6;#22c55e;#22c55e" />
+      </rect>
+      <text class="label" x="40" y="366">1</text>
+    </g>
+  </g>
+
+  <!-- Bar: 4 -->
+  <g class="shadow">
+    <g>
+      <animateTransform attributeName="transform" type="translate" dur="20s" repeatCount="indefinite"
+        keyTimes="0;0.08;0.16;0.24;0.32;0.40;0.48;0.56;0.64;0.72;0.84;0.92;1"
+        values="300 0;300 0;300 0;190 0;190 0;190 0;190 0;190 0;300 0;410 0;410 0;410 0;410 0" />
+      <rect class="bar" x="0" y="200" width="80" height="270" rx="18">
+        <animate attributeName="fill" dur="20s" repeatCount="indefinite"
+          keyTimes="0;0.16;0.24;0.48;0.72;1"
+          values="#3b82f6;#f59e0b;#3b82f6;#f59e0b;#22c55e;#22c55e" />
+      </rect>
+      <text class="label" x="40" y="186">4</text>
+    </g>
+  </g>
+
+  <!-- Bar: 2 -->
+  <g class="shadow">
+    <g>
+      <animateTransform attributeName="transform" type="translate" dur="20s" repeatCount="indefinite"
+        keyTimes="0;0.08;0.16;0.24;0.32;0.40;0.48;0.56;0.64;0.72;0.84;0.92;1"
+        values="410 0;410 0;410 0;410 0;300 0;300 0;300 0;190 0;190 0;190 0;190 0;190 0;190 0" />
+      <rect class="bar" x="0" y="320" width="80" height="150" rx="18">
+        <animate attributeName="fill" dur="20s" repeatCount="indefinite"
+          keyTimes="0;0.24;0.32;0.56;0.64;0.92;1"
+          values="#3b82f6;#f59e0b;#3b82f6;#f59e0b;#3b82f6;#22c55e;#22c55e" />
+      </rect>
+      <text class="label" x="40" y="306">2</text>
+    </g>
+  </g>
+
+  <!-- Bar: 3 -->
+  <g class="shadow">
+    <g>
+      <animateTransform attributeName="transform" type="translate" dur="20s" repeatCount="indefinite"
+        keyTimes="0;0.08;0.16;0.24;0.32;0.40;0.48;0.56;0.64;0.72;0.84;0.92;1"
+        values="520 0;520 0;520 0;520 0;520 0;410 0;410 0;410 0;410 0;300 0;300 0;300 0;300 0" />
+      <rect class="bar" x="0" y="260" width="80" height="210" rx="18">
+        <animate attributeName="fill" dur="20s" repeatCount="indefinite"
+          keyTimes="0;0.32;0.40;0.64;0.72;0.92;1"
+          values="#3b82f6;#f59e0b;#3b82f6;#f59e0b;#3b82f6;#22c55e;#22c55e" />
+      </rect>
+      <text class="label" x="40" y="246">3</text>
+    </g>
+  </g>
+
+  <text class="index" x="120" y="525">0</text>
+  <text class="index" x="230" y="525">1</text>
+  <text class="index" x="340" y="525">2</text>
+  <text class="index" x="450" y="525">3</text>
+  <text class="index" x="560" y="525">4</text>
+  <text class="small" x="275" y="548">array index</text>
+
+  <rect class="panel" x="730" y="110" width="320" height="125" rx="20" />
+  <text class="section" x="755" y="140">Legend</text>
+  <rect class="legend-swatch" x="755" y="156" width="24" height="24" rx="6" fill="#3b82f6" />
+  <text class="body" x="792" y="174">Unsorted value</text>
+  <rect class="legend-swatch" x="755" y="191" width="24" height="24" rx="6" fill="#f59e0b" />
+  <text class="body" x="792" y="209">Values being compared</text>
+  <rect class="legend-swatch" x="755" y="226" width="24" height="24" rx="6" fill="#22c55e" />
+  <text class="body" x="792" y="244">Confirmed sorted position</text>
+
+  <rect class="panel-soft" x="730" y="255" width="320" height="175" rx="20" />
+  <text class="section" x="755" y="286">Algorithm idea</text>
+  <text class="mono" x="755" y="320">repeat passes through the list</text>
+  <text class="mono" x="755" y="350">compare each adjacent pair</text>
+  <text class="mono" x="755" y="380">if left &gt; right, swap them</text>
+  <text class="mono" x="755" y="410">largest unsorted item moves right</text>
+
+  <rect class="panel" x="730" y="450" width="320" height="90" rx="20" />
+  <text class="section" x="755" y="480">Why it teaches well</text>
+  <text class="body" x="755" y="508">You can see each local decision,</text>
+  <text class="body" x="755" y="530">then watch the whole list improve.</text>
+
+  <rect class="panel" x="50" y="550" width="1000" height="72" rx="20" />
+
+  <g>
+    <text class="caption" x="80" y="594" opacity="1">Start with [5, 1, 4, 2, 3]. Bubble sort begins on the left.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.08;0.09;1" values="1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Compare 5 and 1: 5 is larger, so swap them.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.08;0.16;0.17;1" values="0;1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Compare 5 and 4: swap again, pushing 5 farther right.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.16;0.24;0.25;1" values="0;1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Compare 5 and 2: swap again.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.24;0.32;0.33;1" values="0;1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Compare 5 and 3: swap. Now 5 reaches its final sorted spot.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.32;0.40;0.41;1" values="0;1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Next pass: 1 and 4 are already in order, so no swap is needed.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.48;0.56;0.57;1" values="0;1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Compare 4 and 2: 4 is larger, so swap them.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.56;0.64;0.65;1" values="0;1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Compare 4 and 3: swap. Now 4 is fixed too.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.64;0.72;0.73;1" values="0;1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Final check: the remaining values are already ordered.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.84;0.92;0.93;1" values="0;1;1;0;0" />
+  </g>
+  <g opacity="0">
+    <text class="caption" x="80" y="594">Sorted list: [1, 2, 3, 4, 5]. The animation then loops for review.</text>
+    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" keyTimes="0;0.92;1" values="0;1;1" />
+  </g>
+
+</svg>

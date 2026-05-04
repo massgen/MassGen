@@ -1,0 +1,8 @@
+TASK: Visualization of Fourier Transform
+
+Description:
+Make a visual that explains the Fourier transform.
+
+Requirements:
+- Output an SVG file
+- Should be clear and informative

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ project.name }} · TexForge</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body data-page="project" data-project-id="{{ project.id }}">
+  <header class="topbar compact">
+    <div>
+      <p class="eyebrow">TexForge workspace</p>
+      <h1>{{ project.name }}</h1>
+      <p class="lede">{{ project.description }}</p>
+    </div>
+    <div class="topbar-actions">
+      {% if current_user %}
+      <span class="badge">{{ current_user.email }}</span>
+      {% endif %}
+      <a class="ghost" href="/">Back</a>
+      <button id="compileButton" class="primary">Compile preview</button>
+    </div>
+  </header>
+
+  <main class="workspace-grid">
+    <section class="panel file-browser">
+      <div class="panel-header"><h2>Files</h2><span class="badge">{{ project.files|length }}</span></div>
+      <ul class="file-list" id="fileList">
+        {% for file in project.files %}
+        <li class="file-item {% if loop.first %}active{% endif %}" data-file-id="{{ file.id }}" data-file-path="{{ file.path }}" data-file-content="{{ file.content | e }}">{{ file.path }}</li>
+        {% endfor %}
+      </ul>
+      <div class="toolbar compact-toolbar">
+        <button id="renameFileButton" class="ghost" type="button">Rename / move</button>
+        <button id="deleteFileButton" class="ghost" type="button">Delete file</button>
+      </div>
+      <form id="fileForm" class="stack-form compact-form">
+        <input name="path" placeholder="sections/new.tex" required />
+        <textarea name="content" placeholder="LaTeX content"></textarea>
+        <button class="ghost" type="submit">Add file</button>
+      </form>
+    </section>
+
+    <section class="panel editor-panel span-2">
+      <div class="panel-header">
+        <h2>Editor</h2>
+        <div class="toolbar">
+          <select id="engineSelect">
+            <option>pdflatex</option>
+            <option>xelatex</option>
+            <option>lualatex</option>
+          </select>
+          <select id="keybindingSelect">
+            <option>Default</option>
+            <option>Vim</option>
+            <option>Emacs</option>
+          </select>
+          <button id="snapshotButton" class="ghost">Snapshot</button>
+        </div>
+      </div>
+      <div class="split-view">
+        <div>
+          <label class="muted">Code</label>
+          <textarea id="editor" class="editor"></textarea>
+          <div class="editor-footer">
+            <span id="presenceStatus" class="muted">Waiting for collaborators…</span>
+            <span id="lintStatus" class="muted">Lint pending</span>
+          </div>
+        </div>
+        <div>
+          <label class="muted">PDF / structure preview</label>
+          <iframe id="pdfFrame" class="pdf-frame" title="PDF preview"></iframe>
+          <pre id="highlightPanel" class="highlight-panel"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Comments & review</h2>
+      <ul class="mini-list" id="commentList">
+        {% for comment in project.comments %}
+        <li><strong>{{ comment.author }}</strong> — {{ comment.body }}</li>
+        {% endfor %}
+      </ul>
+      <form id="commentForm" class="stack-form compact-form">
+        <input name="author" value="reviewer@example.com" required />
+        <textarea name="body" placeholder="Leave inline review feedback"></textarea>
+        <button class="ghost" type="submit">Post comment</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>History & branching</h2>
+      <ul class="mini-list" id="snapshotList">
+        {% for snapshot in project.snapshots %}
+        <li data-snapshot-id="{{ snapshot.id }}">{{ snapshot.name }} — {{ snapshot.created_at }}</li>
+        {% endfor %}
+      </ul>
+      <form id="branchForm" class="stack-form compact-form">
+        <input name="name" placeholder="journal-revision" required />
+        <select name="snapshot_id" id="branchSnapshotSelect">
+          {% for snapshot in project.snapshots %}
+          <option value="{{ snapshot.id }}">{{ snapshot.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="ghost" type="submit">Create branch</button>
+      </form>
+      <ul class="mini-list" id="branchList">
+        {% for branch in project.branches %}
+        <li><strong>{{ branch.name }}</strong> <button type="button" class="ghost branch-restore-button" data-branch-id="{{ branch.id }}">Restore</button></li>
+        {% endfor %}
+      </ul>
+      <p class="muted">Lightweight branching now persists explicit named branches pinned to snapshots, with one-click restore.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Sharing & permissions</h2>
+      <ul class="mini-list">
+        {% for share in project.shares %}
+        <li>{{ share.role }} link · expires {{ share.expires_at }}</li>
+        {% endfor %}
+      </ul>
+      <form id="shareForm" class="stack-form compact-form">
+        <select name="role">
+          <option value="viewer">Viewer</option>
+          <option value="editor">Editor</option>
+        </select>
+        <button class="ghost" type="submit">Create share link</button>
+      </form>
+      <p id="shareStatus" class="muted">Owner/editor/viewer workflows are persisted through project memberships and expiring links.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Team members</h2>
+      <ul class="mini-list" id="memberList">
+        {% for member in project.members %}
+        <li><strong>{{ member.name }}</strong> — {{ member.role }} · {{ member.email }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Compile log</h2>
+      <pre id="compileLog" class="log-panel">No compile yet.</pre>
+    </section>
+
+    <section class="panel">
+      <h2>Copilot</h2>
+      <form id="aiForm" class="stack-form compact-form">
+        <textarea name="prompt" placeholder="Ask for LaTeX, fixes, summaries, or citations"></textarea>
+        <select name="mode">
+          <option value="generate">Generate</option>
+          <option value="fix">Fix</option>
+        </select>
+        <button class="ghost" type="submit">Suggest</button>
+      </form>
+      <pre id="aiOutput" class="log-panel">No suggestion yet.</pre>
+    </section>
+
+    <section class="panel">
+      <h2>Reference manager</h2>
+      <ul class="mini-list" id="referenceList">
+        {% for reference in project.references %}
+        <li><strong>{{ reference.citation_key }}</strong> — {{ reference.title }}</li>
+        {% endfor %}
+      </ul>
+      <form id="referenceForm" class="stack-form compact-form">
+        <select name="source">
+          <option value="doi">DOI</option>
+          <option value="arxiv">arXiv</option>
+          <option value="scholar">Google Scholar</option>
+        </select>
+        <input name="identifier" placeholder="10.5555/texforge-demo" required />
+        <button class="ghost" type="submit">Import reference</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Suggestion mode</h2>
+      <form id="suggestionForm" class="stack-form compact-form">
+        <input name="author" value="reviewer@example.com" required />
+        <textarea name="body" placeholder="Explain the suggested change"></textarea>
+        <input name="original_text" placeholder="Original text snippet" value="Write here." required />
+        <textarea name="suggested_text" placeholder="Suggested replacement"></textarea>
+        <button class="ghost" type="submit">Submit suggestion</button>
+      </form>
+      <pre id="suggestionStatus" class="log-panel">No suggestions yet.</pre>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Activity timeline</h2>
+      <ul class="timeline">
+        {% for event in activity %}
+        <li><strong>{{ event.actor }}</strong> {{ event.verb }} <span>{{ event.target }}</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+  </main>
+  <script>window.__PROJECT__ = {{ project | tojson }};</script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+TASK: Build a GitHub Platform
+
+Build a full-stack GitHub clone called "GitVault". The goal is to replicate GitHub's complete feature set as a production-ready web application.
+
+Build every feature listed below:
+
+Repositories:
+- Create/delete/fork/archive repos.
+- Public and private visibility.
+- File browser, web editor, blame view, file history, raw view, download ZIP.
+- Topics/tags, releases, README rendering, license and .gitignore templates.
+- Repository insights, dependency graph, contributor graph, traffic analytics, language breakdown, network graph, and compare branches/tags/commits.
+
+Git:
+- Branch and tag management, commit history, commit diff viewer.
+- Merge strategies (merge/squash/rebase), conflict detection, protected branches, merge queues, auto-merge, and CODEOWNERS support.
+
+Pull Requests:
+- Open/close/merge PRs, draft PRs, inline code comments, suggested changes, review requests, approve/request changes/comment states, PR templates, required reviews, status checks, linked issues, and PR diff viewer.
+
+Issues:
+- Create/close/lock issues, labels, milestones, assignees, issue templates, pinned issues, issue linking, reactions, sorting, and filtering.
+
+Discussions:
+- Categories, Q&A with marked answers, reactions, pinning, and locking.
+
+Projects:
+- Kanban board, table view, roadmap/timeline view, custom fields, issue and PR linking, filters, and project templates.
+
+Wiki:
+- Create/edit/delete wiki pages, markdown rendering, page history, and sidebar navigation.
+
+Actions (CI/CD):
+- YAML workflow parser, workflow runs with logs, job steps, self-hosted and cloud runners via Docker.
+- Workflow triggers (push/PR/schedule/manual), artifacts upload/download, environment variables and secrets, reusable workflows, deployment environments with protection rules, and workflow badges.
+
+Packages:
+- Container registry (Docker), npm, Maven, NuGet package hosting, version management, and access control.
+
+Pages:
+- Static site hosting from repo branch or /docs folder, custom domain support, and HTTPS.
+
+Security:
+- Dependabot alerts and auto PRs, CodeQL code scanning, secret scanning, private vulnerability reporting, security advisories, security policy (SECURITY.md), branch protection rules, and required 2FA.
+
+Search:
+- Global code search, semantic search, symbol search, search by repo/user/org/topic, and filters by language/stars/date.
+
+Organizations:
+- Create orgs, teams with granular permissions (read/write/admin/maintain), team discussions, org-level secrets, member roles, billing management, and audit log streaming.
+
+User Profiles:
+- Avatar, bio, location, social links, contribution graph heatmap, pinned repos, achievement badges, followers/following, stars, and activity feed.
+
+Notifications:
+- Web and email notifications, notification inbox, watching repos/issues/PRs, mentions, and custom notification routing.
+
+Authentication:
+- Email/password, OAuth (GitHub/Google), 2FA (TOTP), SSO (SAML), personal access tokens, fine-grained tokens, SSH key management, GPG key management, and session management.
+
+GitHub Copilot Equivalent:
+- Inline AI code suggestions in the web editor using an LLM API.
+
+Codespaces Equivalent:
+- Launch browser-based VS Code (code-server) tied to any repo.
+
+Marketplace:
+- List and install GitHub Apps, OAuth Apps, and Actions from a marketplace directory.
+
+Sponsors:
+- User and org sponsorship tiers, payment integration, and sponsor dashboard.
+
+API:
+- Full REST API and GraphQL API mirroring GitHub's, webhooks with event filtering, and GitHub App support.
+
+Admin Panel:
+- Site-wide admin dashboard, user management, org management, rate limiting, audit logs, and system health monitoring.
+
+Miscellaneous:
+- Dark/light theme, keyboard shortcuts, mobile-responsive UI, starring and watching repos, trending repos page, explore page, invite collaborators, repository transfer, repo visibility changes, deploy keys, and branch renaming.

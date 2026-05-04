@@ -1,0 +1,80 @@
+TASK: Build a Collaborative LaTeX Platform
+
+Build a full-stack, production-ready collaborative LaTeX editing platform called "TexForge", inspired by Overleaf. The goal is to replicate a complete cloud-based academic writing and publishing workflow with real-time collaboration, version control, and PDF rendering.
+
+Core Features
+
+Projects & Files:
+- Create/delete/archive projects.
+- Support folder structures, multi-file LaTeX projects, file upload/download, drag-and-drop organization, templates (IEEE, ACM, thesis, resume), project cloning, and sharing.
+
+Editor:
+- Rich LaTeX editor with syntax highlighting, auto-completion, linting, error highlighting, split view (code + PDF), forward/inverse search (SyncTeX), customizable themes, and Vim/Emacs keybindings.
+
+Real-Time Collaboration:
+- Multi-user live editing using CRDT (Yjs), cursor presence, user awareness (avatars, selections), inline comments, suggestion mode, version snapshots, and conflict-free merging.
+
+Compilation Engine:
+- On-demand and auto LaTeX compilation via Dockerized TeX Live.
+- Include compile logs, error tracing, incremental builds, support for BibTeX/Biber, XeLaTeX, LuaLaTeX, and PDF preview with live refresh.
+
+Version Control:
+- Full document history, diff viewer for LaTeX, named versions, restore points, lightweight branching, and optional Git integration / GitHub sync.
+
+Comments & Review:
+- Inline comments, threaded discussions, resolve/unresolve, reviewer roles, track changes, and suggestion acceptance/rejection.
+
+Templates & Gallery:
+- Template marketplace for journal formats, CVs, reports, preview before use, community submissions, tagging, and search.
+
+Collaboration & Sharing
+
+Permissions:
+- Owner/editor/viewer roles, link-based sharing, public/private projects, access expiration, and organization-level sharing.
+
+Teams & Organizations:
+- Create organizations, shared project spaces, team permissions, academic lab workflows, and admin roles.
+
+Bibliography & References
+
+Reference Management:
+- BibTeX editor, citation auto-complete, import from DOI/arXiv/Google Scholar, shared reference libraries, and duplicate detection.
+
+Cross-Referencing:
+- Auto label suggestions, reference validation, and warnings for missing citations.
+
+Output & Publishing
+
+PDF Export:
+- Download compiled PDFs, versioned exports, and watermarking options.
+
+Journal Submission:
+- Export bundles (ZIP with source), format validation for IEEE/ACM/Springer.
+
+Collaboration with Journals (optional):
+- Submission pipelines and integrations.
+
+Search:
+- Global search across projects, files, comments, and templates.
+- Semantic search for LaTeX commands and references.
+
+AI Assistance (Copilot Equivalent):
+- Inline AI assistant for LaTeX code generation and completion, error fixing suggestions, natural language to LaTeX conversion, academic writing assistance, summaries, paraphrasing, and citation suggestions.
+
+Integrations:
+- GitHub sync (import/export repos), Dropbox/Google Drive import, ORCID integration for authors, and arXiv submission helper.
+
+Authentication & Security:
+- Email/password, OAuth (Google, GitHub), 2FA (TOTP), access tokens, audit logs, encrypted storage, secure project sharing, and private project isolation.
+
+Notifications:
+- Real-time collaboration updates, comment mentions, project activity, email notifications, and in-app notifications.
+
+Admin Panel:
+- User management, project moderation, storage quotas, system monitoring, compilation job queue, rate limiting, and audit logs.
+
+Infrastructure:
+- Dockerized LaTeX workers, Redis queue system, scalable WebSocket layer, CDN for assets, object storage for files, and horizontal scaling support.
+
+Miscellaneous:
+- Dark/light mode, keyboard shortcuts, mobile-responsive UI, offline editing (optional), autosave, and project activity timeline.

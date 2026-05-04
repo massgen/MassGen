@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TexForge</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body data-page="dashboard">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Collaborative academic writing platform</p>
+      <h1>TexForge</h1>
+      <p class="lede">Production-style collaborative LaTeX workspace with live collaboration, history, compile queue simulation, sharing, and AI-assisted authoring.</p>
+    </div>
+    <div class="topbar-actions">
+      {% if current_user %}
+      <span class="badge">Signed in as {{ current_user.name }}</span>
+      {% else %}
+      <span class="badge">Guest demo mode</span>
+      {% endif %}
+      <button id="themeToggle" class="ghost">Toggle theme</button>
+      <a class="primary" href="#new-project">New Project</a>
+    </div>
+  </header>
+
+  <main class="dashboard-grid">
+    <section class="panel hero-card">
+      <h2>Live collaboration</h2>
+      <p>Cursor presence, awareness, shared editing, compile logs, comments, snapshots, templates, organizations, and admin insights are all available in one local-first stack.</p>
+      {% if active_project %}
+      <a class="primary" href="/projects/{{ active_project.id }}">Open {{ active_project.name }}</a>
+      {% endif %}
+    </section>
+
+    <section class="panel" id="new-project">
+      <h2>Create project</h2>
+      <form id="projectForm" class="stack-form">
+        <input name="name" placeholder="Project name" value="Rapid Draft" required />
+        <input name="owner" placeholder="Owner email" value="{{ current_user.email if current_user else 'alice@example.com' }}" required />
+        <select name="template">
+          {% for template in templates %}
+          <option value="{{ template.slug }}">{{ template.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="primary" type="submit">Create</button>
+      </form>
+      <p id="projectFormStatus" class="muted"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Authentication</h2>
+      <div class="auth-grid">
+        <form id="registerForm" class="stack-form compact-form">
+          <input name="name" placeholder="Name" value="Alice" required />
+          <input name="email" placeholder="Email" value="alice@example.com" required />
+          <input name="password" type="password" placeholder="Password" value="secret123" required />
+          <button class="ghost" type="submit">Register</button>
+        </form>
+        <form id="loginForm" class="stack-form compact-form">
+          <input name="email" placeholder="Email" value="alice@example.com" required />
+          <input name="password" type="password" placeholder="Password" value="secret123" required />
+          <button class="ghost" type="submit">Login</button>
+        </form>
+      </div>
+      <p id="authStatus" class="muted">{% if current_user %}Authenticated{% else %}Sign in to unlock role-aware collaboration and admin metrics.{% endif %}</p>
+    </section>
+
+    <section class="panel span-2">
+      <div class="panel-header">
+        <h2>Projects</h2>
+        <span class="badge">{{ projects|length }} active</span>
+      </div>
+      <div class="project-grid">
+        {% for project in projects %}
+        <article class="project-card">
+          <div class="project-meta">
+            <span class="badge">{{ project.template|upper }}</span>
+            {% if project.archived %}<span class="badge muted-badge">Archived</span>{% endif %}
+          </div>
+          <h3>{{ project.name }}</h3>
+          <p>{{ project.description }}</p>
+          <ul class="mini-list">
+            <li>{{ project.files|length }} files</li>
+            <li>{{ project.comments|length }} comments</li>
+            <li>{{ project.snapshots|length }} snapshots</li>
+          </ul>
+          <a class="ghost" href="/projects/{{ project.id }}">Open workspace</a>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel span-2">
+      <div class="panel-header">
+        <h2>Template gallery</h2>
+        <span class="badge">Marketplace</span>
+      </div>
+      <form id="templateSearchForm" class="stack-form compact-form">
+        <input id="templateSearchInput" name="q" placeholder="Search templates by name, tags, or use case" />
+      </form>
+      <div class="template-grid">
+        {% for template in templates %}
+        <article class="template-card" data-template-slug="{{ template.slug }}">
+          <h3>{{ template.name }}</h3>
+          <p>{{ template.description }}</p>
+          <div class="tag-row">
+            {% for tag in template.tags %}
+            <span class="tag">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          <button type="button" class="ghost template-preview-button" data-template-slug="{{ template.slug }}">Preview</button>
+        </article>
+        {% endfor %}
+      </div>
+      <pre id="templatePreview" class="log-panel">Select a template to preview its main.tex and bibliography scaffold.</pre>
+    </section>
+
+    <section class="panel">
+      <h2>Organizations</h2>
+      <ul class="mini-list">
+        {% for org in organizations %}
+        <li><strong>{{ org.name }}</strong> — {{ org.description }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Notifications</h2>
+      <ul class="mini-list">
+        {% for note in notifications %}
+        <li><strong>{{ note.title }}</strong><br />{{ note.body }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>System metrics</h2>
+      <ul class="mini-list">
+        <li><strong>{{ metrics.users }}</strong> users</li>
+        <li><strong>{{ metrics.projects }}</strong> projects</li>
+        <li><strong>{{ metrics.memberships }}</strong> memberships</li>
+        <li><strong>{{ metrics.references }}</strong> imported references</li>
+      </ul>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Activity timeline</h2>
+      <ul class="timeline">
+        {% for event in activity %}
+        <li><strong>{{ event.actor }}</strong> {{ event.verb }} <span>{{ event.target }}</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

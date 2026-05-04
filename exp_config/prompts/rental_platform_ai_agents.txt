@@ -1,0 +1,45 @@
+TASK: Rental Platform with AI Agents
+
+Description:
+Build a short-stay rental marketplace where guests and hosts each have a dedicated AI agent. The guest agent finds and manages stays; the host agent operates the property. Both agents propose actions that their human approves or rejects in one tap - no action is taken without explicit consent. Deliver a working prototype demonstrating the full booking lifecycle and agent-to-agent interaction.
+
+Requirements:
+
+1. Roles
+- Guest: books stays; approves or rejects guest agent proposals.
+- Guest Agent: searches listings, manages bookings, handles check-in, monitors stays, escalates problems.
+- Host: owns properties; approves or rejects host agent proposals.
+- Host Agent: manages listings and pricing, responds to inquiries, coordinates turnovers, handles guest communication.
+- Admin: sets marketplace rules, mediates disputes the agents cannot resolve.
+
+2. Agent Loop
+Every agent runs the same six-stage loop on behalf of its human:
+- Monitor: continuously watch active bookings, listings, and messages.
+- Detect: identify events requiring action (inquiries, pricing changes, conflicts, in-stay issues, review windows).
+- Propose: present a concrete, ready-to-execute action to the human in plain language.
+- Approve: human approves or rejects in one tap.
+- Act: execute the approved action immediately.
+- Confirm: update state and surface result; on failure, restart with a revised proposal.
+
+3. Marketplace Capabilities
+- Listing creation and search/match between guests and listings.
+- Full booking lifecycle: inquiry -> booking -> check-in -> stay -> check-out -> review.
+- Support for multiple concurrent stays per guest and multiple properties per host.
+- Persistent state across repeat interactions (returning guests, recurring hosts).
+
+4. Guest Agent Capabilities
+- Pre-trip: search, compare, propose bookings matching stated preferences.
+- During-stay: monitor for problems, propose interventions.
+- Post-stay: handle refunds, disputes, reviews, learn from outcomes.
+
+5. Host Agent Capabilities
+- Listing management and availability updates.
+- Dynamic pricing proposals.
+- Inquiry response and guest communication.
+- Turnover coordination between bookings.
+- Issue detection and escalation to host.
+
+6. Agent-to-Agent Communication
+- Direct negotiation between guest and host agents (e.g., price, check-in time, special requests).
+- Dispute escalation path to admin when agents cannot resolve.
+- All agent-to-agent exchanges visible to both humans in plain language.

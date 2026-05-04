@@ -1,0 +1,105 @@
+:root {
+  --bg: #0b1020;
+  --panel: #151d33;
+  --muted: #8ea1c6;
+  --text: #eef3ff;
+  --accent: #7c9cff;
+  --border: rgba(255,255,255,0.08);
+}
+body.light {
+  --bg: #f2f5ff;
+  --panel: #ffffff;
+  --muted: #5c6d93;
+  --text: #102040;
+  --accent: #365ef6;
+  --border: rgba(16,32,64,0.1);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, rgba(124,156,255,0.18), transparent 35%), var(--bg);
+  color: var(--text);
+}
+a { color: inherit; text-decoration: none; }
+button, input, textarea, select {
+  font: inherit;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  padding: 0.8rem 1rem;
+}
+textarea { min-height: 120px; resize: vertical; }
+button { cursor: pointer; }
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  padding: 2rem;
+}
+.topbar.compact { padding-bottom: 1rem; }
+.topbar-actions { display: flex; gap: 0.75rem; align-items: center; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-size: 0.78rem; }
+.lede { max-width: 70ch; color: var(--muted); }
+.dashboard-grid, .workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 0 2rem 2rem;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 1.25rem;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.16);
+}
+.panel-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.hero-card { min-height: 220px; display: flex; flex-direction: column; justify-content: center; }
+.span-2 { grid-column: span 2; }
+.primary, button.primary {
+  background: linear-gradient(135deg, var(--accent), #9f7cff);
+  color: white;
+  border: none;
+  padding: 0.85rem 1.15rem;
+  border-radius: 14px;
+}
+.ghost, button.ghost { background: transparent; }
+.badge, .tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.project-grid, .template-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.auth-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.project-card, .template-card { border: 1px solid var(--border); border-radius: 18px; padding: 1rem; }
+.project-meta, .tag-row, .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.compact-toolbar { margin-top: 0.75rem; }
+.mini-list, .timeline, .file-list { list-style: none; padding: 0; margin: 0; }
+.mini-list li, .timeline li { padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+.stack-form { display: grid; gap: 0.75rem; }
+.compact-form { margin-top: 1rem; }
+.file-browser { max-height: 84vh; overflow: auto; }
+.file-item { padding: 0.75rem; border-radius: 12px; border: 1px solid transparent; cursor: pointer; }
+.file-item.active, .file-item:hover { border-color: var(--accent); background: rgba(124,156,255,0.12); }
+.split-view { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1rem; }
+.editor { width: 100%; min-height: 52vh; background: #0c1326; color: #f4f7ff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+body.light .editor { background: #f8fbff; color: #102040; }
+.editor-footer { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.5rem; }
+.pdf-frame, .highlight-panel, .log-panel { width: 100%; min-height: 250px; border-radius: 18px; border: 1px solid var(--border); background: rgba(255,255,255,0.02); padding: 1rem; }
+.highlight-panel { min-height: 180px; white-space: pre-wrap; overflow: auto; }
+.log-panel { white-space: pre-wrap; overflow: auto; }
+.muted { color: var(--muted); }
+.inline-action { margin-left: 0.75rem; padding: 0.35rem 0.7rem; border-radius: 999px; }
+.nested-list { margin-top: 0.5rem; margin-left: 1rem; }
+@media (max-width: 1100px) {
+  .dashboard-grid, .workspace-grid, .split-view { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+  .topbar { flex-direction: column; }
+}

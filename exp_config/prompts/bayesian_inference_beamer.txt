@@ -1,0 +1,12 @@
+TASK: Bayesian Inference Beamer PPT
+
+Description:
+You are an expert in Bayesian statistics and LaTeX typesetting. Generate a single self-contained .tex file that compiles to a Beamer presentation explaining Bayesian inference to graduate students in a quantitative field.
+
+Requirements:
+- Use \documentclass{beamer} with a clean theme such as metropolis, Madrid, or Singapore.
+- Use amsmath and amssymb for all mathematical notation.
+- The content must be fully self-contained.
+- Do not use inline images or external image files.
+- Create all diagrams using TikZ.
+- The final deliverable should be a single .tex file that can compile without requiring additional custom assets.

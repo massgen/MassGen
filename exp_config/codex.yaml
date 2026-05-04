@@ -1,0 +1,25 @@
+agent:
+  id: agent_a
+  backend:
+    type: codex
+    model: gpt-5.4
+    cwd: "workspace"
+    exclude_file_operation_mcps: false
+    reasoning:
+      effort: high
+      summary: auto
+
+ui:
+  display_type: "textual_terminal"
+  logging_enabled: true
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  max_new_answers_per_agent: 3
+
+timeout_settings:
+  orchestrator_timeout_seconds: 10800
+  initial_round_timeout_seconds: 3600
+  subsequent_round_timeout_seconds: 3600
+  round_timeout_grace_seconds: 600

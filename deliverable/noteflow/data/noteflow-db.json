@@ -1,0 +1,688 @@
+{
+  "users": [
+    {
+      "id": "usr_374484b3e06c",
+      "name": "SCIM Owner",
+      "email": "scim-owner@example.com",
+      "passwordHash": "7c334074b6db7d0a6cf574215426a211:933376cbff1be3674595d00cbf7995bd871be6df218749543cd14912b08d6445b513e01a522386291efe0a2ce5a69621a3931ed8558ce491a3b0a722fd92d9fb",
+      "avatarColor": "#4f46e5",
+      "title": "Workspace builder",
+      "bio": "",
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "notificationPreferences": {},
+      "identity": {
+        "authMethods": [
+          "password"
+        ],
+        "lastAuditAt": "2026-05-05T06:06:21.590Z",
+        "deviceMetadata": [
+          {
+            "sessionId": "ses_e4801412d212",
+            "userAgent": "node",
+            "ipAddress": "127.0.0.1",
+            "lastSeenAt": "2026-05-05T06:06:21.590Z"
+          }
+        ]
+      },
+      "twoFactorEnabled": false,
+      "twoFactorSecret": "",
+      "recoveryCodes": []
+    },
+    {
+      "id": "usr_0fcdd9c9f240",
+      "name": "Provisioned Person",
+      "email": "provisioned@example.com",
+      "passwordHash": "aba9c82e738d5d633958786171317eb4:36b71c49be3d7a79388e1dfe943a9c856b735098d8fe806396f0dca49dc3ca550dc65570a011678099dfac2fac83c32a2ec663fe122637bf7f1de8e2f8f693e9",
+      "avatarColor": "#7c3aed",
+      "title": "Analyst",
+      "bio": "",
+      "createdAt": "2026-05-05T06:06:21.612Z",
+      "notificationPreferences": {},
+      "identity": {
+        "authMethods": [
+          "scim"
+        ],
+        "lastAuditAt": "2026-05-05T06:06:21.612Z",
+        "deviceMetadata": [],
+        "samlExternalId": "",
+        "scimExternalId": "scim-42"
+      },
+      "twoFactorEnabled": false,
+      "twoFactorSecret": "",
+      "recoveryCodes": []
+    }
+  ],
+  "sessions": [
+    {
+      "id": "ses_e4801412d212",
+      "userId": "usr_374484b3e06c",
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "lastSeenAt": "2026-05-05T06:06:21.615Z",
+      "userAgent": "node",
+      "ipAddress": "127.0.0.1",
+      "label": "Session 5/4/2026, 11:06:21 PM"
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "ws_624e65305d73",
+      "name": "NoteFlow Demo Workspace",
+      "kind": "team",
+      "ownerId": "system",
+      "createdAt": "2026-05-05T06:06:21.568Z",
+      "settings": {
+        "storageQuotaMb": 100,
+        "domainRestriction": "",
+        "allowGuests": true,
+        "publicSharing": true,
+        "databasePermissions": "workspace-role",
+        "samlEnabled": false,
+        "scimEnabled": false
+      },
+      "members": []
+    },
+    {
+      "id": "ws_55eaa3560f0b",
+      "name": "SCIM's Workspace",
+      "kind": "personal",
+      "ownerId": "usr_374484b3e06c",
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "settings": {
+        "storageQuotaMb": 250,
+        "domainRestriction": "",
+        "allowGuests": true,
+        "publicSharing": true,
+        "databasePermissions": "workspace-role",
+        "samlEnabled": false,
+        "scimEnabled": false
+      },
+      "members": [
+        {
+          "userId": "usr_374484b3e06c",
+          "role": "owner",
+          "invitedAt": "2026-05-05T06:06:21.590Z",
+          "acceptedAt": "2026-05-05T06:06:21.590Z"
+        }
+      ]
+    },
+    {
+      "id": "ws_7761e51b5b27",
+      "name": "SCIM's Team Space",
+      "kind": "team",
+      "ownerId": "usr_374484b3e06c",
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "settings": {
+        "storageQuotaMb": 500,
+        "domainRestriction": "example.com",
+        "allowGuests": true,
+        "publicSharing": true,
+        "databasePermissions": "workspace-role",
+        "samlEnabled": false,
+        "scimEnabled": true
+      },
+      "members": [
+        {
+          "userId": "usr_374484b3e06c",
+          "role": "owner",
+          "invitedAt": "2026-05-05T06:06:21.590Z",
+          "acceptedAt": "2026-05-05T06:06:21.590Z"
+        },
+        {
+          "userId": "usr_0fcdd9c9f240",
+          "role": "viewer",
+          "invitedAt": "2026-05-05T06:06:21.612Z",
+          "acceptedAt": "2026-05-05T06:06:21.612Z"
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "id": "pg_aab64a6160ca",
+      "workspaceId": "ws_624e65305d73",
+      "parentId": null,
+      "title": "Welcome to NoteFlow",
+      "icon": "🌊",
+      "cover": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+      "slug": "welcome-to-noteflow",
+      "customUrl": "/welcome-to-noteflow",
+      "kind": "page",
+      "locked": false,
+      "fullWidth": true,
+      "smallText": false,
+      "verified": true,
+      "deletedAt": null,
+      "favoriteBy": [],
+      "recentBy": [],
+      "published": true,
+      "seo": {
+        "title": "Welcome to NoteFlow",
+        "description": "Explore the NoteFlow collaborative workspace starter experience."
+      },
+      "share": {
+        "enabled": true,
+        "token": "shr_472af8e24f10",
+        "expiresAt": "",
+        "allowedDomain": ""
+      },
+      "permissions": [],
+      "blocks": [
+        {
+          "id": "blk_acdd1911784d",
+          "type": "heading1",
+          "text": "Welcome to NoteFlow"
+        },
+        {
+          "id": "blk_8f6e68abc26e",
+          "type": "callout",
+          "text": "This demo shows nested pages, templates, comments, backlinks, tasks, search, notifications, publishing, sharing, and export."
+        },
+        {
+          "id": "blk_b5f225c04bc0",
+          "type": "heading2",
+          "text": "Try these features"
+        },
+        {
+          "id": "blk_6f56399025f9",
+          "type": "bullet",
+          "text": "Create a page with the slash menu"
+        },
+        {
+          "id": "blk_b15ac48d915e",
+          "type": "bullet",
+          "text": "Open the search palette with Cmd/Ctrl + K"
+        },
+        {
+          "id": "blk_4991b4e505f6",
+          "type": "bullet",
+          "text": "Upload files and attach them to pages"
+        },
+        {
+          "id": "blk_910b3982aa9b",
+          "type": "heading2",
+          "text": "Backlinks demo"
+        },
+        {
+          "id": "blk_f78d3b8a4cdb",
+          "type": "paragraph",
+          "text": "Mention [[Welcome to NoteFlow]] from another page to create backlinks."
+        }
+      ],
+      "history": [],
+      "commentsEnabled": true,
+      "commentsSummary": {
+        "total": 0,
+        "unresolved": 0
+      },
+      "templateId": null,
+      "createdAt": "2026-05-05T06:06:21.568Z",
+      "updatedAt": "2026-05-05T06:06:21.568Z",
+      "createdBy": "system"
+    },
+    {
+      "id": "pg_9f6d54e95c3f",
+      "workspaceId": "ws_55eaa3560f0b",
+      "parentId": null,
+      "title": "Home",
+      "icon": "🏠",
+      "cover": "",
+      "slug": "home-3e06c",
+      "customUrl": "/home-3e06c",
+      "kind": "page",
+      "locked": false,
+      "fullWidth": false,
+      "smallText": false,
+      "verified": true,
+      "deletedAt": null,
+      "favoriteBy": [
+        "usr_374484b3e06c"
+      ],
+      "recentBy": [
+        {
+          "userId": "usr_374484b3e06c",
+          "visitedAt": "2026-05-05T06:06:21.590Z"
+        }
+      ],
+      "published": false,
+      "seo": {
+        "title": "Home",
+        "description": "Personal home page"
+      },
+      "share": {
+        "enabled": false,
+        "token": "shr_bca52e268d2c",
+        "expiresAt": "",
+        "allowedDomain": ""
+      },
+      "permissions": [],
+      "blocks": [
+        {
+          "id": "blk_9555db7cfa59",
+          "type": "heading1",
+          "text": "Welcome, SCIM Owner"
+        },
+        {
+          "id": "blk_28bf1f4f877e",
+          "type": "paragraph",
+          "text": "Use / to insert blocks, create nested pages, and collaborate in real time."
+        },
+        {
+          "id": "blk_c4ad3cfc0526",
+          "type": "todo",
+          "text": "Create your first project page",
+          "checked": false
+        }
+      ],
+      "history": [],
+      "commentsEnabled": true,
+      "commentsSummary": {
+        "total": 0,
+        "unresolved": 0
+      },
+      "templateId": null,
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "updatedAt": "2026-05-05T06:06:21.590Z",
+      "createdBy": "usr_374484b3e06c"
+    }
+  ],
+  "comments": [],
+  "tasks": [
+    {
+      "id": "tsk_c16c99d97195",
+      "workspaceId": "ws_624e65305d73",
+      "pageId": "pg_aab64a6160ca",
+      "title": "Explore NoteFlow demo workspace",
+      "description": "Review page management, tasks, search, and sharing features.",
+      "assigneeUserId": null,
+      "dueDate": "2026-05-06",
+      "priority": "high",
+      "status": "in-progress",
+      "recurring": "weekly",
+      "reminderAt": "2026-05-05T07:06:21.568Z",
+      "dependencies": [],
+      "subItems": [
+        {
+          "id": "sub_19ef0a499b2b",
+          "text": "Open the Welcome page",
+          "done": true
+        }
+      ],
+      "milestone": false,
+      "progress": 40,
+      "linkedPageId": "pg_aab64a6160ca",
+      "createdAt": "2026-05-05T06:06:21.568Z",
+      "updatedAt": "2026-05-05T06:06:21.568Z"
+    }
+  ],
+  "databases": [
+    {
+      "id": "db_9c67b72beebf",
+      "workspaceId": "ws_624e65305d73",
+      "pageId": "pg_aab64a6160ca",
+      "title": "Roadmap Database",
+      "description": "Track initiatives with multiple workspace views.",
+      "icon": "🗂️",
+      "fields": [
+        {
+          "id": "fld_name",
+          "name": "Name",
+          "type": "title"
+        },
+        {
+          "id": "fld_status",
+          "name": "Status",
+          "type": "status",
+          "options": [
+            "Backlog",
+            "In Progress",
+            "Done"
+          ]
+        },
+        {
+          "id": "fld_owner",
+          "name": "Owner",
+          "type": "person"
+        },
+        {
+          "id": "fld_due",
+          "name": "Due",
+          "type": "date"
+        },
+        {
+          "id": "fld_priority",
+          "name": "Priority",
+          "type": "select",
+          "options": [
+            "low",
+            "medium",
+            "high"
+          ]
+        }
+      ],
+      "views": [
+        {
+          "id": "view_table",
+          "name": "Table",
+          "type": "table"
+        },
+        {
+          "id": "view_board",
+          "name": "Board",
+          "type": "board",
+          "groupBy": "fld_status"
+        },
+        {
+          "id": "view_calendar",
+          "name": "Calendar",
+          "type": "calendar",
+          "dateField": "fld_due"
+        },
+        {
+          "id": "view_timeline",
+          "name": "Timeline",
+          "type": "timeline",
+          "dateField": "fld_due"
+        },
+        {
+          "id": "view_gallery",
+          "name": "Gallery",
+          "type": "gallery"
+        }
+      ],
+      "permissions": [],
+      "createdAt": "2026-05-05T06:06:21.568Z",
+      "updatedAt": "2026-05-05T06:06:21.568Z",
+      "createdBy": "system"
+    },
+    {
+      "id": "db_20ff55e571f9",
+      "workspaceId": "ws_55eaa3560f0b",
+      "pageId": "pg_9f6d54e95c3f",
+      "title": "My Tasks Database",
+      "description": "A starter database for milestones, tasks, and planning views.",
+      "icon": "🗃️",
+      "fields": [
+        {
+          "id": "fld_name",
+          "name": "Name",
+          "type": "title"
+        },
+        {
+          "id": "fld_status",
+          "name": "Status",
+          "type": "status",
+          "options": [
+            "Backlog",
+            "In Progress",
+            "Done"
+          ]
+        },
+        {
+          "id": "fld_owner",
+          "name": "Owner",
+          "type": "person"
+        },
+        {
+          "id": "fld_due",
+          "name": "Due",
+          "type": "date"
+        },
+        {
+          "id": "fld_priority",
+          "name": "Priority",
+          "type": "select",
+          "options": [
+            "low",
+            "medium",
+            "high"
+          ]
+        }
+      ],
+      "views": [
+        {
+          "id": "view_table",
+          "name": "Table",
+          "type": "table"
+        },
+        {
+          "id": "view_board",
+          "name": "Board",
+          "type": "board",
+          "groupBy": "fld_status"
+        },
+        {
+          "id": "view_calendar",
+          "name": "Calendar",
+          "type": "calendar",
+          "dateField": "fld_due"
+        },
+        {
+          "id": "view_timeline",
+          "name": "Timeline",
+          "type": "timeline",
+          "dateField": "fld_due"
+        },
+        {
+          "id": "view_gallery",
+          "name": "Gallery",
+          "type": "gallery"
+        }
+      ],
+      "permissions": [],
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "updatedAt": "2026-05-05T06:06:21.590Z",
+      "createdBy": "usr_374484b3e06c"
+    }
+  ],
+  "databaseRows": [
+    {
+      "id": "row_bd2415ffced1",
+      "databaseId": "db_9c67b72beebf",
+      "workspaceId": "ws_624e65305d73",
+      "pageId": "pg_aab64a6160ca",
+      "values": {
+        "fld_name": "Launch public demo",
+        "fld_status": "In Progress",
+        "fld_owner": "system",
+        "fld_due": "2026-05-08",
+        "fld_priority": "high"
+      },
+      "verified": true,
+      "createdAt": "2026-05-05T06:06:21.568Z",
+      "updatedAt": "2026-05-05T06:06:21.568Z",
+      "createdBy": "system"
+    },
+    {
+      "id": "row_da33d7d7ddcc",
+      "databaseId": "db_20ff55e571f9",
+      "workspaceId": "ws_55eaa3560f0b",
+      "pageId": "pg_9f6d54e95c3f",
+      "values": {
+        "fld_name": "Ship first workspace doc",
+        "fld_status": "Backlog",
+        "fld_owner": "usr_374484b3e06c",
+        "fld_due": "2026-05-12",
+        "fld_priority": "medium"
+      },
+      "verified": false,
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "updatedAt": "2026-05-05T06:06:21.590Z",
+      "createdBy": "usr_374484b3e06c"
+    }
+  ],
+  "files": [
+    {
+      "id": "fil_5edc2416b66a",
+      "workspaceId": "ws_624e65305d73",
+      "pageId": "pg_aab64a6160ca",
+      "name": "noteflow-demo.txt",
+      "type": "text/plain",
+      "size": 28,
+      "storagePath": "",
+      "preview": "NoteFlow demo attachment file",
+      "versions": [],
+      "createdAt": "2026-05-05T06:06:21.568Z",
+      "updatedAt": "2026-05-05T06:06:21.568Z",
+      "uploadedBy": "system"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "ntf_7fbf291e31b4",
+      "read": false,
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "delivery": [
+        "in-app"
+      ],
+      "userId": "usr_374484b3e06c",
+      "type": "welcome",
+      "title": "Welcome to NoteFlow",
+      "body": "Your workspaces are ready. Start with Home or create a page from a template.",
+      "category": "workspace",
+      "batchKey": "welcome"
+    }
+  ],
+  "invitations": [],
+  "activity": [
+    {
+      "id": "act_d6c6609d9131",
+      "createdAt": "2026-05-05T06:06:21.612Z",
+      "actorUserId": "usr_374484b3e06c",
+      "workspaceId": "ws_7761e51b5b27",
+      "kind": "workspace.scim-provisioned",
+      "message": "Provisioned provisioned@example.com via SCIM"
+    },
+    {
+      "id": "act_d175c9eb60a8",
+      "createdAt": "2026-05-05T06:06:21.592Z",
+      "actorUserId": "usr_374484b3e06c",
+      "workspaceId": "ws_7761e51b5b27",
+      "kind": "workspace.settings.updated",
+      "message": "Updated security and sharing settings for SCIM's Team Space"
+    },
+    {
+      "id": "act_4908dbaba848",
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "actorUserId": "usr_374484b3e06c",
+      "kind": "workspace.created",
+      "message": "Created initial workspaces",
+      "workspaceId": "ws_55eaa3560f0b"
+    }
+  ],
+  "templates": [
+    {
+      "id": "tpl_project_brief",
+      "name": "Project Brief",
+      "icon": "🚀",
+      "description": "Goal, scope, milestones, and linked tasks",
+      "blocks": [
+        {
+          "id": "blk_31897dda77f8",
+          "type": "heading1",
+          "text": "Project Brief"
+        },
+        {
+          "id": "blk_3268755b8c04",
+          "type": "callout",
+          "text": "Summarize the mission, owner, and due date."
+        },
+        {
+          "id": "blk_01fe4d119503",
+          "type": "heading2",
+          "text": "Goals"
+        },
+        {
+          "id": "blk_1138c4a6ce4e",
+          "type": "bullet",
+          "text": "Primary outcome"
+        },
+        {
+          "id": "blk_993548e7c356",
+          "type": "bullet",
+          "text": "Success metric"
+        },
+        {
+          "id": "blk_7ed676108cf2",
+          "type": "heading2",
+          "text": "Milestones"
+        },
+        {
+          "id": "blk_67c06d75ee51",
+          "type": "todo",
+          "text": "Define scope",
+          "checked": false
+        }
+      ]
+    },
+    {
+      "id": "tpl_meeting_notes",
+      "name": "Meeting Notes",
+      "icon": "📝",
+      "description": "Agenda, notes, decisions, and follow-ups",
+      "blocks": [
+        {
+          "id": "blk_058478507eb1",
+          "type": "heading1",
+          "text": "Meeting Notes"
+        },
+        {
+          "id": "blk_24dfd9856733",
+          "type": "heading2",
+          "text": "Agenda"
+        },
+        {
+          "id": "blk_de5b9c557709",
+          "type": "bullet",
+          "text": "Topic 1"
+        },
+        {
+          "id": "blk_6d33c7a73e15",
+          "type": "heading2",
+          "text": "Decisions"
+        },
+        {
+          "id": "blk_71a3f3263996",
+          "type": "quote",
+          "text": "Record key decisions here."
+        }
+      ]
+    },
+    {
+      "id": "tpl_task_hub",
+      "name": "Task Hub",
+      "icon": "✅",
+      "description": "Work tracker with status, priority, and owners",
+      "blocks": [
+        {
+          "id": "blk_055fb25c5c0a",
+          "type": "heading1",
+          "text": "Task Hub"
+        },
+        {
+          "id": "blk_b059b673ee33",
+          "type": "paragraph",
+          "text": "Use the Tasks panel to manage project execution."
+        },
+        {
+          "id": "blk_96f4f0d7328a",
+          "type": "bookmark",
+          "text": "Link related specs or docs here.",
+          "url": "https://example.com"
+        }
+      ]
+    }
+  ],
+  "recentSearches": [],
+  "emailOutbox": [
+    {
+      "id": "mail_873444c7a050",
+      "to": "scim-owner@example.com",
+      "subject": "Welcome to NoteFlow",
+      "body": "Your workspaces are ready. Start with Home or create a page from a template.",
+      "createdAt": "2026-05-05T06:06:21.590Z",
+      "digestKey": "welcome",
+      "type": "welcome"
+    }
+  ],
+  "magicLinks": []
+}
