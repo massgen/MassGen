@@ -1,0 +1,80 @@
+# MassGen Configuration: Parallel Web Search
+# This configuration demonstrates Parallel's hosted Search MCP server for
+# LLM-optimized web search and URL extraction.
+#
+# Prerequisites:
+#   - None required for free anonymous use (light/exploratory traffic).
+#   - For higher rate limits or production use:
+#       1. Get an API key at https://platform.parallel.ai
+#       2. Set PARALLEL_API_KEY in your .env file
+#       3. Uncomment the `headers` block below
+#
+# Usage:
+#   uv run massgen --config @examples/tools/web-search/parallel_search_example.yaml "Research the latest advances in multi-agent AI systems"
+#
+# Features:
+#   - web_search: pass an `objective` (natural-language goal) plus 2-3 short
+#     keyword `search_queries`; returns ranked URLs with LLM-optimized
+#     excerpts in one call (replaces multi-step keyword search loops)
+#   - web_fetch: pass a list of URLs (and optional `objective`); returns the
+#     most relevant markdown content from each page, bounded for token
+#     efficiency
+#   - Excerpts are pre-ranked and compressed for reasoning utility, so they
+#     can be fed directly into the model context with minimal post-processing
+
+agents:
+  - id: "parallel_research_agent"
+    backend:
+      type: "claude_code"
+      model: "claude-sonnet-4-6"
+      cwd: "workspace"
+      mcp_servers:
+        - name: "parallel_search"
+          type: "streamable-http"
+          url: "https://search.parallel.ai/mcp"
+          # Uncomment to enable higher rate limits with a Parallel API key:
+          # headers:
+          #   Authorization: "Bearer ${PARALLEL_API_KEY}"
+          security:
+            level: "moderate"
+
+    system_message: |
+      You are a research assistant with access to Parallel Web Systems'
+      LLM-optimized search.
+
+      The Parallel Search MCP exposes two tools:
+
+      - web_search(objective, search_queries[, ...]):
+          * `objective` is a natural-language description of what you're
+            trying to answer (max 5000 chars). Include enough context to
+            make the search self-contained.
+          * `search_queries` is a list of 2-3 short keyword queries, each
+            3-6 words. Vary entity names, synonyms, and angles — keep them
+            diverse. Do NOT write sentences or use `site:` operators here.
+            Maximum of 5 queries per call.
+          * Optional `mode`: "basic" for low-latency lookups, "advanced"
+            (default) for higher-quality multi-step retrieval on harder
+            questions.
+          * Returns ranked URLs with markdown excerpts that are already
+            relevance-ranked and compressed for direct LLM consumption.
+
+      - web_fetch(urls[, objective]):
+          * Pass an array of URLs (up to 20) and an optional `objective` to
+            focus the excerpts.
+          * Returns markdown content (or full page bodies if requested) for
+            each URL.
+
+      Best practices:
+      - Provide BOTH `objective` and `search_queries` for best results — one
+        well-formed call typically replaces several keyword searches.
+      - Use web_search for discovery; use web_fetch only when you already
+        know the URL or after a search step has surfaced one.
+      - Cite every claim with the source URL returned by the API; never
+        invent URLs.
+
+      Provide comprehensive, well-sourced responses based on the search
+      results.
+
+ui:
+  display_type: "textual_terminal"
+  logging_enabled: true
