@@ -131,13 +131,21 @@ def get_server_config(server_name: str, apply_api_key_logic: bool = True) -> dic
     # Deep copy to avoid modifying the registry
     config = deepcopy(MCP_SERVER_REGISTRY[server_name])
 
-    # Handle optional API key for Context7
-    if apply_api_key_logic and server_name == "context7":
+    if apply_api_key_logic:
         optional_key_var = config.get("optional_api_key_env_var")
         if optional_key_var and is_api_key_available(optional_key_var):
-            # Add --api-key argument with the API key value
             api_key_value = os.environ.get(optional_key_var)
-            config["args"].extend(["--api-key", api_key_value])
+
+            # Server-specific injection of the optional API key.
+            if server_name == "context7":
+                # Context7 takes the key as a CLI flag on its stdio command.
+                config["args"].extend(["--api-key", api_key_value])
+            elif config.get("type") == "streamable-http":
+                # Hosted HTTP MCPs take the key via the Authorization
+                # Bearer header. Don't overwrite a header the registry
+                # entry already declared.
+                headers = config.setdefault("headers", {})
+                headers.setdefault("Authorization", f"Bearer {api_key_value}")
 
     return config
 
