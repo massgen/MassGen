@@ -75,10 +75,10 @@ MCP_SERVER_REGISTRY: dict[str, dict[str, Any]] = {
         "type": "streamable-http",
         "url": "https://search.parallel.ai/mcp",
         "description": (
-            "Parallel's hosted Search MCP server. Provides web_search "
-            "(objective + 2-3 keyword search_queries -> ranked excerpts) "
-            "and web_fetch (URL -> markdown excerpts) tools optimized for "
-            "LLM consumption. Works without an API key for free anonymous "
+            "Parallel's hosted Search MCP server. Provides LLM-optimized "
+            "web search and URL extraction tools that return ranked, "
+            "compressed markdown excerpts suitable for direct model "
+            "consumption. Works without an API key for free anonymous "
             "use; set PARALLEL_API_KEY for higher rate limits."
         ),
         "requires_api_key": False,
