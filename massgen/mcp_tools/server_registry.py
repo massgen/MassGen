@@ -74,20 +74,25 @@ MCP_SERVER_REGISTRY: dict[str, dict[str, Any]] = {
         "name": "parallel_search",
         "type": "streamable-http",
         "url": "https://search.parallel.ai/mcp",
+        "headers": {
+            "Authorization": "Bearer ${PARALLEL_API_KEY}",
+        },
         "description": (
             "Parallel's hosted Search MCP server. Provides LLM-optimized "
             "web search and URL extraction tools that return ranked, "
             "compressed markdown excerpts suitable for direct model "
-            "consumption. Works without an API key for free anonymous "
-            "use; set PARALLEL_API_KEY for higher rate limits."
+            "consumption."
         ),
-        "requires_api_key": False,
-        "optional_api_key_env_var": "PARALLEL_API_KEY",
+        "requires_api_key": True,
+        "api_key_env_var": "PARALLEL_API_KEY",
         "notes": (
-            "Free anonymous access for light/exploratory use. For higher "
-            "rate limits in production, get a key at https://platform.parallel.ai "
-            "and add 'headers: {Authorization: \"Bearer ${PARALLEL_API_KEY}\"}' "
-            "to your mcp_servers entry. Docs: "
+            "Get an API key at https://platform.parallel.ai. The "
+            "Authorization header is substituted from PARALLEL_API_KEY at "
+            "MCP connection time (mirrors how stdio servers consume env). "
+            "The endpoint search.parallel.ai/mcp also accepts unauthenticated "
+            "requests at lower rate limits — if you want anonymous use, add "
+            "the server manually to your mcp_servers config without the "
+            "headers block (see parallel_search_example.yaml). Docs: "
             "https://docs.parallel.ai/integrations/mcp/search-mcp"
         ),
         "security": {
@@ -131,21 +136,13 @@ def get_server_config(server_name: str, apply_api_key_logic: bool = True) -> dic
     # Deep copy to avoid modifying the registry
     config = deepcopy(MCP_SERVER_REGISTRY[server_name])
 
-    if apply_api_key_logic:
+    # Handle optional API key for Context7
+    if apply_api_key_logic and server_name == "context7":
         optional_key_var = config.get("optional_api_key_env_var")
         if optional_key_var and is_api_key_available(optional_key_var):
+            # Add --api-key argument with the API key value
             api_key_value = os.environ.get(optional_key_var)
-
-            # Server-specific injection of the optional API key.
-            if server_name == "context7":
-                # Context7 takes the key as a CLI flag on its stdio command.
-                config["args"].extend(["--api-key", api_key_value])
-            elif config.get("type") == "streamable-http":
-                # Hosted HTTP MCPs take the key via the Authorization
-                # Bearer header. Don't overwrite a header the registry
-                # entry already declared.
-                headers = config.setdefault("headers", {})
-                headers.setdefault("Authorization", f"Bearer {api_key_value}")
+            config["args"].extend(["--api-key", api_key_value])
 
     return config
 
