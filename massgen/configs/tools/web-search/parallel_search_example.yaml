@@ -25,14 +25,18 @@
 agents:
   - id: "parallel_research_agent"
     backend:
-      type: "claude_code"
-      model: "claude-sonnet-4-6"
-      cwd: "workspace"
+      type: "claude"
+      model: "claude-sonnet-4-20250514"
       mcp_servers:
         - name: "parallel_search"
           type: "streamable-http"
           url: "https://search.parallel.ai/mcp"
-          # Uncomment to enable higher rate limits with a Parallel API key:
+          # Uncomment to enable higher rate limits with a Parallel API key.
+          # NOTE: this `headers` block is the generic massgen MCP transport
+          # shape (matches the streamable_http_test configs). When using the
+          # `claude_code` backend, the equivalent field is a top-level
+          # `authorization: "Bearer ${PARALLEL_API_KEY}"` instead (see
+          # massgen/backend/docs/MCP_IMPLEMENTATION_CLAUDE_BACKEND.md).
           # headers:
           #   Authorization: "Bearer ${PARALLEL_API_KEY}"
           security:
