@@ -634,3 +634,35 @@ class TraceAnalyzerRunner:
             parent_agent_id,
             round_number,
         )
+
+    @staticmethod
+    def split_combined_spawn_result(
+        combined: dict,
+        evaluator_subagent_id: str,
+        trace_subagent_id: str,
+    ) -> tuple[dict, dict]:
+        """Split a combined spawn result into separate evaluator and trace dicts.
+
+        When round_evaluator and execution_trace_analyzer are spawned in a
+        single ``spawn_subagents`` call the result payload contains entries
+        for both. Partition them by ``subagent_id`` so downstream processing
+        can handle each independently.
+        """
+        results = combined.get("results") or []
+        eval_results: list[dict] = []
+        trace_results: list[dict] = []
+        for entry in results:
+            sid = entry.get("subagent_id", "")
+            if sid == trace_subagent_id:
+                trace_results.append(entry)
+            else:
+                eval_results.append(entry)
+
+        base = {k: v for k, v in combined.items() if k != "results"}
+        eval_dict = {**base, "results": eval_results}
+        trace_dict = {
+            **base,
+            "success": bool(trace_results),
+            "results": trace_results,
+        }
+        return eval_dict, trace_dict

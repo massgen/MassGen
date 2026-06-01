@@ -5718,37 +5718,11 @@ class Orchestrator(ChatAgent):
         evaluator_subagent_id: str,
         trace_subagent_id: str,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Split a combined spawn result into separate evaluator and trace dicts.
+        """Delegates to TraceAnalyzerRunner.split_combined_spawn_result (@staticmethod)."""
+        from .orchestrator_collaborators import TraceAnalyzerRunner
 
-        When the round_evaluator and execution_trace_analyzer are spawned in a
-        single ``spawn_subagents`` call the result payload contains entries for
-        both.  This helper partitions them by matching ``subagent_id`` so that
-        downstream processing can handle each independently.
+        return TraceAnalyzerRunner.split_combined_spawn_result(combined, evaluator_subagent_id, trace_subagent_id)
 
-        Returns:
-            (evaluator_result_dict, trace_result_dict) — each shaped like a
-            top-level spawn result with ``success``, ``results``, etc.
-        """
-        results = combined.get("results") or []
-        eval_results: list[dict[str, Any]] = []
-        trace_results: list[dict[str, Any]] = []
-        for entry in results:
-            sid = entry.get("subagent_id", "")
-            if sid == trace_subagent_id:
-                trace_results.append(entry)
-            else:
-                eval_results.append(entry)
-
-        base = {k: v for k, v in combined.items() if k != "results"}
-        eval_dict = {**base, "results": eval_results}
-        trace_dict = {
-            **base,
-            "success": bool(trace_results),
-            "results": trace_results,
-        }
-        return eval_dict, trace_dict
-
-    @staticmethod
     def _format_trace_analyzer_for_memory_static(
         trace_result: "SubagentResult",
         round_number: int,
