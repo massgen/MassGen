@@ -83,6 +83,7 @@ agents:
 orchestrator:
   snapshot_storage: "snapshots"
   agent_temporary_workspace: "temp_workspaces"
+  max_new_answers_per_agent: 3
 
 ui:
   display_type: "textual_terminal"
