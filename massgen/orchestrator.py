@@ -74,6 +74,7 @@ from .memory import ConversationMemory, PersistentMemoryBase
 from .message_templates import MessageTemplates
 from .orchestrator_collaborators import (
     ActiveCoordinationCleanup,
+    AgentOrchestrationSetup,
     AnswerLimitGate,
     AnswerTextNormalizer,
     BootstrapCriteriaEngine,
@@ -240,6 +241,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _skills_validator(self) -> SkillsConfigValidator:
         return SkillsConfigValidator(self)
+
+    @functools.cached_property
+    def _agent_orchestration_setup(self) -> AgentOrchestrationSetup:
+        return AgentOrchestrationSetup(self)
 
     @functools.cached_property
     def _rate_limit_controller(self) -> RateLimitController:
@@ -847,86 +852,13 @@ class Orchestrator(ChatAgent):
                 logger.warning(f"[Orchestrator] Could not create subagent logs directory: {e}")
 
         def _setup_agent_orchestration(agent_id: str, agent) -> None:
-            """Setup orchestration paths for a single agent (can run in parallel)."""
-            if not agent.backend.filesystem_manager:
-                return
-
-            # Add Docker mount for subagent logs directory if needed
-            if self._subagent_logs_dir is not None:
-                fm = agent.backend.filesystem_manager
-                if hasattr(fm, "docker_manager") and fm.docker_manager is not None:
-                    resolved = str(self._subagent_logs_dir.resolve())
-                    fm.docker_manager.additional_mounts[resolved] = {
-                        "bind": resolved,
-                        "mode": "rw",
-                    }
-                    logger.info(
-                        f"[Orchestrator] Added Docker mount for subagent logs: {resolved}",
-                    )
-                    # Also mount delegation directory for file-based container-to-host launch
-                    if self._delegation_dir is not None:
-                        del_resolved = str(self._delegation_dir.resolve())
-                        fm.docker_manager.additional_mounts[del_resolved] = {
-                            "bind": del_resolved,
-                            "mode": "rw",
-                        }
-                        logger.info(
-                            f"[Orchestrator] Added Docker mount for delegation dir: {del_resolved}",
-                        )
-
-            workspace_token = self.coordination_tracker.get_path_token(agent_id)
-            agent.backend.filesystem_manager.setup_orchestration_paths(
-                agent_id=agent_id,
-                snapshot_storage=self._snapshot_storage,
-                agent_temporary_workspace=self._agent_temporary_workspace,
-                skills_directory=skills_directory,
-                massgen_skills=massgen_skills,
-                load_previous_session_skills=load_previous_session_skills,
-                workspace_token=workspace_token,
-            )
-            # Setup workspace directories for massgen skills
-            if hasattr(self.config, "coordination_config") and hasattr(
-                self.config.coordination_config,
-                "massgen_skills",
-            ):
-                if self.config.coordination_config.massgen_skills:
-                    agent.backend.filesystem_manager.setup_massgen_skill_directories(
-                        massgen_skills=self.config.coordination_config.massgen_skills,
-                    )
-            # Setup memory directories if memory filesystem mode is enabled
-            if hasattr(self.config, "coordination_config") and hasattr(
-                self.config.coordination_config,
-                "enable_memory_filesystem_mode",
-            ):
-                if self.config.coordination_config.enable_memory_filesystem_mode:
-                    agent.backend.filesystem_manager.setup_memory_directories()
-
-                    # Restore memories from previous turn if available
-                    if self._previous_turns:
-                        previous_turn = self._previous_turns[-1]  # Get most recent turn
-                        if "log_dir" in previous_turn:
-                            from pathlib import Path as PathlibPath
-
-                            prev_log_dir = PathlibPath(previous_turn["log_dir"])
-                            # Look for final workspace from previous turn
-                            prev_final_workspace = prev_log_dir / "final"
-                            if prev_final_workspace.exists():
-                                # Find the winning agent's workspace from previous turn
-                                for agent_dir in prev_final_workspace.iterdir():
-                                    if agent_dir.is_dir():
-                                        prev_workspace = agent_dir / "workspace"
-                                        if prev_workspace.exists():
-                                            logger.info(
-                                                f"[Orchestrator] Restoring memories from previous turn: {prev_workspace}",
-                                            )
-                                            agent.backend.filesystem_manager.restore_memories_from_previous_turn(
-                                                prev_workspace,
-                                            )
-                                            break  # Only restore from one agent (the winner)
-
-            # Update MCP config with agent_id for Docker mode (must be after setup_orchestration_paths)
-            agent.backend.filesystem_manager.update_backend_mcp_config(
-                agent.backend.config,
+            """Delegates to AgentOrchestrationSetup collaborator."""
+            self._agent_orchestration_setup.setup_agent_orchestration(
+                agent_id,
+                agent,
+                skills_directory,
+                massgen_skills,
+                load_previous_session_skills,
             )
 
         # Setup orchestration paths for all agents in parallel (Docker container creation is I/O bound)
@@ -1251,31 +1183,8 @@ class Orchestrator(ChatAgent):
         return await self._checkpoint_coordinator.activate_checkpoint(signal)
 
     def ensure_workspace_symlinks(self) -> None:
-        """Ensure per-agent workspace symlinks exist in the current attempt log directory.
-
-        In checkpoint solo mode, only creates symlinks for active agents
-        (main agent in solo, all agents during checkpoint).
-        """
-        try:
-            log_dir = get_log_session_dir()
-            if log_dir:
-                for agent_id, agent in self.agents.items():
-                    # Skip inactive agents (e.g., non-main agents in solo mode)
-                    if not self._is_agent_active_in_current_mode(agent_id):
-                        continue
-                    if not agent.backend.filesystem_manager or not agent.backend.filesystem_manager.cwd:
-                        continue
-                    agent_log_dir = log_dir / agent_id
-                    agent_log_dir.mkdir(parents=True, exist_ok=True)
-                    workspace_link = agent_log_dir / "workspace"
-                    if workspace_link.exists():
-                        continue
-                    workspace_link.symlink_to(Path(agent.backend.filesystem_manager.cwd).resolve())
-                    logger.info(
-                        f"[Orchestrator] Symlinked {workspace_link} → {agent.backend.filesystem_manager.cwd}",
-                    )
-        except Exception as e:
-            logger.debug(f"[Orchestrator] Failed to create workspace symlinks: {e}")
+        """Ensure per-agent workspace symlinks (delegates to AgentOrchestrationSetup)."""
+        self._agent_orchestration_setup.ensure_workspace_symlinks()
 
     def _init_nlip_routing(self) -> None:
         """Initialize NLIP routing for all agents (delegates to NlipRoutingInitializer)."""

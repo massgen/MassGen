@@ -7,6 +7,7 @@ existing call site (internal and external) continues to work unchanged.
 """
 
 from .active_coordination_cleanup import ActiveCoordinationCleanup
+from .agent_orchestration_setup import AgentOrchestrationSetup
 from .answer_limit_gate import AnswerLimitGate
 from .answer_text_normalizer import AnswerTextNormalizer
 from .bootstrap_criteria_engine import BootstrapCriteriaEngine
@@ -51,6 +52,7 @@ from .workspace_modal_presenter import WorkspaceModalPresenter
 
 __all__ = [
     "ActiveCoordinationCleanup",
+    "AgentOrchestrationSetup",
     "AnswerLimitGate",
     "ChangedocCoordinator",
     "ChecklistGateManager",
