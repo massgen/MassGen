@@ -16,6 +16,7 @@ from .checkpoint_coordinator import CheckpointCoordinator
 from .context_path_write_tracker import ContextPathWriteTracker
 from .criteria_evolution_runner import CriteriaEvolutionRunner
 from .dspy_paraphrase_coordinator import DspyParaphraseCoordinator
+from .evaluation_criteria_generator import EvaluationCriteriaGeneratorCollaborator
 from .evaluator_result_extractor import EvaluatorResultExtractor
 from .fairness_gate import FairnessGate
 from .final_presentation_runner import FinalPresentationRunner
@@ -80,6 +81,7 @@ __all__ = [
     "MidStreamInjectionHookInstaller",
     "TraceAnalyzerRunner",
     "CriteriaEvolutionRunner",
+    "EvaluationCriteriaGeneratorCollaborator",
     "EvaluatorResultExtractor",
     "QuestionIrreversibilityAnalyzer",
 ]

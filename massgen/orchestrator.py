@@ -84,6 +84,7 @@ from .orchestrator_collaborators import (
     ContextPathWriteTracker,
     CriteriaEvolutionRunner,
     DspyParaphraseCoordinator,
+    EvaluationCriteriaGeneratorCollaborator,
     EvaluatorResultExtractor,
     FairnessGate,
     FinalPresentationRunner,
@@ -372,6 +373,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _persona_injector(self) -> PersonaInjector:
         return PersonaInjector(self)
+
+    @functools.cached_property
+    def _evaluation_criteria_generator_collaborator(self) -> EvaluationCriteriaGeneratorCollaborator:
+        return EvaluationCriteriaGeneratorCollaborator(self)
 
     @functools.cached_property
     def _previous_log_restorer(self) -> PreviousLogRestorer:
@@ -1496,105 +1501,8 @@ class Orchestrator(ChatAgent):
         return await self._persona_injector.generate_and_inject_personas()
 
     async def _generate_and_inject_evaluation_criteria(self) -> None:
-        """Generate task-specific evaluation criteria via a pre-collab subagent run."""
-        if not hasattr(self.config, "coordination_config"):
-            return
-        if not hasattr(self.config.coordination_config, "evaluation_criteria_generator"):
-            return
-        if not self.config.coordination_config.evaluation_criteria_generator.enabled:
-            logger.info("[Orchestrator] Evaluation criteria generation disabled in config")
-            return
-        if self._evaluation_criteria_generated:
-            logger.info("[Orchestrator] Evaluation criteria already generated, skipping")
-            return
-
-        logger.info("[Orchestrator] Generating evaluation criteria via subagent")
-
-        display = getattr(self.coordination_ui, "display", None) if self.coordination_ui else None
-        anchor_agent = next(iter(self.agents.keys()), None)
-        call_id = "criteria_generation_criteria_generation"
-
-        try:
-            from .evaluation_criteria_generator import EvaluationCriteriaGenerator
-
-            ecg = self.config.coordination_config.evaluation_criteria_generator
-            generator = EvaluationCriteriaGenerator()
-
-            has_changedoc = getattr(
-                self.config.coordination_config,
-                "enable_changedoc",
-                False,
-            )
-
-            criteria = await generator.generate_criteria_via_subagent(
-                task=self.current_task or "",
-                agent_configs=self._build_parent_agent_configs(),
-                has_changedoc=has_changedoc,
-                parent_workspace=self._get_parent_workspace("massgen_criteria_"),
-                log_directory=self._get_log_directory(),
-                orchestrator_id=self.orchestrator_id,
-                min_criteria=ecg.min_criteria,
-                max_criteria=ecg.max_criteria,
-                on_subagent_started=self._make_precollab_started_callback(
-                    anchor_agent,
-                    call_id,
-                    display,
-                ),
-                voting_sensitivity=getattr(self.config, "voting_sensitivity", None),
-                voting_threshold=self._get_pre_collab_voting_threshold(),
-                has_planning_spec_context=bool(self._plan_session_id),
-                fast_iteration_mode=self._get_fast_iteration_mode(),
-            )
-
-            self._generated_evaluation_criteria = criteria
-            self._evaluation_criteria_generated = True
-
-            # Re-initialize checklist tool now that generated criteria are available.
-            self._init_checklist_tool()
-            self._save_evaluation_criteria_to_log(criteria)
-
-            source = generator.last_generation_source
-            logger.info(
-                f"[Orchestrator] Generated {len(criteria)} evaluation criteria (source: {source})",
-            )
-
-            crit_preview = " | ".join(f"{c.id}: {c.text[:60]}..." if len(c.text) > 60 else f"{c.id}: {c.text}" for c in criteria[:3])
-            if source == "subagent":
-                self._notify_precollab_completed(
-                    anchor_agent,
-                    "criteria_generation",
-                    call_id,
-                    display,
-                    answer_preview=crit_preview or f"{len(criteria)} criteria generated.",
-                )
-            else:
-                # Loud signal: a fallback means domain-specific generation did NOT
-                # succeed and the run is using GENERIC criteria, which flattens the
-                # evaluation gradient. Make this unmistakable rather than neutral.
-                logger.warning(
-                    "[Orchestrator] Evaluation criteria FELL BACK to %d generic defaults " "(domain-specific generation did not produce usable criteria; " "output quality may suffer).",
-                    len(criteria),
-                )
-                self._notify_precollab_completed(
-                    anchor_agent,
-                    "criteria_generation",
-                    call_id,
-                    display,
-                    answer_preview=f"⚠ Generation failed — using {len(criteria)} GENERIC fallback criteria (quality may suffer).",
-                )
-
-        except Exception as e:
-            logger.error(f"[Orchestrator] Failed to generate evaluation criteria: {e}")
-            logger.warning("[Orchestrator] Continuing without criteria generation")
-            self._evaluation_criteria_generated = True  # Don't retry on failure
-            self._notify_precollab_completed(
-                anchor_agent,
-                "criteria_generation",
-                call_id,
-                display,
-                status="failed",
-                error=str(e),
-            )
+        """Delegates to evaluation_criteria_generator collaborator."""
+        return await self._evaluation_criteria_generator_collaborator.generate_and_inject_evaluation_criteria()
 
     async def _improve_and_inject_prompt(self) -> None:
         """Improve the task prompt via a pre-collab subagent consensus run."""
@@ -1674,18 +1582,8 @@ class Orchestrator(ChatAgent):
             )
 
     def _save_evaluation_criteria_to_log(self, criteria: list) -> None:
-        """Save generated evaluation criteria to a YAML file in the log directory."""
-        try:
-            import yaml
-
-            log_dir = get_log_session_dir()
-            criteria_file = log_dir / "generated_evaluation_criteria.yaml"
-            criteria_data = [{"id": c.id, "text": c.text, "category": c.category, **({"verify_by": c.verify_by} if c.verify_by else {})} for c in criteria]
-            with open(criteria_file, "w") as f:
-                yaml.dump(criteria_data, f, default_flow_style=False)
-            logger.info(f"[Orchestrator] Saved evaluation criteria to {criteria_file}")
-        except Exception as e:
-            logger.debug(f"[Orchestrator] Failed to save evaluation criteria to log: {e}")
+        """Delegates to evaluation_criteria_generator collaborator."""
+        return self._evaluation_criteria_generator_collaborator.save_evaluation_criteria_to_log(criteria)
 
     @staticmethod
     def _has_peer_answers(
@@ -1710,12 +1608,8 @@ class Orchestrator(ChatAgent):
         return self._persona_injector.get_generated_personas()
 
     def get_generated_evaluation_criteria(self) -> list | None:
-        """Get the generated evaluation criteria for persistence across turns.
-
-        Returns:
-            List of GeneratedCriterion objects, or None if not generated.
-        """
-        return self._generated_evaluation_criteria
+        """Delegates to evaluation_criteria_generator collaborator."""
+        return self._evaluation_criteria_generator_collaborator.get_generated_evaluation_criteria()
 
     def _save_personas_to_log(self, personas: dict[str, Any]) -> None:
         """Delegates to persona_injector; see collaborator for full docs."""
