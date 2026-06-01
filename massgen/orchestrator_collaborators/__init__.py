@@ -32,6 +32,7 @@ from .persona_injector import PersonaInjector
 from .planning_tool_injector import PlanningToolInjector
 from .post_evaluation_runner import PostEvaluationRunner
 from .previous_log_restorer import PreviousLogRestorer
+from .prompt_improver_collaborator import PromptImproverCollaborator
 from .question_irreversibility_analyzer import QuestionIrreversibilityAnalyzer
 from .rate_limit_controller import RateLimitController
 from .round_evaluator_gate_config import RoundEvaluatorGateConfig
@@ -88,4 +89,5 @@ __all__ = [
     "EvaluatorResultExtractor",
     "QuestionIrreversibilityAnalyzer",
     "RateLimitController",
+    "PromptImproverCollaborator",
 ]

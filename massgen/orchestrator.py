@@ -99,6 +99,7 @@ from .orchestrator_collaborators import (
     PlanningToolInjector,
     PostEvaluationRunner,
     PreviousLogRestorer,
+    PromptImproverCollaborator,
     QuestionIrreversibilityAnalyzer,
     RateLimitController,
     RoundEvaluatorGateConfig,
@@ -386,6 +387,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _previous_log_restorer(self) -> PreviousLogRestorer:
         return PreviousLogRestorer(self)
+
+    @functools.cached_property
+    def _prompt_improver_collaborator(self) -> PromptImproverCollaborator:
+        return PromptImproverCollaborator(self)
 
     @functools.cached_property
     def _question_irreversibility_analyzer(self) -> QuestionIrreversibilityAnalyzer:
@@ -1514,81 +1519,8 @@ class Orchestrator(ChatAgent):
         return await self._evaluation_criteria_generator_collaborator.generate_and_inject_evaluation_criteria()
 
     async def _improve_and_inject_prompt(self) -> None:
-        """Improve the task prompt via a pre-collab subagent consensus run."""
-        if not hasattr(self.config, "coordination_config"):
-            return
-        if not hasattr(self.config.coordination_config, "prompt_improver"):
-            return
-        if not self.config.coordination_config.prompt_improver.enabled:
-            return
-        if self._prompt_improved:
-            logger.info("[Orchestrator] Prompt already improved, skipping")
-            return
-
-        logger.info("[Orchestrator] Improving prompt via subagent")
-
-        display = getattr(self.coordination_ui, "display", None) if self.coordination_ui else None
-        anchor_agent = next(iter(self.agents.keys()), None)
-        call_id = "prompt_improvement_prompt_improvement"
-
-        try:
-            from .prompt_improver import PromptImprover
-
-            improver = PromptImprover()
-
-            improved = await improver.improve_prompt_via_subagent(
-                task=self.current_task or "",
-                agent_configs=self._build_parent_agent_configs(),
-                parent_workspace=self._get_parent_workspace("massgen_prompt_"),
-                log_directory=self._get_log_directory(),
-                orchestrator_id=self.orchestrator_id,
-                on_subagent_started=self._make_precollab_started_callback(
-                    anchor_agent,
-                    call_id,
-                    display,
-                ),
-                voting_sensitivity=getattr(self.config, "voting_sensitivity", None),
-                voting_threshold=self._get_pre_collab_voting_threshold(),
-                fast_iteration_mode=self._get_fast_iteration_mode(),
-            )
-
-            self._prompt_improved = True
-
-            if improved:
-                self.current_task = improved
-                logger.info(
-                    f"[Orchestrator] Prompt improved ({len(improved)} chars)",
-                )
-                if display and hasattr(display, "notify_prompt_improved"):
-                    try:
-                        display.notify_prompt_improved(improved)
-                    except Exception:
-                        pass
-            else:
-                logger.info(
-                    "[Orchestrator] Prompt improvement returned no result, keeping original",
-                )
-
-            self._notify_precollab_completed(
-                anchor_agent,
-                "prompt_improvement",
-                call_id,
-                display,
-                answer_preview=(f"Improved prompt ({len(improved)} chars)" if improved else "Using original prompt"),
-            )
-
-        except Exception as e:
-            logger.error(f"[Orchestrator] Failed to improve prompt: {e}")
-            logger.warning("[Orchestrator] Continuing without prompt improvement")
-            self._prompt_improved = True
-            self._notify_precollab_completed(
-                anchor_agent,
-                "prompt_improvement",
-                call_id,
-                display,
-                status="failed",
-                error=str(e),
-            )
+        """Delegates to prompt_improver_collaborator; see collaborator for full docs."""
+        await self._prompt_improver_collaborator.improve_and_inject_prompt()
 
     def _save_evaluation_criteria_to_log(self, criteria: list) -> None:
         """Delegates to evaluation_criteria_generator collaborator."""
