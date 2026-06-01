@@ -5861,62 +5861,24 @@ class Orchestrator(ChatAgent):
         return self._criteria_evolution_runner.should_evolve_criteria(current_answers=current_answers)
 
     def _collect_evolution_input_data(self) -> dict[str, Any]:
-        """Gather all agents' execution trace paths and checklist histories."""
-        histories: dict[str, list[dict[str, Any]]] = {}
-        trace_paths: dict[str, Path | None] = {}
-
-        for agent_id in self.agents:
-            state = self.agent_states.get(agent_id)
-            histories[agent_id] = list(getattr(state, "checklist_history", None) or [])
-            raw = self._get_execution_trace_path_for_agent(agent_id)
-            # snapshot_storage may be a relative Path; resolve to absolute so that
-            # _preprocess_spawn_tasks does not mis-resolve it against workspace_root.
-            trace_paths[agent_id] = raw.resolve() if raw is not None else None
-
-        return {
-            "trace_paths": trace_paths,
-            "checklist_histories": histories,
-            "current_criteria": list(self._generated_evaluation_criteria or []),
-            "original_task": getattr(self, "_original_task", None) or "",
-            "evolution_number": self._criteria_evolution_count + 1,
-        }
+        """Delegates to CriteriaEvolutionRunner.collect_evolution_input_data."""
+        return self._criteria_evolution_runner.collect_evolution_input_data()
 
     @staticmethod
     def _format_score_history_table(
         histories: dict[str, list[dict[str, Any]]],
     ) -> str:
-        """Format per-agent score histories as a compact readable table."""
-        lines: list[str] = []
-        for agent_id, history in histories.items():
-            lines.append(f"Agent {agent_id}:")
-            if not history:
-                lines.append("  (no history yet)")
-                continue
-            for round_idx, entry in enumerate(history, start=1):
-                verdict = entry.get("verdict", "?")
-                total = entry.get("total_score", "?")
-                items = entry.get("items_detail") or []
-                per_item = ", ".join(f"{it.get('id', '?')}={it.get('score', '?')}" for it in items)
-                lines.append(f"  Round {round_idx}: verdict={verdict}, total={total}, scores=[{per_item}]")
-        return "\n".join(lines)
+        """Delegates to CriteriaEvolutionRunner.format_score_history_table (@staticmethod)."""
+        from .orchestrator_collaborators import CriteriaEvolutionRunner
+
+        return CriteriaEvolutionRunner.format_score_history_table(histories)
 
     @staticmethod
-    def _format_criteria_for_prompt(
-        criteria: list[Any],
-    ) -> str:
-        """Format GeneratedCriterion list as a readable block for prompts."""
-        lines: list[str] = []
-        for c in criteria:
-            lines.append(f"[{c.id}] ({getattr(c, 'category', 'standard')}) {c.text}")
-            anti = getattr(c, "anti_patterns", None)
-            if anti:
-                lines.append(f"  Anti-patterns: {'; '.join(anti)}")
-            anchors = getattr(c, "score_anchors", None)
-            if anchors:
-                for score_key in ("3", "5", "7", "9"):
-                    if score_key in anchors:
-                        lines.append(f"  {score_key}/10: {anchors[score_key]}")
-        return "\n".join(lines)
+    def _format_criteria_for_prompt(criteria: list[Any]) -> str:
+        """Delegates to CriteriaEvolutionRunner.format_criteria_for_prompt (@staticmethod)."""
+        from .orchestrator_collaborators import CriteriaEvolutionRunner
+
+        return CriteriaEvolutionRunner.format_criteria_for_prompt(criteria)
 
     def _build_criteria_evolution_proposal_task(
         self,
