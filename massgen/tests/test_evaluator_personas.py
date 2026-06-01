@@ -33,13 +33,22 @@ def _make_orchestrator_stub(
     lets us write the tests first (TDD red phase).
     """
     from massgen.orchestrator import Orchestrator
+    from massgen.orchestrator_collaborators import RoundEvaluatorGateConfig
 
     # Build minimal config to instantiate orchestrator
     stub = MagicMock(spec=Orchestrator)
     stub._pending_evaluator_personas = pending
     stub._last_evaluator_personas = last
 
-    # Bind real methods
+    # The persona validate/consume logic now lives in the RoundEvaluatorGateConfig
+    # collaborator; wire a REAL instance (back-ref to the stub) so the delegator
+    # methods exercise the real logic. Override only the team-size lever, which
+    # the test parametrizes (the collaborator otherwise derives it from config).
+    gate = RoundEvaluatorGateConfig(stub)
+    gate.get_evaluator_team_size = lambda: evaluator_team_size
+    stub._round_evaluator_gate_config = gate
+
+    # Bind real delegator methods
     stub._get_evaluator_team_size = lambda: evaluator_team_size
     stub._consume_evaluator_personas = Orchestrator._consume_evaluator_personas.__get__(stub)
     stub._validate_evaluator_personas = Orchestrator._validate_evaluator_personas.__get__(stub)

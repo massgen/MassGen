@@ -983,8 +983,8 @@ async def test_cancel_running_background_work_for_agent_cancels_active_subagents
         raise AssertionError(f"Unexpected tool call: {tool_name}")
 
     monkeypatch.setattr(
-        orchestrator,
-        "_call_subagent_mcp_tool_async",
+        orchestrator._subagent_lifecycle_coordinator,
+        "call_subagent_mcp_tool_async",
         fake_subagent_call,
     )
 
@@ -1632,7 +1632,7 @@ class TestEnsureFinalDirectoryOnShutdown:
         answers = {agent_id: {"answer": "Test answer"}}
         workspaces = {agent_id: str(tmp_path / "workspace")}
 
-        with patch("massgen.orchestrator.get_log_session_dir", return_value=log_dir):
+        with patch("massgen.orchestrator_collaborators.final_result_reporter.get_log_session_dir", return_value=log_dir):
             orchestrator._ensure_final_directory_on_shutdown(answers, workspaces)
 
         final_workspace = log_dir / "final" / agent_id / "workspace"
@@ -1657,7 +1657,7 @@ class TestEnsureFinalDirectoryOnShutdown:
         answers = {agent_id: {"answer": "Test answer"}}
         workspaces = {agent_id: str(tmp_path / "workspace")}
 
-        with patch("massgen.orchestrator.get_log_session_dir", return_value=log_dir):
+        with patch("massgen.orchestrator_collaborators.final_result_reporter.get_log_session_dir", return_value=log_dir):
             orchestrator._ensure_final_directory_on_shutdown(answers, workspaces)
 
         # Should not have created workspace/ subdir since final/ already existed
@@ -1672,7 +1672,7 @@ class TestEnsureFinalDirectoryOnShutdown:
         log_dir = tmp_path / "logs" / "turn_1" / "attempt_1"
         log_dir.mkdir(parents=True)
 
-        with patch("massgen.orchestrator.get_log_session_dir", return_value=log_dir):
+        with patch("massgen.orchestrator_collaborators.final_result_reporter.get_log_session_dir", return_value=log_dir):
             orchestrator._ensure_final_directory_on_shutdown({}, {})
 
         assert not (log_dir / "final").exists()

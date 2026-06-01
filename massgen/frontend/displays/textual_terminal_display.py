@@ -8,11 +8,9 @@ import functools
 import json
 import os
 import re
-import sys
 import tempfile
 import threading
 import time
-import traceback
 from collections import deque
 from collections.abc import Callable
 from datetime import datetime
@@ -169,23 +167,15 @@ def _process_line_buffer(
 # File preview utilities imported from shared module
 
 
-# Emoji fallback mapping for terminals without Unicode support
-EMOJI_FALLBACKS = {
-    "🚀": ">>",  # Launch
-    "💡": "(!)",  # Question
-    "🤖": "[A]",  # Agent
-    "✅": "[✓]",  # Success
-    "❌": "[X]",  # Error
-    "🔄": "[↻]",  # Processing
-    "📊": "[=]",  # Stats
-    "🎯": "[>]",  # Target
-    "⚡": "[!]",  # Fast
-    "🎤": "[M]",  # Presentation
-    "🔍": "[?]",  # Search/Evaluation
-    "⚠️": "[!]",  # Warning
-    "📋": "[□]",  # Summary
-    "🧠": "[B]",  # Brain/Reasoning
-}
+from . import _textual_provider_model as _provider_model  # noqa: E402
+from . import _textual_widget_debug as _widget_debug  # noqa: E402
+
+# Emoji fallback mapping for terminals without Unicode support.
+# Extracted to _textual_terminal_capabilities; re-exported here for back-compat.
+from ._textual_terminal_capabilities import (  # noqa: E402, F401
+    EMOJI_FALLBACKS,
+    TerminalCapabilityProbe,
+)
 
 CRITICAL_PATTERNS = {
     "vote": "✅ Vote recorded",
@@ -748,11 +738,15 @@ class TextualTerminalDisplay(TerminalDisplay):
         self.session_id = None
         self.current_turn = 1
 
-        self.emoji_support = self._detect_emoji_support()
-        self._terminal_type = self._detect_terminal_type()
+        probe = TerminalCapabilityProbe.detect(
+            env=os.environ,
+            on_error=lambda e: tui_log(f"[TextualDisplay] {e}"),
+        )
+        self.emoji_support = probe.emoji_support
+        self._terminal_type = probe.terminal_type
 
         if self.refresh_rate is None:
-            self.refresh_rate = self._get_adaptive_refresh_rate(self._terminal_type)
+            self.refresh_rate = probe.refresh_rate
         else:
             self.refresh_rate = int(self.refresh_rate)
 
@@ -835,37 +829,16 @@ class TextualTerminalDisplay(TerminalDisplay):
                 tui_log(f"[TextualDisplay] {e}")
 
     def _detect_emoji_support(self) -> bool:
-        """Detect if terminal supports emoji."""
-        import locale
+        """Detect if terminal supports emoji (delegates to TerminalCapabilityProbe)."""
+        from ._textual_terminal_capabilities import detect_emoji_support
 
-        term_program = os.environ.get("TERM_PROGRAM", "")
-        if term_program in ["vscode", "iTerm.app", "Apple_Terminal"]:
-            return True
-
-        if os.environ.get("WT_SESSION"):
-            return True
-
-        if os.environ.get("WT_PROFILE_ID"):
-            return True
-
-        try:
-            encoding = locale.getpreferredencoding()
-            if encoding.lower() in ["utf-8", "utf8"]:
-                return True
-        except Exception as e:
-            tui_log(f"[TextualDisplay] {e}")
-
-        lang = os.environ.get("LANG", "")
-        if "UTF-8" in lang or "utf8" in lang:
-            return True
-
-        return False
+        return detect_emoji_support(os.environ, on_error=lambda e: tui_log(f"[TextualDisplay] {e}"))
 
     def _get_icon(self, emoji: str) -> str:
         """Get emoji or fallback based on terminal support."""
-        if self.emoji_support:
-            return emoji
-        return EMOJI_FALLBACKS.get(emoji, emoji)
+        from ._textual_terminal_capabilities import get_icon
+
+        return get_icon(emoji, emoji_support=self.emoji_support)
 
     def _is_critical_content(self, content: str, content_type: str) -> bool:
         """Identify content that should flush immediately."""
@@ -886,31 +859,16 @@ class TextualTerminalDisplay(TerminalDisplay):
         return False
 
     def _detect_terminal_type(self) -> str:
-        """Detect terminal type and capabilities."""
-        if os.environ.get("TERM_PROGRAM") == "vscode":
-            return "vscode"
+        """Detect terminal type (delegates to TerminalCapabilityProbe)."""
+        from ._textual_terminal_capabilities import detect_terminal_type
 
-        if os.environ.get("TERM_PROGRAM") == "iTerm.app":
-            return "iterm"
-
-        if os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_CLIENT"):
-            return "ssh"
-
-        if os.environ.get("WT_SESSION"):
-            return "windows_terminal"
-
-        return "unknown"
+        return detect_terminal_type(os.environ)
 
     def _get_adaptive_refresh_rate(self, terminal_type: str) -> int:
-        """Get optimal refresh rate based on terminal."""
-        rates = {
-            "ssh": 4,
-            "vscode": 4,
-            "iterm": 10,
-            "windows_terminal": 4,
-            "unknown": 6,
-        }
-        return rates.get(terminal_type, 6)
+        """Get optimal refresh rate based on terminal (delegates to probe)."""
+        from ._textual_terminal_capabilities import get_adaptive_refresh_rate
+
+        return get_adaptive_refresh_rate(terminal_type)
 
     def _write_to_agent_file(self, agent_id: str, content: str):
         """Write content to agent's output file."""
@@ -3990,117 +3948,23 @@ if TEXTUAL_AVAILABLE:
                     ),
                 )
 
-        _BACKEND_PROVIDER_SLUGS: dict[str, str] = {
-            "openai": "openai",
-            "codex": "openai",
-            "claude": "anthropic",
-            "claude_code": "anthropic",
-            "gemini": "google",
-            "grok": "xai",
-            "chatcompletion": "openai",
-            "azure_openai": "azure",
-            "openrouter": "openrouter",
-            "groq": "groq",
-            "together": "together",
-            "fireworks": "fireworks",
-            "cerebras": "cerebras",
-            "moonshot": "moonshot",
-            "qwen": "alibaba",
-            "nebius": "nebius",
-            "poe": "poe",
-            "lmstudio": "lmstudio",
-            "zai": "zai",
-            "vllm": "vllm",
-            "sglang": "sglang",
-            "inference": "inference",
-            "ag2": "ag2",
-            "uitars": "bytedance",
-        }
-
-        _PROVIDER_NAME_SLUGS: dict[str, str] = {
-            "openai": "openai",
-            "azure openai": "azure",
-            "claude": "anthropic",
-            "claude code": "anthropic",
-            "anthropic": "anthropic",
-            "gemini": "google",
-            "google": "google",
-            "grok": "xai",
-            "xai": "xai",
-            "openrouter": "openrouter",
-            "chat completions (generic)": "openai",
-            "groq": "groq",
-            "together ai": "together",
-            "fireworks ai": "fireworks",
-            "cerebras ai": "cerebras",
-            "kimi (moonshot ai)": "moonshot",
-            "nebius ai studio": "nebius",
-            "qwen (alibaba cloud)": "alibaba",
-        }
-
-        _MODEL_PREFIX_PROVIDER_SLUGS: tuple[tuple[str, str], ...] = (
-            ("gpt-", "openai"),
-            ("o1-", "openai"),
-            ("o3-", "openai"),
-            ("o4-", "openai"),
-            ("claude-", "anthropic"),
-            ("gemini-", "google"),
-            ("grok-", "xai"),
-            ("qwen-", "alibaba"),
-            ("llama-", "meta"),
-            ("mistral-", "mistral"),
-            ("deepseek-", "deepseek"),
-        )
+        # Provider/model slug tables extracted to _textual_provider_model.
+        # Kept as class-level aliases for any external attribute reads.
+        _BACKEND_PROVIDER_SLUGS = _provider_model._BACKEND_PROVIDER_SLUGS
+        _PROVIDER_NAME_SLUGS = _provider_model._PROVIDER_NAME_SLUGS
+        _MODEL_PREFIX_PROVIDER_SLUGS = _provider_model._MODEL_PREFIX_PROVIDER_SLUGS
 
         def _normalize_provider_slug(self, provider_hint: str | None) -> str | None:
-            """Normalize a backend/provider hint into a canonical slug."""
-            if not provider_hint:
-                return None
-            value = str(provider_hint).strip().lower()
-            if not value:
-                return None
-            if "/" in value:
-                value = value.split("/", 1)[0]
-
-            backend_key = value.replace(" ", "_").replace("-", "_")
-            if backend_key in self._BACKEND_PROVIDER_SLUGS:
-                return self._BACKEND_PROVIDER_SLUGS[backend_key]
-
-            name_key = value.replace("_", " ")
-            if name_key in self._PROVIDER_NAME_SLUGS:
-                return self._PROVIDER_NAME_SLUGS[name_key]
-
-            if value in self._PROVIDER_NAME_SLUGS:
-                return self._PROVIDER_NAME_SLUGS[value]
-
-            return None
+            """Normalize a backend/provider hint into a canonical slug (delegates)."""
+            return _provider_model.normalize_provider_slug(provider_hint)
 
         def _infer_provider_slug_from_model(self, model_name: str) -> str | None:
-            """Infer provider slug from common model naming prefixes."""
-            lowered_model = model_name.strip().lower()
-            if not lowered_model:
-                return None
-            for prefix, provider_slug in self._MODEL_PREFIX_PROVIDER_SLUGS:
-                if lowered_model.startswith(prefix):
-                    return provider_slug
-            return None
+            """Infer provider slug from common model naming prefixes (delegates)."""
+            return _provider_model.infer_provider_slug_from_model(model_name)
 
         def _to_provider_model(self, model_name: str, provider_hint: str | None) -> str:
-            """Format model names as provider/model for startup display."""
-            model = (model_name or "").strip()
-            if not model:
-                return ""
-
-            if "/" in model:
-                raw_provider, raw_model = model.split("/", 1)
-                provider_slug = self._normalize_provider_slug(raw_provider) or raw_provider.strip().lower()
-                normalized_model = raw_model.strip()
-                return f"{provider_slug}/{normalized_model}" if normalized_model else provider_slug
-
-            provider_slug = self._normalize_provider_slug(provider_hint) or self._infer_provider_slug_from_model(model)
-            if not provider_slug:
-                return model
-            return f"{provider_slug}/{model}"
+            """Format model names as provider/model for startup display (delegates)."""
+            return _provider_model.to_provider_model(model_name, provider_hint)
 
         def _build_welcome_agents_info(self) -> list[dict[str, str]]:
             """Build welcome-screen agent metadata with provider/model display names."""
@@ -4129,17 +3993,11 @@ if TEXTUAL_AVAILABLE:
                 if provider_name:
                     provider_hints[agent_id] = str(provider_name)
 
-            agents_info_list: list[dict[str, str]] = []
-            for agent_id in self.coordination_display.agent_ids:
-                raw_model = str(agent_models.get(agent_id, "") or "").strip()
-                provider_model = self._to_provider_model(raw_model, provider_hints.get(agent_id))
-                agents_info_list.append(
-                    {
-                        "id": agent_id,
-                        "model": provider_model,
-                    },
-                )
-            return agents_info_list
+            return _provider_model.build_welcome_agents_info(
+                self.coordination_display.agent_ids,
+                agent_models,
+                provider_hints,
+            )
 
         def compose(self) -> ComposeResult:
             """Compose the UI layout with adaptive agent arrangement."""
@@ -4507,173 +4365,23 @@ if TEXTUAL_AVAILABLE:
 
         def _start_stall_watchdog(self) -> None:
             """Start a background watchdog to capture main-thread stack on stalls."""
-            if not self._timing_debug:
-                return
-            if self._stall_watchdog_thread and self._stall_watchdog_thread.is_alive():
-                return
-
-            self._stall_watchdog_stop.clear()
-            self._stall_watchdog_thread = threading.Thread(
-                target=self._stall_watchdog_loop,
-                name="massgen-tui-stall-watchdog",
-                daemon=True,
-            )
-            self._stall_watchdog_thread.start()
+            _widget_debug.start_stall_watchdog(self)
 
         def _stop_stall_watchdog(self) -> None:
             """Stop stall watchdog thread."""
-            self._stall_watchdog_stop.set()
-            thread = self._stall_watchdog_thread
-            if thread and thread.is_alive():
-                try:
-                    thread.join(timeout=0.2)
-                except Exception:
-                    pass
-            self._stall_watchdog_thread = None
+            _widget_debug.stop_stall_watchdog(self)
 
         def _stall_watchdog_loop(self) -> None:
             """Capture Python stack traces when main loop appears blocked."""
-            while not self._stall_watchdog_stop.wait(0.1):
-                last = self._last_heartbeat_at
-                if not self._timing_debug or last is None:
-                    continue
-                now = time.monotonic()
-                delta = now - last
-                if delta < self._stall_watchdog_threshold_s:
-                    continue
-                # Avoid spamming stack dumps while blocked.
-                if now - self._last_stall_dump_at < 1.5:
-                    continue
-                self._last_stall_dump_at = now
-
-                thread_id = self._thread_id
-                if thread_id is None:
-                    continue
-                frame = sys._current_frames().get(thread_id)
-                if frame is None:
-                    continue
-                stack = "".join(traceback.format_stack(frame, limit=40))
-                tui_log(
-                    "[TIMING] TextualApp.main_loop_stall_stack " f"{delta * 1000.0:.1f}ms thread_id={thread_id}\n{stack}",
-                )
+            _widget_debug.stall_watchdog_loop(self)
 
         def _heartbeat_tick(self) -> None:
             """Log event-loop stalls when timing debug is enabled."""
-            now = time.monotonic()
-            last = self._last_heartbeat_at
-            self._last_heartbeat_at = now
-            if not self._timing_debug or last is None:
-                return
-
-            delta = now - last
-            # 250ms+ main-loop gaps are typically perceived as input lag.
-            if delta >= 0.25:
-                try:
-                    batch_len = len(self._event_batch)
-                except Exception:
-                    batch_len = -1
-                tui_log(
-                    "[TIMING] TextualApp.main_loop_stall " f"{delta * 1000.0:.1f}ms event_batch={batch_len} pending_flush={self._pending_flush}",
-                )
+            _widget_debug.heartbeat_tick(self)
 
         def _dump_widget_sizes(self) -> None:
             """Dump full widget tree with sizes for debugging layout issues."""
-            import json
-
-            def get_widget_info(widget, depth=0):
-                """Recursively get widget info."""
-                info = {
-                    "type": type(widget).__name__,
-                    "id": widget.id,
-                    "classes": list(widget.classes) if hasattr(widget, "classes") else [],
-                    "size": {"width": widget.size.width, "height": widget.size.height} if hasattr(widget, "size") else None,
-                    "region": {"x": widget.region.x, "y": widget.region.y, "width": widget.region.width, "height": widget.region.height} if hasattr(widget, "region") else None,
-                    "content_size": {"width": widget.content_size.width, "height": widget.content_size.height} if hasattr(widget, "content_size") else None,
-                    "styles": {
-                        "width": str(widget.styles.width) if hasattr(widget.styles, "width") else None,
-                        "height": str(widget.styles.height) if hasattr(widget.styles, "height") else None,
-                        "padding": str(widget.styles.padding) if hasattr(widget.styles, "padding") else None,
-                        "margin": str(widget.styles.margin) if hasattr(widget.styles, "margin") else None,
-                        "border": str(widget.styles.border) if hasattr(widget.styles, "border") else None,
-                    },
-                    "children": [],
-                }
-                if depth < 8:  # Limit depth to avoid huge dumps
-                    for child in widget.children:
-                        info["children"].append(get_widget_info(child, depth + 1))
-                return info
-
-            tree = get_widget_info(self)
-            _widget_path = os.path.join(tempfile.gettempdir(), "widget_sizes.json")
-            with open(_widget_path, "w") as f:
-                json.dump(tree, f, indent=2, default=str)
-
-            # Also dump specific timeline info to separate file for easier debugging
-            timeline_debug = []
-            try:
-                from massgen.frontend.displays.textual_widgets.content_sections import (
-                    TimelineSection,
-                )
-
-                for ts in self.query(TimelineSection):
-                    ts_info = {
-                        "id": ts.id,
-                        "size": {"width": ts.size.width, "height": ts.size.height},
-                        "region": {"x": ts.region.x, "y": ts.region.y, "width": ts.region.width, "height": ts.region.height},
-                        "content_size": {"width": ts.content_size.width, "height": ts.content_size.height},
-                    }
-                    # Get the scroll container
-                    try:
-                        container = ts.query_one("#timeline_container")
-                        ts_info["container"] = {
-                            "type": type(container).__name__,
-                            "size": {"width": container.size.width, "height": container.size.height},
-                            "region": {"x": container.region.x, "y": container.region.y, "width": container.region.width, "height": container.region.height},
-                            "content_size": {"width": container.content_size.width, "height": container.content_size.height},
-                            "virtual_size": {"width": container.virtual_size.width, "height": container.virtual_size.height},
-                            "scroll_y": container.scroll_y,
-                            "max_scroll_y": container.max_scroll_y,
-                            "children_count": len(list(container.children)),
-                            "children": [],
-                        }
-                        # Get first and last few children for debugging
-                        children = list(container.children)
-                        for i, child in enumerate(children[:5]):  # First 5
-                            ts_info["container"]["children"].append(
-                                {
-                                    "index": i,
-                                    "type": type(child).__name__,
-                                    "id": child.id,
-                                    "classes": list(child.classes),
-                                    "size": {"width": child.size.width, "height": child.size.height},
-                                    "region": {"y": child.region.y, "height": child.region.height},
-                                },
-                            )
-                        if len(children) > 10:
-                            ts_info["container"]["children"].append({"...": f"{len(children) - 10} more items..."})
-                        for i, child in enumerate(children[-5:]):  # Last 5
-                            if len(children) > 5:
-                                ts_info["container"]["children"].append(
-                                    {
-                                        "index": len(children) - 5 + i,
-                                        "type": type(child).__name__,
-                                        "id": child.id,
-                                        "classes": list(child.classes),
-                                        "size": {"width": child.size.width, "height": child.size.height},
-                                        "region": {"y": child.region.y, "height": child.region.height},
-                                    },
-                                )
-                    except Exception as e:
-                        ts_info["container_error"] = str(e)
-                    timeline_debug.append(ts_info)
-            except Exception as e:
-                timeline_debug.append({"error": str(e)})
-
-            _timeline_path = os.path.join(tempfile.gettempdir(), "timeline_debug.json")
-            with open(_timeline_path, "w") as f:
-                json.dump(timeline_debug, f, indent=2, default=str)
-
-            tui_log(f"Widget sizes dumped to {_widget_path} and {_timeline_path}")
+            _widget_debug.dump_widget_sizes(self)
 
         def _update_safe_indicator(self):
             """Show/hide safe keyboard status in footer area."""
