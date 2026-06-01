@@ -363,7 +363,9 @@ async def test_run_trace_analyzer_queues_artifact_content_for_midstream_injectio
     def _schedule_interrupt(agent_id: str, trigger: str = "background_subagent_complete") -> None:
         scheduled.append((agent_id, trigger))
 
-    orch._schedule_background_wait_interrupt_for_agent = _schedule_interrupt
+    # Method moved into SubagentLifecycleCoordinator; patch the collaborator
+    # so its internal callers (on_background_subagent_complete) see the fake.
+    orch._subagent_lifecycle_coordinator.schedule_background_wait_interrupt_for_agent = _schedule_interrupt
 
     trace_path = tmp_path / "execution_trace.md"
     trace_path.write_text("# Trace", encoding="utf-8")

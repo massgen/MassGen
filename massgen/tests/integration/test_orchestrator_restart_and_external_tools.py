@@ -280,9 +280,12 @@ async def test_no_hook_midstream_enforcement_includes_subagent_completions(mock_
             ),
         ]
 
+    # Method moved into SubagentLifecycleCoordinator; patch the collaborator so
+    # in-collaborator call sites see the fake (the orchestrator delegator routes
+    # through self._subagent_lifecycle_coordinator).
     monkeypatch.setattr(
-        orchestrator,
-        "_get_pending_subagent_results_async",
+        orchestrator._subagent_lifecycle_coordinator,
+        "get_pending_subagent_results_async",
         _fake_get_pending_subagent_results,
     )
 

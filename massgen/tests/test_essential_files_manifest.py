@@ -25,7 +25,9 @@ class TestLoadEssentialFilesManifests:
 
         # Bind the real method
         from massgen.orchestrator import Orchestrator
+        from massgen.orchestrator_collaborators import EssentialFilesHelper
 
+        orch._essential_files_helper = EssentialFilesHelper(orch)
         orch._load_essential_files_manifests = Orchestrator._load_essential_files_manifests.__get__(orch)
         return orch
 
@@ -109,7 +111,9 @@ class TestLoadEssentialFilesManifests:
         orch._snapshot_storage = None
 
         from massgen.orchestrator import Orchestrator
+        from massgen.orchestrator_collaborators import EssentialFilesHelper
 
+        orch._essential_files_helper = EssentialFilesHelper(orch)
         orch._load_essential_files_manifests = Orchestrator._load_essential_files_manifests.__get__(orch)
 
         result = orch._load_essential_files_manifests("agent_a")
@@ -346,8 +350,14 @@ class TestNamespaceVerificationMemoryFiles:
         (short_term / "essential_files_manifest.json").write_text('{"version": 1}')
 
         orch = MagicMock()
+        from massgen.orchestrator_collaborators import WorkspaceLifecycleManager
+
         orch.coordination_tracker = MagicMock()
         orch.coordination_tracker.get_path_token.return_value = "abc123"
+        # Method delegates to WorkspaceLifecycleManager — wire a real collaborator
+        # so the namespacing logic actually runs (otherwise the auto-mocked
+        # collaborator returns a MagicMock and nothing is renamed).
+        orch._workspace_lifecycle_manager = WorkspaceLifecycleManager(orch)
         orch._namespace_verification_memory_files = Orchestrator._namespace_verification_memory_files.__get__(orch)
 
         orch._namespace_verification_memory_files(archive_path, "agent_a")

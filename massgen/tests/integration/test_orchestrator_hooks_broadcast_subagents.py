@@ -191,8 +191,8 @@ async def test_subagent_post_hook_uses_async_pending_getter(mock_orchestrator, m
     def fail_sync_pending(_aid: str):
         raise AssertionError("Sync pending getter should not be used from post-tool hook")
 
-    monkeypatch.setattr(orchestrator, "_get_pending_subagent_results_async", fake_async_pending, raising=False)
-    monkeypatch.setattr(orchestrator, "_get_pending_subagent_results", fail_sync_pending)
+    monkeypatch.setattr(orchestrator._subagent_lifecycle_coordinator, "get_pending_subagent_results_async", fake_async_pending, raising=False)
+    monkeypatch.setattr(orchestrator._subagent_lifecycle_coordinator, "get_pending_subagent_results", fail_sync_pending)
 
     result = await manager.execute_hooks(
         HookType.POST_TOOL_USE,
@@ -256,7 +256,9 @@ def test_on_subagent_complete_schedules_background_wait_interrupt(mock_orchestra
     )
     scheduled: list[tuple[str, str]] = []
 
-    orchestrator._schedule_background_wait_interrupt_for_agent = lambda aid, trigger="background_subagent_complete": scheduled.append((aid, trigger))
+    # Method moved into SubagentLifecycleCoordinator; patch the collaborator
+    # so its internal call site (on_subagent_complete) sees the fake.
+    orchestrator._subagent_lifecycle_coordinator.schedule_background_wait_interrupt_for_agent = lambda aid, trigger="background_subagent_complete": scheduled.append((aid, trigger))
 
     orchestrator._on_subagent_complete(agent_id, "sub-1", result)
 

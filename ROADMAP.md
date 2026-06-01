@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.91
+**Current Version:** v0.1.92
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** May 27, 2026
+**Last Updated:** June 1, 2026
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -42,9 +42,26 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.92** | 05/29/26 | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.91 ([#959](https://github.com/massgen/MassGen/issues/959)) |
+| **v0.1.93** | 06/03/26 | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.92 ([#959](https://github.com/massgen/MassGen/issues/959)) |
 
 *All releases ship on MWF @ 9am PT when ready*
+
+---
+
+## ✅ v0.1.92 - Orchestrator Collaborator Refactor & Parallel Search MCP (Completed)
+
+**Released:** June 1, 2026
+
+### Features
+- **Orchestrator Collaborator Extraction**: `orchestrator.py` dropped from 21,599 to 8,574 lines by extracting 49 lazy collaborators into `massgen/orchestrator_collaborators/`
+- **Stable Delegator Surface**: Public methods remain available through thin delegators, preserving existing internal and external call sites
+- **Textual Display Cleanup**: Provider/model helpers, terminal capability probing, and widget-debug helpers moved out of `textual_terminal_display.py` into focused sibling modules
+- **Parallel Web Search MCP**: New `parallel_search` MCP registry entry and `massgen/configs/tools/web-search/parallel_search_example.yaml` for Parallel's hosted Search MCP server
+- **Refactor Roadmap**: `docs/dev_notes/orchestrator_refactor_roadmap.md` documents remaining high-risk follow-up extraction work
+- **Tests**: 77 new characterization cases cover orchestrator and Textual display contracts, with existing integration/unit seams repointed to the collaborators
+
+### Notes
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ---
 
@@ -61,7 +78,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **Tests**: New parser/validator parity coverage and native hook regression tests protect these release-critical paths
 
 ### Notes
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.92.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ---
 
@@ -80,7 +97,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ### Notes
 - Discriminative Criteria Refinements from the roadmap landed in this release.
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.92.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ---
 
@@ -98,7 +115,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ### Notes
 - This completes the follow-up Antigravity integration pass introduced in v0.1.88.
-- Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.92.
+- Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ---
 
@@ -115,7 +132,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **Tests**: `massgen/tests/test_antigravity_cli_backend.py` covers command construction, config isolation, MCP schema, workflow JSON envelopes, Docker/API-key constraints, hook wiring, and env passthrough
 
 ### Notes
-- Follow-up Antigravity hardening landed in v0.1.89; Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.92.
+- Follow-up Antigravity hardening landed in v0.1.89; Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ---
 
@@ -132,7 +149,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **`bootstrap_subagent` Single-Shot Fix**: `Orchestrator._run_bootstrap_discriminator_step` passes `refine=False` to `spawn_subagent` — the canonical knob `SubagentManager` respects at the orchestrator level (the orchestrator's `max_new_answers_per_agent: 3` default was shadowing coordination-dict overrides)
 
 ### Notes
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) ultimately carried forward to v0.1.92.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) ultimately carried forward to v0.1.93.
 - Closes [#1082](https://github.com/massgen/MassGen/issues/1082) (`llms.txt` + `llms-full.txt`) and [#1083](https://github.com/massgen/MassGen/issues/1083) (CrewAI / LangGraph / AutoGen comparison pages).
 
 ---
@@ -308,7 +325,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.92 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.91)
+## 📋 v0.1.93 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.92)
 
 ### Features
 
