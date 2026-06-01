@@ -258,3 +258,64 @@ Your answer:"""
                 {"error": str(e)},
             )
             return {"has_irreversible": True, "blocked_tools": set()}
+
+    @staticmethod
+    def format_planning_mode_ui(
+        has_irreversible: bool,
+        blocked_tools: set,
+        has_isolated_workspaces: bool,
+        user_question: str,
+    ) -> str:
+        """Format a nice UI box for planning mode status."""
+        if not has_irreversible:
+            box = "\n╭─ Coordination Mode ────────────────────────────────────────╮\n"
+            box += "│ ✅ Planning Mode: DISABLED                                │\n"
+            box += "│                                                            │\n"
+            box += "│ All tools available during coordination.                  │\n"
+            box += "│ No irreversible operations detected.                      │\n"
+            box += "╰────────────────────────────────────────────────────────────╯\n"
+            return box
+
+        box = "\n╭─ Coordination Mode ────────────────────────────────────────╮\n"
+        box += "│ 🧠 Planning Mode: ENABLED                                  │\n"
+        box += "│                                                            │\n"
+
+        if has_isolated_workspaces:
+            box += "│ 🔒 Workspace: Isolated (filesystem ops allowed)           │\n"
+            box += "│                                                            │\n"
+
+        box += "│ Agents will plan and coordinate without executing         │\n"
+        box += "│ irreversible actions. The winning agent will implement    │\n"
+        box += "│ the plan during final presentation.                       │\n"
+        box += "│                                                            │\n"
+
+        if blocked_tools:
+            box += "│ 🚫 Blocked Tools:                                          │\n"
+            sorted_tools = sorted(blocked_tools)
+            for i, tool in enumerate(sorted_tools[:5], 1):
+                display_tool = tool if len(tool) <= 50 else tool[:47] + "..."
+                box += f"│   {i}. {display_tool:<54} │\n"
+
+            if len(sorted_tools) > 5:
+                remaining = len(sorted_tools) - 5
+                box += f"│   ... and {remaining} more tool(s)                              │\n"
+            box += "│                                                            │\n"
+        else:
+            box += "│ 🚫 Blocking: ALL MCP tools                                 │\n"
+            box += "│                                                            │\n"
+
+        box += "│ 📊 Analysis:                                               │\n"
+        summary = user_question[:50] + "..." if len(user_question) > 50 else user_question
+        words = summary.split()
+        line = "│   "
+        for word in words:
+            if len(line) + len(word) + 1 > 60:
+                box += line.ljust(61) + "│\n"
+                line = "│   " + word + " "
+            else:
+                line += word + " "
+        if len(line) > 4:
+            box += line.ljust(61) + "│\n"
+
+        box += "╰────────────────────────────────────────────────────────────╯\n"
+        return box

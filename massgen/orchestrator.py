@@ -1896,79 +1896,13 @@ class Orchestrator(ChatAgent):
         has_isolated_workspaces: bool,
         user_question: str,
     ) -> str:
-        """
-        Format a nice UI box for planning mode status.
-
-        Args:
-            has_irreversible: Whether irreversible operations were detected
-            blocked_tools: Set of specific blocked tool names
-            has_isolated_workspaces: Whether agents have isolated workspaces
-            user_question: The user's question for context
-
-        Returns:
-            Formatted string with nice box UI
-        """
-        if not has_irreversible:
-            # Planning mode disabled - brief message
-            box = "\n╭─ Coordination Mode ────────────────────────────────────────╮\n"
-            box += "│ ✅ Planning Mode: DISABLED                                │\n"
-            box += "│                                                            │\n"
-            box += "│ All tools available during coordination.                  │\n"
-            box += "│ No irreversible operations detected.                      │\n"
-            box += "╰────────────────────────────────────────────────────────────╯\n"
-            return box
-
-        # Planning mode enabled
-        box = "\n╭─ Coordination Mode ────────────────────────────────────────╮\n"
-        box += "│ 🧠 Planning Mode: ENABLED                                  │\n"
-        box += "│                                                            │\n"
-
-        if has_isolated_workspaces:
-            box += "│ 🔒 Workspace: Isolated (filesystem ops allowed)           │\n"
-            box += "│                                                            │\n"
-
-        # Description
-        box += "│ Agents will plan and coordinate without executing         │\n"
-        box += "│ irreversible actions. The winning agent will implement    │\n"
-        box += "│ the plan during final presentation.                       │\n"
-        box += "│                                                            │\n"
-
-        # Blocked tools section
-        if blocked_tools:
-            box += "│ 🚫 Blocked Tools:                                          │\n"
-            # Format tools into nice columns
-            sorted_tools = sorted(blocked_tools)
-            for i, tool in enumerate(sorted_tools[:5], 1):  # Show max 5 tools
-                # Shorten tool name if too long
-                display_tool = tool if len(tool) <= 50 else tool[:47] + "..."
-                box += f"│   {i}. {display_tool:<54} │\n"
-
-            if len(sorted_tools) > 5:
-                remaining = len(sorted_tools) - 5
-                box += f"│   ... and {remaining} more tool(s)                              │\n"
-            box += "│                                                            │\n"
-        else:
-            box += "│ 🚫 Blocking: ALL MCP tools                                 │\n"
-            box += "│                                                            │\n"
-
-        # Add brief analysis summary
-        box += "│ 📊 Analysis:                                               │\n"
-        # Create a brief summary from the question
-        summary = user_question[:50] + "..." if len(user_question) > 50 else user_question
-        # Wrap text to fit in box
-        words = summary.split()
-        line = "│   "
-        for word in words:
-            if len(line) + len(word) + 1 > 60:
-                box += line.ljust(61) + "│\n"
-                line = "│   " + word + " "
-            else:
-                line += word + " "
-        if len(line) > 4:  # If there's content
-            box += line.ljust(61) + "│\n"
-
-        box += "╰────────────────────────────────────────────────────────────╯\n"
-        return box
+        """Delegates to QuestionIrreversibilityAnalyzer.format_planning_mode_ui (@staticmethod)."""
+        return self._question_irreversibility_analyzer.format_planning_mode_ui(
+            has_irreversible,
+            blocked_tools,
+            has_isolated_workspaces,
+            user_question,
+        )
 
     async def _analyze_question_irreversibility(
         self,
