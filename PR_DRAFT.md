@@ -66,9 +66,10 @@ Full roadmap, lessons-learned, and the 6 remaining (high-risk, paused) steps are
 
 ## Out of scope (paused for follow-up release)
 
-Two remaining concerns identified in the analysis are paused because they need behavior-changing work before extraction:
+One remaining concern needs behavior-changing work before extraction:
 
 - **`MidStreamInjectionHookInstaller` (remaining 12 of 18 methods)** — `_setup_hook_manager_for_agent`, `_setup_codex_mcp_hooks`, `_setup_codex_hybrid_hooks`, `_setup_native_hooks_for_agent`, `_register_round_timeout_hooks`, etc. These contain duplicated `get_injection_content` closures across 3 backend paths. Need a callback-unification pass first (behavior-changing, separate validation surface), THEN extract. The 6 pure helpers (`_close_agent_stream`, `_check_restart_pending`, `_should_defer_restart_for_first_answer`, `_clear_framework_mcp_state`, `_compute_plan_progress_stats`, `_build_tool_result_injection`) ARE extracted in this PR.
-- **`AgentOrchestrationSetup`** — lives inline in `__init__` as a nested function + loop. Extraction requires `__init__`-rewiring (a different kind of refactor), not just method-relocation.
+
+Also out of scope: the streaming/coordination cores (`_stream_agent_execution` 2,239 lines, `_stream_coordination_with_agents` 911, `_coordinate_agents` 541, `__init__` ~557, `chat` 180) — these need structural restructuring rather than pure extraction, deferred to a separate PR.
 
 The full plan, ordered steps, and applied-during-this-PR lessons learned are in `docs/dev_notes/orchestrator_refactor_roadmap.md` to make the follow-up straightforward.
