@@ -11,6 +11,7 @@ from .answer_limit_gate import AnswerLimitGate
 from .answer_text_normalizer import AnswerTextNormalizer
 from .bootstrap_criteria_engine import BootstrapCriteriaEngine
 from .broadcast_tool_initializer import BroadcastToolInitializer
+from .changedoc_coordinator import ChangedocCoordinator
 from .checklist_gate_manager import ChecklistGateManager
 from .checkpoint_coordinator import CheckpointCoordinator
 from .context_path_write_tracker import ContextPathWriteTracker
@@ -49,6 +50,7 @@ from .workspace_modal_presenter import WorkspaceModalPresenter
 __all__ = [
     "ActiveCoordinationCleanup",
     "AnswerLimitGate",
+    "ChangedocCoordinator",
     "ChecklistGateManager",
     "CheckpointCoordinator",
     "FairnessGate",
