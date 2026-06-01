@@ -80,6 +80,7 @@ from .orchestrator_collaborators import (
     BootstrapCriteriaEngine,
     BroadcastToolInitializer,
     ChangedocCoordinator,
+    ChatFollowupHandler,
     ChecklistGateManager,
     CheckpointCoordinator,
     ContextPathWriteTracker,
@@ -391,6 +392,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _docker_diagnostics(self) -> DockerDiagnostics:
         return DockerDiagnostics(self)
+
+    @functools.cached_property
+    def _chat_followup_handler(self) -> ChatFollowupHandler:
+        return ChatFollowupHandler(self)
 
     @functools.cached_property
     def _persona_injector(self) -> PersonaInjector:
@@ -1682,38 +1687,8 @@ class Orchestrator(ChatAgent):
         self,
         messages: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        """Build conversation context from message list."""
-        conversation_history = []
-        current_message = None
-
-        # Process messages to extract conversation history and current message
-        for message in messages:
-            role = message.get("role")
-            content = message.get("content", "")
-
-            if role == "user":
-                current_message = content
-                # Add to history (excluding the current message)
-                if len(conversation_history) > 0 or len(messages) > 1:
-                    conversation_history.append(message.copy())
-            elif role == "assistant":
-                conversation_history.append(message.copy())
-            elif role == "tool":
-                # Preserve tool results for multi-turn tool calling.
-                conversation_history.append(message.copy())
-            elif role == "system":
-                # System messages are typically not part of conversation history
-                pass
-
-        # Remove the last user message from history since that's the current message
-        if conversation_history and conversation_history[-1].get("role") == "user":
-            conversation_history.pop()
-
-        return {
-            "current_message": current_message,
-            "conversation_history": conversation_history,
-            "full_messages": messages,
-        }
+        """Delegates to ChatFollowupHandler.build_conversation_context (@staticmethod)."""
+        return ChatFollowupHandler.build_conversation_context(messages)
 
     async def _inject_shared_memory_context(
         self,
@@ -8670,60 +8645,9 @@ class Orchestrator(ChatAgent):
         user_message: str,
         conversation_context: dict[str, Any] | None = None,
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Handle follow-up questions after presenting final answer with conversation context."""
-        # Analyze the follow-up question for irreversibility before re-coordinating
-        has_irreversible = await self._analyze_question_irreversibility(
-            user_message,
-            conversation_context or {},
-        )
-
-        # Set planning mode for all agents based on analysis
-        for agent_id, agent in self.agents.items():
-            if hasattr(agent.backend, "set_planning_mode"):
-                agent.backend.set_planning_mode(has_irreversible)
-                log_orchestrator_activity(
-                    self.orchestrator_id,
-                    f"Set planning mode for {agent_id} (follow-up)",
-                    {
-                        "planning_mode_enabled": has_irreversible,
-                        "reason": "follow-up irreversibility analysis",
-                    },
-                )
-
-        # For now, acknowledge with context awareness
-        # Future: implement full re-coordination with follow-up context
-
-        if conversation_context and len(conversation_context.get("conversation_history", [])) > 0:
-            log_stream_chunk(
-                "orchestrator",
-                "content",
-                f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're asking: "
-                f"'{user_message}'. Currently, the coordination is complete, but I can help clarify the answer or "
-                f"coordinate a new task that takes our conversation history into account.",
-            )
-            yield StreamChunk(
-                type="content",
-                content=f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're "
-                f"asking: '{user_message}'. Currently, the coordination is complete, but I can help clarify the answer "
-                f"or coordinate a new task that takes our conversation history into account.",
-            )
-        else:
-            log_stream_chunk(
-                "orchestrator",
-                "content",
-                f"🤔 Thank you for your follow-up: '{user_message}'. The coordination is complete, but I can help clarify the answer or coordinate a new task if needed.",
-            )
-            yield StreamChunk(
-                type="content",
-                content=f"🤔 Thank you for your follow-up: '{user_message}'. The coordination is complete, but I can help clarify the answer or coordinate a new task if needed.",
-            )
-
-        log_stream_chunk("orchestrator", "done", None)
-        yield StreamChunk(type="done")
-
-    # =============================================================================
-    # PUBLIC API METHODS
-    # =============================================================================
+        """Delegates to ChatFollowupHandler.handle_followup (async generator)."""
+        async for chunk in self._chat_followup_handler.handle_followup(user_message, conversation_context):
+            yield chunk
 
     def add_agent(self, agent_id: str, agent: ChatAgent) -> None:
         """Add a new sub-agent to the orchestrator."""

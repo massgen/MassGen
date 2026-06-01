@@ -13,6 +13,7 @@ from .answer_text_normalizer import AnswerTextNormalizer
 from .bootstrap_criteria_engine import BootstrapCriteriaEngine
 from .broadcast_tool_initializer import BroadcastToolInitializer
 from .changedoc_coordinator import ChangedocCoordinator
+from .chat_followup_handler import ChatFollowupHandler
 from .checklist_gate_manager import ChecklistGateManager
 from .checkpoint_coordinator import CheckpointCoordinator
 from .context_path_write_tracker import ContextPathWriteTracker
@@ -57,6 +58,7 @@ __all__ = [
     "AgentOrchestrationSetup",
     "AnswerLimitGate",
     "ChangedocCoordinator",
+    "ChatFollowupHandler",
     "ChecklistGateManager",
     "CheckpointCoordinator",
     "FairnessGate",
