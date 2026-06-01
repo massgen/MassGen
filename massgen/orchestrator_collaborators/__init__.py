@@ -17,6 +17,7 @@ from .checklist_gate_manager import ChecklistGateManager
 from .checkpoint_coordinator import CheckpointCoordinator
 from .context_path_write_tracker import ContextPathWriteTracker
 from .criteria_evolution_runner import CriteriaEvolutionRunner
+from .docker_diagnostics import DockerDiagnostics
 from .dspy_paraphrase_coordinator import DspyParaphraseCoordinator
 from .evaluation_criteria_generator import EvaluationCriteriaGeneratorCollaborator
 from .evaluator_result_extractor import EvaluatorResultExtractor
@@ -73,6 +74,7 @@ __all__ = [
     "RoundEvaluatorGateConfig",
     "RoundEvaluatorRunner",
     "RoundStartContextQueue",
+    "DockerDiagnostics",
     "DspyParaphraseCoordinator",
     "AnswerTextNormalizer",
     "OrchestratorTimeoutCalculator",

@@ -84,6 +84,7 @@ from .orchestrator_collaborators import (
     CheckpointCoordinator,
     ContextPathWriteTracker,
     CriteriaEvolutionRunner,
+    DockerDiagnostics,
     DspyParaphraseCoordinator,
     EvaluationCriteriaGeneratorCollaborator,
     EvaluatorResultExtractor,
@@ -385,6 +386,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _snapshot_manager(self) -> SnapshotManager:
         return SnapshotManager(self)
+
+    @functools.cached_property
+    def _docker_diagnostics(self) -> DockerDiagnostics:
+        return DockerDiagnostics(self)
 
     @functools.cached_property
     def _persona_injector(self) -> PersonaInjector:
@@ -6320,97 +6325,16 @@ class Orchestrator(ChatAgent):
         agent_id: str,
         mcp_status: str,
     ) -> None:
-        """Save Docker container logs when MCP failure is detected.
-
-        This helps debug why Docker-based MCP servers disconnect by capturing
-        container state and logs at the time of failure.
-
-        Args:
-            agent: The ChatAgent instance.
-            agent_id: Agent identifier.
-            mcp_status: The MCP status that triggered this (e.g., 'mcp_tools_failed').
-        """
-        try:
-            # Check if agent uses Docker mode
-            if not hasattr(agent, "backend") or not hasattr(
-                agent.backend,
-                "filesystem_manager",
-            ):
-                return
-
-            fm = agent.backend.filesystem_manager
-            if not fm or not hasattr(fm, "docker_manager") or not fm.docker_manager:
-                return
-
-            docker_manager = fm.docker_manager
-
-            # Get container health info
-            health = docker_manager.get_container_health(agent_id)
-            if not health.get("exists"):
-                logger.warning(
-                    f"[Docker] Container not found for {agent_id} during MCP failure - may have been cleaned up",
-                )
-                return
-
-            # Log container health status
-            logger.info(
-                f"[Docker] Container health for {agent_id} during MCP failure ({mcp_status}): "
-                f"status={health.get('status')}, running={health.get('running')}, "
-                f"exit_code={health.get('exit_code')}, oom_killed={health.get('oom_killed')}, "
-                f"error={health.get('error')}",
-            )
-
-            # Save logs to the session log directory
-            from .logger_config import get_log_session_dir
-
-            log_dir = get_log_session_dir()
-            if log_dir:
-                import time
-
-                timestamp = time.strftime("%H%M%S")
-                log_filename = f"docker_logs_{agent_id}_{mcp_status}_{timestamp}.txt"
-                log_path = log_dir / log_filename
-                docker_manager.save_container_logs(agent_id, log_path, tail=500)
-
-        except (OSError, AttributeError, KeyError) as e:
-            # OSError: File I/O errors when saving logs
-            # AttributeError: Missing attributes on agent/backend/manager objects
-            # KeyError: Missing dict keys in health info
-            logger.warning(
-                f"[Docker] Failed to save container logs on MCP failure: {e}",
-            )
+        """Delegates to DockerDiagnostics.save_docker_logs_on_mcp_failure."""
+        self._docker_diagnostics.save_docker_logs_on_mcp_failure(agent, agent_id, mcp_status)
 
     def _get_docker_health(
         self,
         agent: "ChatAgent",
         agent_id: str,
     ) -> dict[str, Any] | None:
-        """Get Docker container health info for reliability metrics.
-
-        Args:
-            agent: The ChatAgent instance.
-            agent_id: Agent identifier.
-
-        Returns:
-            Docker health dict or None if not using Docker.
-        """
-        try:
-            if not hasattr(agent, "backend") or not hasattr(
-                agent.backend,
-                "filesystem_manager",
-            ):
-                return None
-
-            fm = agent.backend.filesystem_manager
-            if not fm or not hasattr(fm, "docker_manager") or not fm.docker_manager:
-                return None
-
-            return fm.docker_manager.get_container_health(agent_id)
-        except (AttributeError, KeyError) as e:
-            # AttributeError: Missing attributes on agent/backend/manager objects
-            # KeyError: Missing dict keys when accessing container state
-            logger.debug(f"[Docker] Failed to get container health: {e}")
-            return None
+        """Delegates to DockerDiagnostics.get_docker_health."""
+        return self._docker_diagnostics.get_docker_health(agent, agent_id)
 
     def _create_tool_error_messages(
         self,
