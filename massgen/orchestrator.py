@@ -87,6 +87,7 @@ from .orchestrator_collaborators import (
     CriteriaEvolutionRunner,
     DockerDiagnostics,
     DspyParaphraseCoordinator,
+    EssentialFilesHelper,
     EvaluationCriteriaGeneratorCollaborator,
     EvaluatorResultExtractor,
     FairnessGate,
@@ -297,6 +298,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _evaluator_result_extractor(self) -> EvaluatorResultExtractor:
         return EvaluatorResultExtractor(self)
+
+    @functools.cached_property
+    def _essential_files_helper(self) -> EssentialFilesHelper:
+        return EssentialFilesHelper(self)
 
     @functools.cached_property
     def _orchestrator_timeout_calculator(self) -> OrchestratorTimeoutCalculator:
@@ -5346,36 +5351,8 @@ class Orchestrator(ChatAgent):
         self,
         agent_id: str,
     ) -> dict[str, Any]:
-        """Load essential_files_manifest.json from all agents' snapshots.
-
-        Returns a dict mapping anonymous agent ID to parsed manifest data.
-        Skips agents without manifests or with invalid JSON.
-        """
-        manifests: dict[str, Any] = {}
-        if not self._snapshot_storage:
-            return manifests
-
-        agent_mapping = self.coordination_tracker.get_reverse_agent_mapping()
-        snapshot_base = Path(self._snapshot_storage)
-
-        for source_agent_id in self.agents:
-            anon_id = agent_mapping.get(source_agent_id, source_agent_id)
-            manifest_path = snapshot_base / source_agent_id / "memory" / "short_term" / "essential_files_manifest.json"
-            if not manifest_path.exists():
-                continue
-            try:
-                manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
-                if not isinstance(manifest_data, dict) or manifest_data.get("version") != 1:
-                    logger.warning(
-                        f"[EssentialFiles] Invalid manifest version for {source_agent_id}, skipping",
-                    )
-                    continue
-                manifests[anon_id] = manifest_data
-            except (json.JSONDecodeError, OSError) as e:
-                logger.warning(
-                    f"[EssentialFiles] Failed to load manifest for {source_agent_id}: {e}",
-                )
-        return manifests
+        """Delegates to EssentialFilesHelper.load_essential_files_manifests."""
+        return self._essential_files_helper.load_essential_files_manifests(agent_id)
 
     def _format_essential_files_context_block(
         self,

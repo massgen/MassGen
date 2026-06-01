@@ -25,7 +25,9 @@ class TestLoadEssentialFilesManifests:
 
         # Bind the real method
         from massgen.orchestrator import Orchestrator
+        from massgen.orchestrator_collaborators import EssentialFilesHelper
 
+        orch._essential_files_helper = EssentialFilesHelper(orch)
         orch._load_essential_files_manifests = Orchestrator._load_essential_files_manifests.__get__(orch)
         return orch
 
@@ -109,7 +111,9 @@ class TestLoadEssentialFilesManifests:
         orch._snapshot_storage = None
 
         from massgen.orchestrator import Orchestrator
+        from massgen.orchestrator_collaborators import EssentialFilesHelper
 
+        orch._essential_files_helper = EssentialFilesHelper(orch)
         orch._load_essential_files_manifests = Orchestrator._load_essential_files_manifests.__get__(orch)
 
         result = orch._load_essential_files_manifests("agent_a")
