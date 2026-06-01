@@ -5763,59 +5763,11 @@ class Orchestrator(ChatAgent):
 
     def _rewrite_subagent_mcp_config_files(
         self,
-        workspace_root: Any,
+        workspace_root,
         agent_id: str,
     ) -> None:
-        """Re-write the subagent MCP JSON config files that may have been lost
-        when the workspace was cleared between rounds.
-
-        These are the same files originally created by _create_subagent_mcp_config
-        and referenced by path in the MCP server args.
-        """
-        import json
-        from pathlib import Path as PathlibPath
-
-        mcp_temp_dir = PathlibPath(workspace_root) / ".massgen" / "subagent_mcp"
-        mcp_temp_dir.mkdir(parents=True, exist_ok=True)
-
-        _token = self.coordination_tracker.get_path_token(agent_id)
-
-        try:
-            # agent_configs.json
-            agent_configs = []
-            for aid, a in self.agents.items():
-                agent_cfg: dict[str, Any] = {"id": aid}
-                if hasattr(a.backend, "config"):
-                    backend_cfg = {k: v for k, v in a.backend.config.items() if k not in ("mcp_servers", "_config_path")}
-                    agent_cfg["backend"] = backend_cfg
-                runtime_agent_config = getattr(a, "config", None)
-                subagent_agents = getattr(runtime_agent_config, "subagent_agents", None)
-                if isinstance(subagent_agents, list) and subagent_agents:
-                    agent_cfg["subagent_agents"] = json.loads(json.dumps(subagent_agents))
-                agent_configs.append(agent_cfg)
-            with open(mcp_temp_dir / f"{_token}_agent_configs.json", "w") as f:
-                json.dump(agent_configs, f)
-
-            # coordination_config.json
-            coord_cfg = getattr(self.config, "coordination_config", None)
-            if coord_cfg:
-                parent_coordination_config = self._build_parent_coordination_config_for_subagents()
-                if parent_coordination_config:
-                    with open(mcp_temp_dir / f"{_token}_coordination_config.json", "w") as f:
-                        json.dump(parent_coordination_config, f)
-
-            # orchestrator_config.json
-            if coord_cfg:
-                so_cfg = getattr(coord_cfg, "subagent_orchestrator", None)
-                if so_cfg:
-                    with open(mcp_temp_dir / f"{_token}_orchestrator_config.json", "w") as f:
-                        json.dump(so_cfg.to_dict(), f)
-
-            logger.info(
-                f"[Orchestrator] Re-wrote subagent MCP config files to {mcp_temp_dir}",
-            )
-        except Exception as e:
-            logger.warning(f"[Orchestrator] Failed to re-write subagent MCP config files: {e}")
+        """Delegates to SubagentToolInjector.rewrite_subagent_mcp_config_files."""
+        self._subagent_tool_injector.rewrite_subagent_mcp_config_files(workspace_root, agent_id)
 
     def _ensure_context_md_for_round_evaluator(
         self,

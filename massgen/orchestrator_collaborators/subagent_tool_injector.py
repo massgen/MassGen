@@ -523,3 +523,57 @@ class SubagentToolInjector:
         )
 
         return config
+
+    def rewrite_subagent_mcp_config_files(
+        self,
+        workspace_root,
+        agent_id: str,
+    ) -> None:
+        """Re-write the subagent MCP JSON config files lost when the workspace
+        was cleared between rounds (round-2+ counterpart of create_subagent_mcp_config)."""
+        import json
+        from pathlib import Path as PathlibPath
+        from typing import Any
+
+        orch = self._orchestrator
+        mcp_temp_dir = PathlibPath(workspace_root) / ".massgen" / "subagent_mcp"
+        mcp_temp_dir.mkdir(parents=True, exist_ok=True)
+        _token = orch.coordination_tracker.get_path_token(agent_id)
+
+        try:
+            agent_configs = []
+            for aid, a in orch.agents.items():
+                agent_cfg: dict[str, Any] = {"id": aid}
+                if hasattr(a.backend, "config"):
+                    backend_cfg = {k: v for k, v in a.backend.config.items() if k not in ("mcp_servers", "_config_path")}
+                    agent_cfg["backend"] = backend_cfg
+                runtime_agent_config = getattr(a, "config", None)
+                subagent_agents = getattr(runtime_agent_config, "subagent_agents", None)
+                if isinstance(subagent_agents, list) and subagent_agents:
+                    agent_cfg["subagent_agents"] = json.loads(json.dumps(subagent_agents))
+                agent_configs.append(agent_cfg)
+            with open(mcp_temp_dir / f"{_token}_agent_configs.json", "w") as f:
+                json.dump(agent_configs, f)
+
+            coord_cfg = getattr(orch.config, "coordination_config", None)
+            if coord_cfg:
+                parent_coordination_config = self.build_parent_coordination_config_for_subagents()
+                if parent_coordination_config:
+                    with open(mcp_temp_dir / f"{_token}_coordination_config.json", "w") as f:
+                        json.dump(parent_coordination_config, f)
+
+            if coord_cfg:
+                so_cfg = getattr(coord_cfg, "subagent_orchestrator", None)
+                if so_cfg:
+                    with open(mcp_temp_dir / f"{_token}_orchestrator_config.json", "w") as f:
+                        json.dump(so_cfg.to_dict(), f)
+
+            from massgen.logger_config import logger
+
+            logger.info(
+                f"[Orchestrator] Re-wrote subagent MCP config files to {mcp_temp_dir}",
+            )
+        except Exception as e:
+            from massgen.logger_config import logger
+
+            logger.warning(f"[Orchestrator] Failed to re-write subagent MCP config files: {e}")
