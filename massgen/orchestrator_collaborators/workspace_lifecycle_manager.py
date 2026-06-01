@@ -169,3 +169,89 @@ class WorkspaceLifecycleManager:
                 if namespaced_mf.exists():
                     namespaced_mf.unlink()
                 manifest_file.rename(namespaced_mf)
+
+    def merge_agent_memories_to_winner(self, winning_agent_id: str) -> None:
+        """Merge memory directories from all agents into the winning agent's workspace.
+
+        Ensures memories created by any agent during coordination are preserved
+        in the final snapshot, regardless of which agent won.
+        """
+        orch = self._orchestrator
+        if not hasattr(orch.config, "coordination_config") or not hasattr(
+            orch.config.coordination_config,
+            "enable_memory_filesystem_mode",
+        ):
+            return
+
+        if not orch.config.coordination_config.enable_memory_filesystem_mode:
+            logger.debug(
+                "[Orchestrator] Memory filesystem mode not enabled, skipping memory merge",
+            )
+            return
+
+        winning_agent = orch.agents.get(winning_agent_id)
+        if not winning_agent or not hasattr(winning_agent, "backend") or not winning_agent.backend.filesystem_manager:
+            logger.warning(
+                f"[Orchestrator] Cannot merge memories - winning agent {winning_agent_id} has no filesystem manager",
+            )
+            return
+
+        winner_memory_base = Path(winning_agent.backend.filesystem_manager.cwd) / "memory"
+        winner_memory_base.mkdir(parents=True, exist_ok=True)
+
+        logger.info(
+            f"[Orchestrator] Merging memories from all agents into {winning_agent_id}'s workspace",
+        )
+
+        merged_count = 0
+        for agent_id, agent in orch.agents.items():
+            if agent_id == winning_agent_id:
+                continue
+
+            if not hasattr(agent, "backend") or not agent.backend.filesystem_manager:
+                continue
+
+            agent_memory_base = Path(agent.backend.filesystem_manager.cwd) / "memory"
+            if not agent_memory_base.exists():
+                continue
+
+            for tier in ["short_term", "long_term"]:
+                source_tier_dir = agent_memory_base / tier
+                if not source_tier_dir.exists():
+                    continue
+
+                dest_tier_dir = winner_memory_base / tier
+                dest_tier_dir.mkdir(parents=True, exist_ok=True)
+
+                for memory_file in source_tier_dir.glob("*.md"):
+                    dest_file = dest_tier_dir / memory_file.name
+
+                    if dest_file.exists():
+                        try:
+                            existing_content = dest_file.read_text()
+                            new_content = memory_file.read_text()
+                            combined = f"{existing_content}\n\n---\n\n# From Agent {agent_id}\n\n{new_content}"
+                            dest_file.write_text(combined)
+                            logger.info(
+                                f"[Orchestrator] Merged {memory_file.name} from {agent_id} (appended)",
+                            )
+                            merged_count += 1
+                        except Exception as e:
+                            logger.warning(
+                                f"[Orchestrator] Failed to merge {memory_file.name} from {agent_id}: {e}",
+                            )
+                    else:
+                        try:
+                            shutil.copy2(memory_file, dest_file)
+                            logger.info(
+                                f"[Orchestrator] Copied {memory_file.name} from {agent_id}",
+                            )
+                            merged_count += 1
+                        except Exception as e:
+                            logger.warning(
+                                f"[Orchestrator] Failed to copy {memory_file.name} from {agent_id}: {e}",
+                            )
+
+        logger.info(
+            f"[Orchestrator] Memory merge complete: {merged_count} files merged from other agents into {winning_agent_id}'s workspace",
+        )
