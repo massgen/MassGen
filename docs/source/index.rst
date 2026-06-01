@@ -209,6 +209,10 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.92 (June 1, 2026)** - Orchestrator Collaborator Refactor & Parallel Search MCP
+
+Refactors the monolithic orchestrator into 49 lazy collaborators with stable delegator call sites, splits focused Textual display helpers into sibling modules, adds characterization coverage for extraction seams, and introduces a Parallel Web Search MCP registry entry plus runnable example config.
+
 **v0.1.91 (May 27, 2026)** - Config Reliability & Hook Safety
 
 Hardens release-critical YAML configuration paths with centralized coordination, timeout, and orchestrator runtime parsing; strict unknown-key validation for typo detection; checklist runtime control wiring; and safer Gemini/Codex native hook path permission precedence.
