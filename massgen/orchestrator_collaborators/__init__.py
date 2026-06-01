@@ -49,6 +49,7 @@ from .snapshot_manager import SnapshotManager
 from .step_mode_handler import StepModeHandler
 from .subagent_lifecycle_coordinator import SubagentLifecycleCoordinator
 from .subagent_tool_injector import SubagentToolInjector
+from .tool_message_helpers import ToolMessageHelpers
 from .trace_analyzer_runner import TraceAnalyzerRunner
 from .workspace_lifecycle_manager import WorkspaceLifecycleManager
 from .workspace_modal_presenter import WorkspaceModalPresenter
@@ -93,6 +94,7 @@ __all__ = [
     "PersonaInjector",
     "MidStreamInjectionHookInstaller",
     "TraceAnalyzerRunner",
+    "ToolMessageHelpers",
     "CriteriaEvolutionRunner",
     "EvaluationCriteriaGeneratorCollaborator",
     "EvaluatorResultExtractor",

@@ -116,6 +116,7 @@ from .orchestrator_collaborators import (
     StepModeHandler,
     SubagentLifecycleCoordinator,
     SubagentToolInjector,
+    ToolMessageHelpers,
     TraceAnalyzerRunner,
     WorkspaceLifecycleManager,
     WorkspaceModalPresenter,
@@ -424,6 +425,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _step_mode_handler(self) -> StepModeHandler:
         return StepModeHandler(self)
+
+    @functools.cached_property
+    def _tool_message_helpers(self) -> ToolMessageHelpers:
+        return ToolMessageHelpers(self)
 
     def __init__(
         self,
@@ -1460,34 +1465,8 @@ class Orchestrator(ChatAgent):
 
     @staticmethod
     def _is_tool_related_content(content: str) -> bool:
-        """
-        Defensive check: exclude tool-related output from clean answer text.
-
-        This guards against backends (e.g., ClaudeCode) that may embed tool
-        output or status messages in content-type chunks. Normally these are
-        handled via separate chunk_type branches (mcp_status, backend_status,
-        custom_tool_status), but this catches any that leak through.
-
-        Args:
-            content: The content string to check
-
-        Returns:
-            True if content is tool-related and should be excluded from clean answer
-        """
-        if not content:
-            return False
-
-        # Tool output prefixed by orchestrator for mcp_status / custom_tool_status
-        if content.startswith("🔧 "):
-            return True
-
-        # Backend status messages (session info from ClaudeCode)
-        if content.startswith("Final Temp Working directory:"):
-            return True
-        if content.startswith("Final Session ID:"):
-            return True
-
-        return False
+        """Delegates to ToolMessageHelpers.is_tool_related_content (@staticmethod)."""
+        return ToolMessageHelpers.is_tool_related_content(content)
 
     async def chat(
         self,
@@ -6184,51 +6163,8 @@ class Orchestrator(ChatAgent):
         primary_error_msg: str,
         secondary_error_msg: str = None,
     ) -> list[dict[str, Any]]:
-        """
-        Create tool error messages for all tool calls in a response.
-
-        Args:
-            agent: The ChatAgent instance for backend access
-            tool_calls: List of tool calls that need error responses
-            primary_error_msg: Error message for the first tool call
-            secondary_error_msg: Error message for additional tool calls (defaults to primary_error_msg)
-
-        Returns:
-            List of tool result messages that can be sent back to the agent
-        """
-        if not tool_calls:
-            return []
-
-        if secondary_error_msg is None:
-            secondary_error_msg = primary_error_msg
-
-        enforcement_msgs = []
-
-        # Send primary error for the first tool call
-        first_tool_call = tool_calls[0]
-        error_result_msg = agent.backend.create_tool_result_message(
-            first_tool_call,
-            primary_error_msg,
-        )
-        # Handle both single dict (Chat Completions) and list (Response API) returns
-        if isinstance(error_result_msg, list):
-            enforcement_msgs.extend(error_result_msg)
-        else:
-            enforcement_msgs.append(error_result_msg)
-
-        # Send secondary error messages for any additional tool calls (API requires response to ALL calls)
-        for additional_tool_call in tool_calls[1:]:
-            neutral_msg = agent.backend.create_tool_result_message(
-                additional_tool_call,
-                secondary_error_msg,
-            )
-            # Handle both single dict (Chat Completions) and list (Response API) returns
-            if isinstance(neutral_msg, list):
-                enforcement_msgs.extend(neutral_msg)
-            else:
-                enforcement_msgs.append(neutral_msg)
-
-        return enforcement_msgs
+        """Delegates to ToolMessageHelpers.create_tool_error_messages (@staticmethod)."""
+        return ToolMessageHelpers.create_tool_error_messages(agent, tool_calls, primary_error_msg, secondary_error_msg)
 
     def _split_disallowed_workflow_tool_calls(
         self,
@@ -6236,32 +6172,8 @@ class Orchestrator(ChatAgent):
         tool_calls: list[dict[str, Any]],
         allowed_workflow_tool_names: set[str],
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
-        """Split tool calls into allowed and disallowed workflow calls for this round.
-
-        Args:
-            agent: Agent used to extract tool names from backend-specific call objects.
-            tool_calls: Raw tool calls returned by model/backend.
-            allowed_workflow_tool_names: Workflow tools available in this round.
-
-        Returns:
-            Tuple of:
-            - allowed_calls: Calls that can be processed this round
-            - disallowed_calls: Workflow calls not available this round
-            - disallowed_names: Ordered list of disallowed workflow tool names
-        """
-        allowed_calls: list[dict[str, Any]] = []
-        disallowed_calls: list[dict[str, Any]] = []
-        disallowed_names: list[str] = []
-
-        for tool_call in tool_calls:
-            tool_name = agent.backend.extract_tool_name(tool_call)
-            if tool_name in WORKFLOW_TOOL_NAMES and tool_name not in allowed_workflow_tool_names:
-                disallowed_calls.append(tool_call)
-                disallowed_names.append(tool_name)
-                continue
-            allowed_calls.append(tool_call)
-
-        return allowed_calls, disallowed_calls, disallowed_names
+        """Delegates to ToolMessageHelpers.split_disallowed_workflow_tool_calls."""
+        return self._tool_message_helpers.split_disallowed_workflow_tool_calls(agent, tool_calls, allowed_workflow_tool_names)
 
     def _load_rate_limits_from_config(self) -> dict[str, dict[str, int]]:
         """Thin delegator — see :class:`RateLimitController`."""
