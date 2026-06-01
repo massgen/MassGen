@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.92 (June 1, 2026)** - Orchestrator Collaborator Refactor & Parallel Search MCP
+Refactors the monolithic orchestrator into 49 lazy collaborators with stable delegator call sites, splits focused TUI display helpers into sibling modules, adds characterization coverage for the extraction seams, and introduces a Parallel Web Search MCP registry entry plus runnable example config.
+
 **v0.1.91 (May 27, 2026)** - Config Reliability & Hook Safety
 Hardens release-critical configuration paths with centralized coordination, timeout, and orchestrator runtime parsing; strict unknown-key validation for typo detection; checklist runtime control wiring; and safer Gemini/Codex native hook path permission precedence.
 
@@ -32,6 +35,36 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 
 ---
 
+## [0.1.92] - 2026-06-01
+
+### Added
+- **Parallel Web Search MCP**: Added a `parallel_search` MCP server registry entry and `massgen/configs/tools/web-search/parallel_search_example.yaml` for Parallel's hosted Search MCP server, supporting anonymous exploratory use and optional `PARALLEL_API_KEY` headers for higher rate limits.
+- **Orchestrator Refactor Roadmap**: Added `docs/dev_notes/orchestrator_refactor_roadmap.md` to document the extraction sequence, lessons learned, and high-risk follow-up work left intentionally out of scope.
+- **Characterization Coverage**: Added orchestrator and Textual terminal display characterization suites to pin public contracts and extraction seams before continuing deeper refactors.
+
+### Changed
+- **Orchestrator Collaborator Extraction**: `massgen/orchestrator.py` was reduced from 21,599 to 8,574 lines by extracting 49 lazy collaborators into `massgen/orchestrator_collaborators/`. Existing methods remain available through thin delegators so current internal and external call sites keep working.
+- **Textual Terminal Display Cleanup**: Provider/model display helpers, terminal capability probing, and widget-debug helpers moved out of `textual_terminal_display.py` into focused sibling modules while preserving public imports.
+- **Refactor Test Seams**: Existing monkeypatch and mock-stub tests were repointed to the collaborator locations without deleting tests or weakening assertions.
+
+### Tests
+- Added `massgen/tests/test_orchestrator_characterization.py` covering the orchestrator public contract and lazy collaborator access pattern.
+- Added `massgen/tests/frontend/test_textual_terminal_display_characterization.py` covering Textual display public exports and helper extraction seams.
+- Updated integration/unit coverage around broadcast hooks, restart/external tools, auto trace analysis, essential files, evaluator personas, and orchestrator units for the new collaborator seams.
+- Verified targeted characterization and collaborator suites; ruff checks pass for the refactored orchestrator, collaborator package, and Textual display modules.
+
+### Notes
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Remaining high-risk extraction work for MidStreamInjectionHookInstaller and streaming/coordination cores is documented for follow-up.
+
+### Technical Details
+- **Major Focus**: Shrink MassGen's orchestration core without changing behavior, making future coordination changes easier to isolate and review.
+- **Key Commits**: `f9227eaf`, `a80281cb`, `efa4dd4c`, `b155a346`
+- **PRs Merged**: [#1108](https://github.com/massgen/MassGen/pull/1108)
+- **Contributors**: @NormallyGaussian, @ncrispino, @HenryQi and the MassGen team
+
+---
+
 ## [0.1.91] - 2026-05-27
 
 ### Added
@@ -48,7 +81,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 - Added native hook regression coverage for nested read-only path precedence, protected-path enforcement, and Claude Code `additionalContext` injection conversion.
 
 ### Notes
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.92.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ### Technical Details
 - **Major Focus**: Make release-critical YAML configuration surfaces typo-resistant and parser-complete while hardening native hook path authorization.
@@ -81,7 +114,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 
 ### Notes
 - Discriminative Criteria Refinements from the v0.1.90 roadmap landed in this release.
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.92.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ### Technical Details
 - **Major Focus**: Make checklist-gated refinement a stronger optimization loop by improving the loss signal, reducing scoring bias, and preventing low-signal criteria from dominating later rounds.
@@ -109,7 +142,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 
 ### Notes
 - This release completes the follow-up Antigravity integration pass that v0.1.88 introduced as a first version.
-- Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.92.
+- Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ### Technical Details
 - **Major Focus**: Make Antigravity CLI reliable in real MassGen coordination runs by hardening auth, workspace isolation, workflow-tool semantics, hook integration, and prompt affordance boundaries.
@@ -140,7 +173,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 ### Notes
 - Antigravity CLI (`agy`) must be installed separately with `curl -fsSL https://antigravity.google/cli/install.sh | bash`.
 - Local mode can use existing Google OAuth state at `~/.gemini/google_accounts.json`; Docker mode requires `GEMINI_API_KEY` or `GOOGLE_API_KEY` because OAuth state does not cross container boundaries.
-- Follow-up Antigravity hardening landed in v0.1.89; Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.92.
+- Follow-up Antigravity hardening landed in v0.1.89; Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
 
 ### Technical Details
 - **Major Focus**: Add Google Antigravity CLI as a first-class MassGen backend while keeping project-local isolation and MassGen workflow/tool semantics intact.

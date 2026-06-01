@@ -1,4 +1,4 @@
-# MassGen v0.1.91 Release Announcement
+# MassGen v0.1.92 Release Announcement
 
 <!--
 This is the current release announcement. Copy this + feature-highlights.md to LinkedIn/X.
@@ -7,23 +7,23 @@ After posting, update the social links below.
 
 ## Release Summary
 
-We're excited to release MassGen v0.1.91 — Config Reliability & Hook Safety! 🚀 This is a reliability pass for the config and hook paths that releases depend on. Coordination, timeout, and orchestrator runtime settings now go through centralized parsers; validation catches unknown YAML keys earlier; and strict mode turns those typos into release blockers. Checklist runtime controls use the same wiring, while Gemini/Codex standalone hooks respect nested protected paths before broader workspace write permissions.
+We're excited to release MassGen v0.1.92 — Orchestrator Collaborator Refactor & Parallel Search MCP! 🚀 This release takes a cleanup-heavy step toward a smaller, easier-to-test orchestration core. The monolithic orchestrator has been split into 49 lazy collaborators while preserving existing public call sites, TUI display helpers moved into focused sibling modules, and characterization tests now pin the extraction seams. It also adds a Parallel Web Search MCP example for LLM-optimized research workflows.
 
 ## Install
 
 ```bash
-pip install massgen==0.1.91
+pip install massgen==0.1.92
 ```
 
 ## Links
 
-- **Release notes:** https://github.com/massgen/MassGen/releases/tag/v0.1.91
+- **Release notes:** https://github.com/massgen/MassGen/releases/tag/v0.1.92
 - **X post:** [TO BE ADDED AFTER POSTING]
 - **LinkedIn post:** [TO BE ADDED AFTER POSTING]
 
 ## Posting Notes
 
-- **Suggested image:** Use a screenshot of the v0.1.91 release notes.
+- **Suggested image:** Use a screenshot of the v0.1.92 release notes.
 
 ---
 
@@ -33,44 +33,38 @@ Copy everything below this line, then append content from `feature-highlights.md
 
 ---
 
-We're excited to release MassGen v0.1.91 — Config Reliability & Hook Safety! 🚀 This is a reliability pass for the config and hook paths that releases depend on. Coordination, timeout, and orchestrator runtime settings now go through centralized parsers; validation catches unknown YAML keys earlier; and strict mode turns those typos into release blockers. Checklist runtime controls use the same wiring, while Gemini/Codex standalone hooks respect nested protected paths before broader workspace write permissions.
+We're excited to release MassGen v0.1.92 — Orchestrator Collaborator Refactor & Parallel Search MCP! 🚀 This release takes a cleanup-heavy step toward a smaller, easier-to-test orchestration core. The monolithic orchestrator has been split into 49 lazy collaborators while preserving existing public call sites, TUI display helpers moved into focused sibling modules, and characterization tests now pin the extraction seams. It also adds a Parallel Web Search MCP example for LLM-optimized research workflows.
 
 **Key Improvements:**
 
-🧭 **Centralized Config Wiring**:
-- `CoordinationConfig.from_dict()` now owns coordination YAML parsing
-- `TimeoutConfig.from_dict()` now owns timeout setting parsing
-- `AgentConfig.apply_orchestrator_config()` now owns top-level orchestrator runtime field application
-- CLI helpers remain as compatibility wrappers around the centralized paths
+🧩 **Orchestrator Collaborator Extraction**:
+- `orchestrator.py` dropped from 21,599 to 8,574 lines
+- 49 collaborators now live under `massgen/orchestrator_collaborators/`
+- Thin delegator methods keep existing internal and external call sites working
+- Collaborators use lazy cached properties so `Orchestrator.__new__` test fixtures still work
 
-🔎 **Config Drift Detection**:
-- Unknown `orchestrator.coordination.*` keys now produce validation warnings
-- Unknown top-level `orchestrator.*` and `timeout_settings.*` keys are also flagged
-- `scripts/validate_all_configs.py --strict` treats those warnings as release-blocking
+🖥️ **TUI Display Module Cleanup**:
+- `textual_terminal_display.py` now delegates provider/model helpers, terminal capability probing, and widget-debug helpers to focused sibling modules
+- Public TUI exports remain stable for existing imports
 
-✅ **Checklist Runtime Controls**:
-- `max_checklist_calls_per_round` now flows through the centralized orchestrator runtime helper
-- `checklist_first_answer` is wired through the same path
-- Documented planning and subagent timeout fields have parser coverage
+🔎 **Parallel Web Search MCP**:
+- New `parallel_search` server registry entry
+- New runnable example at `massgen/configs/tools/web-search/parallel_search_example.yaml`
+- Supports anonymous exploratory use, with optional `PARALLEL_API_KEY` for higher rate limits
 
-🛡️ **Native Hook Permission Safety**:
-- Gemini CLI and Codex standalone hook scripts now prefer more-specific managed paths
-- Nested read-only and protected paths override broader writable parent directories
-- Claude Code hook injection tests/docs now match the SDK-native `additionalContext` contract
-
-🧪 **Tests**:
-- New parser/validator parity coverage for coordination config, timeout settings, and top-level orchestrator runtime fields
-- Strict config validation tests cover typo detection for release configs
-- Native hook regression tests cover nested read-only precedence and protected-path enforcement
+🧪 **Characterization Safety Net**:
+- 77 new characterization cases pin public contracts and extraction seams
+- Existing monkeypatch/mock seams were repointed to collaborator locations without deleting tests or weakening assertions
+- The refactor roadmap and remaining high-risk follow-up work are documented in `docs/dev_notes/orchestrator_refactor_roadmap.md`
 
 **Getting Started:**
 
 ```bash
-pip install massgen==0.1.91
-uv run massgen --config massgen/configs/features/fast_iteration.yaml "Create an svg of an AI agent coding."
+pip install massgen==0.1.92
+uv run massgen --config massgen/configs/tools/web-search/parallel_search_example.yaml "Research the latest advances in multi-agent AI systems"
 ```
 
-Release notes: https://github.com/massgen/MassGen/releases/tag/v0.1.91
+Release notes: https://github.com/massgen/MassGen/releases/tag/v0.1.92
 
 Feature highlights:
 

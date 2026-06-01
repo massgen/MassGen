@@ -1,14 +1,14 @@
-# MassGen v0.1.92 Roadmap
+# MassGen v0.1.93 Roadmap
 
-**Target Release:** May 29, 2026
+**Target Release:** June 3, 2026
 
 ## Overview
 
-Version 0.1.92 picks up the image/video edit work deferred from v0.1.86-v0.1.91 and continues multimodal provider-parity work.
+Version 0.1.93 picks up the image/video edit work deferred from v0.1.86-v0.1.92 and continues multimodal provider-parity work.
 
 ---
 
-## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.91)
+## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.92)
 
 **Issue:** [#959](https://github.com/massgen/MassGen/issues/959)
 **Owner:** @ncrispino
@@ -30,6 +30,7 @@ Version 0.1.92 picks up the image/video edit work deferred from v0.1.86-v0.1.91 
 
 ## Related Tracks
 
+- **v0.1.92**: Orchestrator collaborator refactor and Parallel Search MCP — 49 collaborator extractions, Textual display helper split, characterization coverage, and a Parallel hosted search example
 - **v0.1.91**: Config reliability and hook safety — centralized config parsing, strict unknown-key validation, checklist runtime control wiring, and nested native-hook permission precedence
 - **v0.1.90**: Discriminative criteria refinements and checklist calibration — score-spread pruning, per-criterion feedback, position-bias counterbalancing, unified checklist gate, and shared score utilities
 - **v0.1.89**: Antigravity CLI full integration and hardening — workflow-mode parity, auth checks, workspace project anchoring, standalone hooks.json, and prompt affordance gating

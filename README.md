@@ -69,7 +69,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.91 Features](#-latest-features-v0191)
+- [v0.1.92 Features](#-latest-features-v0192)
 </details>
 
 <details open>
@@ -122,15 +122,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [Recent Achievements (v0.1.91)](#recent-achievements-v0191)
-- [Previous Achievements (v0.0.3 - v0.1.90)](#previous-achievements-v003---v0190)
+- [Recent Achievements (v0.1.92)](#recent-achievements-v0192)
+- [Previous Achievements (v0.0.3 - v0.1.91)](#previous-achievements-v003---v0191)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.92 Roadmap](#v0192-roadmap)
+- [v0.1.93 Roadmap](#v0193-roadmap)
 </details>
 
 <details open>
@@ -155,19 +155,19 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.91)
+## 🆕 Latest Features (v0.1.92)
 
-**🎉 Released: May 27, 2026**
+**🎉 Released: June 1, 2026**
 
-**What's New in v0.1.91:**
-- **🧭 Centralized Config Wiring** - Coordination, timeout, and top-level orchestrator runtime settings now parse through single source-of-truth helpers.
-- **🔎 Config Drift Detection** - Unknown YAML keys in release-critical config surfaces now produce validation warnings, and strict config validation treats them as release blockers.
-- **🛡️ Native Hook Permission Safety** - Gemini CLI and Codex standalone hooks now apply nested protected/read-only paths before broader writable workspace rules.
+**What's New in v0.1.92:**
+- **🧩 Orchestrator Collaborators** - The monolithic orchestrator is split into 49 lazy collaborators while preserving existing public call sites.
+- **🧪 Characterization Safety Net** - New orchestrator and Textual display characterization tests pin public contracts and extraction seams.
+- **🔎 Parallel Web Search MCP** - A new Parallel Search MCP registry entry and example config support LLM-optimized web research workflows.
 
-**Try v0.1.91 Features:**
+**Try v0.1.92 Features:**
 ```bash
-pip install massgen==0.1.91
-uv run massgen --config massgen/configs/features/fast_iteration.yaml "Create an svg of an AI agent coding."
+pip install massgen==0.1.92
+uv run massgen --config massgen/configs/tools/web-search/parallel_search_example.yaml "Research the latest advances in multi-agent AI systems"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1242,18 +1242,20 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.91)
+### Recent Achievements (v0.1.92)
 
-**🎉 Released: May 27, 2026**
+**🎉 Released: June 1, 2026**
 
-#### Config Reliability & Hook Safety
-- **Centralized Config Wiring**: `CoordinationConfig.from_dict()`, `TimeoutConfig.from_dict()`, and `AgentConfig.apply_orchestrator_config()` now own their respective YAML/runtime surfaces
-- **Config Drift Detection**: Unknown coordination, orchestrator, and timeout keys produce validation warnings, and strict validation treats them as release-blocking
-- **Checklist Runtime Controls**: `max_checklist_calls_per_round` and `checklist_first_answer` now flow through the centralized orchestrator runtime helper
-- **Native Hook Permission Safety**: Gemini CLI and Codex standalone hooks enforce nested protected/read-only paths before broader writable parents
-- **Tests**: New parser/validator parity coverage and native hook regression tests guard the release-critical paths
+#### Orchestrator Collaborator Refactor & Parallel Search MCP
+- **Orchestrator Collaborators**: `orchestrator.py` dropped from 21,599 to 8,574 lines by extracting 49 lazy collaborators into `massgen/orchestrator_collaborators/`
+- **Stable Delegator Surface**: Existing public methods remain available through thin delegators, preserving internal and external call sites
+- **Textual Display Cleanup**: Provider/model helpers, terminal capability probing, and widget-debug helpers moved into focused sibling modules
+- **Parallel Web Search MCP**: New `parallel_search` registry entry and example config support Parallel's hosted Search MCP server
+- **Tests**: 77 new characterization cases pin the orchestrator and Textual display public contracts
 
-### Previous Achievements (v0.0.3 - v0.1.90)
+### Previous Achievements (v0.0.3 - v0.1.91)
+
+✅ **Config Reliability & Hook Safety (v0.1.91)**: Centralized coordination, timeout, and orchestrator runtime parsing; strict unknown-key validation; checklist runtime control wiring; and safer Gemini/Codex native hook path permission precedence.
 
 ✅ **Discriminative Criteria Refinements & Checklist Calibration (v0.1.90)**: Improved checklist-gated refinement quality with discriminative-power pruning, per-criterion feedback, position-bias counterbalancing, deterministic tie-breaking, a unified checklist gate, shared score parsing utilities, and fast-iteration config updates.
 
@@ -1580,9 +1582,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.92 Roadmap
+### v0.1.93 Roadmap
 
-Version 0.1.92 picks up the image/video edit work deferred from v0.1.86-v0.1.91 and continues multimodal provider-parity work:
+Version 0.1.93 picks up the image/video edit work deferred from v0.1.86-v0.1.92 and continues multimodal provider-parity work:
 
 #### Planned Features
 - **Image/Video Edit Capabilities** ([#959](https://github.com/massgen/MassGen/issues/959)): Image and video editing across providers with multi-turn editing workflows via continuation IDs
