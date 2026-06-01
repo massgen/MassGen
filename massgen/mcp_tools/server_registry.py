@@ -9,6 +9,8 @@ Available servers:
 - Context7: Up-to-date documentation for libraries and frameworks
 - Brave Search: Web search via Brave API (requires API key)
 - Exa Search: AI-powered web search via Exa API (requires API key)
+- Parallel Search: LLM-optimized web search via Parallel API (anonymous-friendly;
+  optional API key for higher rate limits)
 """
 
 import os
@@ -63,6 +65,35 @@ MCP_SERVER_REGISTRY: dict[str, dict[str, Any]] = {
             "npm package (npx -y exa-mcp-server); Exa's docs also recommend "
             "the hosted MCP endpoint https://mcp.exa.ai/mcp for "
             "HTTP-capable clients."
+        ),
+        "security": {
+            "level": "moderate",
+        },
+    },
+    "parallel_search": {
+        "name": "parallel_search",
+        "type": "streamable-http",
+        "url": "https://search.parallel.ai/mcp",
+        "headers": {
+            "Authorization": "Bearer ${PARALLEL_API_KEY}",
+        },
+        "description": (
+            "Parallel's hosted Search MCP server. Provides LLM-optimized "
+            "web search and URL extraction tools that return ranked, "
+            "compressed markdown excerpts suitable for direct model "
+            "consumption."
+        ),
+        "requires_api_key": True,
+        "api_key_env_var": "PARALLEL_API_KEY",
+        "notes": (
+            "Get an API key at https://platform.parallel.ai. The "
+            "Authorization header is substituted from PARALLEL_API_KEY at "
+            "MCP connection time (mirrors how stdio servers consume env). "
+            "The endpoint search.parallel.ai/mcp also accepts unauthenticated "
+            "requests at lower rate limits — if you want anonymous use, add "
+            "the server manually to your mcp_servers config without the "
+            "headers block (see parallel_search_example.yaml). Docs: "
+            "https://docs.parallel.ai/integrations/mcp/search-mcp"
         ),
         "security": {
             "level": "moderate",

@@ -1,0 +1,89 @@
+# MassGen Configuration: Parallel Web Search
+# This configuration demonstrates Parallel's hosted Search MCP server for
+# LLM-optimized web search and URL extraction.
+#
+# Prerequisites:
+#   - None required for free anonymous use (light/exploratory traffic).
+#   - For higher rate limits or production use:
+#       1. Get an API key at https://platform.parallel.ai
+#       2. Set PARALLEL_API_KEY in your .env file
+#       3. Uncomment the `headers` block below
+#
+# Usage:
+#   uv run massgen --config @examples/tools/web-search/parallel_search_example.yaml "Research the latest advances in multi-agent AI systems"
+#
+# Features:
+#   - web_search: pass an `objective` (natural-language goal) plus 2-3 short
+#     keyword `search_queries`; returns ranked URLs with LLM-optimized
+#     excerpts in one call (replaces multi-step keyword search loops)
+#   - web_fetch: pass a list of URLs (and optional `objective`); returns the
+#     most relevant markdown content from each page, bounded for token
+#     efficiency
+#   - Excerpts are pre-ranked and compressed for reasoning utility, so they
+#     can be fed directly into the model context with minimal post-processing
+
+agents:
+  - id: "parallel_research_agent"
+    backend:
+      type: "claude"
+      model: "claude-sonnet-4-20250514"
+      mcp_servers:
+        - name: "parallel_search"
+          type: "streamable-http"
+          url: "https://search.parallel.ai/mcp"
+          # Uncomment to enable higher rate limits with a Parallel API key.
+          # NOTE: this `headers` block is the generic massgen MCP transport
+          # shape (matches the streamable_http_test configs). When using the
+          # `claude_code` backend, the equivalent field is a top-level
+          # `authorization: "Bearer ${PARALLEL_API_KEY}"` instead (see
+          # massgen/backend/docs/MCP_IMPLEMENTATION_CLAUDE_BACKEND.md).
+          # headers:
+          #   Authorization: "Bearer ${PARALLEL_API_KEY}"
+          security:
+            level: "moderate"
+
+    system_message: |
+      You are a research assistant with access to Parallel Web Systems'
+      LLM-optimized search.
+
+      The Parallel Search MCP exposes two tools — the exact call schemas
+      will be provided to you by the MCP server itself. Rely on those
+      schemas for argument names and types; the notes below describe how
+      to use the tools well, not how to call them.
+
+      Web search
+      - The objective should be a natural-language description of what
+        you're trying to answer (up to 5000 chars). Include enough context
+        to make the search self-contained.
+      - Provide 2-3 short keyword queries, each 3-6 words. Vary entity
+        names, synonyms, and angles — keep them diverse. Do NOT write
+        sentences or use `site:` operators in the keyword queries.
+        Maximum of 5 queries per call.
+      - When the tool supports a mode preset, prefer the default
+        ("advanced") for higher-quality multi-step retrieval on harder
+        questions and the lower-latency "basic" mode for simple lookups.
+      - Results come back as ranked URLs with markdown excerpts that are
+        already relevance-ranked and compressed for direct LLM
+        consumption.
+
+      URL extraction
+      - Provide a small batch of URLs (up to 20) and, when useful, an
+        objective to focus the excerpts.
+      - Results come back as markdown content from each URL.
+
+      Best practices
+      - Provide BOTH an objective and keyword queries for best results —
+        one well-formed search typically replaces several keyword
+        searches.
+      - Use the web search tool for discovery; use the URL extraction
+        tool only when you already know the URL or after a search step
+        has surfaced one.
+      - Cite every claim with the source URL returned by the tools;
+        never invent URLs.
+
+      Provide comprehensive, well-sourced responses based on the search
+      results.
+
+ui:
+  display_type: "textual_terminal"
+  logging_enabled: true
