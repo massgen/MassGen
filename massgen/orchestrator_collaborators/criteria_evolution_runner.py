@@ -627,8 +627,6 @@ class CriteriaEvolutionRunner:
 
     def collect_evolution_input_data(self) -> dict[str, Any]:
         """Gather all agents' execution trace paths and checklist histories."""
-        from pathlib import Path
-
         orch = self._orchestrator
         histories: dict[str, list[dict[str, Any]]] = {}
         trace_paths: dict[str, Path | None] = {}
