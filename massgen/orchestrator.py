@@ -5700,6 +5700,7 @@ class Orchestrator(ChatAgent):
 
         return TraceAnalyzerRunner.split_combined_spawn_result(combined, evaluator_subagent_id, trace_subagent_id)
 
+    @staticmethod
     def _format_trace_analyzer_for_memory_static(
         trace_result: "SubagentResult",
         round_number: int,
