@@ -112,6 +112,7 @@ from .orchestrator_collaborators import (
     RuntimeInputDelivery,
     SkillsConfigValidator,
     SnapshotManager,
+    StepModeHandler,
     SubagentLifecycleCoordinator,
     SubagentToolInjector,
     TraceAnalyzerRunner,
@@ -414,6 +415,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _changedoc_coordinator(self) -> ChangedocCoordinator:
         return ChangedocCoordinator(self)
+
+    @functools.cached_property
+    def _step_mode_handler(self) -> StepModeHandler:
+        return StepModeHandler(self)
 
     def __init__(
         self,
@@ -1736,64 +1741,13 @@ class Orchestrator(ChatAgent):
         return self._metrics_reporter.save_coordination_logs()
 
     def finalize_step_mode(self, log_dir: Path) -> None:
-        """Write post-coordination artifacts for step mode runs.
+        """Delegator: see :class:`StepModeHandler.finalize_step_mode`.
 
-        Replicates the normal-mode finalization sequence so that step mode
-        log directories have the same structure (final/, status.json,
-        coordination_events.json, metrics) that downstream tools expect.
-
-        Args:
-            log_dir: The log session directory.
+        Invoked unbound by ``test_answer_path_normalization.py`` against a
+        ``MagicMock(spec=Orchestrator)``, so the underlying implementation is
+        a ``@staticmethod`` that accepts the orchestrator explicitly.
         """
-        import shutil
-
-        action_data = self._step_action_data or {}
-        agent_id = action_data.get("agent_id", "")
-        action = action_data.get("action", "")
-        answer_text = action_data.get("answer_text")
-        workspace_path = action_data.get("workspace_path")
-
-        # Write final/ directory for answer actions
-        if action == "new_answer" and answer_text is not None:
-            final_dir = log_dir / "final" / agent_id
-            final_dir.mkdir(parents=True, exist_ok=True)
-
-            # Normalize workspace paths so answer references the adjacent workspace/
-            normalized_answer = answer_text
-            if workspace_path:
-                dest_workspace = str(final_dir / "workspace")
-                normalized_answer = normalized_answer.replace(
-                    str(workspace_path),
-                    dest_workspace,
-                )
-                resolved_ws = str(Path(workspace_path).resolve())
-                if resolved_ws != str(workspace_path):
-                    normalized_answer = normalized_answer.replace(
-                        resolved_ws,
-                        dest_workspace,
-                    )
-
-            (final_dir / "answer.txt").write_text(normalized_answer)
-
-            # Copy workspace to final/ if available
-            if workspace_path:
-                ws_src = Path(workspace_path)
-                if ws_src.is_dir():
-                    ws_dest = final_dir / "workspace"
-                    shutil.copytree(ws_src, ws_dest, symlinks=True, dirs_exist_ok=True)
-
-            # Record in coordination tracker
-            self.coordination_tracker.set_final_answer(
-                agent_id,
-                answer_text,
-                snapshot_timestamp="final",
-            )
-
-        # Save coordination logs (status.json, coordination_events.json, metrics)
-        self.coordination_tracker._end_session()
-        self.coordination_tracker.save_coordination_logs(log_dir)
-        self.coordination_tracker.save_status_file(log_dir, orchestrator=self)
-        self.save_metrics(log_dir)
+        return StepModeHandler.finalize_step_mode(self, log_dir)
 
     def save_metrics(self, log_dir: Path):
         """Delegator: see MetricsReporter."""
@@ -1835,62 +1789,8 @@ class Orchestrator(ChatAgent):
         )
 
     async def _continuous_status_updates(self):
-        """Background task to continuously update status.json during coordination.
-
-        This task runs every 2 seconds to provide real-time status monitoring
-        for automation tools and LLM agents.
-        """
-        try:
-            while True:
-                # Check for cancellation before sleeping
-                if hasattr(self, "cancellation_manager") and self.cancellation_manager and self.cancellation_manager.is_cancelled:
-                    logger.info(
-                        "Cancellation detected in status update task - stopping",
-                    )
-                    break
-
-                await asyncio.sleep(2)  # Update every 2 seconds
-
-                # Check for cancellation after sleeping
-                if hasattr(self, "cancellation_manager") and self.cancellation_manager and self.cancellation_manager.is_cancelled:
-                    logger.info(
-                        "Cancellation detected in status update task - stopping",
-                    )
-                    break
-
-                log_session_dir = get_log_session_dir()
-                if log_session_dir:
-                    try:
-                        # Run synchronous save_status_file in thread pool to avoid blocking event loop
-                        # This prevents delays in WebSocket broadcasts and other async operations
-                        loop = asyncio.get_running_loop()
-                        await loop.run_in_executor(
-                            None,  # Use default thread pool executor
-                            self.coordination_tracker.save_status_file,
-                            log_session_dir,
-                            self,
-                        )
-                    except Exception as e:
-                        logger.debug(f"Failed to update status file in background: {e}")
-
-                # Update timeout status for each agent in the display
-                try:
-                    display = None
-                    if hasattr(self, "coordination_ui") and self.coordination_ui:
-                        display = getattr(self.coordination_ui, "display", None)
-
-                    if display and hasattr(display, "update_timeout_status"):
-                        for agent_id in self.agents.keys():
-                            timeout_state = self.get_agent_timeout_state(agent_id)
-                            if timeout_state and timeout_state.get("active_timeout"):
-                                display.update_timeout_status(agent_id, timeout_state)
-                except Exception as e:
-                    logger.warning(f"Failed to update timeout status in display: {e}")
-        except asyncio.CancelledError:
-            # Task was cancelled, this is expected behavior
-            pass
-        except Exception as e:
-            logger.warning(f"Background status update task encountered error: {e}")
+        """Delegator: see :class:`StepModeHandler.continuous_status_updates`."""
+        await self._step_mode_handler.continuous_status_updates()
 
     async def _coordinate_agents_with_timeout(
         self,
@@ -5406,46 +5306,12 @@ class Orchestrator(ChatAgent):
         return self._peer_answer_visibility_tracker.get_current_answers_snapshot()
 
     def _resolve_step_mode_workspace(self, agent_id: str) -> str | None:
-        """Resolve the workspace path for step mode output.
-
-        After _save_agent_snapshot runs, the agent's cwd is cleared but
-        snapshot_storage has the full copy. Prefer snapshot_storage when it
-        has content; fall back to cwd if snapshot_storage is missing.
-        Returns None when the agent produced no workspace files.
-        """
-        agent = self.agents.get(agent_id)
-        if not agent or not agent.backend.filesystem_manager:
-            return None
-        fm = agent.backend.filesystem_manager
-        if fm.snapshot_storage and fm.snapshot_storage.is_dir() and any(fm.snapshot_storage.iterdir()):
-            return str(fm.snapshot_storage)
-        if fm.cwd and Path(fm.cwd).is_dir() and any(Path(fm.cwd).iterdir()):
-            return str(fm.cwd)
-        return None
+        """Delegator: see :class:`StepModeHandler.resolve_step_mode_workspace`."""
+        return self._step_mode_handler.resolve_step_mode_workspace(agent_id)
 
     def _resolve_step_mode_stale_paths(self, agent_id: str) -> list[str]:
-        """Collect workspace paths the agent may have referenced in its answer text.
-
-        These paths (cwd, temp workspace) are ephemeral and won't exist when
-        another step mode invocation loads the session directory. They need to
-        be replaced with the session dir workspace path by save_step_mode_output.
-
-        Args:
-            agent_id: The agent whose paths to collect.
-
-        Returns:
-            List of stale path strings (may be empty).
-        """
-        stale: list[str] = []
-        agent = self.agents.get(agent_id)
-        if not agent or not agent.backend.filesystem_manager:
-            return stale
-        fm = agent.backend.filesystem_manager
-        if fm.cwd:
-            stale.append(str(fm.cwd))
-        if fm.agent_temporary_workspace:
-            stale.append(str(fm.agent_temporary_workspace))
-        return stale
+        """Delegator: see :class:`StepModeHandler.resolve_step_mode_stale_paths`."""
+        return self._step_mode_handler.resolve_step_mode_stale_paths(agent_id)
 
     def _sync_decomposition_answer_visibility(self, agent_id: str) -> None:
         """Update seen-answer revision snapshot (delegates to PeerAnswerVisibilityTracker)."""

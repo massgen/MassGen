@@ -45,6 +45,7 @@ from .run_mode_strategy_resolver import RunModeStrategyResolver
 from .runtime_input_delivery import RuntimeInputDelivery
 from .skills_config_validator import SkillsConfigValidator
 from .snapshot_manager import SnapshotManager
+from .step_mode_handler import StepModeHandler
 from .subagent_lifecycle_coordinator import SubagentLifecycleCoordinator
 from .subagent_tool_injector import SubagentToolInjector
 from .trace_analyzer_runner import TraceAnalyzerRunner
@@ -65,6 +66,7 @@ __all__ = [
     "PreviousLogRestorer",
     "SkillsConfigValidator",
     "SnapshotManager",
+    "StepModeHandler",
     "SubagentLifecycleCoordinator",
     "SubagentToolInjector",
     "NlipRoutingInitializer",
