@@ -19,7 +19,6 @@ TODOs:
 
 import asyncio
 import concurrent.futures
-import copy
 import functools
 import json
 import os
@@ -85,6 +84,7 @@ from .orchestrator_collaborators import (
     ContextPathWriteTracker,
     CriteriaEvolutionRunner,
     DspyParaphraseCoordinator,
+    EvaluatorResultExtractor,
     FairnessGate,
     FinalPresentationRunner,
     FinalResultReporter,
@@ -98,6 +98,7 @@ from .orchestrator_collaborators import (
     PlanningToolInjector,
     PostEvaluationRunner,
     PreviousLogRestorer,
+    QuestionIrreversibilityAnalyzer,
     RoundEvaluatorGateConfig,
     RoundEvaluatorRunner,
     RoundStartContextQueue,
@@ -277,6 +278,10 @@ class Orchestrator(ChatAgent):
         return AnswerTextNormalizer(self)
 
     @functools.cached_property
+    def _evaluator_result_extractor(self) -> EvaluatorResultExtractor:
+        return EvaluatorResultExtractor(self)
+
+    @functools.cached_property
     def _orchestrator_timeout_calculator(self) -> OrchestratorTimeoutCalculator:
         return OrchestratorTimeoutCalculator(self)
 
@@ -371,6 +376,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _previous_log_restorer(self) -> PreviousLogRestorer:
         return PreviousLogRestorer(self)
+
+    @functools.cached_property
+    def _question_irreversibility_analyzer(self) -> QuestionIrreversibilityAnalyzer:
+        return QuestionIrreversibilityAnalyzer(self)
 
     def __init__(
         self,
@@ -2277,224 +2286,16 @@ class Orchestrator(ChatAgent):
         user_question: str,
         conversation_context: dict[str, Any],
     ) -> dict[str, Any]:
+        """Delegate to :class:`QuestionIrreversibilityAnalyzer`.
+
+        Kept on Orchestrator with an identical signature because numerous
+        tests (e.g. ``test_intelligent_planning_mode.py``) and internal call
+        sites invoke ``orch._analyze_question_irreversibility(...)`` directly.
         """
-        Analyze if the user's question involves MCP tools with irreversible outcomes.
-
-        This method randomly selects an available agent to analyze whether executing
-        the user's question would involve MCP tool operations with irreversible outcomes
-        (e.g., sending Discord messages, posting tweets, deleting files) vs reversible
-        read operations (e.g., reading Discord messages, searching tweets, listing files).
-
-        Args:
-            user_question: The user's question/request
-            conversation_context: Full conversation context including history
-
-        Returns:
-            Dict with:
-                - has_irreversible (bool): True if irreversible operations detected
-                - blocked_tools (set): Set of MCP tool names to block (e.g., {'mcp__discord__discord_send'})
-                                      Empty set means block ALL MCP tools
-        """
-        import random
-
-        print("=" * 80, flush=True)
-        print(
-            "🔍 [INTELLIGENT PLANNING MODE] Analyzing question for irreversibility...",
-            flush=True,
+        return await self._question_irreversibility_analyzer.analyze(
+            user_question,
+            conversation_context,
         )
-        print(
-            f"📝 Question: {user_question[:100]}{'...' if len(user_question) > 100 else ''}",
-            flush=True,
-        )
-        print("=" * 80, flush=True)
-
-        # Select a random agent for analysis
-        available_agents = [aid for aid, agent in self.agents.items() if agent.backend is not None]
-        if not available_agents:
-            # No agents available, default to safe mode (planning enabled, block ALL)
-            log_orchestrator_activity(
-                self.orchestrator_id,
-                "No agents available for irreversibility analysis, defaulting to planning mode",
-                {},
-            )
-            return {"has_irreversible": True, "blocked_tools": set()}
-
-        analyzer_agent_id = random.choice(available_agents)
-        analyzer_agent = self.agents[analyzer_agent_id]
-
-        print(f"🤖 Selected analyzer agent: {analyzer_agent_id}", flush=True)
-
-        # Check if agents have isolated workspaces
-        has_isolated_workspaces = False
-        workspace_info = []
-        for agent_id, agent in self.agents.items():
-            if agent.backend and agent.backend.filesystem_manager:
-                cwd = agent.backend.filesystem_manager.cwd
-                if cwd and "workspace" in os.path.basename(cwd).lower():
-                    has_isolated_workspaces = True
-                    workspace_info.append(f"{agent_id}: {cwd}")
-
-        if has_isolated_workspaces:
-            print(
-                "🔒 Detected isolated agent workspaces - filesystem ops will be allowed",
-                flush=True,
-            )
-
-        log_orchestrator_activity(
-            self.orchestrator_id,
-            "Analyzing question irreversibility",
-            {
-                "analyzer_agent": analyzer_agent_id,
-                "question_preview": user_question[:100] + "..." if len(user_question) > 100 else user_question,
-                "has_isolated_workspaces": has_isolated_workspaces,
-            },
-        )
-
-        # Build analysis prompt - now asking for specific tool names
-        workspace_context = ""
-        if has_isolated_workspaces:
-            workspace_context = """
-IMPORTANT - ISOLATED WORKSPACES:
-The agents are working in isolated temporary workspaces (directories containing "workspace" in their name).
-Filesystem operations (read_file, write_file, delete_file, list_files, etc.) within these isolated workspaces are SAFE and REVERSIBLE.
-They should NOT be blocked because:
-- These are temporary directories specific to this coordination session
-- Files created/modified are isolated from external systems
-- Changes are contained within the agent's sandbox
-- The workspace can be cleared after coordination
-
-Only block filesystem operations if they explicitly target paths OUTSIDE the isolated workspace.
-"""
-
-        analysis_prompt = f"""You are analyzing whether a user's request involves operations with irreversible outcomes.
-
-USER REQUEST:
-{user_question}
-{workspace_context}
-CONTEXT:
-Your task is to determine if executing this request would involve MCP (Model Context Protocol) tools that have irreversible outcomes, and if so, identify which specific tools should be blocked.
-
-MCP tools follow the naming convention: mcp__<server>__<tool_name>
-Examples:
-- mcp__discord__discord_send (irreversible - sends messages)
-- mcp__discord__discord_read_channel (reversible - reads messages)
-- mcp__twitter__post_tweet (irreversible - posts publicly)
-- mcp__twitter__search_tweets (reversible - searches)
-- mcp__filesystem__write_file (SAFE in isolated workspace - writes to temporary files)
-- mcp__filesystem__read_file (reversible - reads files)
-
-IRREVERSIBLE OPERATIONS:
-- Sending messages (discord_send, slack_send, etc.)
-- Posting content publicly (post_tweet, create_post, etc.)
-- Deleting files or data OUTSIDE isolated workspace (delete_file on external paths, remove_data, etc.)
-- Modifying external systems (write_file to external paths, update_record, etc.)
-- Creating permanent records (create_issue, add_comment, etc.)
-- Executing commands that change state (run_command, execute_script, etc.)
-
-REVERSIBLE OPERATIONS (DO NOT BLOCK):
-- Reading messages or data (read_channel, get_messages, etc.)
-- Searching or querying information (search_tweets, query_data, etc.)
-- Listing files or resources (list_files, list_channels, etc.)
-- Fetching data from APIs (get_user, fetch_data, etc.)
-- Viewing information (view_channel, get_info, etc.)
-- Filesystem operations IN ISOLATED WORKSPACE (write_file, read_file, delete_file, list_files when in workspace*)
-
-Respond in this EXACT format:
-IRREVERSIBLE: YES/NO
-BLOCKED_TOOLS: tool1, tool2, tool3
-
-If IRREVERSIBLE is NO, leave BLOCKED_TOOLS empty.
-If IRREVERSIBLE is YES, list the specific MCP tool names that should be blocked (e.g., mcp__discord__discord_send).
-
-Your answer:"""
-
-        # Create messages for the analyzer
-        analysis_messages = [
-            {"role": "user", "content": analysis_prompt},
-        ]
-
-        try:
-            # Stream response from analyzer agent (but don't show to user)
-            response_text = ""
-            async for chunk in analyzer_agent.backend.stream_with_tools(
-                messages=analysis_messages,
-                tools=[],  # No tools needed for simple analysis
-                agent_id=analyzer_agent_id,
-            ):
-                if chunk.type == "content" and chunk.content:
-                    response_text += chunk.content
-
-            # Parse response
-            response_clean = response_text.strip()
-            has_irreversible = False
-            blocked_tools = set()
-
-            # Parse IRREVERSIBLE line
-            found_irreversible_line = False
-            for line in response_clean.split("\n"):
-                line = line.strip()
-                if line.startswith("IRREVERSIBLE:"):
-                    found_irreversible_line = True
-                    # Extract the value after the colon
-                    value = line.split(":", 1)[1].strip().upper()
-                    # Check if the first word is YES
-                    has_irreversible = value.startswith("YES")
-                elif line.startswith("BLOCKED_TOOLS:"):
-                    # Extract tool names after the colon
-                    tools_part = line.split(":", 1)[1].strip()
-                    if tools_part:
-                        # Split by comma and clean up whitespace
-                        blocked_tools = {tool.strip() for tool in tools_part.split(",") if tool.strip()}
-
-            # Fallback: If no structured format found, look for YES/NO in the response
-            if not found_irreversible_line:
-                print(
-                    "⚠️  [WARNING] No 'IRREVERSIBLE:' line found, using fallback parsing",
-                    flush=True,
-                )
-                response_upper = response_clean.upper()
-                # Look for clear YES/NO indicators
-                if "YES" in response_upper and "NO" not in response_upper:
-                    has_irreversible = True
-                elif "NO" in response_upper:
-                    has_irreversible = False
-                else:
-                    # Default to safe mode if unclear
-                    has_irreversible = True
-
-            log_orchestrator_activity(
-                self.orchestrator_id,
-                "Irreversibility analysis complete",
-                {
-                    "analyzer_agent": analyzer_agent_id,
-                    "response": response_clean[:100],
-                    "has_irreversible": has_irreversible,
-                    "blocked_tools_count": len(blocked_tools),
-                },
-            )
-
-            # Display nice UI box for planning mode status
-            ui_box = self._format_planning_mode_ui(
-                has_irreversible=has_irreversible,
-                blocked_tools=blocked_tools,
-                has_isolated_workspaces=has_isolated_workspaces,
-                user_question=user_question,
-            )
-            print(ui_box, flush=True)
-
-            return {
-                "has_irreversible": has_irreversible,
-                "blocked_tools": blocked_tools,
-            }
-
-        except Exception as e:
-            # On error, default to safe mode (planning enabled, block ALL)
-            log_orchestrator_activity(
-                self.orchestrator_id,
-                "Irreversibility analysis failed, defaulting to planning mode",
-                {"error": str(e)},
-            )
-            return {"has_irreversible": True, "blocked_tools": set()}
 
     async def _continuous_status_updates(self):
         """Background task to continuously update status.json during coordination.
@@ -6708,254 +6509,38 @@ Your answer:"""
         log_path: str,
         workspace_path: str,
     ) -> dict[str, str] | None:
-        """Read all evaluator agent answers from a round_evaluator's log directory.
-
-        Reads status.json to discover agent IDs and timestamps, then reads
-        each agent's answer.txt. Returns anonymized keys like
-        ``{"Evaluator A": "...", "Evaluator B": "...", ...}``.
-
-        Returns None if the log directory or status.json doesn't exist.
-        """
-        log_dir = Path(log_path)
-
-        # log_path may be the base dir or a resolved events.jsonl path.
-        # Walk up to find the directory containing full_logs/status.json.
-        full_logs = log_dir / "full_logs"
-        status_file = full_logs / "status.json"
-        if not status_file.exists():
-            # Try walking up from resolved path (e.g. .../full_logs/events.jsonl)
-            for parent in [log_dir.parent, log_dir.parent.parent]:
-                candidate = parent / "full_logs" / "status.json"
-                if candidate.exists():
-                    full_logs = parent / "full_logs"
-                    status_file = candidate
-                    break
-            else:
-                return None
-
-        try:
-            status_data = json.loads(status_file.read_text())
-        except (json.JSONDecodeError, OSError):
-            logger.warning(
-                "[Orchestrator] Failed to read round_evaluator status.json from %s",
-                status_file,
-            )
-            return None
-
-        historical_list = status_data.get("historical_workspaces", [])
-        if not isinstance(historical_list, list) or not historical_list:
-            return None
-
-        answers: dict[str, str] = {}
-        anonymous_labels = iter(f"Evaluator {chr(65 + i)}" for i in range(26))
-
-        for ws_info in historical_list:
-            if not isinstance(ws_info, dict):
-                continue
-            agent_id = ws_info.get("agentId", "")
-            timestamp = ws_info.get("timestamp", "")
-            if not agent_id or not timestamp:
-                continue
-
-            # Try full_logs/{agentId}/{timestamp}/answer.txt
-            answer_file = full_logs / agent_id / timestamp / "answer.txt"
-            if answer_file.exists():
-                try:
-                    text = answer_file.read_text().strip()
-                    if text:
-                        label = next(anonymous_labels, f"Evaluator {len(answers)}")
-                        answers[label] = text
-                except OSError:
-                    pass
-
-        return answers if answers else None
+        """Static delegator — see EvaluatorResultExtractor."""
+        return EvaluatorResultExtractor.extract_all_evaluator_answers(
+            log_path,
+            workspace_path,
+        )
 
     @staticmethod
     def extract_evaluator_workspace_paths(
         log_path: str,
     ) -> list[str]:
-        """Return workspace paths for each eval agent in a round_evaluator run.
-
-        Looks for ``full_logs/{agentId}/workspace/`` directories, which are
-        the persisted snapshots of each evaluator's workspace.
-        """
-        log_dir = Path(log_path)
-
-        # Same walk-up logic as extract_all_evaluator_answers
-        full_logs = log_dir / "full_logs"
-        if not full_logs.is_dir():
-            for parent in [log_dir.parent, log_dir.parent.parent]:
-                candidate = parent / "full_logs"
-                if candidate.is_dir():
-                    full_logs = candidate
-                    break
-            else:
-                return []
-
-        paths: list[str] = []
-        for child in sorted(full_logs.iterdir()):
-            if not child.is_dir():
-                continue
-            ws = child / "workspace"
-            if ws.is_dir():
-                paths.append(str(ws))
-        return paths
+        """Static delegator — see EvaluatorResultExtractor."""
+        return EvaluatorResultExtractor.extract_evaluator_workspace_paths(log_path)
 
     @staticmethod
     def format_multi_evaluator_result_block(
         all_answers: dict[str, str],
         auto_injected: bool = False,
     ) -> str:
-        """Format multiple evaluator critiques as separate tagged blocks.
-
-        Strips verdict_block JSON from each critique before injection so
-        the parent reads the prose analysis only.
-        """
-        from .subagent.models import RoundEvaluatorResult
-
-        n = len(all_answers)
-
-        if auto_injected:
-            instructions = (
-                "Improvement tasks have been auto-injected into your task plan.\n"
-                "Call `get_task_plan` to see them. Implement each task, then call `new_answer`.\n"
-                "Do NOT call `submit_checklist` or `draft_approach` — already handled."
-            )
-        else:
-            instructions = (
-                "You received independent critiques from multiple evaluators.\n"
-                "Synthesize them yourself:\n"
-                "1. Read ALL critiques — each evaluator catches different issues.\n"
-                "2. For each criterion, adopt the HARSHEST score across evaluators.\n"
-                "3. Collect ALL unique concrete findings — even if only one evaluator mentions them.\n"
-                "4. When evaluators flag the SAME issue, merge into one finding:\n"
-                "   keep the most specific description, harshest severity, and\n"
-                "   combine distinct evidence.\n"
-                "5. Build one unified improvement plan from the combined findings.\n"
-                "6. Save the synthesized diagnostic to your workspace\n"
-                "   (e.g., tasks/diagnostic_report.md), then call `submit_checklist`\n"
-                "   with that path as report_path.\n"
-                "Do NOT discard findings just because other evaluators missed them.\n"
-                "Do NOT average scores — use the lowest (harshest) per criterion.\n\n"
-                "IMPORTANT: If any critique below is short or references a workspace\n"
-                "file (e.g., 'refer to critique_packet.md'), browse that evaluator's\n"
-                "workspace to read the full report. You have read-only access to all\n"
-                "evaluator workspaces. Do NOT skip a thin answer — the real critique\n"
-                "may be in the workspace."
-            )
-
-        parts = [
-            "============================================================",
-            f"ROUND EVALUATOR RESULTS ({n} independent evaluations)",
-            "============================================================",
-            instructions,
-            "",
-        ]
-
-        for label, critique_text in all_answers.items():
-            # Strip verdict_block from injected text (scores visible in prose)
-            clean_text = RoundEvaluatorResult.strip_verdict_block(critique_text)
-            parts.append(f'<evaluator_packet evaluator="{label}">')
-            parts.append(clean_text)
-            parts.append("</evaluator_packet>")
-            parts.append("")
-
-        parts.append("============================================================")
-        return "\n".join(parts)
+        """Static delegator — see EvaluatorResultExtractor."""
+        return EvaluatorResultExtractor.format_multi_evaluator_result_block(
+            all_answers,
+            auto_injected=auto_injected,
+        )
 
     @staticmethod
     def build_task_plan_from_evaluator_verdict(
         evaluator_result: "RoundEvaluatorResult",
     ) -> list[dict]:
-        """Convert evaluator verdict improvements/preserve into a task_plan.
-
-        Returns a list in the same format as ``evaluate_draft_approach()``
-        output, ready for ``_write_inject_file()``.
-        """
-        if evaluator_result.verdict != "iterate":
-            return []
-
-        structured_next_tasks = evaluator_result.normalize_next_tasks_payload(
-            evaluator_result.next_tasks,
+        """Static delegator — see EvaluatorResultExtractor."""
+        return EvaluatorResultExtractor.build_task_plan_from_evaluator_verdict(
+            evaluator_result,
         )
-        if structured_next_tasks:
-            task_plan = copy.deepcopy(structured_next_tasks.get("tasks", []))
-            if evaluator_result.preserve:
-                task_plan.append(
-                    {
-                        "type": "verify_preserve",
-                        "description": ("Verify preserved strengths haven't regressed and that earlier " "correctness fixes still pass after later changes"),
-                        "execution": {"mode": "inline"},
-                        "items": [
-                            {
-                                "criterion_id": p.get("criterion_id", ""),
-                                "what": p.get("what", ""),
-                                "source": p.get("source", ""),
-                            }
-                            for p in evaluator_result.preserve
-                        ],
-                    },
-                )
-            return task_plan
-
-        if not evaluator_result.improvements:
-            return []
-
-        task_plan: list[dict] = []
-
-        # Opportunities (explore tasks) come first — they represent independent
-        # ideas the evaluator identified that could be a leap forward, not just
-        # corrections.  Placing them before improve tasks encourages the parent
-        # to consider creative directions before falling back to patching.
-        if evaluator_result.opportunities:
-            for opp in evaluator_result.opportunities:
-                task_plan.append(
-                    {
-                        "type": "explore",
-                        "idea": opp.get("idea", ""),
-                        "rationale": opp.get("rationale", ""),
-                        "impact": opp.get("impact", "transformative"),
-                        "relates_to": opp.get("relates_to", []),
-                        "execution": {"mode": "delegate", "subagent_type": "builder"},
-                    },
-                )
-
-        for imp in evaluator_result.improvements:
-            entry: dict = {
-                "type": "improve",
-                "criterion_id": imp.get("criterion_id", ""),
-                "criterion": imp.get("verification", ""),
-                "plan": imp.get("plan", ""),
-                "impact": imp.get("impact", "incremental"),
-                "sources": imp.get("sources", []),
-            }
-            detail = imp.get("detail", "")
-            if detail:
-                entry["detail"] = detail
-            if entry["impact"] in ("structural", "transformative"):
-                entry["execution"] = {"mode": "delegate", "subagent_type": "builder"}
-            else:
-                entry["execution"] = {"mode": "inline"}
-            task_plan.append(entry)
-
-        if evaluator_result.preserve:
-            task_plan.append(
-                {
-                    "type": "verify_preserve",
-                    "description": ("Verify preserved strengths haven't regressed and that earlier " "correctness fixes still pass after later changes"),
-                    "execution": {"mode": "inline"},
-                    "items": [
-                        {
-                            "criterion_id": p.get("criterion_id", ""),
-                            "what": p.get("what", ""),
-                            "source": p.get("source", ""),
-                        }
-                        for p in evaluator_result.preserve
-                    ],
-                },
-            )
-
-        return task_plan
 
     def _handle_round_evaluator_gate_failure(
         self,

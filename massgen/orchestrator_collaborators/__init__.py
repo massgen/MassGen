@@ -16,6 +16,7 @@ from .checkpoint_coordinator import CheckpointCoordinator
 from .context_path_write_tracker import ContextPathWriteTracker
 from .criteria_evolution_runner import CriteriaEvolutionRunner
 from .dspy_paraphrase_coordinator import DspyParaphraseCoordinator
+from .evaluator_result_extractor import EvaluatorResultExtractor
 from .fairness_gate import FairnessGate
 from .final_presentation_runner import FinalPresentationRunner
 from .final_result_reporter import FinalResultReporter
@@ -29,6 +30,7 @@ from .persona_injector import PersonaInjector
 from .planning_tool_injector import PlanningToolInjector
 from .post_evaluation_runner import PostEvaluationRunner
 from .previous_log_restorer import PreviousLogRestorer
+from .question_irreversibility_analyzer import QuestionIrreversibilityAnalyzer
 from .round_evaluator_gate_config import RoundEvaluatorGateConfig
 from .round_evaluator_runner import RoundEvaluatorRunner
 from .round_start_context_queue import RoundStartContextQueue
@@ -78,4 +80,6 @@ __all__ = [
     "MidStreamInjectionHookInstaller",
     "TraceAnalyzerRunner",
     "CriteriaEvolutionRunner",
+    "EvaluatorResultExtractor",
+    "QuestionIrreversibilityAnalyzer",
 ]
