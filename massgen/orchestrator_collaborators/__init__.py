@@ -32,6 +32,7 @@ from .planning_tool_injector import PlanningToolInjector
 from .post_evaluation_runner import PostEvaluationRunner
 from .previous_log_restorer import PreviousLogRestorer
 from .question_irreversibility_analyzer import QuestionIrreversibilityAnalyzer
+from .rate_limit_controller import RateLimitController
 from .round_evaluator_gate_config import RoundEvaluatorGateConfig
 from .round_evaluator_runner import RoundEvaluatorRunner
 from .round_start_context_queue import RoundStartContextQueue
@@ -84,4 +85,5 @@ __all__ = [
     "EvaluationCriteriaGeneratorCollaborator",
     "EvaluatorResultExtractor",
     "QuestionIrreversibilityAnalyzer",
+    "RateLimitController",
 ]
