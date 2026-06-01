@@ -255,3 +255,86 @@ class WorkspaceLifecycleManager:
         logger.info(
             f"[Orchestrator] Memory merge complete: {merged_count} files merged from other agents into {winning_agent_id}'s workspace",
         )
+
+    def seed_plan_execution_workspaces(self, context: str) -> None:
+        """Seed execute-mode plan or spec artifacts into agent workspaces."""
+        orch = self._orchestrator
+        if not orch._plan_session_id:
+            return
+        try:
+            from massgen.plan_storage import PlanSession
+
+            plan_session = PlanSession(orch._plan_session_id)
+            try:
+                _metadata = plan_session.load_metadata()
+                _artifact_type = getattr(_metadata, "artifact_type", "plan")
+            except Exception:
+                logger.opt(exception=True).warning(
+                    f"[Orchestrator] Could not load artifact_type from metadata for " f"plan_session={orch._plan_session_id}; defaulting to 'plan'. " f"This may cause incorrect workspace seeding.",
+                )
+                _artifact_type = "plan"
+            if _artifact_type == "spec":
+                from massgen.plan_execution import (
+                    setup_agent_workspaces_for_spec_execution,
+                )
+
+                item_count = setup_agent_workspaces_for_spec_execution(orch.agents, plan_session)
+                item_label = "requirements"
+            else:
+                from massgen.plan_execution import setup_agent_workspaces_for_execution
+
+                item_count = setup_agent_workspaces_for_execution(orch.agents, plan_session)
+                item_label = "tasks"
+            if item_count > 0:
+                logger.info(
+                    "[Orchestrator] Seeded plan execution workspace (%s, plan_session=%s, %s=%d)",
+                    context,
+                    orch._plan_session_id,
+                    item_label,
+                    item_count,
+                )
+            else:
+                logger.warning(
+                    "[Orchestrator] Plan execution workspace seed produced no %s (%s, plan_session=%s)",
+                    item_label,
+                    context,
+                    orch._plan_session_id,
+                )
+        except Exception:
+            logger.exception(
+                "[Orchestrator] Failed to seed plan execution workspace (%s, plan_session=%s)",
+                context,
+                orch._plan_session_id,
+            )
+
+    @staticmethod
+    def copy_workspace_contents(
+        source,
+        destination,
+        *,
+        replace_destination: bool = False,
+    ) -> int:
+        """Copy top-level workspace contents from source to destination."""
+        if not source.exists() or not source.is_dir():
+            return 0
+        if replace_destination and destination.exists():
+            shutil.rmtree(destination)
+        destination.mkdir(parents=True, exist_ok=True)
+        items_copied = 0
+        for item in source.iterdir():
+            if item.is_symlink():
+                continue
+            if item.is_file():
+                shutil.copy2(item, destination / item.name)
+                items_copied += 1
+                continue
+            if item.is_dir():
+                shutil.copytree(
+                    item,
+                    destination / item.name,
+                    dirs_exist_ok=True,
+                    symlinks=True,
+                    ignore_dangling_symlinks=True,
+                )
+                items_copied += 1
+        return items_copied

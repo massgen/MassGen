@@ -988,63 +988,8 @@ class Orchestrator(ChatAgent):
         self._seed_plan_execution_workspaces(context="orchestrator_init")
 
     def _seed_plan_execution_workspaces(self, context: str) -> None:
-        """Seed execute-mode plan or spec artifacts into agent workspaces."""
-        if not self._plan_session_id:
-            return
-
-        try:
-            from .plan_storage import PlanSession
-
-            plan_session = PlanSession(self._plan_session_id)
-
-            # Check artifact type to route to plan or spec workspace seeding
-            try:
-                _metadata = plan_session.load_metadata()
-                _artifact_type = getattr(_metadata, "artifact_type", "plan")
-            except Exception:
-                logger.opt(exception=True).warning(
-                    f"[Orchestrator] Could not load artifact_type from metadata for " f"plan_session={self._plan_session_id}; defaulting to 'plan'. " f"This may cause incorrect workspace seeding.",
-                )
-                _artifact_type = "plan"
-
-            if _artifact_type == "spec":
-                from .plan_execution import setup_agent_workspaces_for_spec_execution
-
-                item_count = setup_agent_workspaces_for_spec_execution(
-                    self.agents,
-                    plan_session,
-                )
-                item_label = "requirements"
-            else:
-                from .plan_execution import setup_agent_workspaces_for_execution
-
-                item_count = setup_agent_workspaces_for_execution(
-                    self.agents,
-                    plan_session,
-                )
-                item_label = "tasks"
-
-            if item_count > 0:
-                logger.info(
-                    "[Orchestrator] Seeded plan execution workspace (%s, plan_session=%s, %s=%d)",
-                    context,
-                    self._plan_session_id,
-                    item_label,
-                    item_count,
-                )
-            else:
-                logger.warning(
-                    "[Orchestrator] Plan execution workspace seed produced no %s (%s, plan_session=%s)",
-                    item_label,
-                    context,
-                    self._plan_session_id,
-                )
-        except Exception:
-            logger.exception(
-                "[Orchestrator] Failed to seed plan execution workspace (%s, plan_session=%s)",
-                context,
-                self._plan_session_id,
-            )
+        """Delegates to WorkspaceLifecycleManager.seed_plan_execution_workspaces."""
+        self._workspace_lifecycle_manager.seed_plan_execution_workspaces(context)
 
     def _get_decomposition_criteria_for_agent(self, agent_id: str | None) -> list | None:
         """Delegates to ChecklistGateManager."""
@@ -3363,32 +3308,10 @@ class Orchestrator(ChatAgent):
         *,
         replace_destination: bool = False,
     ) -> int:
-        """Copy top-level workspace contents from source to destination."""
-        if not source.exists() or not source.is_dir():
-            return 0
+        """Delegates to WorkspaceLifecycleManager.copy_workspace_contents (@staticmethod)."""
+        from .orchestrator_collaborators import WorkspaceLifecycleManager
 
-        if replace_destination and destination.exists():
-            shutil.rmtree(destination)
-        destination.mkdir(parents=True, exist_ok=True)
-
-        items_copied = 0
-        for item in source.iterdir():
-            if item.is_symlink():
-                continue
-            if item.is_file():
-                shutil.copy2(item, destination / item.name)
-                items_copied += 1
-                continue
-            if item.is_dir():
-                shutil.copytree(
-                    item,
-                    destination / item.name,
-                    dirs_exist_ok=True,
-                    symlinks=True,
-                    ignore_dangling_symlinks=True,
-                )
-                items_copied += 1
-        return items_copied
+        return WorkspaceLifecycleManager.copy_workspace_contents(source, destination, replace_destination=replace_destination)
 
     def _save_partial_workspace_snapshots_for_interrupted_turn(
         self,
