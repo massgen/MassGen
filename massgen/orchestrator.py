@@ -98,6 +98,7 @@ from .orchestrator_collaborators import (
     PersonaInjector,
     PlanningToolInjector,
     PostEvaluationRunner,
+    PreCollabHelpers,
     PreviousLogRestorer,
     PromptImproverCollaborator,
     QuestionIrreversibilityAnalyzer,
@@ -351,6 +352,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _final_presentation_runner(self) -> FinalPresentationRunner:
         return FinalPresentationRunner(self)
+
+    @functools.cached_property
+    def _pre_collab_helpers(self) -> PreCollabHelpers:
+        return PreCollabHelpers(self)
 
     @functools.cached_property
     def _peer_answer_visibility_tracker(self) -> PeerAnswerVisibilityTracker:
@@ -1384,34 +1389,17 @@ class Orchestrator(ChatAgent):
         return self._subagent_tool_injector.create_subagent_mcp_config(agent_id, agent)
 
     def _build_parent_agent_configs(self) -> list[dict[str, Any]]:
-        """Build simplified agent configs for subagent inheritance."""
-        configs: list[dict[str, Any]] = []
-        for agent_id, agent in self.agents.items():
-            agent_cfg: dict[str, Any] = {"id": agent_id}
-            if hasattr(agent, "backend") and hasattr(agent.backend, "config"):
-                backend_cfg = {k: v for k, v in agent.backend.config.items() if k not in ("mcp_servers", "_config_path")}
-                agent_cfg["backend"] = backend_cfg
-            configs.append(agent_cfg)
-        return configs
+        """Build simplified agent configs for subagent inheritance (delegates to PreCollabHelpers)."""
+        return self._pre_collab_helpers.build_parent_agent_configs()
 
     def _get_parent_workspace(self, fallback_prefix: str = "massgen_precollab_") -> str:
-        """Return the first agent's workspace path, or a temp dir."""
-        for agent in self.agents.values():
-            fm = getattr(getattr(agent, "backend", None), "filesystem_manager", None)
-            if fm and fm.cwd:
-                return str(fm.cwd)
-        import tempfile
-
-        return tempfile.mkdtemp(prefix=fallback_prefix)
+        """Return the first agent's workspace path, or a temp dir (delegates to PreCollabHelpers)."""
+        return self._pre_collab_helpers.get_parent_workspace(fallback_prefix)
 
     @staticmethod
     def _get_log_directory() -> str | None:
-        """Return the current log session directory as a string, or None."""
-        try:
-            log_dir = get_log_session_dir()
-            return str(log_dir) if log_dir else None
-        except Exception:
-            return None
+        """Return the current log session directory as a string, or None (delegates to PreCollabHelpers)."""
+        return PreCollabHelpers.get_log_directory()
 
     def _get_pre_collab_voting_threshold(self) -> int | None:
         """Return the voting threshold for pre-collab subagent runs."""
@@ -1438,41 +1426,8 @@ class Orchestrator(ChatAgent):
         call_id: str,
         display: Any,
     ):
-        """Build a callback for pre-collab subagent start notifications."""
-
-        def _on_started(
-            subagent_id: str,
-            subagent_task: str,
-            timeout_seconds: int,
-            status_callback: Any,
-            log_path: str | None,
-        ) -> None:
-            _emitter = get_event_emitter()
-            if _emitter:
-                _emitter.emit_raw(
-                    StructuredEventType.PRE_COLLAB_STARTED,
-                    agent_id=anchor_agent,
-                    subagent_id=subagent_id,
-                    task=subagent_task,
-                    timeout_seconds=timeout_seconds,
-                    call_id=call_id,
-                    log_path=log_path,
-                )
-            if display and anchor_agent and hasattr(display, "notify_runtime_subagent_started"):
-                try:
-                    display.notify_runtime_subagent_started(
-                        agent_id=anchor_agent,
-                        subagent_id=subagent_id,
-                        task=subagent_task,
-                        timeout_seconds=timeout_seconds,
-                        call_id=call_id,
-                        status_callback=status_callback,
-                        log_path=log_path,
-                    )
-                except Exception:
-                    pass
-
-        return _on_started
+        """Build a callback for pre-collab subagent start notifications (delegates to PreCollabHelpers)."""
+        return self._pre_collab_helpers.make_precollab_started_callback(anchor_agent, call_id, display)
 
     def _notify_precollab_completed(
         self,
@@ -1485,26 +1440,16 @@ class Orchestrator(ChatAgent):
         answer_preview: str = "",
         error: str | None = None,
     ) -> None:
-        """Emit event + notify display for a pre-collab phase completion."""
-        _emitter = get_event_emitter()
-        kwargs: dict[str, Any] = {
-            "agent_id": anchor_agent,
-            "subagent_id": subagent_id,
-            "call_id": call_id,
-            "status": status,
-        }
-        if error:
-            kwargs["error"] = error
-        if answer_preview:
-            kwargs["answer_preview"] = answer_preview
-        if _emitter and anchor_agent:
-            _emitter.emit_raw(StructuredEventType.PRE_COLLAB_COMPLETED, **kwargs)
-
-        if display and anchor_agent and hasattr(display, "notify_runtime_subagent_completed"):
-            try:
-                display.notify_runtime_subagent_completed(**kwargs)
-            except Exception:
-                pass
+        """Emit event + notify display for a pre-collab phase completion (delegates to PreCollabHelpers)."""
+        self._pre_collab_helpers.notify_precollab_completed(
+            anchor_agent,
+            subagent_id,
+            call_id,
+            display,
+            status=status,
+            answer_preview=answer_preview,
+            error=error,
+        )
 
     # ------------------------------------------------------------------
     # Pre-collab phases

@@ -31,6 +31,7 @@ from .peer_answer_visibility_tracker import PeerAnswerVisibilityTracker
 from .persona_injector import PersonaInjector
 from .planning_tool_injector import PlanningToolInjector
 from .post_evaluation_runner import PostEvaluationRunner
+from .pre_collab_helpers import PreCollabHelpers
 from .previous_log_restorer import PreviousLogRestorer
 from .prompt_improver_collaborator import PromptImproverCollaborator
 from .question_irreversibility_analyzer import QuestionIrreversibilityAnalyzer
@@ -90,4 +91,5 @@ __all__ = [
     "QuestionIrreversibilityAnalyzer",
     "RateLimitController",
     "PromptImproverCollaborator",
+    "PreCollabHelpers",
 ]
