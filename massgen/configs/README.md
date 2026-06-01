@@ -227,7 +227,22 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.91 - Latest
+### v0.1.92 - Latest
+**New Features:** Orchestrator Collaborator Refactor & Parallel Search MCP
+
+**Key Features:**
+- **Orchestrator Collaborators**: `orchestrator.py` is split into 49 lazy collaborators with stable delegator call sites
+- **Textual Display Cleanup**: Provider/model helpers, terminal capability probing, and widget-debug helpers moved into focused sibling modules
+- **Parallel Web Search MCP**: New `parallel_search` registry entry and runnable example config for Parallel's hosted Search MCP server
+- **Characterization Coverage**: New orchestrator and Textual display tests pin public contracts and extraction seams
+
+**Try It:**
+```bash
+pip install massgen==0.1.92
+uv run massgen --config massgen/configs/tools/web-search/parallel_search_example.yaml "Research the latest advances in multi-agent AI systems"
+```
+
+### v0.1.91
 **New Features:** Config Reliability & Hook Safety
 
 **Key Features:**

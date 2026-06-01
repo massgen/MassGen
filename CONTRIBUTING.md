@@ -359,7 +359,7 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 
 ## 🔧 Development Workflow
 
-> **Important**: Our next version is v0.1.92. If you want to contribute, please contribute to the `dev/v0.1.92` branch (or `main` if dev/v0.1.92 doesn't exist yet).
+> **Important**: Our next version is v0.1.93. If you want to contribute, please contribute to the `dev/v0.1.93` branch (or `main` if dev/v0.1.93 doesn't exist yet).
 
 ### 1. Create Feature Branch
 
@@ -367,8 +367,8 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 # Fetch latest changes from upstream
 git fetch upstream
 
-# Create feature branch from dev/v0.1.92 (or main if dev branch doesn't exist yet)
-git checkout -b feature/your-feature-name upstream/dev/v0.1.92
+# Create feature branch from dev/v0.1.93 (or main if dev branch doesn't exist yet)
+git checkout -b feature/your-feature-name upstream/dev/v0.1.93
 ```
 
 ### 2. Make Your Changes
@@ -507,7 +507,7 @@ git push origin feature/your-feature-name
 ```
 
 Then create a pull request on GitHub:
-- Base branch: `dev/v0.1.92` (or `main` if dev branch doesn't exist yet)
+- Base branch: `dev/v0.1.93` (or `main` if dev branch doesn't exist yet)
 - Compare branch: `feature/your-feature-name`
 - Add clear description of changes
 - Link any related issues
@@ -617,7 +617,7 @@ Have a significant feature idea not covered by existing tracks?
 - [ ] Tests pass locally
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow convention
-- [ ] PR targets `dev/v0.1.92` branch (or `main` if dev branch doesn't exist yet)
+- [ ] PR targets `dev/v0.1.93` branch (or `main` if dev branch doesn't exist yet)
 
 ### PR Description Should Include
 
