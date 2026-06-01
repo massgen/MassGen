@@ -571,3 +571,56 @@ class CriteriaEvolutionRunner:
                     agent_id,
                     exc,
                 )
+
+    @staticmethod
+    def read_evolution_json_from_result(entry: dict[str, Any]) -> dict[str, Any] | None:
+        """Read criteria-evolution JSON from a subagent result entry.
+
+        Prefers the workspace file ``deliverable/evolved_criteria.json`` (written
+        by the subagent). Falls back to parsing the answer text or fenced JSON.
+        """
+        import json
+        from pathlib import Path
+
+        _FILENAME = "evolved_criteria.json"
+        workspace = entry.get("workspace") or ""
+        if workspace:
+            ws = Path(workspace)
+            candidates = [ws / "deliverable" / _FILENAME]
+            for pattern in (
+                f"agent_*/deliverable/{_FILENAME}",
+                f"snapshots/*/*/deliverable/{_FILENAME}",
+            ):
+                candidates.extend(ws.glob(pattern))
+            for candidate in candidates:
+                if candidate.exists():
+                    try:
+                        data = json.loads(candidate.read_text(encoding="utf-8"))
+                        if isinstance(data, dict):
+                            return data
+                    except Exception:
+                        pass
+
+        answer_text = entry.get("answer") or ""
+        if not answer_text:
+            return None
+        try:
+            parsed = json.loads(answer_text)
+            if isinstance(parsed, dict):
+                return parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
+        for fence in ("```json", "```"):
+            start = answer_text.find(fence)
+            if start < 0:
+                continue
+            start += len(fence)
+            end = answer_text.find("```", start)
+            if end > start:
+                try:
+                    parsed = json.loads(answer_text[start:end].strip())
+                    if isinstance(parsed, dict):
+                        return parsed
+                except (json.JSONDecodeError, ValueError):
+                    pass
+        return None
