@@ -87,6 +87,7 @@ from .orchestrator_collaborators import (
     CriteriaEvolutionRunner,
     DockerDiagnostics,
     DspyParaphraseCoordinator,
+    EnforcementBufferHelper,
     EssentialFilesHelper,
     EvaluationCriteriaGeneratorCollaborator,
     EvaluatorResultExtractor,
@@ -302,6 +303,10 @@ class Orchestrator(ChatAgent):
     @functools.cached_property
     def _essential_files_helper(self) -> EssentialFilesHelper:
         return EssentialFilesHelper(self)
+
+    @functools.cached_property
+    def _enforcement_buffer_helper(self) -> EnforcementBufferHelper:
+        return EnforcementBufferHelper(self)
 
     @functools.cached_property
     def _orchestrator_timeout_calculator(self) -> OrchestratorTimeoutCalculator:
@@ -5942,39 +5947,12 @@ class Orchestrator(ChatAgent):
         )
 
     def _get_buffer_content(self, agent: "ChatAgent") -> tuple[str | None, int]:
-        """Get streaming buffer content from agent backend for enforcement tracking.
-
-        Returns:
-            Tuple of (buffer_preview: first 500 chars or None, buffer_chars: total char count)
-        """
-        buffer_content = None
-        buffer_chars = 0
-
-        if hasattr(agent.backend, "_get_streaming_buffer"):
-            buffer_content = agent.backend._get_streaming_buffer()
-            if buffer_content:
-                buffer_chars = len(buffer_content)
-                # Truncate preview to 500 chars
-                buffer_content = buffer_content[:500] if len(buffer_content) > 500 else buffer_content
-
-        return buffer_content, buffer_chars
+        """Delegates to EnforcementBufferHelper.get_buffer_content (@staticmethod)."""
+        return EnforcementBufferHelper.get_buffer_content(agent)
 
     def _truncate_enforcement_buffer_content(self, buffer_content: str | None) -> str | None:
-        """Bound enforcement retry buffer size to avoid prompt blowups."""
-        if not buffer_content:
-            return None
-
-        normalized = buffer_content.strip()
-        if not normalized:
-            return None
-
-        max_chars = self._ENFORCEMENT_RETRY_BUFFER_MAX_CHARS
-        if len(normalized) <= max_chars:
-            return normalized
-
-        kept = normalized[:max_chars]
-        removed = len(normalized) - len(kept)
-        return f"[... earlier retry context truncated ({removed} chars removed); " f"showing first {len(kept)} chars ...]\n" f"{kept}"
+        """Delegates to EnforcementBufferHelper.truncate_enforcement_buffer_content."""
+        return self._enforcement_buffer_helper.truncate_enforcement_buffer_content(buffer_content)
 
     def _save_docker_logs_on_mcp_failure(
         self,

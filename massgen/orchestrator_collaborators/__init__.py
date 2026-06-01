@@ -20,6 +20,7 @@ from .context_path_write_tracker import ContextPathWriteTracker
 from .criteria_evolution_runner import CriteriaEvolutionRunner
 from .docker_diagnostics import DockerDiagnostics
 from .dspy_paraphrase_coordinator import DspyParaphraseCoordinator
+from .enforcement_buffer_helper import EnforcementBufferHelper
 from .essential_files_helper import EssentialFilesHelper
 from .evaluation_criteria_generator import EvaluationCriteriaGeneratorCollaborator
 from .evaluator_result_extractor import EvaluatorResultExtractor
@@ -99,6 +100,7 @@ __all__ = [
     "CriteriaEvolutionRunner",
     "EvaluationCriteriaGeneratorCollaborator",
     "EssentialFilesHelper",
+    "EnforcementBufferHelper",
     "EvaluatorResultExtractor",
     "QuestionIrreversibilityAnalyzer",
     "RateLimitController",
