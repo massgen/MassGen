@@ -666,3 +666,21 @@ class TraceAnalyzerRunner:
             "results": trace_results,
         }
         return eval_dict, trace_dict
+
+    def should_spawn_trace_analyzer(self, agent_id: str) -> bool:
+        """Return True if auto_trace_analysis should spawn for this agent."""
+        orch = self._orchestrator
+        coord = getattr(orch.config, "coordination_config", None)
+        if not coord:
+            return False
+        if not getattr(coord, "auto_trace_analysis", False):
+            return False
+        # Must be round 2+ (restart_count >= 1)
+        state = orch.agent_states.get(agent_id)
+        if not state or getattr(state, "restart_count", 0) < 1:
+            return False
+        # Must not already have an in-flight trace task
+        existing = orch._background_trace_tasks.get(agent_id)
+        if existing and not existing.done():
+            return False
+        return True
