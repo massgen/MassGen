@@ -533,7 +533,6 @@ class SubagentToolInjector:
         was cleared between rounds (round-2+ counterpart of create_subagent_mcp_config)."""
         import json
         from pathlib import Path as PathlibPath
-        from typing import Any
 
         orch = self._orchestrator
         mcp_temp_dir = PathlibPath(workspace_root) / ".massgen" / "subagent_mcp"
