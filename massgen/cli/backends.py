@@ -853,7 +853,7 @@ def create_agents_from_config(
                                 )
                             else:
                                 logger.debug(
-                                    f"✅ Using OPENAI_API_KEY from environment (key starts with: {api_key[:7]}...)",
+                                    "✅ Using OPENAI_API_KEY from environment",
                                 )
                             embedding_cfg["api_key"] = api_key
                         elif emb_provider == "together":
