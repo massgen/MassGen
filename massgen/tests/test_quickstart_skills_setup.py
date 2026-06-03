@@ -333,7 +333,7 @@ def test_ensure_quickstart_skills_ready_runs_installer_when_needed(monkeypatch):
     """CLI should run quickstart installer when config enables skills."""
     calls = []
 
-    monkeypatch.setattr(cli, "_quickstart_config_uses_skills", lambda _: True)
+    monkeypatch.setattr(cli.quickstart, "_quickstart_config_uses_skills", lambda _: True)
     monkeypatch.setattr(
         skills_installer,
         "install_quickstart_skills",
@@ -348,7 +348,7 @@ def test_ensure_quickstart_skills_ready_skips_installer_when_not_needed(monkeypa
     """CLI should skip quickstart installer when config does not enable skills."""
     calls = []
 
-    monkeypatch.setattr(cli, "_quickstart_config_uses_skills", lambda _: False)
+    monkeypatch.setattr(cli.quickstart, "_quickstart_config_uses_skills", lambda _: False)
     monkeypatch.setattr(
         skills_installer,
         "install_quickstart_skills",
@@ -363,7 +363,7 @@ def test_ensure_quickstart_skills_ready_skips_when_user_declines(monkeypatch):
     """CLI should skip quickstart installer when user opts out in wizard."""
     calls = []
 
-    monkeypatch.setattr(cli, "_quickstart_config_uses_skills", lambda _: True)
+    monkeypatch.setattr(cli.quickstart, "_quickstart_config_uses_skills", lambda _: True)
     monkeypatch.setattr(
         skills_installer,
         "install_quickstart_skills",

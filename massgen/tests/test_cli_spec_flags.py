@@ -89,8 +89,8 @@ class TestRunExecuteSpec:
         config = {"agents": [{"agent_id": "agent1", "backend": "openai"}], "orchestrator": {}}
 
         with (
-            patch("massgen.cli.resolve_plan_path") as mock_resolve,
-            patch("massgen.cli._execute_plan_phase", new_callable=AsyncMock) as mock_execute,
+            patch("massgen.cli.plan_commands.resolve_plan_path") as mock_resolve,
+            patch("massgen.cli.plan_commands._execute_plan_phase", new_callable=AsyncMock) as mock_execute,
         ):
             mock_session = MagicMock()
             mock_session.plan_dir = plan_dir
@@ -128,7 +128,7 @@ class TestRunExecuteSpec:
 
         config = {"agents": [{"agent_id": "agent1", "backend": "openai"}], "orchestrator": {}}
 
-        with patch("massgen.cli.resolve_plan_path") as mock_resolve:
+        with patch("massgen.cli.plan_commands.resolve_plan_path") as mock_resolve:
             mock_session = MagicMock()
             mock_session.plan_dir = plan_dir
             mock_session.plan_id = "test"
@@ -163,8 +163,8 @@ class TestRunExecuteSpec:
         config = {"agents": [{"agent_id": "agent1"}], "orchestrator": {}}
 
         with (
-            patch("massgen.cli.resolve_plan_path") as mock_resolve,
-            patch("massgen.cli._execute_plan_phase", new_callable=AsyncMock) as mock_execute,
+            patch("massgen.cli.plan_commands.resolve_plan_path") as mock_resolve,
+            patch("massgen.cli.plan_commands._execute_plan_phase", new_callable=AsyncMock) as mock_execute,
         ):
             mock_session = MagicMock()
             mock_session.plan_dir = plan_dir
@@ -208,8 +208,8 @@ class TestRunExecuteSpec:
         config = {"agents": [{"agent_id": "agent1"}], "orchestrator": {}}
 
         with (
-            patch("massgen.cli.resolve_plan_path") as mock_resolve,
-            patch("massgen.cli._execute_plan_phase", new_callable=AsyncMock) as mock_execute,
+            patch("massgen.cli.plan_commands.resolve_plan_path") as mock_resolve,
+            patch("massgen.cli.plan_commands._execute_plan_phase", new_callable=AsyncMock) as mock_execute,
         ):
             mock_session = MagicMock()
             mock_session.plan_dir = plan_dir
@@ -258,8 +258,8 @@ class TestRunExecuteSpec:
         config = {"agents": [{"agent_id": "agent1"}], "orchestrator": {}}
 
         with (
-            patch("massgen.cli.resolve_plan_path") as mock_resolve,
-            patch("massgen.cli._execute_plan_phase", new_callable=AsyncMock) as mock_execute,
+            patch("massgen.cli.plan_commands.resolve_plan_path") as mock_resolve,
+            patch("massgen.cli.plan_commands._execute_plan_phase", new_callable=AsyncMock) as mock_execute,
         ):
             mock_session = MagicMock()
             mock_session.plan_dir = plan_dir
