@@ -26,7 +26,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Run fast test lane
         env:
@@ -38,4 +38,31 @@ jobs:
           uv run pytest massgen/tests
           -m "not live_api and not docker and not expensive"
           -k "not test_timeline_snapshot and not test_final_lock_option and not test_web_quickstart_reasoning_sync and not test_subagent_input_bar_snapshot_matches_main_input and not test_review_modal_snapshot"
-          -q --tb=no
+          -q --tb=short
+
+      # Blocking mypy gate for the type-checked island (ratchet).
+      - name: mypy island (blocking)
+        if: matrix.python-version == '3.12'
+        run: bash scripts/mypy_island.sh
+
+      # Non-blocking full-repo mypy for visibility (codebase is largely untyped).
+      - name: mypy full repo (non-blocking)
+        if: matrix.python-version == '3.12'
+        continue-on-error: true
+        run: uv run mypy massgen/ || true
+
+      # Non-blocking coverage visibility (no gate yet — establish a baseline first).
+      - name: Coverage (non-blocking)
+        if: matrix.python-version == '3.12'
+        continue-on-error: true
+        env:
+          RUN_INTEGRATION: "1"
+          RUN_LIVE_API: "0"
+          RUN_EXPENSIVE: "0"
+          RUN_DOCKER: "0"
+        run: >
+          uv run pytest massgen/tests
+          -m "not live_api and not docker and not expensive"
+          -k "not test_timeline_snapshot and not test_final_lock_option and not test_web_quickstart_reasoning_sync and not test_subagent_input_bar_snapshot_matches_main_input and not test_review_modal_snapshot"
+          -q --tb=no -p no:cacheprovider
+          --cov=massgen --cov-report=term-missing:skip-covered --cov-report=xml

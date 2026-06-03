@@ -27,6 +27,7 @@ from ..api_params_handler import (
 from ..formatter import ResponseFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType, TextStreamChunk
+from ..utils.tool_argument_normalization import normalize_json_object_argument
 from ._streaming_buffer_mixin import StreamingBufferMixin
 from .base import FilesystemSupport, StreamChunk
 from .base_with_custom_tool_and_mcp import (
@@ -834,11 +835,14 @@ class ResponseBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
                     tool_name = call.get("name", "")
                     tool_args = call.get("arguments", {})
 
-                    # Parse arguments if they're a string
+                    # Normalize arguments (may arrive as a JSON string). Use the
+                    # shared normalizer; on malformed payloads log (don't silently
+                    # drop) and fall back to empty args.
                     if isinstance(tool_args, str):
                         try:
-                            tool_args = json.loads(tool_args)
-                        except json.JSONDecodeError:
+                            tool_args, _ = normalize_json_object_argument(tool_args, field_name=tool_name or "arguments")
+                        except ValueError:
+                            logger.warning(f"Malformed tool arguments for {tool_name!r}; using empty args.")
                             tool_args = {}
 
                     # Build tool call in standard format

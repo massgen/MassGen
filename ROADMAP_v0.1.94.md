@@ -1,14 +1,14 @@
-# MassGen v0.1.93 Roadmap
+# MassGen v0.1.94 Roadmap
 
-**Target Release:** June 3, 2026
+**Target Release:** TBD
 
 ## Overview
 
-Version 0.1.93 picks up the image/video edit work deferred from v0.1.86-v0.1.92 and continues multimodal provider-parity work.
+Version 0.1.94 picks up the image/video edit work deferred from v0.1.86-v0.1.93 and continues multimodal provider-parity work.
 
 ---
 
-## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.92)
+## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.93)
 
 **Issue:** [#959](https://github.com/massgen/MassGen/issues/959)
 **Owner:** @ncrispino

@@ -20,7 +20,7 @@ def test_execution_metadata_saved_on_missing_default_config(monkeypatch: pytest.
     reset_logging_session()
 
     # Force no default config resolution so we hit the early missing-config branch.
-    monkeypatch.setattr(massgen_cli, "resolve_config_path", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(massgen_cli.entrypoint, "resolve_config_path", lambda *_args, **_kwargs: None)
 
     prompt = "save prompt on early fail"
     args = argparse.Namespace(

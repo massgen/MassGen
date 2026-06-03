@@ -311,7 +311,7 @@ async def understand_image(
             try:
                 loaded = _load_and_process_image(image_path, base_dir, allowed_paths_list, name=None)
                 loaded_images.append(loaded)
-            except (ValueError, Exception) as e:
+            except Exception as e:
                 return _error(str(e))
         elif images:
             # Multi-image mode with names from dict keys
@@ -319,7 +319,7 @@ async def understand_image(
                 try:
                     loaded = _load_and_process_image(path, base_dir, allowed_paths_list, name=name)
                     loaded_images.append(loaded)
-                except (ValueError, Exception) as e:
+                except Exception as e:
                     return _error(f"Error loading '{name}': {str(e)}")
         else:
             # Follow-up mode: rely on conversation threading, no new image payload.

@@ -359,7 +359,7 @@ async def test_execute_plan_phase_timeout_skips_chunk_and_advances_to_next_chunk
     agents = {"agent_a": _DummyAgent(agent_workspace)}
 
     monkeypatch.setattr(
-        cli_module,
+        cli_module.plan_commands,
         "create_agents_from_config",
         lambda *args, **kwargs: agents,
     )
@@ -424,7 +424,7 @@ async def test_execute_plan_phase_timeout_skips_chunk_and_advances_to_next_chunk
 
         raise AssertionError(f"unexpected active chunk in test: {active_chunk}")
 
-    monkeypatch.setattr(cli_module, "run_single_question", _fake_run_single_question)
+    monkeypatch.setattr(cli_module.plan_commands, "run_single_question", _fake_run_single_question)
 
     config = {
         "agents": [{"type": "mock", "model": "mock-model"}],
@@ -479,7 +479,7 @@ async def test_execute_plan_phase_uses_textual_display_when_configured(
     agents = {"agent_a": _DummyAgent(agent_workspace)}
 
     monkeypatch.setattr(
-        cli_module,
+        cli_module.plan_commands,
         "create_agents_from_config",
         lambda *args, **kwargs: agents,
     )
@@ -517,7 +517,7 @@ async def test_execute_plan_phase_uses_textual_display_when_configured(
             },
         }
 
-    monkeypatch.setattr(cli_module, "run_single_question", _fake_run_single_question)
+    monkeypatch.setattr(cli_module.plan_commands, "run_single_question", _fake_run_single_question)
 
     config = {
         "agents": [{"type": "mock", "model": "mock-model"}],

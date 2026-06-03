@@ -9,19 +9,35 @@ deprecated patterns. Update to reflect current backend architecture.
 import copy
 import logging
 import warnings
-from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any, Optional
+from dataclasses import field, fields
+from typing import TYPE_CHECKING, Any
 
+from pydantic import ConfigDict
+from pydantic.dataclasses import dataclass as pydantic_dataclass
+
+from .config_modes import (
+    CoordinationMode,
+    DriftConflictPolicy,
+    FinalAnswerStrategy,
+    GapReportMode,
+    LearningCaptureMode,
+    NoveltyInjection,
+    RoundEvaluatorTransformationPressure,
+    SubagentRuntimeFallbackMode,
+    SubagentRuntimeMode,
+    WriteMode,
+)
 from .evaluation_criteria_generator import EvaluationCriteriaGeneratorConfig
+from .message_templates import MessageTemplates
 from .persona_generator import PersonaGeneratorConfig
+from .subagent.models import SubagentOrchestratorConfig
 from .task_decomposer import TaskDecomposerConfig
 
 if TYPE_CHECKING:
-    from .message_templates import MessageTemplates
-    from .subagent.models import SubagentOrchestratorConfig
+    pass
 
 
-@dataclass
+@pydantic_dataclass
 class StepModeConfig:
     """Configuration for step mode execution.
 
@@ -37,7 +53,7 @@ class StepModeConfig:
     session_dir: str = ""
 
 
-@dataclass
+@pydantic_dataclass
 class TimeoutConfig:
     """Configuration for timeout settings in MassGen.
 
@@ -70,11 +86,16 @@ class TimeoutConfig:
     def from_dict(cls, timeout_settings: dict[str, Any] | None) -> "TimeoutConfig":
         """Parse a timeout_settings YAML dictionary into a TimeoutConfig."""
         timeout_settings = cls._as_dict(timeout_settings)
+        _unknown = set(timeout_settings) - cls.yaml_timeout_keys()
+        if _unknown:
+            logging.getLogger(__name__).warning(
+                "Unknown timeout_settings key(s) ignored (possible typo): " f"{sorted(_unknown)}",
+            )
         timeout_kwargs = {key: timeout_settings[key] for key in cls.yaml_timeout_keys() if key in timeout_settings}
         return cls(**timeout_kwargs)
 
 
-@dataclass
+@pydantic_dataclass
 class PromptImproverConfig:
     """Configuration for pre-collab prompt improvement.
 
@@ -89,7 +110,7 @@ class PromptImproverConfig:
 _STANDALONE_CHECKPOINT_VALID_MODES = ("generate", "verify")
 
 
-@dataclass
+@pydantic_dataclass
 class CoordinationConfig:
     """Configuration for coordination behavior in MassGen.
 
@@ -225,7 +246,7 @@ class CoordinationConfig:
     max_broadcasts_per_agent: int = 10
     task_planning_filesystem_mode: bool = False
     enable_memory_filesystem_mode: bool = False
-    learning_capture_mode: str = "verification_and_final_only"  # "round" | "verification_and_final_only" | "final_only"
+    learning_capture_mode: LearningCaptureMode = "verification_and_final_only"  # "round" | "verification_and_final_only" | "final_only"
     disable_final_only_round_capture_fallback: bool = False
     compression_target_ratio: float = 0.20  # Preserve 20% of messages on context overflow
     use_skills: bool = False
@@ -246,23 +267,23 @@ class CoordinationConfig:
     subagent_max_timeout: int = 600  # Maximum 10 minutes
     subagent_max_concurrent: int = 3
     subagent_round_timeouts: dict[str, Any] | None = None
-    subagent_runtime_mode: str = "isolated"  # "isolated" | "inherited"
-    subagent_runtime_fallback_mode: str | None = None  # None | "inherited"
+    subagent_runtime_mode: SubagentRuntimeMode = "isolated"  # "isolated" | "inherited"
+    subagent_runtime_fallback_mode: SubagentRuntimeFallbackMode | None = None  # None | "inherited"
     subagent_host_launch_prefix: list[str] | None = None  # Optional command prefix for containerized isolated launch
-    subagent_orchestrator: Optional["SubagentOrchestratorConfig"] = None
+    subagent_orchestrator: SubagentOrchestratorConfig | None = None
     # Background subagent execution configuration
     background_subagents: dict[str, Any] | None = None  # {enabled: bool, injection_strategy: str}
     use_two_tier_workspace: bool = False  # Enable scratch/deliverable structure + git versioning
     task_decomposer: TaskDecomposerConfig = field(default_factory=TaskDecomposerConfig)
-    write_mode: str = "auto"  # "auto" | "worktree" | "isolated" | "legacy"
+    write_mode: WriteMode = "auto"  # "auto" | "worktree" | "isolated" | "legacy"
     enable_changedoc: bool = True  # Write changedoc.md decision journal during coordination
-    drift_conflict_policy: str = "skip"  # "skip" | "prefer_presenter" | "fail"
+    drift_conflict_policy: DriftConflictPolicy = "skip"  # "skip" | "prefer_presenter" | "fail"
     subagent_types: list[str] | None = None  # None = use DEFAULT_SUBAGENT_TYPES (excludes novelty)
     round_evaluator_before_checklist: bool = False  # Round 2+ must run round_evaluator before checklist submit
     orchestrator_managed_round_evaluator: bool = False  # Gate orchestrator-owned round_evaluator launch; default prompt-guidance only
     round_evaluator_skip_synthesis: bool = False  # Skip synthesis stage; pass all raw critiques to parent directly
     round_evaluator_refine: bool = False  # Allow evaluator agents to iterate (multi-round with voting)
-    round_evaluator_transformation_pressure: str = "balanced"  # "gentle" | "balanced" | "aggressive"
+    round_evaluator_transformation_pressure: RoundEvaluatorTransformationPressure = "balanced"  # "gentle" | "balanced" | "aggressive"
     enable_quality_rethink_on_iteration: bool = False  # Auto-inject quality_rethinking spawn task on iteration 2+
     enable_novelty_on_iteration: bool = False  # Auto-inject novelty/quality spawn task on iteration 2+
     enable_execution_trace_analyzer: bool = False  # Run execution_trace_analyzer in parallel with round_evaluator
@@ -273,7 +294,7 @@ class CoordinationConfig:
     evolving_criteria_min_high_score_count: int = 2  # Min number of criteria at threshold to trigger evolution
     evolving_criteria_timeout: int = 300  # Seconds for the full evolution gate (proposals + synthesis)
     enable_evaluator_personas: bool = False  # Expose set_evaluator_personas tool for agent-driven evaluator diversity
-    novelty_injection: str = "none"  # "none" | "gentle" | "moderate" | "aggressive"
+    novelty_injection: NoveltyInjection = "none"  # "none" | "gentle" | "moderate" | "aggressive"
     improvements: dict[str, Any] = field(default_factory=dict)  # Quality gate config for draft_approach
     checklist_criteria_preset: str | None = None  # "persona" | "decomposition" | "evaluation" | "prompt" | "analysis" | "planning" | "spec" | "round_evaluator"
     checklist_criteria_inline: list[dict[str, str]] | None = None  # [{text, category: primary|standard|stretch, anti_patterns?, verify_by?}]
@@ -446,6 +467,16 @@ class CoordinationConfig:
 
         coord_cfg = cls._as_dict(coord_cfg)
 
+        # Surface unknown/typo'd coordination keys instead of silently dropping
+        # them (the old behavior let e.g. "coordnation_mode" default silently).
+        # Recognized = field names + the nested "standalone_checkpoint" block key.
+        _recognized = {f.name for f in fields(cls)} | {"standalone_checkpoint"}
+        _unknown = set(coord_cfg) - _recognized
+        if _unknown:
+            logging.getLogger(__name__).warning(
+                "Unknown orchestrator.coordination key(s) ignored (possible typo): " f"{sorted(_unknown)}",
+            )
+
         persona_generator_config = PersonaGeneratorConfig()
         if "persona_generator" in coord_cfg:
             pg_cfg = cls._as_dict(coord_cfg["persona_generator"])
@@ -490,7 +521,12 @@ class CoordinationConfig:
                 cls._as_dict(coord_cfg["subagent_orchestrator"]),
             )
 
-        return cls(
+        # Build kwargs then drop None values so absent YAML keys fall back to the
+        # field defaults. Historically this used cls(**all_kwargs) where absent
+        # keys were passed as None, which (under the old plain dataclass) silently
+        # overrode non-None defaults with None (e.g. write_mode -> None instead of
+        # "auto"). Pydantic now enforces field types, so we respect defaults.
+        _kw = dict(
             enable_planning_mode=coord_cfg.get("enable_planning_mode", False),
             planning_mode_instruction=coord_cfg.get(
                 "planning_mode_instruction",
@@ -575,6 +611,7 @@ class CoordinationConfig:
             bootstrap_max_per_agent_per_round=coord_cfg.get("bootstrap_max_per_agent_per_round", 3),
             bootstrap_max_total=coord_cfg.get("bootstrap_max_total", 30),
         )
+        return cls(**{k: v for k, v in _kw.items() if v is not None})
 
     def __post_init__(self):
         """Validate configuration after initialization."""
@@ -693,16 +730,11 @@ class CoordinationConfig:
             )
 
     def _validate_improvements(self):
-        """Validate improvements quality-gate configuration."""
-        if self.improvements is None:
-            self.improvements = {}
-            return
+        """Validate improvements quality-gate configuration.
 
-        if not isinstance(self.improvements, dict):
-            raise ValueError(
-                "improvements must be a dictionary",
-            )
-
+        ``improvements`` is a non-optional dict field; pydantic guarantees its
+        type at construction, so only the key-value contents need checking here.
+        """
         for key in ("min_transformative", "min_structural", "min_non_incremental"):
             if key not in self.improvements:
                 continue
@@ -738,7 +770,7 @@ class CoordinationConfig:
                 )
 
 
-@dataclass
+@pydantic_dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class AgentConfig:
     """Configuration for MassGen agents using the proven binary decision framework.
 
@@ -777,8 +809,13 @@ class AgentConfig:
     # Core backend configuration (includes tool enablement)
     backend_params: dict[str, Any] = field(default_factory=dict)
 
-    # Framework configuration
-    message_templates: Optional["MessageTemplates"] = None
+    # Framework configuration.
+    # Typed Any (not Optional[MessageTemplates]) because MessageTemplates is a
+    # TYPE_CHECKING-only import the pydantic schema can't resolve; runtime
+    # behavior is unchanged (holds a MessageTemplates or None).
+    # arbitrary_types_allowed (on this class) lets pydantic accept MessageTemplates,
+    # a plain (non-pydantic) class, as a field type — validated by isinstance.
+    message_templates: MessageTemplates | None = None
 
     # Voting behavior configuration
     voting_sensitivity: str = "lenient"
@@ -788,7 +825,7 @@ class AgentConfig:
     max_new_answers_per_agent: int | None = None
     max_new_answers_global: int | None = None
     checklist_require_gap_report: bool = True
-    gap_report_mode: str = "changedoc"  # "changedoc" | "separate" | "none"
+    gap_report_mode: GapReportMode = "changedoc"  # "changedoc" | "separate" | "none"
     answer_novelty_requirement: str = "lenient"
     fairness_enabled: bool = True
     fairness_lead_cap_answers: int = 2
@@ -828,7 +865,7 @@ class AgentConfig:
     # - winner_reuse: use the selected answer directly when presentation can be skipped
     # - winner_present: selected winner performs a final presentation pass
     # - synthesize: selected presenter combines the strongest parts of all answers
-    final_answer_strategy: str | None = None
+    final_answer_strategy: FinalAnswerStrategy | None = None
 
     # Disable injection of other agents' answers (used by TUI multi-agent refinement OFF)
     # When True, agents work independently without seeing each other's work mid-stream
@@ -842,7 +879,7 @@ class AgentConfig:
     # Coordination mode: "voting" (default) or "decomposition"
     # In decomposition mode, each agent works on an assigned subtask and calls stop when done.
     # A presenter agent synthesizes the final output.
-    coordination_mode: str = "voting"
+    coordination_mode: CoordinationMode = "voting"
     # Agent ID that presents the final synthesized output (decomposition mode)
     presenter_agent: str | None = None
 

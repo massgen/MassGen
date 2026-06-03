@@ -68,7 +68,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.92 Features](#-latest-features-v0192)
+- [v0.1.93 Features](#-latest-features-v0193)
 </details>
 
 <details open>
@@ -121,8 +121,8 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [Recent Achievements (v0.1.92)](#recent-achievements-v0192)
-- [Previous Achievements (v0.0.3 - v0.1.91)](#previous-achievements-v003---v0191)
+- [Recent Achievements (v0.1.93)](#recent-achievements-v0193)
+- [Previous Achievements (v0.0.3 - v0.1.92)](#previous-achievements-v003---v0192)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
@@ -154,19 +154,18 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.92)
+## 🆕 Latest Features (v0.1.93)
 
-**🎉 Released: June 1, 2026**
+**🎉 Released: June 3, 2026**
 
-**What's New in v0.1.92:**
-- **🧩 Orchestrator Collaborators** - The monolithic orchestrator is split into 49 lazy collaborators while preserving existing public call sites.
-- **🧪 Characterization Safety Net** - New orchestrator and Textual display characterization tests pin public contracts and extraction seams.
-- **🔎 Parallel Web Search MCP** - A new Parallel Search MCP registry entry and example config support LLM-optimized web research workflows.
+**What's New in v0.1.93** (internal-quality release — no runtime behavior changes):
+- **🧩 CLI Package Decomposition** - The monolithic 12k-line `cli.py` is split into a focused `massgen/cli/` package while preserving the public import surface.
+- **🛡️ Pydantic Config Migration** - Configuration classes now validate field types on construction, with `Literal`-typed modes as a single source of truth the validator derives from.
+- **🧹 Dead Code Removal & Tooling** - Removed ~8.7k lines of unreferenced legacy code, fixed the coverage gate, and re-enabled type checking via an incremental mypy ratchet.
 
-**Try v0.1.92 Features:**
+**Install v0.1.93:**
 ```bash
-pip install massgen==0.1.92
-uv run massgen --config massgen/configs/tools/web-search/parallel_search_example.yaml "Research the latest advances in multi-agent AI systems"
+pip install massgen==0.1.93
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1241,18 +1240,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.92)
+### Recent Achievements (v0.1.93)
 
-**🎉 Released: June 1, 2026**
+**🎉 Released: June 3, 2026**
 
-#### Orchestrator Collaborator Refactor & Parallel Search MCP
-- **Orchestrator Collaborators**: `orchestrator.py` dropped from 21,599 to 8,574 lines by extracting 49 lazy collaborators into `massgen/orchestrator_collaborators/`
-- **Stable Delegator Surface**: Existing public methods remain available through thin delegators, preserving internal and external call sites
-- **Textual Display Cleanup**: Provider/model helpers, terminal capability probing, and widget-debug helpers moved into focused sibling modules
-- **Parallel Web Search MCP**: New `parallel_search` registry entry and example config support Parallel's hosted Search MCP server
-- **Tests**: 77 new characterization cases pin the orchestrator and Textual display public contracts
+#### CLI Package Decomposition & Pydantic Config Migration
+- **CLI Package Decomposition**: The monolithic `cli.py` (12,206 lines) was split into an 18-module `massgen/cli/` package with a facade that preserves the public import surface; the ~886-line Textual per-turn handler was extracted into a dependency-injected function
+- **Pydantic Config Migration**: Config classes migrated to `pydantic.dataclasses` (type validation on construction) with `Literal`-typed modes in `massgen/config_modes.py` that the validator derives from — closing a real validator-drift bug
+- **Single-Source Exclusion Lists**: The two hand-duplicated "excluded params" lists now derive from one frozenset, locked by a regression test
+- **Dead Code Removal**: Deleted ~8,700 lines of unreferenced legacy `v1`/`prototype` code that was shipping in the wheel
+- **Tooling**: Fixed the broken coverage gate, enabled a no-assert test guard, enforced `uv.lock` in CI, and re-enabled type checking via an incremental mypy ratchet
+- **Fixes**: Concurrent-run log isolation (MAS-274), a config default regression, and logged (not silent) backend tool-arg parsing
 
-### Previous Achievements (v0.0.3 - v0.1.91)
+### Previous Achievements (v0.0.3 - v0.1.92)
+
+✅ **Orchestrator Collaborator Refactor & Parallel Search MCP (v0.1.92)**: Reduced `orchestrator.py` from 21,599 to 8,574 lines by extracting 49 lazy collaborators, split Textual display helpers into sibling modules, added characterization coverage, and introduced a Parallel Web Search MCP registry entry plus example config.
 
 ✅ **Config Reliability & Hook Safety (v0.1.91)**: Centralized coordination, timeout, and orchestrator runtime parsing; strict unknown-key validation; checklist runtime control wiring; and safer Gemini/Codex native hook path permission precedence.
 
@@ -1581,9 +1583,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.93 Roadmap
+### v0.1.94 Roadmap
 
-Version 0.1.93 picks up the image/video edit work deferred from v0.1.86-v0.1.92 and continues multimodal provider-parity work:
+Version 0.1.94 picks up the image/video edit work deferred from v0.1.86-v0.1.93 and continues multimodal provider-parity work:
 
 #### Planned Features
 - **Image/Video Edit Capabilities** ([#959](https://github.com/massgen/MassGen/issues/959)): Image and video editing across providers with multi-turn editing workflows via continuation IDs

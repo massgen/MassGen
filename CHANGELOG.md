@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Recent Releases
 
+**v0.1.93 (June 3, 2026)** - CLI Package Decomposition & Pydantic Config Migration
+Splits the monolithic `cli.py` into a focused `massgen/cli/` package, migrates the configuration classes to pydantic dataclasses with `Literal`-typed modes validated at construction, removes ~8.7k lines of dead legacy code, and hardens the test-signal and type-checking tooling (coverage gate, no-assert guard, `uv.lock` enforcement, and an incremental mypy ratchet). Internal-quality release with no runtime behavior changes.
+
 **v0.1.92 (June 1, 2026)** - Orchestrator Collaborator Refactor & Parallel Search MCP
 Refactors the monolithic orchestrator into 49 lazy collaborators with stable delegator call sites, splits focused TUI display helpers into sibling modules, adds characterization coverage for the extraction seams, and introduces a Parallel Web Search MCP registry entry plus runnable example config.
 
@@ -35,6 +38,39 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 
 ---
 
+## [0.1.93] - 2026-06-03
+
+### Changed
+- **CLI Package Decomposition**: The monolithic `massgen/cli.py` (12,206 lines) was split into an 18-module `massgen/cli/` package with a facade `__init__` that preserves the public surface — `from massgen.cli import X` and `massgen.cli.X` continue to work unchanged. The ~886-line per-turn handler inside the Textual interactive loop was extracted into a module-level, dependency-injected function, dropping that loop from ~1,200 to ~284 lines.
+- **Pydantic Config Migration**: The configuration classes (`AgentConfig`, `CoordinationConfig`, `TimeoutConfig`, `StepModeConfig`, `PromptImproverConfig`, and the persona/criteria/decomposer/subagent-orchestrator sub-configs) were migrated from plain dataclasses to `pydantic.dataclasses`, validating field types on construction while preserving `from_dict`/`to_dict`/`__post_init__` semantics. `pydantic>=2.0` is now a declared dependency.
+- **Typed Mode Fields (Single Source of Truth)**: Mode fields (`write_mode`, `coordination_mode`, `novelty_injection`, `drift_conflict_policy`, `final_answer_strategy`, etc.) are now `Literal` types in `massgen/config_modes.py`, and `config_validator` derives its `VALID_*` sets from them via `get_args` so the validator can no longer drift from the config models.
+- **Single-Source Exclusion Lists**: The two hand-duplicated 104/105 "params never forwarded to provider APIs" lists in `backend/base.py` and the API params handler now derive from one `frozenset` (`backend/_excluded_params.py`), with a regression test locking them in sync.
+
+### Fixed
+- **Concurrent-Run Log Isolation (MAS-274)**: The Textual interactive orchestration thread now inherits the per-run logging session via `contextvars.copy_context()`, so concurrent in-process runs no longer cross-contaminate logs and snapshot paths by falling back to the process-global session.
+- **Stale Validator Set**: The validator's subagent runtime-mode set omitted `delegated` and would have rejected valid configs; deriving it from the `Literal` source of truth fixes this.
+- **Config Default Regression**: `CoordinationConfig.from_dict` now drops `None` values so absent YAML keys fall back to field defaults (previously `write_mode` could become `None` instead of `"auto"`).
+- **Backend Tool-Arg Logging**: The Response backend routes tool-call argument parsing through the shared normalizer, logging malformed payloads instead of silently dropping them to `{}`.
+
+### Removed
+- **Dead Legacy Packages**: Deleted ~8,700 lines of unreferenced legacy code (`massgen/v1`, `massgen/prototype`) that were being shipped in the wheel.
+
+### Tests
+- **Test-Signal Hardening**: Fixed the broken coverage configuration (`source` matched no real package), enabled `error::pytest.PytestReturnNotNoneWarning` so no-assert tests fail, and switched CI to enforce `uv.lock` (`uv sync --frozen`) with actionable `--tb=short`.
+- **Incremental mypy Ratchet**: Re-enabled mypy (previously fully disabled) on a curated island of clean modules via `scripts/mypy_island.sh`, wired as a blocking pre-commit hook and CI gate, plus a non-blocking full-repo mypy job for visibility.
+- Added `test_config_pydantic_validation.py`, `test_excluded_params_single_source.py`, and CLI helper/run-loop characterization suites; verified all 282 bundled configs still validate.
+
+### Notes
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to a future release.
+- This is an internal-quality release: behavior is preserved, with the focus on decomposing the CLI, giving configuration real type validation, and re-enabling type checking.
+
+### Technical Details
+- **Major Focus**: Shrink and harden MassGen's CLI and configuration layers without changing runtime behavior, making future changes easier to isolate, type-check, and review.
+- **Key Commits**: `68fcd74b`, `51483e17`, `74f9b21a`, `1dcd01b9`, `701b11e5`
+- **Contributors**: @ncrispino and the MassGen team
+
+---
+
 ## [0.1.92] - 2026-06-01
 
 ### Added
@@ -54,7 +90,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 - Verified targeted characterization and collaborator suites; ruff checks pass for the refactored orchestrator, collaborator package, and Textual display modules.
 
 ### Notes
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 - Remaining high-risk extraction work for MidStreamInjectionHookInstaller and streaming/coordination cores is documented for follow-up.
 
 ### Technical Details
@@ -81,7 +117,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 - Added native hook regression coverage for nested read-only path precedence, protected-path enforcement, and Claude Code `additionalContext` injection conversion.
 
 ### Notes
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ### Technical Details
 - **Major Focus**: Make release-critical YAML configuration surfaces typo-resistant and parser-complete while hardening native hook path authorization.
@@ -114,7 +150,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 
 ### Notes
 - Discriminative Criteria Refinements from the v0.1.90 roadmap landed in this release.
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ### Technical Details
 - **Major Focus**: Make checklist-gated refinement a stronger optimization loop by improving the loss signal, reducing scoring bias, and preventing low-signal criteria from dominating later rounds.
@@ -142,7 +178,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 
 ### Notes
 - This release completes the follow-up Antigravity integration pass that v0.1.88 introduced as a first version.
-- Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ### Technical Details
 - **Major Focus**: Make Antigravity CLI reliable in real MassGen coordination runs by hardening auth, workspace isolation, workflow-tool semantics, hook integration, and prompt affordance boundaries.
@@ -173,7 +209,7 @@ New `orchestrator.coordination.criteria_mode` option lets evaluation criteria em
 ### Notes
 - Antigravity CLI (`agy`) must be installed separately with `curl -fsSL https://antigravity.google/cli/install.sh | bash`.
 - Local mode can use existing Google OAuth state at `~/.gemini/google_accounts.json`; Docker mode requires `GEMINI_API_KEY` or `GOOGLE_API_KEY` because OAuth state does not cross container boundaries.
-- Follow-up Antigravity hardening landed in v0.1.89; Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Follow-up Antigravity hardening landed in v0.1.89; Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ### Technical Details
 - **Major Focus**: Add Google Antigravity CLI as a first-class MassGen backend while keeping project-local isolation and MassGen workflow/tool semantics intact.

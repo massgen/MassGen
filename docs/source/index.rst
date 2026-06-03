@@ -209,6 +209,10 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.93 (June 3, 2026)** - CLI Package Decomposition & Pydantic Config Migration
+
+Splits the monolithic ``cli.py`` into a focused ``massgen/cli/`` package, migrates the configuration classes to pydantic dataclasses with ``Literal``-typed modes validated at construction, removes ~8.7k lines of dead legacy code, and hardens the test-signal and type-checking tooling (coverage gate, no-assert guard, ``uv.lock`` enforcement, and an incremental mypy ratchet). Internal-quality release with no runtime behavior changes.
+
 **v0.1.92 (June 1, 2026)** - Orchestrator Collaborator Refactor & Parallel Search MCP
 
 Refactors the monolithic orchestrator into 49 lazy collaborators with stable delegator call sites, splits focused Textual display helpers into sibling modules, adds characterization coverage for extraction seams, and introduces a Parallel Web Search MCP registry entry plus runnable example config.

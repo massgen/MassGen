@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from massgen.structured_logging import log_persona_generation, trace_persona_generation
 
@@ -53,7 +54,7 @@ class DiversityMode:
     METHODOLOGY = "methodology"  # Different working approaches, same problem
 
 
-@dataclass
+@pydantic_dataclass
 class PersonaGeneratorConfig:
     """Configuration for automatic persona generation.
 

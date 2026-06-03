@@ -11,14 +11,15 @@ import logging
 import os
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@pydantic_dataclass
 class TaskDecomposerConfig:
     """Configuration for automatic task decomposition.
 

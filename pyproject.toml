@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "datasets==3.2.0",
     "openai==2.2.0",
+    "pydantic>=2.0",
     "xai-sdk==1.6.1",
     "anthropic>=0.61.0",
     "elevenlabs>=1.0.0",
@@ -271,6 +272,9 @@ markers = [
 ]
 asyncio_mode = "auto"
 filterwarnings = [
+    # A test that returns a non-None value almost always means an assert was
+    # forgotten (the return value is silently discarded). Treat it as an error.
+    "error::pytest.PytestReturnNotNoneWarning",
     "ignore::pytest.PytestAssertRewriteWarning:_pytest.config",
     "ignore:jsonschema.RefResolver is deprecated as of v4.18.0.*:DeprecationWarning:autogen\\.json_utils",
     "ignore:Accessing jsonschema.__version__ is deprecated.*:DeprecationWarning:autogen\\.import_utils",
@@ -278,11 +282,13 @@ filterwarnings = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["agents", "massgen_*"]
+source = ["massgen"]
 omit = [
     "*/tests/*",
     "*/test_*",
     "future_mass/*",
+    "massgen/v1/*",
+    "massgen/prototype/*",
     "setup.py",
 ]
 

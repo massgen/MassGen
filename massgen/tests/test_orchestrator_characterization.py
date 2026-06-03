@@ -196,17 +196,13 @@ class TestPublicContractImports:
             "raw_config",
         ]
 
-    def test_mass_orchestrator_current_baseline(self):
-        """MassOrchestrator is NOT currently exported from massgen.orchestrator.
+    def test_mass_orchestrator_not_exported(self):
+        """The legacy ``MassOrchestrator`` name is not exported from massgen.orchestrator.
 
-        The refactor step-0 shim is REQUIRED to add it. We pin the present
-        reality (absent at top level, present in massgen.v1.orchestrator) so the
-        diff that adds the re-export is explicit and the v1 source is unchanged.
+        (The old ``massgen.v1`` package that defined it has been removed; the
+        current orchestrator is ``massgen.orchestrator.Orchestrator``.)
         """
         assert not hasattr(orchestrator_module, "MassOrchestrator")
-        from massgen.v1.orchestrator import MassOrchestrator as V1MassOrchestrator
-
-        assert inspect.isclass(V1MassOrchestrator)
 
 
 # ===========================================================================

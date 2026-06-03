@@ -19,9 +19,10 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 
-@dataclass
+@pydantic_dataclass
 class EvaluationCriteriaGeneratorConfig:
     """Configuration for evaluation criteria generation.
 

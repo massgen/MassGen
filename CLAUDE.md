@@ -198,7 +198,7 @@ When adding new YAML parameters, update **both**:
 
 When adding new **coordination** YAML parameters (under `orchestrator.coordination`), update **all three**:
 - `massgen/agent_config.py` -> `CoordinationConfig` dataclass field
-- `massgen/cli.py` -> `_parse_coordination_config()` (must explicitly map the key or it silently defaults to `False`)
+- `massgen/cli/config_parsing.py` -> `_parse_coordination_config()` (must explicitly map the key or it silently defaults to `False`)
 - `massgen/agent_config.py` -> `to_dict()` if the field needs to serialize back
 
 ## Workflow Guidelines
@@ -284,7 +284,7 @@ Interpretation rules:
 
 ## Key Files for New Contributors
 
-- Entry point: `massgen/cli.py`
+- Entry point: `massgen/cli/` package (console script `massgen.cli:cli_main`; argparse in `massgen/cli/entrypoint.py`)
 - Coordination logic: `massgen/orchestrator.py`
 - Agent implementation: `massgen/chat_agent.py`
 - Backend interface: `massgen/backend/base.py`
