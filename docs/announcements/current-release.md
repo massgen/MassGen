@@ -7,7 +7,7 @@ After posting, update the social links below.
 
 ## Release Summary
 
-MassGen v0.1.93 — CLI Package Decomposition & Pydantic Config Migration — is an internal-quality release with no intended runtime behavior changes. It breaks the 12k-line CLI module into a focused `massgen/cli/` package, adds construction-time validation to core config dataclasses, consolidates duplicated provider-exclusion lists, removes dead legacy code from the wheel, and tightens CI/type-checking so future changes fail earlier and with clearer signals.
+We're excited to release MassGen v0.1.93 — CLI Package Decomposition & Pydantic Config Migration! 🚀 This internal-quality release keeps runtime behavior stable while tightening the layers developers touch most: the 12k-line CLI is now a focused `massgen/cli/` package, config dataclasses validate at construction time, provider-exclusion lists share one source of truth, dead legacy code is gone from the wheel, and CI/type-checking catches issues earlier.
 
 ## Install
 
@@ -33,7 +33,7 @@ Copy everything below this line, then append content from `feature-highlights.md
 
 ---
 
-MassGen v0.1.93 — CLI Package Decomposition & Pydantic Config Migration — is an internal-quality release with no intended runtime behavior changes. It breaks the 12k-line CLI module into a focused `massgen/cli/` package, adds construction-time validation to core config dataclasses, consolidates duplicated provider-exclusion lists, removes dead legacy code from the wheel, and tightens CI/type-checking so future changes fail earlier and with clearer signals.
+We're excited to release MassGen v0.1.93 — CLI Package Decomposition & Pydantic Config Migration! 🚀 This internal-quality release keeps runtime behavior stable while tightening the layers developers touch most: the 12k-line CLI is now a focused `massgen/cli/` package, config dataclasses validate at construction time, provider-exclusion lists share one source of truth, dead legacy code is gone from the wheel, and CI/type-checking catches issues earlier.
 
 **Key Improvements:**
 
