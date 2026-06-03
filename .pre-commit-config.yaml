@@ -91,29 +91,18 @@ repos:
   #         --disable=C3001
   #       ]
 
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.7.0
-  #   hooks:
-  #     - id: mypy
-  #       exclude:
-  #           (?x)(
-  #               ^docs
-  #               | \.html$
-  #           )
-  #       args: [ --disallow-untyped-defs,
-  #               --disallow-incomplete-defs,
-  #               --ignore-missing-imports,
-  #               --disable-error-code=var-annotated,
-  #               --disable-error-code=union-attr,
-  #               --disable-error-code=assignment,
-  #               --disable-error-code=attr-defined,
-  #               --disable-error-code=import-untyped,
-  #               --disable-error-code=truthy-function,
-  #               --disable-error-code=typeddict-item,
-  #               --follow-imports=skip,
-  #               --explicit-package-bases,
-  #               massgen/backend
-  #               ]
+  # Incremental mypy "ratchet": type-check only a curated island of clean modules
+  # (full-repo mypy is not yet feasible — ~2300 errors). Expand ISLAND in
+  # scripts/mypy_island.sh as modules get typed. A non-blocking full-repo mypy
+  # job runs in CI for visibility.
+  - repo: local
+    hooks:
+      - id: mypy-island
+        name: mypy (type-checked island)
+        entry: bash scripts/mypy_island.sh
+        language: system
+        pass_filenames: false
+        files: ^(massgen/agent_config\.py|massgen/backend/_excluded_params\.py|massgen/cli/(_constants|env|mode_flags|planning)\.py|scripts/mypy_island\.sh)$
   - repo: https://github.com/regebro/pyroma
     rev: "5.0.1"
     hooks:
