@@ -227,7 +227,22 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.92 - Latest
+### v0.1.93 - Latest
+**Internal-Quality Release:** CLI Package Decomposition & Pydantic Config Migration
+
+**Key Changes:**
+- **CLI Package Decomposition**: The monolithic `cli.py` (12,206 lines) is split into a focused `massgen/cli/` package while preserving the public import surface
+- **Pydantic Config Migration**: Config classes validate field types on construction, with `Literal`-typed modes as a single source of truth the validator derives from
+- **Dead Code Removal & Tooling**: Removed ~8.7k lines of unreferenced legacy code, fixed the coverage gate, and re-enabled type checking via an incremental mypy ratchet
+
+No new configuration files — this release preserves runtime behavior. All 282 bundled configs continue to validate.
+
+**Install:**
+```bash
+pip install massgen==0.1.93
+```
+
+### v0.1.92
 **New Features:** Orchestrator Collaborator Refactor & Parallel Search MCP
 
 **Key Features:**

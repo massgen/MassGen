@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.92
+**Current Version:** v0.1.93
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** June 1, 2026
+**Last Updated:** June 3, 2026
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -42,9 +42,27 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.93** | 06/03/26 | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.92 ([#959](https://github.com/massgen/MassGen/issues/959)) |
+| **v0.1.94** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.93 ([#959](https://github.com/massgen/MassGen/issues/959)) |
 
 *All releases ship on MWF @ 9am PT when ready*
+
+---
+
+## ✅ v0.1.93 - CLI Package Decomposition & Pydantic Config Migration (Completed)
+
+**Released:** June 3, 2026
+
+### Features
+- **CLI Package Decomposition**: The monolithic `massgen/cli.py` (12,206 lines) was split into an 18-module `massgen/cli/` package with a facade that preserves the public import surface; the ~886-line Textual per-turn handler was extracted into a dependency-injected function
+- **Pydantic Config Migration**: Config classes migrated to `pydantic.dataclasses` (type validation on construction) with `Literal`-typed modes in `massgen/config_modes.py` that `config_validator` derives from — closing a real validator-drift bug
+- **Single-Source Exclusion Lists**: The two hand-duplicated "params never forwarded to provider APIs" lists now derive from one frozenset, locked by a regression test
+- **Dead Code Removal**: Deleted ~8,700 lines of unreferenced legacy `v1`/`prototype` code that was shipping in the wheel
+- **Tooling**: Fixed the broken coverage gate, enabled a no-assert test guard, enforced `uv.lock` in CI, and re-enabled type checking via an incremental mypy ratchet
+- **Fixes**: Concurrent-run log isolation (MAS-274), a config default regression, and logged (not silent) backend tool-arg parsing
+
+### Notes
+- Internal-quality release: runtime behavior is preserved.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ---
 
@@ -61,7 +79,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **Tests**: 77 new characterization cases cover orchestrator and Textual display contracts, with existing integration/unit seams repointed to the collaborators
 
 ### Notes
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ---
 
@@ -78,7 +96,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **Tests**: New parser/validator parity coverage and native hook regression tests protect these release-critical paths
 
 ### Notes
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ---
 
@@ -97,7 +115,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ### Notes
 - Discriminative Criteria Refinements from the roadmap landed in this release.
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ---
 
@@ -115,7 +133,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ### Notes
 - This completes the follow-up Antigravity integration pass introduced in v0.1.88.
-- Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ---
 
@@ -132,7 +150,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **Tests**: `massgen/tests/test_antigravity_cli_backend.py` covers command construction, config isolation, MCP schema, workflow JSON envelopes, Docker/API-key constraints, hook wiring, and env passthrough
 
 ### Notes
-- Follow-up Antigravity hardening landed in v0.1.89; Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.93.
+- Follow-up Antigravity hardening landed in v0.1.89; Discriminative Criteria Refinements landed in v0.1.90; Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.94.
 
 ---
 
@@ -149,7 +167,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - **`bootstrap_subagent` Single-Shot Fix**: `Orchestrator._run_bootstrap_discriminator_step` passes `refine=False` to `spawn_subagent` — the canonical knob `SubagentManager` respects at the orchestrator level (the orchestrator's `max_new_answers_per_agent: 3` default was shadowing coordination-dict overrides)
 
 ### Notes
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) ultimately carried forward to v0.1.93.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) ultimately carried forward to v0.1.94.
 - Closes [#1082](https://github.com/massgen/MassGen/issues/1082) (`llms.txt` + `llms-full.txt`) and [#1083](https://github.com/massgen/MassGen/issues/1083) (CrewAI / LangGraph / AutoGen comparison pages).
 
 ---
@@ -325,7 +343,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.93 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.92)
+## 📋 v0.1.94 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.93)
 
 ### Features
 
