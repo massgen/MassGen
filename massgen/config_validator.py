@@ -24,10 +24,11 @@ Usage:
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 import yaml
 
+from . import config_modes
 from .backend.capabilities import (
     BACKEND_CAPABILITIES,
     get_capabilities,
@@ -159,22 +160,18 @@ class ConfigValidator:
     # Valid answer novelty requirements
     VALID_ANSWER_NOVELTY = {"lenient", "balanced", "strict"}
 
-    # Valid write modes for isolated write contexts
-    VALID_WRITE_MODES = {"auto", "worktree", "isolated", "legacy"}
-    VALID_DRIFT_CONFLICT_POLICIES = {"skip", "prefer_presenter", "fail"}
-    VALID_NOVELTY_INJECTION = {"none", "gentle", "moderate", "aggressive"}
-    VALID_ROUND_EVALUATOR_TRANSFORMATION_PRESSURE = {"gentle", "balanced", "aggressive"}
-    VALID_SUBAGENT_RUNTIME_MODES = {"isolated", "inherited"}
-    VALID_SUBAGENT_RUNTIME_FALLBACK_MODES = {"inherited"}
-    VALID_FINAL_ANSWER_STRATEGIES = {"winner_reuse", "winner_present", "synthesize"}
-    VALID_LEARNING_CAPTURE_MODES = {
-        "round",
-        "verification_and_final_only",
-        "final_only",
-    }
-
-    # Valid gap report modes
-    VALID_GAP_REPORT_MODES = {"changedoc", "separate", "none"}
+    # These mode value-sets derive from the Literal types in config_modes (the
+    # single source of truth) so the validator can't drift from the config models
+    # again (it previously omitted the "delegated" subagent runtime mode).
+    VALID_WRITE_MODES = set(get_args(config_modes.WriteMode))
+    VALID_DRIFT_CONFLICT_POLICIES = set(get_args(config_modes.DriftConflictPolicy))
+    VALID_NOVELTY_INJECTION = set(get_args(config_modes.NoveltyInjection))
+    VALID_ROUND_EVALUATOR_TRANSFORMATION_PRESSURE = set(get_args(config_modes.RoundEvaluatorTransformationPressure))
+    VALID_SUBAGENT_RUNTIME_MODES = set(get_args(config_modes.SubagentRuntimeMode))
+    VALID_SUBAGENT_RUNTIME_FALLBACK_MODES = set(get_args(config_modes.SubagentRuntimeFallbackMode))
+    VALID_FINAL_ANSWER_STRATEGIES = set(get_args(config_modes.FinalAnswerStrategy))
+    VALID_LEARNING_CAPTURE_MODES = set(get_args(config_modes.LearningCaptureMode))
+    VALID_GAP_REPORT_MODES = set(get_args(config_modes.GapReportMode))
 
     def __init__(self):
         """Initialize the validator."""

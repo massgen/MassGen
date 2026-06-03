@@ -14,6 +14,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
+from pydantic.dataclasses import dataclass as pydantic_dataclass
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_SHARED_CHILD_TEAM_TYPES = ["round_evaluator"]
@@ -207,7 +209,7 @@ class SubagentConfig:
         )
 
 
-@dataclass
+@pydantic_dataclass
 class SubagentOrchestratorConfig:
     """
     Configuration for subagent orchestrator mode.

@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "datasets==3.2.0",
     "openai==2.2.0",
+    "pydantic>=2.0",
     "xai-sdk==1.6.1",
     "anthropic>=0.61.0",
     "elevenlabs>=1.0.0",
