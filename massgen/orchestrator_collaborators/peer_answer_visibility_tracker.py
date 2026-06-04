@@ -83,14 +83,34 @@ class PeerAnswerVisibilityTracker:
 
         state.seen_answer_counts = current_counts
 
-    def mark_seen_answer_revisions(self, agent_id: str, source_agent_ids: list[str]) -> None:
-        """Mark current answer revisions from source agents as seen by ``agent_id``."""
+    def mark_seen_answer_revisions(
+        self,
+        agent_id: str,
+        source_agent_ids: list[str],
+        seen_counts: dict[str, int] | None = None,
+    ) -> None:
+        """Mark answer revisions from source agents as seen by ``agent_id``.
+
+        ``seen_counts`` (R1 fix): per-source revision counts *captured at the
+        moment the injected content was selected*. When provided, the source is
+        marked seen up to that captured count rather than the live count, so a
+        peer revision published during the intervening ``await`` (e.g. snapshot
+        copy) is NOT silently marked seen and remains injectable. The captured
+        count is clamped to the current count and never lowers an already-higher
+        seen count. When omitted, falls back to the legacy live read.
+        """
         orch = self._orchestrator
         state = orch.agent_states.get(agent_id)
         if not state:
             return
         for source_agent_id in source_agent_ids:
-            state.seen_answer_counts[source_agent_id] = self.get_agent_answer_revision_count(source_agent_id)
+            current = self.get_agent_answer_revision_count(source_agent_id)
+            if seen_counts is not None and source_agent_id in seen_counts:
+                count = min(int(seen_counts[source_agent_id]), current)
+            else:
+                count = current
+            prev = state.seen_answer_counts.get(source_agent_id, 0)
+            state.seen_answer_counts[source_agent_id] = max(prev, count)
 
     def get_latest_answer_revision_timestamp(self, source_agent_id: str) -> float:
         """Get timestamp of the latest answer revision for an agent."""
@@ -273,8 +293,15 @@ class PeerAnswerVisibilityTracker:
         self,
         agent_id: str,
         source_agent_ids: list[str],
+        seen_counts: dict[str, int] | None = None,
     ) -> None:
-        """Apply per-agent state updates after mid-stream answer injection."""
+        """Apply per-agent state updates after mid-stream answer injection.
+
+        ``seen_counts`` is forwarded to :meth:`mark_seen_answer_revisions` (R1
+        fix): pass the revision counts captured when the injected content was
+        selected so a peer revision published during the intervening ``await``
+        is not marked seen. See that method for details.
+        """
         orch = self._orchestrator
         state = orch.agent_states.get(agent_id)
         if not state or not source_agent_ids:
@@ -288,4 +315,4 @@ class PeerAnswerVisibilityTracker:
             )
             state.decomposition_answer_streak = 0
 
-        self.mark_seen_answer_revisions(agent_id, source_agent_ids)
+        self.mark_seen_answer_revisions(agent_id, source_agent_ids, seen_counts=seen_counts)

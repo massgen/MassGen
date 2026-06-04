@@ -35,6 +35,21 @@ class ActiveCoordinationCleanup:
                 logger.warning(f"[Orchestrator] Error stopping SubagentLaunchWatcher: {e}")
             orch._subagent_launch_watcher = None
 
+        # R4: cancel detached background trace-analyzer tasks BEFORE flushing, so a
+        # surviving task cannot append a result after the flush into a queue that
+        # will never be consumed (and so it doesn't outlive the hard timeout). The
+        # task's CancelledError path returns without writing, so awaiting the
+        # cancellation fully closes the window.
+        if getattr(orch, "_background_trace_tasks", None):
+            for _agent_id, trace_task in list(orch._background_trace_tasks.items()):
+                if not trace_task.done():
+                    trace_task.cancel()
+                    try:
+                        await trace_task
+                    except (asyncio.CancelledError, Exception):
+                        pass
+            orch._background_trace_tasks.clear()
+
         # Flush any pending subagent results that weren't delivered.
         orch._flush_pending_subagent_results()
 

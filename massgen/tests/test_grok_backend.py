@@ -1,156 +1,86 @@
 #!/usr/bin/env python3
-"""
-Test script for Grok backend integration with architecture.
-Tests basic functionality, tool integration, and streaming.
+"""Tests for the Grok backend.
+
+E2 fix: this file previously held three async functions that ``print()``-ed and
+returned ``True/False`` with no assertions. Under ``asyncio_mode=auto`` they were
+collected and passed silently (the return value was consumed by pytest-asyncio),
+giving keyless duplicate coverage with no regression-detection value.
+
+Now:
+  - the metadata/token/cost surface is a real **offline** unit test (no key, no
+    network, no cost), so it runs in the default suite;
+  - the streaming and agent paths are proper ``live_api`` tests that skip without
+    ``XAI_API_KEY`` and assert on real responses (they do NOT run by default, so
+    no external cost is incurred unless explicitly enabled).
 """
 
-import asyncio
+from __future__ import annotations
+
 import os
-import sys
-from pathlib import Path
 
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+import pytest
 
-from massgen.backend.grok import GrokBackend  # noqa: E402
-from massgen.chat_agent import SingleAgent  # noqa: E402
+from massgen.backend.grok import GrokBackend
+from massgen.chat_agent import SingleAgent
 
 
-async def test_grok_basic():
-    """Test basic Grok backend functionality."""
-    print("🧪 Testing Grok Backend - Basic Functionality")
+def test_grok_backend_metadata_offline() -> None:
+    """Provider name, builtin tools, token estimation, and cost calc (no network)."""
+    backend = GrokBackend(api_key="dummy-key-offline")
 
-    # Check if API key is available
+    assert backend.get_provider_name() == "Grok"
+
+    tools = backend.get_supported_builtin_tools()
+    assert isinstance(tools, list) and tools, "expected at least one builtin tool"
+
+    tokens = backend.estimate_tokens("Hello world, this is a test message")
+    assert isinstance(tokens, int) and tokens > 0
+
+    cost = backend.calculate_cost(100, 50, "grok-3-mini")
+    assert isinstance(cost, float) and cost > 0.0
+
+
+@pytest.mark.live_api
+@pytest.mark.asyncio
+async def test_grok_streaming_live() -> None:
+    """Streaming returns non-empty content with no error chunk (requires XAI_API_KEY)."""
     api_key = os.getenv("XAI_API_KEY")
     if not api_key:
-        print("❌ XAI_API_KEY not found in environment variables")
-        print("⚠️  Set XAI_API_KEY to test Grok backend")
-        return False
+        pytest.skip("XAI_API_KEY not set")
 
-    try:
-        backend = GrokBackend(api_key=api_key)
+    backend = GrokBackend(api_key=api_key)
+    messages = [{"role": "user", "content": "Say hello in one short sentence."}]
 
-        # Test basic info
-        print(f"✅ Provider: {backend.get_provider_name()}")
-        print(f"✅ Supported tools: {backend.get_supported_builtin_tools()}")
+    response_content = ""
+    async for chunk in backend.stream_with_tools(messages, tools=[], model="grok-3-mini"):
+        if chunk.type == "content" and chunk.content:
+            response_content += chunk.content
+        elif chunk.type == "error":
+            pytest.fail(f"Grok streaming returned an error chunk: {chunk.error}")
 
-        # Test token estimation
-        test_text = "Hello world, this is a test message"
-        tokens = backend.estimate_tokens(test_text)
-        print(f"✅ Token estimation: {tokens} tokens for '{test_text}'")
-
-        # Test cost calculation
-        cost = backend.calculate_cost(100, 50, "grok-3-mini")
-        print(f"✅ Cost calculation: ${cost:.6f} for 100 input + 50 output tokens")
-
-        return True
-
-    except Exception as e:
-        print(f"❌ Basic test failed: {e}")
-        return False
+    assert response_content.strip()
 
 
-async def test_grok_streaming():
-    """Test Grok streaming without tools."""
-    print("\n🧪 Testing Grok Backend - Streaming")
-
+@pytest.mark.live_api
+@pytest.mark.asyncio
+async def test_grok_with_agent_live() -> None:
+    """SingleAgent over Grok returns content with no error chunk (requires XAI_API_KEY)."""
     api_key = os.getenv("XAI_API_KEY")
     if not api_key:
-        print("❌ XAI_API_KEY not found - skipping streaming test")
-        return False
+        pytest.skip("XAI_API_KEY not set")
 
-    try:
-        backend = GrokBackend(api_key=api_key)
+    backend = GrokBackend(api_key=api_key)
+    agent = SingleAgent(
+        backend=backend,
+        system_message="You are a helpful AI assistant.",
+        agent_id="test_grok_agent",
+    )
 
-        messages = [
-            {
-                "role": "user",
-                "content": "Say hello and explain what you are in one sentence.",
-            },
-        ]
+    response_content = ""
+    async for chunk in agent.chat([{"role": "user", "content": "What is 2+2? Answer briefly."}]):
+        if chunk.type == "content" and chunk.content:
+            response_content += chunk.content
+        elif chunk.type == "error":
+            pytest.fail(f"Grok agent returned an error chunk: {chunk.error}")
 
-        print("📤 Sending request to Grok...")
-        response_content = ""
-
-        async for chunk in backend.stream_with_tools(messages, tools=[], model="grok-3-mini"):
-            if chunk.type == "content" and chunk.content:
-                response_content += chunk.content
-                print(chunk.content, end="", flush=True)
-            elif chunk.type == "error":
-                print(f"\n❌ Error: {chunk.error}")
-                return False
-
-        print(f"\n✅ Streaming test completed. Response length: {len(response_content)} chars")
-        return True
-
-    except Exception as e:
-        print(f"❌ Streaming test failed: {e}")
-        return False
-
-
-async def test_grok_with_agent():
-    """Test Grok backend through SingleAgent integration."""
-    print("\n🧪 Testing Grok Backend - SingleAgent Integration")
-
-    api_key = os.getenv("XAI_API_KEY")
-    if not api_key:
-        print("❌ XAI_API_KEY not found - skipping agent test")
-        return False
-
-    try:
-        # Create Grok backend and agent
-        backend = GrokBackend(api_key=api_key)
-        agent = SingleAgent(
-            backend=backend,
-            system_message="You are a helpful AI assistant.",
-            agent_id="test_grok_agent",
-        )
-
-        print("📤 Testing agent response...")
-        response_content = ""
-
-        # Test agent with a simple message
-        messages = [{"role": "user", "content": "What is 2+2? Answer briefly."}]
-        async for chunk in agent.chat(messages):
-            if chunk.type == "content" and chunk.content:
-                response_content += chunk.content
-                print(chunk.content, end="", flush=True)
-            elif chunk.type == "error":
-                print(f"\n❌ Agent error: {chunk.error}")
-                return False
-
-        print(f"\n✅ Agent test completed. Response: '{response_content.strip()}'")
-        return True
-
-    except Exception as e:
-        print(f"❌ Agent test failed: {e}")
-        return False
-
-
-async def main():
-    """Run all Grok backend tests."""
-    print("🚀 MassGen - Grok Backend Testing")
-    print("=" * 50)
-
-    results = []
-
-    # Run tests
-    results.append(await test_grok_basic())
-    results.append(await test_grok_streaming())
-    results.append(await test_grok_with_agent())
-
-    # Summary
-    print("\n" + "=" * 50)
-    print("📊 Test Results:")
-    print(f"✅ Passed: {sum(results)}")
-    print(f"❌ Failed: {len(results) - sum(results)}")
-
-    if all(results):
-        print("🎉 All Grok backend tests passed!")
-    else:
-        print("⚠️  Some tests failed - check XAI_API_KEY and network connection")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    assert response_content.strip()

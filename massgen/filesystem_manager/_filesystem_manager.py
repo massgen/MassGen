@@ -14,6 +14,7 @@ The manager is backend-agnostic and works with any backend that has filesystem
 MCP tools configured.
 """
 
+import asyncio
 import json
 import os
 import shutil
@@ -2350,7 +2351,28 @@ class FilesystemManager:
         Returns:
             Path to the temporary workspace with restored snapshots
 
-        TODO: reimplement without 'shutil' and 'os' operations for true async
+        B1: the blocking filesystem work (rmtree/copytree/scrub) is offloaded to a
+        worker thread via ``asyncio.to_thread`` so it does not stall the
+        orchestrator event loop. While one agent's snapshots are copied, the other
+        agents' streams keep being consumed. Each agent owns a distinct
+        ``agent_temporary_workspace`` directory, so concurrent offloaded copies
+        write to disjoint paths — there is no shared-state race.
+        """
+        if not self.agent_temporary_workspace:
+            return None
+
+        return await asyncio.to_thread(
+            self._copy_snapshots_to_temp_workspace_sync,
+            all_snapshots,
+            agent_mapping,
+        )
+
+    def _copy_snapshots_to_temp_workspace_sync(self, all_snapshots: dict[str, Path], agent_mapping: dict[str, str]) -> Path | None:
+        """Synchronous body of :meth:`copy_snapshots_to_temp_workspace`.
+
+        Runs on a worker thread (see that method). Each agent's
+        ``agent_temporary_workspace`` is distinct, so concurrent invocations on
+        different FilesystemManager instances touch disjoint directories.
         """
         if not self.agent_temporary_workspace:
             return None

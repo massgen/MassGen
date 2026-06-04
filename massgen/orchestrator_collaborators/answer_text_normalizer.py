@@ -105,15 +105,25 @@ class AnswerTextNormalizer:
                 other_workspace = str(
                     other_agent.backend.filesystem_manager.get_current_workspace(),
                 )
+                # C2: use loguru brace-style deferred formatting instead of eager
+                # f-strings. These logs interpolate the full answer body on every
+                # (answer x agent) pair; with f-strings Python builds the multi-KB
+                # string even when no DEBUG sink is attached. With brace args, loguru
+                # only formats when a handler actually accepts the record.
                 logger.debug(
-                    f"[Orchestrator._normalize_workspace_paths_in_answers] Replacing {other_workspace} in answer from {agent_id} with path {replace_path}. original answer: {normalized_answer}",
+                    "[Orchestrator._normalize_workspace_paths_in_answers] Replacing {} in answer from {} with path {}. original answer: {}",
+                    other_workspace,
+                    agent_id,
+                    replace_path,
+                    normalized_answer,
                 )
                 normalized_answer = normalized_answer.replace(
                     other_workspace,
                     replace_path,
                 )
                 logger.debug(
-                    f"[Orchestrator._normalize_workspace_paths_in_answers] Intermediate normalized answer: {normalized_answer}",
+                    "[Orchestrator._normalize_workspace_paths_in_answers] Intermediate normalized answer: {}",
+                    normalized_answer,
                 )
 
             normalized_answers[agent_id] = normalized_answer

@@ -4187,12 +4187,21 @@ You are a subagent spawned to work on a specific task. Your workspace is isolate
         self._active_processes.clear()
 
         # Also cancel any background tasks
+        cancelled_background_tasks: list = []
         for task_id, task in list(self._background_tasks.items()):
             if not task.done():
                 logger.warning(f"[SubagentManager] Cancelling background task {task_id}...")
                 task.cancel()
                 cancelled_count += 1
                 cancelled_subagent_ids.add(task_id)
+                cancelled_background_tasks.append(task)
+
+        # R5: await the cancellations so each task runs its CancelledError handler
+        # (cancelled-status preservation + idempotent self-pop) against the LIVE
+        # registry, before we clear it — instead of resuming after this method
+        # returns and operating on an already-cleared dict.
+        if cancelled_background_tasks:
+            await asyncio.gather(*cancelled_background_tasks, return_exceptions=True)
 
         self._background_tasks.clear()
 

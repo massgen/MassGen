@@ -20,7 +20,8 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from massgen.logger_config import logger
+from massgen.logger_config import get_event_emitter, logger
+from massgen.utils import ActionType
 
 if TYPE_CHECKING:
     from massgen.orchestrator import Orchestrator
@@ -142,6 +143,196 @@ class MidStreamInjectionHookInstaller:
         except Exception as e:
             logger.debug(f"[Orchestrator] Could not compute plan progress: {e}")
             return None
+
+    async def build_midstream_injection(
+        self,
+        agent_id: str,
+        answers: dict[str, str],
+        *,
+        native: bool,
+    ) -> str | None:
+        """Unified mid-stream peer-answer injection callback (A1).
+
+        Replaces the two near-identical ``get_injection_content`` closures that
+        lived inline in ``_setup_hook_manager_for_agent`` (GeneralHookManager
+        path) and ``_setup_native_hooks_for_agent`` (native path). Keeping them
+        separate was a backend-parity hazard — a fix to one path silently skipped
+        the other.
+
+        ``native`` only affects log/track wording and the (non-native) debug
+        workspace-listing output. The side-effect sequence is canonical and
+        preserves the load-bearing invariant shared by both original closures:
+        ``update_agent_context_with_new_answers`` runs BEFORE
+        ``refresh_checklist_state_for_agent`` so ``available_agent_labels``
+        reflect the newly-injected labels. (The prior inter-path divergence in
+        the position of the ``restart_pending`` recompute and the emitter/track
+        calls was verified inert — the recompute reads only ``seen_answer_counts``,
+        which is set at the same relative position in both paths.)
+
+        Mutates the caller's ``answers`` dict in place so re-entrant callbacks do
+        not re-inject the same updates.
+        """
+        orch = self._orchestrator
+        label = "native " if native else ""
+        track_suffix = " (native)" if native else ""
+
+        # Skip injection if disabled (multi-agent refinement OFF mode).
+        if orch.config.disable_injection:
+            return None
+
+        if not orch._check_restart_pending(agent_id):
+            return None
+
+        # First-answer protection: don't inject before the agent's first answer.
+        if orch._should_defer_restart_for_first_answer(agent_id):
+            orch.agent_states[agent_id].restart_pending = False
+            return None
+
+        # In vote-only mode, force a full restart instead (mid-stream injection
+        # can't update the fixed vote tool schema).
+        if orch._is_vote_only_mode(agent_id):
+            return None
+
+        if orch._should_defer_peer_updates_until_restart(agent_id):
+            if orch._has_unseen_answer_updates(agent_id):
+                orch.agent_states[agent_id].restart_pending = True
+                logger.info(
+                    "[Orchestrator] Deferring %speer answer update injection until restart for %s",
+                    label,
+                    agent_id,
+                )
+            else:
+                orch.agent_states[agent_id].restart_pending = False
+            return None
+
+        # Get CURRENT answers (includes virtual agents in step mode).
+        current_answers = orch._get_current_answers_snapshot()
+        selected_answers, had_unseen_updates = orch._select_midstream_answer_updates(
+            agent_id,
+            current_answers,
+        )
+
+        if not selected_answers:
+            if had_unseen_updates:
+                # Keep restart pending when unseen updates still exist.
+                orch.agent_states[agent_id].restart_pending = True
+                cap = getattr(orch.config, "max_midstream_injections_per_round", 2)
+                logger.info(
+                    "[Orchestrator] Skipping %smid-stream injection for %s: per-round cap reached (%s)",
+                    label,
+                    agent_id,
+                    cap,
+                )
+            else:
+                # No unseen updates remain: this was a stale restart_pending flag.
+                orch.agent_states[agent_id].restart_pending = False
+            return None
+
+        # R1: capture peer revision counts as-of selection, before the
+        # snapshot-copy await below can let a peer publish a new revision that
+        # would otherwise be silently marked "seen".
+        captured_revision_counts = orch._capture_answer_revision_counts(list(selected_answers.keys()))
+
+        # TIMING CONSTRAINT: skip injection if too close to soft timeout.
+        if orch._should_skip_injection_due_to_timeout(agent_id):
+            return None
+
+        # Copy snapshots from new-answer agents to temp workspace BEFORE building
+        # the injection, so the workspace files are available to the agent.
+        logger.info(
+            "[Orchestrator] Copying snapshots for mid-stream injection to %s",
+            agent_id,
+        )
+        await orch._copy_all_snapshots_to_temp_workspace(agent_id)
+
+        # Build injection content (pass existing answers to detect updates vs new).
+        injection = orch._build_tool_result_injection(
+            agent_id,
+            selected_answers,
+            existing_answers=answers,
+        )
+
+        # Debug: log temp-workspace contents per injected agent (non-native path
+        # only, preserved from the original GeneralHookManager closure).
+        if not native:
+            viewing_agent = orch.agents.get(agent_id)
+            if viewing_agent and viewing_agent.backend.filesystem_manager:
+                temp_workspace_base = str(
+                    viewing_agent.backend.filesystem_manager.agent_temporary_workspace,
+                )
+                agent_mapping = orch.coordination_tracker.get_reverse_agent_mapping()
+                for aid in selected_answers.keys():
+                    anon_id = agent_mapping.get(aid, f"agent_{aid}")
+                    workspace_path = os.path.join(temp_workspace_base, anon_id)
+                    if os.path.exists(workspace_path):
+                        try:
+                            files = os.listdir(workspace_path)
+                            logger.debug(
+                                f"[Orchestrator] Injection workspace {workspace_path} contains: {files}",
+                            )
+                        except OSError as e:
+                            logger.debug(
+                                f"[Orchestrator] Could not list workspace {workspace_path}: {e}",
+                            )
+                    else:
+                        logger.debug(
+                            f"[Orchestrator] Injection workspace {workspace_path} does NOT exist!",
+                        )
+
+        # Increment injection counters.
+        orch.agent_states[agent_id].injection_count += 1
+        orch.agent_states[agent_id].midstream_injections_this_round += len(selected_answers)
+
+        # Update answers so future callbacks don't re-inject the same updates.
+        answers.update(selected_answers)
+
+        # Update known_answer_ids so vote validation knows the agent saw these.
+        orch.agent_states[agent_id].known_answer_ids.update(selected_answers.keys())
+        orch._register_injected_answer_updates(
+            agent_id,
+            list(selected_answers.keys()),
+            seen_counts=captured_revision_counts,
+        )
+        orch._mark_pending_checklist_recheck_labels(agent_id, list(selected_answers.keys()))
+
+        # Update agent context labels BEFORE refreshing checklist state so
+        # available_agent_labels reflects the newly-injected labels (e.g.
+        # agent1.2 replacing agent1.1). Load-bearing ordering — both original
+        # closures preserved it.
+        orch.coordination_tracker.update_agent_context_with_new_answers(
+            agent_id,
+            list(selected_answers.keys()),
+        )
+        orch._refresh_checklist_state_for_agent(agent_id)
+
+        # Keep restart pending if additional unseen revisions still remain.
+        orch.agent_states[agent_id].restart_pending = orch._has_unseen_answer_updates(agent_id)
+
+        logger.info(
+            "[Orchestrator] Mid-stream injection%s for %s: %d answer update(s)",
+            track_suffix,
+            agent_id,
+            len(selected_answers),
+        )
+        if not native:
+            preview = injection[:2000] + ("..." if len(injection) > 2000 else "")
+            logger.debug(f"[Orchestrator] Injection content (truncated):\n{preview}")
+
+        _inj_emitter = get_event_emitter()
+        if _inj_emitter:
+            _inj_emitter.emit_injection_received(
+                agent_id=agent_id,
+                source_agents=list(selected_answers.keys()),
+                injection_type="mid_stream",
+            )
+
+        orch.coordination_tracker.track_agent_action(
+            agent_id,
+            ActionType.UPDATE_INJECTED,
+            f"Mid-stream{track_suffix}: {len(selected_answers)} answer(s)",
+        )
+
+        return injection
 
     def build_tool_result_injection(
         self,
