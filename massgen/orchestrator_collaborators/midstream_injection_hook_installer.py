@@ -16,11 +16,25 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from massgen.logger_config import get_event_emitter, logger
+from massgen.mcp_tools.hooks import (
+    BackgroundToolCompleteHook,
+    GeneralHookManager,
+    HighPriorityTaskReminderHook,
+    HookType,
+    MediaCallLedgerHook,
+    MidStreamInjectionHook,
+    PythonCallableHook,
+    RoundTimeoutPostHook,
+    RoundTimeoutPreHook,
+    RoundTimeoutState,
+    SubagentCompleteHook,
+)
 from massgen.utils import ActionType
 
 if TYPE_CHECKING:
@@ -143,6 +157,528 @@ class MidStreamInjectionHookInstaller:
         except Exception as e:
             logger.debug(f"[Orchestrator] Could not compute plan progress: {e}")
             return None
+
+    def setup_hook_manager_for_agent(
+        self,
+        agent_id: str,
+        agent: Any,
+        answers: dict[str, str],
+    ) -> None:
+        """Route hook setup by backend capability (native / codex / GeneralHookManager).
+
+        Dispatcher: Claude-Code-style native backends use the native adapter,
+        Codex uses its hybrid or MCP path, everything else uses GeneralHookManager.
+        """
+        orch = self._orchestrator
+
+        # Runtime human input must work for all backends, including those that
+        # don't support hook registration (hookless fallback / Codex path).
+        orch._ensure_runtime_human_input_hook_initialized()
+        orch._ensure_runtime_inbox_poller_initialized()
+
+        backend = getattr(agent, "backend", None)
+        backend_provider = backend.get_provider_name() if backend and hasattr(backend, "get_provider_name") else ""
+
+        # Codex uses a hybrid path: native Bash hooks plus MCP/file payload delivery.
+        if (
+            backend_provider == "codex"
+            and hasattr(agent.backend, "supports_native_hooks")
+            and agent.backend.supports_native_hooks()
+            and hasattr(agent.backend, "supports_mcp_server_hooks")
+            and agent.backend.supports_mcp_server_hooks()
+        ):
+            orch._setup_codex_hybrid_hooks(agent_id, agent, answers)
+            return
+
+        # Native hooks (e.g., Claude Code)
+        if hasattr(agent.backend, "supports_native_hooks") and agent.backend.supports_native_hooks():
+            orch._setup_native_hooks_for_agent(agent_id, agent, answers)
+            return
+
+        # MCP server-level hooks (e.g., Codex)
+        if hasattr(agent.backend, "supports_mcp_server_hooks") and agent.backend.supports_mcp_server_hooks():
+            orch._setup_codex_mcp_hooks(agent_id, agent, answers)
+            return
+
+        # Fall back to GeneralHookManager for standard backends
+        if not hasattr(agent.backend, "set_general_hook_manager"):
+            return
+
+        manager = GeneralHookManager()
+        mid_stream_hook = MidStreamInjectionHook()
+
+        # A1: both the GeneralHookManager and native paths route through the
+        # single unified installer method so they can no longer drift.
+        async def get_injection_content() -> str | None:
+            return await orch._build_midstream_injection(agent_id, answers, native=False)
+
+        mid_stream_hook.set_callback(get_injection_content)
+
+        # Register mid-stream injection hook first (maintains current behavior order)
+        manager.register_global_hook(HookType.POST_TOOL_USE, mid_stream_hook)
+
+        if orch._is_round_learning_capture_enabled():
+            reminder_hook = HighPriorityTaskReminderHook()
+            manager.register_global_hook(HookType.POST_TOOL_USE, reminder_hook)
+
+        manager.register_global_hook(HookType.POST_TOOL_USE, MediaCallLedgerHook())
+
+        # Register human input hook (shared across all agents)
+        manager.register_global_hook(HookType.POST_TOOL_USE, orch._human_input_hook)
+
+        # Register subagent completion hook for background result injection
+        if orch._background_subagents_enabled:
+            subagent_hook = SubagentCompleteHook(
+                injection_strategy=orch._background_subagent_injection_strategy,
+            )
+
+            def make_pending_getter(aid: str):
+                return lambda: orch._get_pending_subagent_results_async(aid)
+
+            subagent_hook.set_pending_results_getter(make_pending_getter(agent_id))
+            manager.register_global_hook(HookType.POST_TOOL_USE, subagent_hook)
+            logger.debug(f"[Orchestrator] Registered SubagentCompleteHook for {agent_id}")
+
+            # Wire background tool delegate so list/status/result/cancel route to subagents
+            if hasattr(agent.backend, "register_background_delegate"):
+                from massgen.subagent.background_delegate import (
+                    SubagentBackgroundDelegate,
+                )
+
+                def _make_call_tool(aid: str):
+                    return lambda tool_name, params: orch._call_subagent_mcp_tool_async(
+                        aid,
+                        tool_name,
+                        params,
+                    )
+
+                delegate = SubagentBackgroundDelegate(
+                    call_tool=_make_call_tool(agent_id),
+                    agent_id=agent_id,
+                )
+                agent.backend.register_background_delegate(delegate)
+                logger.debug(f"[Orchestrator] Registered SubagentBackgroundDelegate for {agent_id}")
+
+        # Register background tool completion hook for async tool result injection
+        if hasattr(agent.backend, "get_pending_background_tool_results"):
+            background_tool_hook = BackgroundToolCompleteHook()
+            background_tool_hook.set_completed_jobs_getter(
+                agent.backend.get_pending_background_tool_results,
+            )
+            manager.register_global_hook(HookType.POST_TOOL_USE, background_tool_hook)
+            logger.debug(
+                f"[Orchestrator] Registered BackgroundToolCompleteHook for {agent_id}",
+            )
+        # Register per-round timeout hooks if configured
+        orch._register_round_timeout_hooks(agent_id, manager)
+
+        # Register user-configured hooks from agent backend config
+        if hasattr(agent.backend, "config") and agent.backend.config:
+            agent_hooks = agent.backend.config.get("hooks")
+            if agent_hooks:
+                manager.register_hooks_from_config(agent_hooks, agent_id=agent_id)
+                logger.debug(
+                    f"[Orchestrator] Registered user-configured hooks for {agent_id}",
+                )
+
+        # Set manager on backend
+        agent.backend.set_general_hook_manager(manager)
+        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
+
+            async def _wait_interrupt_provider(
+                requested_agent_id: str,
+                *,
+                _agent_id: str = agent_id,
+            ) -> dict[str, Any] | None:
+                target_agent_id = requested_agent_id or _agent_id
+                if hasattr(orch, "cancellation_manager") and orch.cancellation_manager and orch.cancellation_manager.is_cancelled:
+                    return {
+                        "interrupt_reason": "turn_cancelled",
+                        "injected_content": None,
+                    }
+
+                runtime_sections = await orch._collect_no_hook_runtime_fallback_sections(
+                    target_agent_id,
+                )
+                if not runtime_sections:
+                    return None
+                return {
+                    "interrupt_reason": "runtime_injection_available",
+                    "injected_content": "\n".join(runtime_sections),
+                }
+
+            agent.backend.set_background_wait_interrupt_provider(
+                _wait_interrupt_provider,
+            )
+        logger.debug(
+            f"[Orchestrator] Set up hook manager for {agent_id} with mid-stream and reminder hooks",
+        )
+
+    def setup_codex_mcp_hooks(
+        self,
+        agent_id: str,
+        agent: Any,
+        answers: dict[str, str],
+    ) -> None:
+        """Set up MCP server-level hook delivery for Codex backends.
+
+        Instead of registering hooks on a GeneralHookManager, this stores a
+        reference (on the orchestrator) so the streaming loop can call
+        ``_flush_codex_hook_payloads()`` to write injection files the MCP
+        middleware consumes.
+        """
+        orch = self._orchestrator
+
+        # Mark this agent as using MCP server hooks (stored on the orchestrator so
+        # the streaming loop and tests observe it there).
+        if not hasattr(orch, "_codex_mcp_hook_agents"):
+            orch._codex_mcp_hook_agents = {}
+
+        orch._codex_mcp_hook_agents[agent_id] = {
+            "agent": agent,
+            "answers": answers,
+        }
+
+        # Set up the background wait interrupt provider (reuse existing pattern)
+        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
+
+            async def _wait_interrupt_provider(
+                requested_agent_id: str,
+                *,
+                _agent_id: str = agent_id,
+            ) -> dict[str, Any] | None:
+                target_agent_id = requested_agent_id or _agent_id
+                if hasattr(orch, "cancellation_manager") and orch.cancellation_manager and orch.cancellation_manager.is_cancelled:
+                    return {
+                        "interrupt_reason": "turn_cancelled",
+                        "injected_content": None,
+                    }
+
+                runtime_sections = await orch._collect_no_hook_runtime_fallback_sections(
+                    target_agent_id,
+                )
+                if not runtime_sections:
+                    return None
+                return {
+                    "interrupt_reason": "runtime_injection_available",
+                    "injected_content": "\n".join(runtime_sections),
+                }
+
+            agent.backend.set_background_wait_interrupt_provider(
+                _wait_interrupt_provider,
+            )
+
+        logger.info(
+            "[Orchestrator] Set up MCP server-level hook delivery for %s",
+            agent_id,
+        )
+
+    def setup_codex_hybrid_hooks(
+        self,
+        agent_id: str,
+        agent: Any,
+        answers: dict[str, str],
+    ) -> None:
+        """Set up Codex's hybrid delivery path (native Bash bridge + MCP/file payloads)."""
+        orch = self._orchestrator
+
+        adapter = agent.backend.get_native_hook_adapter()
+        if not adapter:
+            logger.warning(
+                "[Orchestrator] Codex backend reported native hooks but no adapter was available for %s",
+                agent_id,
+            )
+            orch._setup_codex_mcp_hooks(agent_id, agent, answers)
+            return
+
+        manager = GeneralHookManager()
+        manager.register_global_hook(
+            HookType.POST_TOOL_USE,
+            PythonCallableHook(
+                name="codex_post_tool_bridge",
+                handler=lambda _event: None,
+                matcher="Bash",
+            ),
+        )
+
+        native_config = adapter.build_native_hooks_config(
+            manager,
+            agent_id=agent_id,
+        )
+        agent.backend.set_native_hooks_config(native_config)
+        # Codex's native hook surface is Bash-only, but the TUI and manual
+        # wrap-up flow still need real timeout hook objects in agent state.
+        timeout_manager = GeneralHookManager()
+        orch._register_round_timeout_hooks(agent_id, timeout_manager)
+        orch._setup_codex_mcp_hooks(agent_id, agent, answers)
+
+        hooks = native_config.get("hooks", {}) if isinstance(native_config, dict) else {}
+        logger.info(
+            "[Orchestrator] Set up Codex hybrid hooks for %s: PreToolUse=%d, PostToolUse=%d",
+            agent_id,
+            len(hooks.get("PreToolUse", [])),
+            len(hooks.get("PostToolUse", [])),
+        )
+
+    def setup_native_hooks_for_agent(
+        self,
+        agent_id: str,
+        agent: Any,
+        answers: dict[str, str],
+    ) -> None:
+        """Set up native hooks for backends that support them (e.g., Claude Code).
+
+        Converts MassGen hooks to the backend's native format via the
+        NativeHookAdapter; the backend then executes them natively rather than
+        through MassGen's GeneralHookManager.
+        """
+        orch = self._orchestrator
+
+        adapter = agent.backend.get_native_hook_adapter()
+        if not adapter:
+            logger.warning(
+                f"[Orchestrator] Backend supports native hooks but adapter unavailable for {agent_id}",
+            )
+            return
+
+        # Create a GeneralHookManager to hold MassGen hooks (converted to native).
+        manager = GeneralHookManager()
+
+        mid_stream_hook = MidStreamInjectionHook()
+
+        # A1: unified with the GeneralHookManager path via the single installer
+        # method; native=True only changes log wording and the debug listing.
+        async def get_injection_content() -> str | None:
+            return await orch._build_midstream_injection(agent_id, answers, native=True)
+
+        mid_stream_hook.set_callback(get_injection_content)
+        manager.register_global_hook(HookType.POST_TOOL_USE, mid_stream_hook)
+
+        if orch._is_round_learning_capture_enabled():
+            reminder_hook = HighPriorityTaskReminderHook()
+            manager.register_global_hook(HookType.POST_TOOL_USE, reminder_hook)
+
+        manager.register_global_hook(HookType.POST_TOOL_USE, MediaCallLedgerHook())
+
+        # Register human input hook (shared across all agents)
+        orch._ensure_runtime_human_input_hook_initialized()
+        manager.register_global_hook(HookType.POST_TOOL_USE, orch._human_input_hook)
+
+        # Register subagent completion hook for background result injection
+        if orch._background_subagents_enabled:
+            subagent_hook = SubagentCompleteHook(
+                injection_strategy=orch._background_subagent_injection_strategy,
+            )
+
+            def make_pending_getter(aid: str):
+                return lambda: orch._get_pending_subagent_results_async(aid)
+
+            subagent_hook.set_pending_results_getter(make_pending_getter(agent_id))
+            manager.register_global_hook(HookType.POST_TOOL_USE, subagent_hook)
+            logger.debug(f"[Orchestrator] Registered SubagentCompleteHook (native) for {agent_id}")
+
+            # Wire background tool delegate so list/status/result/cancel route to subagents
+            if hasattr(agent.backend, "register_background_delegate"):
+                from massgen.subagent.background_delegate import (
+                    SubagentBackgroundDelegate,
+                )
+
+                def _make_call_tool(aid: str):
+                    return lambda tool_name, params: orch._call_subagent_mcp_tool_async(
+                        aid,
+                        tool_name,
+                        params,
+                    )
+
+                delegate = SubagentBackgroundDelegate(
+                    call_tool=_make_call_tool(agent_id),
+                    agent_id=agent_id,
+                )
+                agent.backend.register_background_delegate(delegate)
+                logger.debug(f"[Orchestrator] Registered SubagentBackgroundDelegate (native) for {agent_id}")
+
+        # Register background tool completion hook for async tool result injection
+        if hasattr(agent.backend, "get_pending_background_tool_results"):
+            background_tool_hook = BackgroundToolCompleteHook()
+            background_tool_hook.set_completed_jobs_getter(
+                agent.backend.get_pending_background_tool_results,
+            )
+            manager.register_global_hook(HookType.POST_TOOL_USE, background_tool_hook)
+            logger.debug(
+                f"[Orchestrator] Registered BackgroundToolCompleteHook (native) for {agent_id}",
+            )
+        # Register per-round timeout hooks if configured
+        orch._register_round_timeout_hooks(agent_id, manager)
+
+        # Register user-configured hooks from agent backend config
+        agent_hooks = agent.backend.config.get("hooks")
+        if agent_hooks:
+            manager.register_hooks_from_config(agent_hooks, agent_id=agent_id)
+
+        # Register PathPermissionManagerHook for PRE_TOOL_USE validation.
+        # Native backends like Copilot need MassGen-level path validation.
+        # Claude Code already handles permissions via add_dirs, so skip it.
+        backend_provider = agent.backend.get_provider_name() if hasattr(agent.backend, "get_provider_name") else ""
+        if backend_provider != "claude_code":
+            _fm = getattr(agent.backend, "filesystem_manager", None)
+            if _fm:
+                _ppm = getattr(_fm, "path_permission_manager", None)
+                if _ppm:
+                    from massgen.filesystem_manager import PathPermissionManagerHook
+
+                    ppm_hook = PathPermissionManagerHook(_ppm)
+                    manager.register_global_hook(HookType.PRE_TOOL_USE, ppm_hook)
+                    logger.debug(
+                        f"[Orchestrator] Registered PathPermissionManagerHook (PRE_TOOL_USE) for {agent_id}",
+                    )
+
+        # Create context factory for hooks
+        def context_factory() -> dict[str, Any]:
+            workspace_path = None
+            filesystem_manager = getattr(agent.backend, "filesystem_manager", None)
+            if filesystem_manager and hasattr(filesystem_manager, "get_current_workspace"):
+                try:
+                    workspace_path = str(filesystem_manager.get_current_workspace())
+                except Exception:
+                    workspace_path = None
+            return {
+                "session_id": getattr(orch, "session_id", ""),
+                "orchestrator_id": getattr(orch, "orchestrator_id", ""),
+                "agent_id": agent_id,
+                "workspace_path": workspace_path,
+            }
+
+        # Convert to native format using adapter
+        native_config = adapter.build_native_hooks_config(
+            manager,
+            agent_id=agent_id,
+            context_factory=context_factory,
+        )
+
+        # Set native hooks config on backend
+        agent.backend.set_native_hooks_config(native_config)
+        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
+
+            async def _wait_interrupt_provider(
+                requested_agent_id: str,
+                *,
+                _agent_id: str = agent_id,
+            ) -> dict[str, Any] | None:
+                target_agent_id = requested_agent_id or _agent_id
+                if hasattr(orch, "cancellation_manager") and orch.cancellation_manager and orch.cancellation_manager.is_cancelled:
+                    return {
+                        "interrupt_reason": "turn_cancelled",
+                        "injected_content": None,
+                    }
+
+                runtime_sections = await orch._collect_no_hook_runtime_fallback_sections(
+                    target_agent_id,
+                )
+                if not runtime_sections:
+                    return None
+                return {
+                    "interrupt_reason": "runtime_injection_available",
+                    "injected_content": "\n".join(runtime_sections),
+                }
+
+            agent.backend.set_background_wait_interrupt_provider(
+                _wait_interrupt_provider,
+            )
+        logger.info(
+            f"[Orchestrator] Set up native hooks for {agent_id}: " f"PreToolUse={len(native_config.get('PreToolUse', []))}, " f"PostToolUse={len(native_config.get('PostToolUse', []))} hooks",
+        )
+
+    def register_round_timeout_hooks(
+        self,
+        agent_id: str,
+        manager: GeneralHookManager,
+    ) -> None:
+        """Register per-round timeout hooks if configured.
+
+        Creates a soft RoundTimeoutPostHook (injects a warning after tool calls)
+        and a hard RoundTimeoutPreHook (blocks non-terminal tools after the grace
+        period), storing both on the agent state for per-round reset.
+        """
+        orch = self._orchestrator
+
+        timeout_config = orch.config.timeout_config
+        initial_timeout = timeout_config.initial_round_timeout_seconds
+        subsequent_timeout = timeout_config.subsequent_round_timeout_seconds
+        grace_seconds = timeout_config.round_timeout_grace_seconds
+
+        # Skip if no round timeouts configured
+        if initial_timeout is None and subsequent_timeout is None:
+            return
+
+        logger.info(
+            f"[Orchestrator] Registering round timeout hooks for {agent_id}: " f"initial={initial_timeout}s, subsequent={subsequent_timeout}s, grace={grace_seconds}s",
+        )
+
+        # Create closures that read from agent state
+        def get_round_start_time() -> float:
+            """Get the current round start time from agent state."""
+            start_time = orch.agent_states[agent_id].round_start_time
+            if start_time is None:
+                # Fallback to current time if not set (shouldn't happen)
+                logger.warning(
+                    f"[Orchestrator] round_start_time is None for {agent_id}, using current time as fallback",
+                )
+                return time.time()
+            return start_time
+
+        def get_agent_round() -> int:
+            """Get the current round number from coordination tracker."""
+            return orch.coordination_tracker.get_agent_round(agent_id)
+
+        # Create shared state for coordinating soft -> hard timeout progression
+        # This ensures hard timeout only fires AFTER soft timeout has been injected
+        timeout_state = RoundTimeoutState()
+
+        # Get two-tier workspace setting from coordination config
+        # Suppressed when write_mode is active (write_mode replaces the old two-tier structure)
+        coordination_config = getattr(orch.config, "coordination_config", None)
+        write_mode = getattr(coordination_config, "write_mode", None) if coordination_config else None
+        use_two_tier_workspace = False
+        if not (write_mode and write_mode != "legacy"):
+            use_two_tier_workspace = bool(
+                getattr(coordination_config, "use_two_tier_workspace", False),
+            )
+
+        # Create soft timeout hook (POST_TOOL_USE - injects warning)
+        post_hook = RoundTimeoutPostHook(
+            name=f"round_timeout_soft_{agent_id}",
+            get_round_start_time=get_round_start_time,
+            get_agent_round=get_agent_round,
+            initial_timeout_seconds=initial_timeout,
+            subsequent_timeout_seconds=subsequent_timeout,
+            grace_seconds=grace_seconds,
+            agent_id=agent_id,
+            shared_state=timeout_state,
+            use_two_tier_workspace=use_two_tier_workspace,
+        )
+
+        # Create hard timeout hook (PRE_TOOL_USE - blocks non-terminal tools)
+        pre_hook = RoundTimeoutPreHook(
+            name=f"round_timeout_hard_{agent_id}",
+            get_round_start_time=get_round_start_time,
+            get_agent_round=get_agent_round,
+            initial_timeout_seconds=initial_timeout,
+            subsequent_timeout_seconds=subsequent_timeout,
+            grace_seconds=grace_seconds,
+            agent_id=agent_id,
+            shared_state=timeout_state,
+        )
+
+        # Register hooks
+        manager.register_global_hook(HookType.POST_TOOL_USE, post_hook)
+        manager.register_global_hook(HookType.PRE_TOOL_USE, pre_hook)
+
+        # Store hook references so we can reset them on new rounds
+        orch.agent_states[agent_id].round_timeout_hooks = (post_hook, pre_hook)
+        # Store the shared state so we can check force_terminate in the orchestrator loop
+        orch.agent_states[agent_id].round_timeout_state = timeout_state
+
+        logger.debug(f"[Orchestrator] Registered round timeout hooks for {agent_id}")
 
     async def build_midstream_injection(
         self,
