@@ -69,7 +69,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.93 Features](#-latest-features-v0193)
+- [v0.1.94 Features](#-latest-features-v0194)
 </details>
 
 <details open>
@@ -122,15 +122,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [Recent Achievements (v0.1.93)](#recent-achievements-v0193)
-- [Previous Achievements (v0.0.3 - v0.1.92)](#previous-achievements-v003---v0192)
+- [Recent Achievements (v0.1.94)](#recent-achievements-v0194)
+- [Previous Achievements (v0.0.3 - v0.1.93)](#previous-achievements-v003---v0193)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.93 Roadmap](#v0193-roadmap)
+- [v0.1.95 Roadmap](#v0195-roadmap)
 </details>
 
 <details open>
@@ -155,18 +155,18 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.93)
+## 🆕 Latest Features (v0.1.94)
 
-**🎉 Released: June 3, 2026**
+**🎉 Released: June 5, 2026**
 
-**What's New in v0.1.93** (internal-quality release — no runtime behavior changes):
-- **🧩 CLI Package Decomposition** - The monolithic 12k-line `cli.py` is split into a focused `massgen/cli/` package while preserving the public import surface.
-- **🛡️ Pydantic Config Migration** - Configuration classes now validate field types on construction, with `Literal`-typed modes as a single source of truth the validator derives from.
-- **🧹 Dead Code Removal & Tooling** - Removed ~8.7k lines of unreferenced legacy code, fixed the coverage gate, and re-enabled type checking via an incremental mypy ratchet.
+**What's New in v0.1.94** (Parallelism Hardening — engineering-health release, no per-backend functionality changes):
+- **⚡ Snapshot Copy Off the Event Loop** - The peer-context snapshot copy now runs its blocking filesystem work on a worker thread, so one agent's copy no longer stalls every other agent's streaming.
+- **🔒 Immutable, Versioned Snapshots** - Snapshots are published as immutable versions with an atomically-repointed symlink; readers pin the current version, eliminating the read-during-write race the off-loop copy would otherwise expose.
+- **🧵 Concurrency Correctness Fixes** - Lost peer-answer revisions, lost background-subagent results, leaked trace tasks, and a cancel-without-await teardown are all fixed; worktree-isolation degradation is now surfaced.
 
-**Install v0.1.93:**
+**Install v0.1.94:**
 ```bash
-pip install massgen==0.1.93
+pip install massgen==0.1.94
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1241,19 +1241,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.93)
+### Recent Achievements (v0.1.94)
 
-**🎉 Released: June 3, 2026**
+**🎉 Released: June 5, 2026**
 
-#### CLI Package Decomposition & Pydantic Config Migration
-- **CLI Package Decomposition**: The monolithic `cli.py` (12,206 lines) was split into an 18-module `massgen/cli/` package with a facade that preserves the public import surface; the ~886-line Textual per-turn handler was extracted into a dependency-injected function
-- **Pydantic Config Migration**: Config classes migrated to `pydantic.dataclasses` (type validation on construction) with `Literal`-typed modes in `massgen/config_modes.py` that the validator derives from — closing a real validator-drift bug
-- **Single-Source Exclusion Lists**: The two hand-duplicated "excluded params" lists now derive from one frozenset, locked by a regression test
-- **Dead Code Removal**: Deleted ~8,700 lines of unreferenced legacy `v1`/`prototype` code that was shipping in the wheel
-- **Tooling**: Fixed the broken coverage gate, enabled a no-assert test guard, enforced `uv.lock` in CI, and re-enabled type checking via an incremental mypy ratchet
-- **Fixes**: Concurrent-run log isolation (MAS-274), a config default regression, and logged (not silent) backend tool-arg parsing
+#### Parallelism Hardening (Engineering Health)
+- **Snapshot Copy Off the Event Loop**: `FilesystemManager.copy_snapshots_to_temp_workspace` now offloads its blocking `rmtree`/`copytree`/scrub to a worker thread via `asyncio.to_thread`, so one agent's snapshot copy no longer serializes every other agent's streaming
+- **Immutable, Versioned Snapshots**: snapshots publish to `<base>/.versions/<id>/v<N>` with an atomically-repointed symlink; readers `acquire`/refcount the current version for the duration of their copy (new `SnapshotVersionStore`), eliminating the read-during-write race the off-loop copy would otherwise expose
+- **Concurrency Correctness**: fixed lost peer-answer revisions (R1), lost background-subagent results (R2/R3), leaked trace tasks on cleanup (R4), and a cancel-without-await teardown (R5)
+- **Worktree-Isolation Degradation Surfaced (D2)**: a swallowed `TypeError` (invalid `emit_status(status=…)` kwarg) had silenced the signal entirely
+- **Unified Mid-Stream Injection (A1)**: the two ~150-line per-backend injection closures collapsed into one shared implementation; the background-wait interrupt provider was deduplicated, removing backend-parity drift
+- **No per-backend functionality changes** — all landed under TDD with cost-free simulation
 
-### Previous Achievements (v0.0.3 - v0.1.92)
+### Previous Achievements (v0.0.3 - v0.1.93)
+
+✅ **CLI Package Decomposition & Pydantic Config Migration (v0.1.93)**: Split the monolithic 12k-line `cli.py` into an 18-module `massgen/cli/` package, migrated config classes to `pydantic.dataclasses` with `Literal`-typed modes the validator derives from, consolidated provider-exclusion lists, removed ~8.7k lines of dead legacy code from the wheel, and hardened the test-signal/type-checking tooling. Internal-quality release, no runtime behavior changes.
 
 ✅ **Orchestrator Collaborator Refactor & Parallel Search MCP (v0.1.92)**: Reduced `orchestrator.py` from 21,599 to 8,574 lines by extracting 49 lazy collaborators, split Textual display helpers into sibling modules, added characterization coverage, and introduced a Parallel Web Search MCP registry entry plus example config.
 
@@ -1584,9 +1586,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.94 Roadmap
+### v0.1.95 Roadmap
 
-Version 0.1.94 picks up the image/video edit work deferred from v0.1.86-v0.1.93 and continues multimodal provider-parity work:
+Version 0.1.95 picks up the image/video edit work deferred from v0.1.86-v0.1.94 and continues multimodal provider-parity work:
 
 #### Planned Features
 - **Image/Video Edit Capabilities** ([#959](https://github.com/massgen/MassGen/issues/959)): Image and video editing across providers with multi-turn editing workflows via continuation IDs

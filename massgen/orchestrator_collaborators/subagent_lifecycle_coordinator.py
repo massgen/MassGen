@@ -193,6 +193,30 @@ class SubagentLifecycleCoordinator:
 
         return run_async_safely(self.get_pending_subagent_results_async(agent_id))
 
+    def consume_pending_subagent_results(
+        self,
+        agent_id: str,
+        consumed_subagent_ids: set[str],
+    ) -> None:
+        """Remove only the just-delivered subagent results, preserving late appends.
+
+        R2/R3 fix: the injection paths previously did
+        ``_pending_subagent_results.pop(agent_id, None)`` after an ``await`` window,
+        which discarded any result a background task appended during that window.
+        This removes only the entries whose ``subagent_id`` was actually consumed,
+        dropping the key only when nothing remains. A result that arrived
+        concurrently survives for the next injection cycle.
+        """
+        orch = self._orchestrator
+        existing = orch._pending_subagent_results.get(agent_id)
+        if existing is None:
+            return
+        remaining = [entry for entry in existing if entry[0] not in consumed_subagent_ids]
+        if remaining:
+            orch._pending_subagent_results[agent_id] = remaining
+        else:
+            orch._pending_subagent_results.pop(agent_id, None)
+
     # ------------------------------------------------------------------
     # Cancellation flows
     # ------------------------------------------------------------------

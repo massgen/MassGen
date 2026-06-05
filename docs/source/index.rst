@@ -209,6 +209,10 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.94 (June 5, 2026)** - Parallelism Hardening (Engineering Health)
+
+Strengthens the orchestrator's parallel execution: moves the snapshot copy off the event loop so agents keep streaming concurrently — backed by immutable versioned snapshots that keep the off-loop copy safe — and closes latent concurrency races (lost peer-answer revisions, lost background-subagent results, leaked trace tasks, cancel-without-await teardown). Also unifies the mid-stream injection paths and surfaces worktree-isolation degradation. No per-backend functionality changes.
+
 **v0.1.93 (June 3, 2026)** - CLI Package Decomposition & Pydantic Config Migration
 
 Splits the monolithic ``cli.py`` into a focused ``massgen/cli/`` package, migrates the configuration classes to pydantic dataclasses with ``Literal``-typed modes validated at construction, removes ~8.7k lines of dead legacy code, and hardens the test-signal and type-checking tooling (coverage gate, no-assert guard, ``uv.lock`` enforcement, and an incremental mypy ratchet). Internal-quality release with no runtime behavior changes.

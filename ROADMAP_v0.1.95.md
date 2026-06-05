@@ -1,14 +1,14 @@
-# MassGen v0.1.94 Roadmap
+# MassGen v0.1.95 Roadmap
 
 **Target Release:** TBD
 
 ## Overview
 
-Version 0.1.94 picks up the image/video edit work deferred from v0.1.86-v0.1.93 and continues multimodal provider-parity work.
+Version 0.1.95 picks up the image/video edit work deferred from v0.1.86-v0.1.94 and continues multimodal provider-parity work.
 
 ---
 
-## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.93)
+## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.94)
 
 **Issue:** [#959](https://github.com/massgen/MassGen/issues/959)
 **Owner:** @ncrispino
@@ -30,6 +30,8 @@ Version 0.1.94 picks up the image/video edit work deferred from v0.1.86-v0.1.93 
 
 ## Related Tracks
 
+- **v0.1.94**: Parallelism Hardening (engineering health) — snapshot copy moved off the event loop with immutable versioned snapshots, lock-free concurrency-race fixes, unified mid-stream injection, and worktree-isolation degradation surfaced
+- **v0.1.93**: CLI package decomposition and pydantic config migration — focused `massgen/cli/` package, construction-time config validation with `Literal`-typed modes, single-source exclusion lists, dead-code removal, and test-signal/type-checking hardening
 - **v0.1.92**: Orchestrator collaborator refactor and Parallel Search MCP — 49 collaborator extractions, Textual display helper split, characterization coverage, and a Parallel hosted search example
 - **v0.1.91**: Config reliability and hook safety — centralized config parsing, strict unknown-key validation, checklist runtime control wiring, and nested native-hook permission precedence
 - **v0.1.90**: Discriminative criteria refinements and checklist calibration — score-spread pruning, per-criterion feedback, position-bias counterbalancing, unified checklist gate, and shared score utilities

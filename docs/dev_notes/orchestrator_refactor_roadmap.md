@@ -63,8 +63,8 @@
 - [x] Step 28 (FinalPresentationRunner-5 methods, 1302 lines) — **DONE & verified green**. orchestrator.py → 15,021. 1 regression fixed: inner `self.get_final_presentation(...)` bypassed test monkeypatches on `orchestrator.get_final_presentation` → repointed to `orch.get_final_presentation(...)`.
 - [x] Step 23 (PeerAnswerVisibilityTracker-13 methods) — **DONE & verified green** (first batch with zero verifier issues). orchestrator.py → 14,866. Dual-writer field `pending_checklist_recheck_labels` mutated via orch back-ref so ChecklistGateManager later sees the same live set.
 - [x] Step 24 (ChecklistGateManager-11 methods, 1252 lines) — **DONE & verified green** (largest single extraction; 219 tests passed across checklist/criteria/round_evaluator suites). 1 regression fixed: collaborator's `resolve_effective_checklist_criteria` called `self.get_active_criteria(...)` directly → bypassed test monkeypatches on `orchestrator._get_active_criteria` → repointed to `orch._get_active_criteria(...)`.
-- [x] Step 29 (MidStreamInjectionHookInstaller — partial: 6 of 18 pure helpers extracted, 310 lines). The 12 hook-installation methods with duplicated callback closures across 3 backend paths (`_setup_hook_manager_for_agent`, `_setup_codex_mcp_hooks`, `_setup_codex_hybrid_hooks`, `_setup_native_hooks_for_agent`, `_register_round_timeout_hooks`, etc.) remain on Orchestrator — they need a callback-unification pass first (behavior-changing, out of scope for pure extraction).
-- [ ] Step 27 (AgentOrchestrationSetup-2 methods) skipped: lives inline in `__init__` as a nested function + loop; "extraction" requires `__init__`-rewiring not just method-relocation — different kind of refactor.
+- [x] Step 29 (MidStreamInjectionHookInstaller) — **COMPLETE** (2026-06-04). First A1 unified the two duplicated `get_injection_content` closures into `build_midstream_injection(..., native=)` (the callback-unification pass the prior note said was needed), then the 5 hook-installation methods (`_setup_hook_manager_for_agent`, `_setup_codex_mcp_hooks`, `_setup_codex_hybrid_hooks`, `_setup_native_hooks_for_agent`, `_register_round_timeout_hooks`) were moved to the collaborator with thin orchestrator delegators. Cross-method calls route through `orch._delegator` for monkeypatch-safety. orchestrator.py 8,561 → 7,910 over the A1+extraction work. Validated by the hooks/restart/broadcast integration suites + characterization.
+- [x] Step 27 (AgentOrchestrationSetup) — **DONE** (corrected 2026-06-04 by eng-health audit). The collaborator now lives at `massgen/orchestrator_collaborators/agent_orchestration_setup.py`; only a thin per-agent delegator loop remains inline in `__init__`. (The earlier "skipped" status was stale — the `__init__`-rewiring was completed.)
 
 ## Release status — SHIPPED (50% milestone)
 
@@ -85,7 +85,8 @@ After completing the original plan, identified and extracted 4 more cohesive clu
 
 ## Follow-up release work
 
-- **AgentOrchestrationSetup**: hoist the inline per-agent setup function out of `__init__` first (a small structural refactor), THEN extract as a collaborator.
+- **AgentOrchestrationSetup**: DONE — extracted to its own collaborator; only a thin `__init__` delegator loop remains (optional future hoist).
+- **MidStreamInjectionHookInstaller**: DONE — closures unified (A1) and all 5 hook-install methods moved into the collaborator (2026-06-04).
 - **MidStreamInjectionHookInstaller remaining 12 methods**: unify the duplicated `get_injection_content` closures across the 3 backend paths (behavior-changing, needs its own validation), THEN extract.
 - These are not blocking — Orchestrator is now 38% smaller and the remaining bulk is the 4 hook-install paths + the streaming-loop core.
 

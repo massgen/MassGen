@@ -59,14 +59,7 @@ from .logger_config import (
 from .mcp_tools.hooks import (
     BackgroundToolCompleteHook,
     GeneralHookManager,
-    HighPriorityTaskReminderHook,
-    HookType,
     HumanInputHook,
-    MediaCallLedgerHook,
-    MidStreamInjectionHook,
-    PythonCallableHook,
-    RoundTimeoutPostHook,
-    RoundTimeoutPreHook,
     RoundTimeoutState,
     SubagentCompleteHook,
 )
@@ -196,6 +189,11 @@ class AgentState:
     # emitted in the current round that are pending merge into the orchestrator
     # accumulator at round transition. Each entry: {text, category, anti_patterns?}.
     criteria_proposals: list[dict[str, Any]] = field(default_factory=list)
+    # D2: set when per-round worktree isolation setup failed and the agent fell
+    # back to its base workspace (no per-round branch isolation). Surfaces the
+    # degradation that was previously only a log line.
+    round_isolation_degraded: bool = False
+    round_isolation_error: str | None = None
 
 
 class Orchestrator(ChatAgent):
@@ -2658,27 +2656,10 @@ class Orchestrator(ChatAgent):
                                 agent_id,
                                 prefer_local_runtime_state=True,
                             )
-                            # Attach changedoc from workspace if enabled
-                            if self._is_changedoc_enabled() and agent and agent.backend.filesystem_manager:
-                                from massgen.changedoc import (
-                                    read_changedoc_from_workspace,
-                                )
-
-                                ws_path = agent.backend.filesystem_manager.cwd
-                                if ws_path:
-                                    changedoc_content = read_changedoc_from_workspace(Path(ws_path))
-                                    if changedoc_content:
-                                        answers_list = self.coordination_tracker.answers_by_agent.get(agent_id, [])
-                                        if answers_list:
-                                            label = answers_list[-1].label
-                                            # Replace [SELF] placeholder with real answer label
-                                            changedoc_content = changedoc_content.replace("[SELF]", label)
-                                            answers_list[-1].changedoc = changedoc_content
-                                            logger.info(
-                                                "[Orchestrator] Attached changedoc (%d chars) to %s",
-                                                len(changedoc_content),
-                                                answers_list[-1].label,
-                                            )
+                            # Attach changedoc from workspace if enabled (D3: guarded —
+                            # a changedoc/filesystem error must not kill an agent that
+                            # already recorded a valid answer above).
+                            self._attach_changedoc_to_latest_answer(agent_id, agent)
                             if self._is_decomposition_mode():
                                 self.agent_states[agent_id].decomposition_answer_streak += 1
                                 # Agent has produced a new self revision; keep its own seen
@@ -3494,316 +3475,8 @@ class Orchestrator(ChatAgent):
         agent: ChatAgent,
         answers: dict[str, str],
     ) -> None:
-        """Set up hooks for agent - uses native adapter for Claude Code, GeneralHookManager for others.
-
-        This routes hook setup based on backend capabilities:
-        - Backends with native hook support (Claude Code): Use NativeHookAdapter
-        - Standard backends: Use GeneralHookManager
-
-        Both paths set up the same hooks:
-        1. MidStreamInjectionHook - injects answers from other agents into tool results
-        2. HighPriorityTaskReminderHook - reminds to document high-priority task completions (round mode only)
-
-        Args:
-            agent_id: The agent identifier
-            agent: The ChatAgent instance
-            answers: Dict of existing answers when agent started (used to detect new answers)
-        """
-        # Runtime human input must work for all backends, including those that
-        # don't support hook registration (hookless fallback / Codex path).
-        self._ensure_runtime_human_input_hook_initialized()
-        self._ensure_runtime_inbox_poller_initialized()
-
-        backend = getattr(agent, "backend", None)
-        backend_provider = backend.get_provider_name() if backend and hasattr(backend, "get_provider_name") else ""
-
-        # Codex uses a hybrid path: native Bash hooks plus MCP/file-based payload delivery.
-        if (
-            backend_provider == "codex"
-            and hasattr(agent.backend, "supports_native_hooks")
-            and agent.backend.supports_native_hooks()
-            and hasattr(agent.backend, "supports_mcp_server_hooks")
-            and agent.backend.supports_mcp_server_hooks()
-        ):
-            self._setup_codex_hybrid_hooks(agent_id, agent, answers)
-            return
-
-        # Check if backend supports native hooks (e.g., Claude Code)
-        if hasattr(agent.backend, "supports_native_hooks") and agent.backend.supports_native_hooks():
-            self._setup_native_hooks_for_agent(agent_id, agent, answers)
-            return
-
-        # Check if backend supports MCP server-level hooks (e.g., Codex)
-        if hasattr(agent.backend, "supports_mcp_server_hooks") and agent.backend.supports_mcp_server_hooks():
-            self._setup_codex_mcp_hooks(agent_id, agent, answers)
-            return
-
-        # Fall back to GeneralHookManager for standard backends
-        if not hasattr(agent.backend, "set_general_hook_manager"):
-            return
-
-        # Create hook manager
-        manager = GeneralHookManager()
-
-        # Create mid-stream injection hook with closure-based callback
-        mid_stream_hook = MidStreamInjectionHook()
-
-        # Define the injection callback (captures agent_id and answers)
-        # This is async to allow copying snapshots before injection
-        async def get_injection_content() -> str | None:
-            """Check if mid-stream injection is needed and return content."""
-            # Skip injection if disabled (multi-agent refinement OFF mode)
-            # Agents work independently without seeing each other's work
-            if self.config.disable_injection:
-                return None
-
-            if not self._check_restart_pending(agent_id):
-                return None
-
-            # First-answer protection: don't inject into an agent that hasn't
-            # produced its first answer yet.
-            if self._should_defer_restart_for_first_answer(agent_id):
-                self.agent_states[agent_id].restart_pending = False
-                return None
-
-            # In vote-only mode, skip injection and force a full restart instead.
-            # Mid-stream injection can't update tool schemas, so agents in vote-only mode
-            # wouldn't be able to vote for newly discovered answers (the vote enum is fixed
-            # at stream start). A full restart gives them updated tool schemas.
-            if self._is_vote_only_mode(agent_id):
-                return None  # Let restart happen instead
-
-            if self._should_defer_peer_updates_until_restart(agent_id):
-                if self._has_unseen_answer_updates(agent_id):
-                    self.agent_states[agent_id].restart_pending = True
-                    logger.info(
-                        "[Orchestrator] Deferring peer answer update injection until restart for %s",
-                        agent_id,
-                    )
-                else:
-                    self.agent_states[agent_id].restart_pending = False
-                return None
-
-            # Get CURRENT answers (includes virtual agents in step mode)
-            current_answers = self._get_current_answers_snapshot()
-            selected_answers, had_unseen_updates = self._select_midstream_answer_updates(
-                agent_id,
-                current_answers,
-            )
-
-            if not selected_answers:
-                if had_unseen_updates:
-                    # Keep restart pending when unseen updates still exist.
-                    self.agent_states[agent_id].restart_pending = True
-                    cap = getattr(self.config, "max_midstream_injections_per_round", 2)
-                    logger.info(
-                        "[Orchestrator] Skipping mid-stream injection for %s: per-round cap reached (%s)",
-                        agent_id,
-                        cap,
-                    )
-                else:
-                    # No unseen updates remain: this was a stale restart_pending flag.
-                    self.agent_states[agent_id].restart_pending = False
-                return None
-
-            # TIMING CONSTRAINT: Skip injection if too close to soft timeout
-            if self._should_skip_injection_due_to_timeout(agent_id):
-                return None  # Let restart happen instead
-
-            # Copy snapshots from new answer agents to temp workspace BEFORE building injection
-            # This ensures the workspace files are available when the agent tries to access them
-            logger.info(
-                f"[Orchestrator] Copying snapshots for mid-stream injection to {agent_id}",
-            )
-            await self._copy_all_snapshots_to_temp_workspace(agent_id)
-
-            # Build injection content (pass existing answers to detect updates vs new)
-            injection = self._build_tool_result_injection(
-                agent_id,
-                selected_answers,
-                existing_answers=answers,
-            )
-
-            # Debug: Log what's in the temp workspace for each injected agent
-            viewing_agent = self.agents.get(agent_id)
-            if viewing_agent and viewing_agent.backend.filesystem_manager:
-                temp_workspace_base = str(
-                    viewing_agent.backend.filesystem_manager.agent_temporary_workspace,
-                )
-                agent_mapping = self.coordination_tracker.get_reverse_agent_mapping()
-                for aid in selected_answers.keys():
-                    anon_id = agent_mapping.get(aid, f"agent_{aid}")
-                    workspace_path = os.path.join(temp_workspace_base, anon_id)
-                    if os.path.exists(workspace_path):
-                        try:
-                            files = os.listdir(workspace_path)
-                            logger.debug(
-                                f"[Orchestrator] Injection workspace {workspace_path} contains: {files}",
-                            )
-                        except OSError as e:
-                            logger.debug(
-                                f"[Orchestrator] Could not list workspace {workspace_path}: {e}",
-                            )
-                    else:
-                        logger.debug(
-                            f"[Orchestrator] Injection workspace {workspace_path} does NOT exist!",
-                        )
-
-            # Increment injection count
-            self.agent_states[agent_id].injection_count += 1
-            self.agent_states[agent_id].midstream_injections_this_round += len(selected_answers)
-
-            # Update answers to include newly injected answers (prevents re-injection)
-            # This mutates the captured closure variable so future callbacks see updated state
-            answers.update(selected_answers)
-
-            # Update known_answer_ids so vote validation knows this agent has seen these
-            self.agent_states[agent_id].known_answer_ids.update(selected_answers.keys())
-            self._register_injected_answer_updates(agent_id, list(selected_answers.keys()))
-            self._mark_pending_checklist_recheck_labels(agent_id, list(selected_answers.keys()))
-
-            # Keep restart pending if additional unseen revisions still remain.
-            self.agent_states[agent_id].restart_pending = self._has_unseen_answer_updates(agent_id)
-
-            # Track the injection
-            logger.info(
-                f"[Orchestrator] Mid-stream injection for {agent_id}: {len(selected_answers)} answer update(s)",
-            )
-            # Log the actual injection content at debug level (may contain sensitive data)
-            preview = injection[:2000] + ("..." if len(injection) > 2000 else "")
-            logger.debug(f"[Orchestrator] Injection content (truncated):\n{preview}")
-            self.coordination_tracker.track_agent_action(
-                agent_id,
-                ActionType.UPDATE_INJECTED,
-                f"Mid-stream: {len(selected_answers)} answer(s)",
-            )
-
-            # Emit injection_received event for TUI
-
-            _inj_emitter = get_event_emitter()
-            if _inj_emitter:
-                _inj_emitter.emit_injection_received(
-                    agent_id=agent_id,
-                    source_agents=list(selected_answers.keys()),
-                    injection_type="mid_stream",
-                )
-
-            # Update agent's context labels first, then refresh checklist state so
-            # available_agent_labels reflects the newly-injected labels (e.g. agent1.2
-            # replacing agent1.1). Refreshing before updating would leave stale labels.
-            self.coordination_tracker.update_agent_context_with_new_answers(
-                agent_id,
-                list(selected_answers.keys()),
-            )
-            self._refresh_checklist_state_for_agent(agent_id)
-
-            return injection
-
-        # Set callback on hook
-        mid_stream_hook.set_callback(get_injection_content)
-
-        # Register mid-stream injection hook first (maintains current behavior order)
-        manager.register_global_hook(HookType.POST_TOOL_USE, mid_stream_hook)
-
-        # Register high-priority task reminder hook (enabled round-wise when capture is enabled)
-        if self._is_round_learning_capture_enabled():
-            reminder_hook = HighPriorityTaskReminderHook()
-            manager.register_global_hook(HookType.POST_TOOL_USE, reminder_hook)
-
-        # Register media call ledger hook (read_media/generate_media provenance capture)
-        manager.register_global_hook(HookType.POST_TOOL_USE, MediaCallLedgerHook())
-
-        # Register human input hook (shared across all agents)
-        manager.register_global_hook(HookType.POST_TOOL_USE, self._human_input_hook)
-
-        # Register subagent completion hook for background result injection
-        if self._background_subagents_enabled:
-            subagent_hook = SubagentCompleteHook(
-                injection_strategy=self._background_subagent_injection_strategy,
-            )
-
-            # Create a closure that captures agent_id for pending results retrieval
-            def make_pending_getter(aid: str):
-                return lambda: self._get_pending_subagent_results_async(aid)
-
-            subagent_hook.set_pending_results_getter(make_pending_getter(agent_id))
-            manager.register_global_hook(HookType.POST_TOOL_USE, subagent_hook)
-            logger.debug(f"[Orchestrator] Registered SubagentCompleteHook for {agent_id}")
-
-            # Wire background tool delegate so list/status/result/cancel route to subagents
-            if hasattr(agent.backend, "register_background_delegate"):
-                from massgen.subagent.background_delegate import (
-                    SubagentBackgroundDelegate,
-                )
-
-                def _make_call_tool(aid: str):
-                    return lambda tool_name, params: self._call_subagent_mcp_tool_async(
-                        aid,
-                        tool_name,
-                        params,
-                    )
-
-                delegate = SubagentBackgroundDelegate(
-                    call_tool=_make_call_tool(agent_id),
-                    agent_id=agent_id,
-                )
-                agent.backend.register_background_delegate(delegate)
-                logger.debug(f"[Orchestrator] Registered SubagentBackgroundDelegate for {agent_id}")
-
-        # Register background tool completion hook for async tool result injection
-        if hasattr(agent.backend, "get_pending_background_tool_results"):
-            background_tool_hook = BackgroundToolCompleteHook()
-            background_tool_hook.set_completed_jobs_getter(
-                agent.backend.get_pending_background_tool_results,
-            )
-            manager.register_global_hook(HookType.POST_TOOL_USE, background_tool_hook)
-            logger.debug(
-                f"[Orchestrator] Registered BackgroundToolCompleteHook for {agent_id}",
-            )
-        # Register per-round timeout hooks if configured
-        self._register_round_timeout_hooks(agent_id, manager)
-
-        # Register user-configured hooks from agent backend config
-        if hasattr(agent.backend, "config") and agent.backend.config:
-            agent_hooks = agent.backend.config.get("hooks")
-            if agent_hooks:
-                manager.register_hooks_from_config(agent_hooks, agent_id=agent_id)
-                logger.debug(
-                    f"[Orchestrator] Registered user-configured hooks for {agent_id}",
-                )
-
-        # Set manager on backend
-        agent.backend.set_general_hook_manager(manager)
-        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
-
-            async def _wait_interrupt_provider(
-                requested_agent_id: str,
-                *,
-                _agent_id: str = agent_id,
-            ) -> dict[str, Any] | None:
-                target_agent_id = requested_agent_id or _agent_id
-                if hasattr(self, "cancellation_manager") and self.cancellation_manager and self.cancellation_manager.is_cancelled:
-                    return {
-                        "interrupt_reason": "turn_cancelled",
-                        "injected_content": None,
-                    }
-
-                runtime_sections = await self._collect_no_hook_runtime_fallback_sections(
-                    target_agent_id,
-                )
-                if not runtime_sections:
-                    return None
-                return {
-                    "interrupt_reason": "runtime_injection_available",
-                    "injected_content": "\n".join(runtime_sections),
-                }
-
-            agent.backend.set_background_wait_interrupt_provider(
-                _wait_interrupt_provider,
-            )
-        logger.debug(
-            f"[Orchestrator] Set up hook manager for {agent_id} with mid-stream and reminder hooks",
-        )
+        """Route hook setup by backend capability (delegates to MidStreamInjectionHookInstaller)."""
+        self._midstream_injection_hook_installer.setup_hook_manager_for_agent(agent_id, agent, answers)
 
     def _setup_codex_mcp_hooks(
         self,
@@ -3811,54 +3484,8 @@ class Orchestrator(ChatAgent):
         agent: ChatAgent,
         answers: dict[str, str],
     ) -> None:
-        """Set up MCP server-level hook delivery for Codex backends.
-
-        Instead of registering hooks on a GeneralHookManager, this stores a
-        reference so the streaming loop can call _flush_codex_hook_payloads()
-        to write injection files that the MCP middleware consumes.
-        """
-        # Mark this agent as using MCP server hooks
-        if not hasattr(self, "_codex_mcp_hook_agents"):
-            self._codex_mcp_hook_agents: dict[str, dict[str, Any]] = {}
-
-        self._codex_mcp_hook_agents[agent_id] = {
-            "agent": agent,
-            "answers": answers,
-        }
-
-        # Set up the background wait interrupt provider (reuse existing pattern)
-        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
-
-            async def _wait_interrupt_provider(
-                requested_agent_id: str,
-                *,
-                _agent_id: str = agent_id,
-            ) -> dict[str, Any] | None:
-                target_agent_id = requested_agent_id or _agent_id
-                if hasattr(self, "cancellation_manager") and self.cancellation_manager and self.cancellation_manager.is_cancelled:
-                    return {
-                        "interrupt_reason": "turn_cancelled",
-                        "injected_content": None,
-                    }
-
-                runtime_sections = await self._collect_no_hook_runtime_fallback_sections(
-                    target_agent_id,
-                )
-                if not runtime_sections:
-                    return None
-                return {
-                    "interrupt_reason": "runtime_injection_available",
-                    "injected_content": "\n".join(runtime_sections),
-                }
-
-            agent.backend.set_background_wait_interrupt_provider(
-                _wait_interrupt_provider,
-            )
-
-        logger.info(
-            "[Orchestrator] Set up MCP server-level hook delivery for %s",
-            agent_id,
-        )
+        """Set up Codex MCP server-level hook delivery (delegates to MidStreamInjectionHookInstaller)."""
+        self._midstream_injection_hook_installer.setup_codex_mcp_hooks(agent_id, agent, answers)
 
     def _setup_codex_hybrid_hooks(
         self,
@@ -3866,53 +3493,8 @@ class Orchestrator(ChatAgent):
         agent: ChatAgent,
         answers: dict[str, str],
     ) -> None:
-        """Set up Codex's hybrid delivery path.
-
-        Codex native hooks currently cover Bash-only ``PreToolUse`` and
-        ``PostToolUse``. MassGen runtime payload delivery still flows through the
-        shared ``hook_post_tool_use.json`` file and the MCP/file carry-forward
-        path, so we register a lightweight native Bash bridge and keep the
-        existing Codex MCP setup in place.
-        """
-        adapter = agent.backend.get_native_hook_adapter()
-        if not adapter:
-            logger.warning(
-                "[Orchestrator] Codex backend reported native hooks but no adapter was available for %s",
-                agent_id,
-            )
-            self._setup_codex_mcp_hooks(agent_id, agent, answers)
-            return
-
-        manager = GeneralHookManager()
-        manager.register_global_hook(
-            HookType.POST_TOOL_USE,
-            PythonCallableHook(
-                name="codex_post_tool_bridge",
-                handler=lambda _event: None,
-                matcher="Bash",
-            ),
-        )
-
-        native_config = adapter.build_native_hooks_config(
-            manager,
-            agent_id=agent_id,
-        )
-        agent.backend.set_native_hooks_config(native_config)
-        # Codex's native hook surface is Bash-only, but the TUI and manual
-        # wrap-up flow still need real timeout hook objects in agent state.
-        # Register those separately so request_answer_now() and timeout status
-        # work on the hybrid path without changing the native hooks config.
-        timeout_manager = GeneralHookManager()
-        self._register_round_timeout_hooks(agent_id, timeout_manager)
-        self._setup_codex_mcp_hooks(agent_id, agent, answers)
-
-        hooks = native_config.get("hooks", {}) if isinstance(native_config, dict) else {}
-        logger.info(
-            "[Orchestrator] Set up Codex hybrid hooks for %s: PreToolUse=%d, PostToolUse=%d",
-            agent_id,
-            len(hooks.get("PreToolUse", [])),
-            len(hooks.get("PostToolUse", [])),
-        )
+        """Set up Codex's hybrid delivery path (delegates to MidStreamInjectionHookInstaller)."""
+        self._midstream_injection_hook_installer.setup_codex_hybrid_hooks(agent_id, agent, answers)
 
     async def _collect_round_timeout_runtime_sections(
         self,
@@ -4060,6 +3642,8 @@ class Orchestrator(ChatAgent):
                         )
 
                         if selected_answers:
+                            # R1: capture peer revision counts before the snapshot-copy await.
+                            captured_revision_counts = self._capture_answer_revision_counts(list(selected_answers.keys()))
                             if not self._should_skip_injection_due_to_timeout(agent_id):
                                 await self._copy_all_snapshots_to_temp_workspace(agent_id)
 
@@ -4075,7 +3659,7 @@ class Orchestrator(ChatAgent):
                                 self.agent_states[agent_id].midstream_injections_this_round += len(selected_answers)
                                 answers.update(selected_answers)
                                 self.agent_states[agent_id].known_answer_ids.update(selected_answers.keys())
-                                self._register_injected_answer_updates(agent_id, list(selected_answers.keys()))
+                                self._register_injected_answer_updates(agent_id, list(selected_answers.keys()), seen_counts=captured_revision_counts)
                                 self._mark_pending_checklist_recheck_labels(agent_id, list(selected_answers.keys()))
                                 # Update context labels BEFORE refreshing checklist state so
                                 # available_agent_labels reflects the newly-injected labels
@@ -4113,7 +3697,9 @@ class Orchestrator(ChatAgent):
             combined = "\n".join(injection_parts)
             agent.backend.write_post_tool_use_hook(combined)
             if wrote_subagent_payload:
-                self._pending_subagent_results.pop(agent_id, None)
+                # R2: remove only the consumed results, not the whole key, so a
+                # background task that appended during the await window survives.
+                self._consume_pending_subagent_results(agent_id, {sid for sid, _ in pending})
             logger.info(
                 f"[Orchestrator] Wrote {len(combined)} chars to hook file for {agent_id} " f"({len(injection_parts)} parts)",
             )
@@ -4225,8 +3811,12 @@ class Orchestrator(ChatAgent):
                 context={"agent_id": agent_id},
             )
             if subagent_result.inject and subagent_result.inject.get("content"):
-                # Delivery succeeded — now clear the source.
-                self._pending_subagent_results.pop(agent_id, None)
+                # Delivery succeeded — clear only the consumed results (R3), so a
+                # background result appended during the await window is preserved.
+                self._consume_pending_subagent_results(
+                    agent_id,
+                    {sid for sid, _ in pending_subagent_results},
+                )
                 sections.append(str(subagent_result.inject["content"]))
                 logger.info(
                     "[Orchestrator] Hookless subagent completion delivery status=%s (%s)",
@@ -4383,6 +3973,8 @@ class Orchestrator(ChatAgent):
         injection_parts: list[str] = []
 
         if selected_answers:
+            # R1: capture peer revision counts before the snapshot-copy await.
+            captured_revision_counts = self._capture_answer_revision_counts(list(selected_answers.keys()))
             logger.info(
                 "[Orchestrator] Delivering no-hook mid-stream peer updates via enforcement message for %s",
                 agent_id,
@@ -4407,7 +3999,7 @@ class Orchestrator(ChatAgent):
 
             # Mark the selected source revisions as seen by this agent.
             self.agent_states[agent_id].known_answer_ids.update(selected_answers.keys())
-            self._register_injected_answer_updates(agent_id, list(selected_answers.keys()))
+            self._register_injected_answer_updates(agent_id, list(selected_answers.keys()), seen_counts=captured_revision_counts)
             self._mark_pending_checklist_recheck_labels(agent_id, list(selected_answers.keys()))
 
             _inj_emitter = get_event_emitter()
@@ -4617,97 +4209,8 @@ class Orchestrator(ChatAgent):
         agent_id: str,
         manager: GeneralHookManager,
     ) -> None:
-        """Register per-round timeout hooks if configured.
-
-        This creates two hooks:
-        1. RoundTimeoutPostHook (soft timeout) - Injects warning message after tool calls
-        2. RoundTimeoutPreHook (hard timeout) - Blocks non-terminal tools after grace period
-
-        The hooks are stored in agent_states so they can be reset when a new round starts.
-
-        Args:
-            agent_id: The agent identifier
-            manager: The GeneralHookManager to register hooks with
-        """
-        # Get timeout config
-        timeout_config = self.config.timeout_config
-        initial_timeout = timeout_config.initial_round_timeout_seconds
-        subsequent_timeout = timeout_config.subsequent_round_timeout_seconds
-        grace_seconds = timeout_config.round_timeout_grace_seconds
-
-        # Skip if no round timeouts configured
-        if initial_timeout is None and subsequent_timeout is None:
-            return
-
-        logger.info(
-            f"[Orchestrator] Registering round timeout hooks for {agent_id}: " f"initial={initial_timeout}s, subsequent={subsequent_timeout}s, grace={grace_seconds}s",
-        )
-
-        # Create closures that read from agent state
-        def get_round_start_time() -> float:
-            """Get the current round start time from agent state."""
-            start_time = self.agent_states[agent_id].round_start_time
-            if start_time is None:
-                # Fallback to current time if not set (shouldn't happen)
-                logger.warning(
-                    f"[Orchestrator] round_start_time is None for {agent_id}, using current time as fallback",
-                )
-                return time.time()
-            return start_time
-
-        def get_agent_round() -> int:
-            """Get the current round number from coordination tracker."""
-            return self.coordination_tracker.get_agent_round(agent_id)
-
-        # Create shared state for coordinating soft -> hard timeout progression
-        # This ensures hard timeout only fires AFTER soft timeout has been injected
-        timeout_state = RoundTimeoutState()
-
-        # Get two-tier workspace setting from coordination config
-        # Suppressed when write_mode is active (write_mode replaces the old two-tier structure)
-        coordination_config = getattr(self.config, "coordination_config", None)
-        write_mode = getattr(coordination_config, "write_mode", None) if coordination_config else None
-        use_two_tier_workspace = False
-        if not (write_mode and write_mode != "legacy"):
-            use_two_tier_workspace = bool(
-                getattr(coordination_config, "use_two_tier_workspace", False),
-            )
-
-        # Create soft timeout hook (POST_TOOL_USE - injects warning)
-        post_hook = RoundTimeoutPostHook(
-            name=f"round_timeout_soft_{agent_id}",
-            get_round_start_time=get_round_start_time,
-            get_agent_round=get_agent_round,
-            initial_timeout_seconds=initial_timeout,
-            subsequent_timeout_seconds=subsequent_timeout,
-            grace_seconds=grace_seconds,
-            agent_id=agent_id,
-            shared_state=timeout_state,
-            use_two_tier_workspace=use_two_tier_workspace,
-        )
-
-        # Create hard timeout hook (PRE_TOOL_USE - blocks non-terminal tools)
-        pre_hook = RoundTimeoutPreHook(
-            name=f"round_timeout_hard_{agent_id}",
-            get_round_start_time=get_round_start_time,
-            get_agent_round=get_agent_round,
-            initial_timeout_seconds=initial_timeout,
-            subsequent_timeout_seconds=subsequent_timeout,
-            grace_seconds=grace_seconds,
-            agent_id=agent_id,
-            shared_state=timeout_state,
-        )
-
-        # Register hooks
-        manager.register_global_hook(HookType.POST_TOOL_USE, post_hook)
-        manager.register_global_hook(HookType.PRE_TOOL_USE, pre_hook)
-
-        # Store hook references so we can reset them on new rounds
-        self.agent_states[agent_id].round_timeout_hooks = (post_hook, pre_hook)
-        # Store the shared state so we can check force_terminate in the orchestrator loop
-        self.agent_states[agent_id].round_timeout_state = timeout_state
-
-        logger.debug(f"[Orchestrator] Registered round timeout hooks for {agent_id}")
+        """Register per-round timeout hooks (delegates to MidStreamInjectionHookInstaller)."""
+        self._midstream_injection_hook_installer.register_round_timeout_hooks(agent_id, manager)
 
     def _setup_native_hooks_for_agent(
         self,
@@ -4715,290 +4218,8 @@ class Orchestrator(ChatAgent):
         agent: ChatAgent,
         answers: dict[str, str],
     ) -> None:
-        """Set up native hooks for backends that support them (e.g., Claude Code).
-
-        This converts MassGen hooks to the backend's native format using the
-        NativeHookAdapter interface. The hooks are then executed natively by
-        the backend rather than through MassGen's GeneralHookManager.
-
-        Args:
-            agent_id: The agent identifier
-            agent: The ChatAgent instance
-            answers: Dict of existing answers when agent started (used to detect new answers)
-        """
-        # Get the native hook adapter from the backend
-        adapter = agent.backend.get_native_hook_adapter()
-        if not adapter:
-            logger.warning(
-                f"[Orchestrator] Backend supports native hooks but adapter unavailable for {agent_id}",
-            )
-            return
-
-        # Create a GeneralHookManager to hold MassGen hooks
-        # (We'll convert these to native format)
-        manager = GeneralHookManager()
-
-        # Create mid-stream injection hook with closure-based callback
-        mid_stream_hook = MidStreamInjectionHook()
-
-        # Define the injection callback (same logic as GeneralHookManager path)
-        async def get_injection_content() -> str | None:
-            """Check if mid-stream injection is needed and return content."""
-            if self.config.disable_injection:
-                return None
-
-            if not self._check_restart_pending(agent_id):
-                return None
-
-            # First-answer protection: don't inject into an agent that hasn't
-            # produced its first answer yet.
-            if self._should_defer_restart_for_first_answer(agent_id):
-                self.agent_states[agent_id].restart_pending = False
-                return None
-
-            # In vote-only mode, skip injection and force a full restart instead.
-            if self._is_vote_only_mode(agent_id):
-                return None
-
-            if self._should_defer_peer_updates_until_restart(agent_id):
-                if self._has_unseen_answer_updates(agent_id):
-                    self.agent_states[agent_id].restart_pending = True
-                    logger.info(
-                        "[Orchestrator] Deferring native peer answer update injection until restart for %s",
-                        agent_id,
-                    )
-                else:
-                    self.agent_states[agent_id].restart_pending = False
-                return None
-
-            # Get CURRENT answers (includes virtual agents in step mode)
-            current_answers = self._get_current_answers_snapshot()
-            selected_answers, had_unseen_updates = self._select_midstream_answer_updates(
-                agent_id,
-                current_answers,
-            )
-
-            if not selected_answers:
-                if had_unseen_updates:
-                    self.agent_states[agent_id].restart_pending = True
-                    cap = getattr(self.config, "max_midstream_injections_per_round", 2)
-                    logger.info(
-                        "[Orchestrator] Skipping native mid-stream injection for %s: per-round cap reached (%s)",
-                        agent_id,
-                        cap,
-                    )
-                else:
-                    self.agent_states[agent_id].restart_pending = False
-                return None
-
-            # TIMING CONSTRAINT: Skip injection if too close to soft timeout
-            if self._should_skip_injection_due_to_timeout(agent_id):
-                return None  # Let restart happen instead
-
-            # Copy snapshots from new answer agents to temp workspace
-            logger.info(
-                f"[Orchestrator] Copying snapshots for mid-stream injection to {agent_id}",
-            )
-            await self._copy_all_snapshots_to_temp_workspace(agent_id)
-
-            # Build injection content
-            injection = self._build_tool_result_injection(
-                agent_id,
-                selected_answers,
-                existing_answers=answers,
-            )
-
-            # Increment injection count
-            self.agent_states[agent_id].injection_count += 1
-            self.agent_states[agent_id].midstream_injections_this_round += len(selected_answers)
-
-            # Update answers to include newly injected answers (prevents re-injection)
-            # This mutates the captured closure variable so future callbacks see updated state
-            answers.update(selected_answers)
-
-            # Update known_answer_ids so vote validation knows this agent has seen these
-            self.agent_states[agent_id].known_answer_ids.update(selected_answers.keys())
-            self._register_injected_answer_updates(agent_id, list(selected_answers.keys()))
-            self._mark_pending_checklist_recheck_labels(agent_id, list(selected_answers.keys()))
-
-            # Update context labels BEFORE refreshing checklist state so
-            # available_agent_labels reflects the newly-injected labels
-            # (e.g. agent1.2 replacing agent1.1). Same ordering as all other paths.
-            self.coordination_tracker.update_agent_context_with_new_answers(
-                agent_id,
-                list(selected_answers.keys()),
-            )
-
-            # Refresh checklist tool state after injection (streak may have reset)
-            self._refresh_checklist_state_for_agent(agent_id)
-
-            # Keep restart pending if additional unseen revisions still remain.
-            self.agent_states[agent_id].restart_pending = self._has_unseen_answer_updates(agent_id)
-
-            # Emit injection_received event for TUI
-
-            _inj_emitter = get_event_emitter()
-            if _inj_emitter:
-                _inj_emitter.emit_injection_received(
-                    agent_id=agent_id,
-                    source_agents=list(selected_answers.keys()),
-                    injection_type="mid_stream",
-                )
-
-            # Track the injection
-            logger.info(
-                f"[Orchestrator] Mid-stream injection (native) for {agent_id}: {len(selected_answers)} answer update(s)",
-            )
-            self.coordination_tracker.track_agent_action(
-                agent_id,
-                ActionType.UPDATE_INJECTED,
-                f"Mid-stream (native): {len(selected_answers)} answer(s)",
-            )
-
-            return injection
-
-        # Set callback on hook
-        mid_stream_hook.set_callback(get_injection_content)
-
-        # Register mid-stream injection hook
-        manager.register_global_hook(HookType.POST_TOOL_USE, mid_stream_hook)
-
-        # Register high-priority task reminder hook (enabled round-wise when capture is enabled)
-        if self._is_round_learning_capture_enabled():
-            reminder_hook = HighPriorityTaskReminderHook()
-            manager.register_global_hook(HookType.POST_TOOL_USE, reminder_hook)
-
-        # Register media call ledger hook (read_media/generate_media provenance capture)
-        manager.register_global_hook(HookType.POST_TOOL_USE, MediaCallLedgerHook())
-
-        # Register human input hook (shared across all agents)
-        self._ensure_runtime_human_input_hook_initialized()
-        manager.register_global_hook(HookType.POST_TOOL_USE, self._human_input_hook)
-
-        # Register subagent completion hook for background result injection
-        if self._background_subagents_enabled:
-            subagent_hook = SubagentCompleteHook(
-                injection_strategy=self._background_subagent_injection_strategy,
-            )
-
-            # Create a closure that captures agent_id for pending results retrieval
-            def make_pending_getter(aid: str):
-                return lambda: self._get_pending_subagent_results_async(aid)
-
-            subagent_hook.set_pending_results_getter(make_pending_getter(agent_id))
-            manager.register_global_hook(HookType.POST_TOOL_USE, subagent_hook)
-            logger.debug(f"[Orchestrator] Registered SubagentCompleteHook (native) for {agent_id}")
-
-            # Wire background tool delegate so list/status/result/cancel route to subagents
-            if hasattr(agent.backend, "register_background_delegate"):
-                from massgen.subagent.background_delegate import (
-                    SubagentBackgroundDelegate,
-                )
-
-                def _make_call_tool(aid: str):
-                    return lambda tool_name, params: self._call_subagent_mcp_tool_async(
-                        aid,
-                        tool_name,
-                        params,
-                    )
-
-                delegate = SubagentBackgroundDelegate(
-                    call_tool=_make_call_tool(agent_id),
-                    agent_id=agent_id,
-                )
-                agent.backend.register_background_delegate(delegate)
-                logger.debug(f"[Orchestrator] Registered SubagentBackgroundDelegate (native) for {agent_id}")
-
-        # Register background tool completion hook for async tool result injection
-        if hasattr(agent.backend, "get_pending_background_tool_results"):
-            background_tool_hook = BackgroundToolCompleteHook()
-            background_tool_hook.set_completed_jobs_getter(
-                agent.backend.get_pending_background_tool_results,
-            )
-            manager.register_global_hook(HookType.POST_TOOL_USE, background_tool_hook)
-            logger.debug(
-                f"[Orchestrator] Registered BackgroundToolCompleteHook (native) for {agent_id}",
-            )
-        # Register per-round timeout hooks if configured
-        self._register_round_timeout_hooks(agent_id, manager)
-
-        # Register user-configured hooks from agent backend config
-        agent_hooks = agent.backend.config.get("hooks")
-        if agent_hooks:
-            manager.register_hooks_from_config(agent_hooks, agent_id=agent_id)
-
-        # Register PathPermissionManagerHook for PRE_TOOL_USE validation.
-        # Native backends like Copilot need MassGen-level path validation.
-        # Claude Code already handles permissions via add_dirs, so skip it.
-        backend_provider = agent.backend.get_provider_name() if hasattr(agent.backend, "get_provider_name") else ""
-        if backend_provider != "claude_code":
-            _fm = getattr(agent.backend, "filesystem_manager", None)
-            if _fm:
-                _ppm = getattr(_fm, "path_permission_manager", None)
-                if _ppm:
-                    from massgen.filesystem_manager import PathPermissionManagerHook
-
-                    ppm_hook = PathPermissionManagerHook(_ppm)
-                    manager.register_global_hook(HookType.PRE_TOOL_USE, ppm_hook)
-                    logger.debug(
-                        f"[Orchestrator] Registered PathPermissionManagerHook (PRE_TOOL_USE) for {agent_id}",
-                    )
-
-        # Create context factory for hooks
-        def context_factory() -> dict[str, Any]:
-            workspace_path = None
-            filesystem_manager = getattr(agent.backend, "filesystem_manager", None)
-            if filesystem_manager and hasattr(filesystem_manager, "get_current_workspace"):
-                try:
-                    workspace_path = str(filesystem_manager.get_current_workspace())
-                except Exception:
-                    workspace_path = None
-            return {
-                "session_id": getattr(self, "session_id", ""),
-                "orchestrator_id": getattr(self, "orchestrator_id", ""),
-                "agent_id": agent_id,
-                "workspace_path": workspace_path,
-            }
-
-        # Convert to native format using adapter
-        native_config = adapter.build_native_hooks_config(
-            manager,
-            agent_id=agent_id,
-            context_factory=context_factory,
-        )
-
-        # Set native hooks config on backend
-        agent.backend.set_native_hooks_config(native_config)
-        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
-
-            async def _wait_interrupt_provider(
-                requested_agent_id: str,
-                *,
-                _agent_id: str = agent_id,
-            ) -> dict[str, Any] | None:
-                target_agent_id = requested_agent_id or _agent_id
-                if hasattr(self, "cancellation_manager") and self.cancellation_manager and self.cancellation_manager.is_cancelled:
-                    return {
-                        "interrupt_reason": "turn_cancelled",
-                        "injected_content": None,
-                    }
-
-                runtime_sections = await self._collect_no_hook_runtime_fallback_sections(
-                    target_agent_id,
-                )
-                if not runtime_sections:
-                    return None
-                return {
-                    "interrupt_reason": "runtime_injection_available",
-                    "injected_content": "\n".join(runtime_sections),
-                }
-
-            agent.backend.set_background_wait_interrupt_provider(
-                _wait_interrupt_provider,
-            )
-        logger.info(
-            f"[Orchestrator] Set up native hooks for {agent_id}: " f"PreToolUse={len(native_config.get('PreToolUse', []))}, " f"PostToolUse={len(native_config.get('PostToolUse', []))} hooks",
-        )
+        """Set up native hooks (delegates to MidStreamInjectionHookInstaller)."""
+        self._midstream_injection_hook_installer.setup_native_hooks_for_agent(agent_id, agent, answers)
 
     @classmethod
     def _coerce_answer_content_to_text(cls, content: Any) -> str:
@@ -5204,9 +4425,18 @@ class Orchestrator(ChatAgent):
         """Update seen-answer revision snapshot (delegates to PeerAnswerVisibilityTracker)."""
         self._peer_answer_visibility_tracker.sync_decomposition_answer_visibility(agent_id)
 
-    def _mark_seen_answer_revisions(self, agent_id: str, source_agent_ids: list[str]) -> None:
+    def _mark_seen_answer_revisions(
+        self,
+        agent_id: str,
+        source_agent_ids: list[str],
+        seen_counts: dict[str, int] | None = None,
+    ) -> None:
         """Mark seen answer revisions (delegates to PeerAnswerVisibilityTracker)."""
-        self._peer_answer_visibility_tracker.mark_seen_answer_revisions(agent_id, source_agent_ids)
+        self._peer_answer_visibility_tracker.mark_seen_answer_revisions(
+            agent_id,
+            source_agent_ids,
+            seen_counts=seen_counts,
+        )
 
     def _get_latest_answer_revision_timestamp(self, source_agent_id: str) -> float:
         """Get latest revision timestamp (delegates to PeerAnswerVisibilityTracker)."""
@@ -5258,12 +4488,116 @@ class Orchestrator(ChatAgent):
             source_agent_ids,
         )
 
-    def _register_injected_answer_updates(self, agent_id: str, source_agent_ids: list[str]) -> None:
+    def _register_injected_answer_updates(
+        self,
+        agent_id: str,
+        source_agent_ids: list[str],
+        seen_counts: dict[str, int] | None = None,
+    ) -> None:
         """Apply post-injection state updates (delegates to PeerAnswerVisibilityTracker)."""
         self._peer_answer_visibility_tracker.register_injected_answer_updates(
             agent_id,
             source_agent_ids,
+            seen_counts=seen_counts,
         )
+
+    def _capture_answer_revision_counts(self, source_agent_ids: list[str]) -> dict[str, int]:
+        """Snapshot per-source answer revision counts at injection-selection time (R1).
+
+        Capturing the counts before the snapshot-copy ``await`` lets
+        ``_register_injected_answer_updates`` mark the agent seen up to exactly
+        what it was shown, even if a peer publishes a new revision during the await.
+        """
+        return {source_id: self._get_agent_answer_revision_count(source_id) for source_id in source_agent_ids}
+
+    def _consume_pending_subagent_results(self, agent_id: str, consumed_subagent_ids: set[str]) -> None:
+        """Remove only delivered subagent results, preserving concurrent appends (R2/R3).
+
+        Delegates to SubagentLifecycleCoordinator.
+        """
+        self._subagent_lifecycle_coordinator.consume_pending_subagent_results(
+            agent_id,
+            consumed_subagent_ids,
+        )
+
+    async def _build_midstream_injection(self, agent_id: str, answers: dict[str, str], *, native: bool) -> str | None:
+        """Unified mid-stream peer-answer injection callback (A1).
+
+        Delegates to MidStreamInjectionHookInstaller. Both the GeneralHookManager
+        and native hook paths route their injection callback through here, so the
+        two backend paths can no longer drift.
+        """
+        return await self._midstream_injection_hook_installer.build_midstream_injection(
+            agent_id,
+            answers,
+            native=native,
+        )
+
+    def _attach_changedoc_to_latest_answer(self, agent_id: str, agent: Any) -> None:
+        """Attach the workspace changedoc to the agent's latest recorded answer (D3).
+
+        This is non-essential post-record enrichment that runs AFTER
+        ``add_agent_answer`` has already persisted the answer. Any failure (e.g.
+        filesystem error reading the changedoc) is logged and swallowed so a
+        bookkeeping bug cannot mark a valid-answer agent as killed.
+        """
+        try:
+            if not (self._is_changedoc_enabled() and agent and agent.backend.filesystem_manager):
+                return
+            from massgen.changedoc import read_changedoc_from_workspace
+
+            ws_path = agent.backend.filesystem_manager.cwd
+            if not ws_path:
+                return
+            changedoc_content = read_changedoc_from_workspace(Path(ws_path))
+            if not changedoc_content:
+                return
+            answers_list = self.coordination_tracker.answers_by_agent.get(agent_id, [])
+            if not answers_list:
+                return
+            label = answers_list[-1].label
+            # Replace [SELF] placeholder with real answer label
+            changedoc_content = changedoc_content.replace("[SELF]", label)
+            answers_list[-1].changedoc = changedoc_content
+            logger.info(
+                "[Orchestrator] Attached changedoc (%d chars) to %s",
+                len(changedoc_content),
+                answers_list[-1].label,
+            )
+        except Exception:
+            logger.warning(
+                "[Orchestrator] Failed to attach changedoc for %s (answer preserved)",
+                agent_id,
+                exc_info=True,
+            )
+
+    def _record_round_isolation_degraded(self, agent_id: str, error: BaseException) -> None:
+        """Record + surface that per-round worktree isolation failed for an agent (D2).
+
+        Sets observable state on the agent's AgentState (instead of swallowing the
+        failure into a single log line) and, when an event emitter is available,
+        emits a visible signal. The agent continues in its base workspace.
+        """
+        error_text = f"{type(error).__name__}: {error}"
+        state = self.agent_states.get(agent_id)
+        if state is not None:
+            state.round_isolation_degraded = True
+            state.round_isolation_error = error_text
+        logger.warning(
+            "[Orchestrator] Per-round worktree isolation FAILED for %s — continuing in base " "workspace without per-round branch isolation: %s",
+            agent_id,
+            error_text,
+        )
+        try:
+            emitter = get_event_emitter()
+            if emitter is not None and hasattr(emitter, "emit_status"):
+                emitter.emit_status(
+                    message=f"round isolation degraded: {error_text}",
+                    level="warning",
+                    agent_id=agent_id,
+                )
+        except Exception:
+            logger.debug("[Orchestrator] Unable to emit round-isolation degraded status", exc_info=True)
 
     def _check_fairness_answer_lead_cap(self, agent_id: str) -> tuple[bool, str | None]:
         """Enforce max lead in answer revisions (delegates to FairnessGate)."""
@@ -6080,7 +5414,11 @@ class Orchestrator(ChatAgent):
 
             # Re-write SUBAGENT.md dirs and MCP config JSON files each round so
             # the lazy scanner / deferred loader in the MCP server always finds
-            # them — workspace clears between rounds can remove .massgen/.
+            # them. NOTE (B5, 2026-06-04): the original "workspace clears remove
+            # .massgen/" rationale is now stale — clear_workspace() is disabled
+            # above and preserves .massgen/ regardless. The rewrite is kept (not
+            # guarded) pending verification that it is per-round idempotent for
+            # all backends; the cost is a few ms over ~7 subagent configs.
             if hasattr(self.config, "coordination_config") and getattr(self.config.coordination_config, "enable_subagents", False):
                 workspace_root = agent.backend.filesystem_manager.get_workspace_root()
                 self._write_subagent_type_dirs(workspace_root)
@@ -6214,7 +5552,12 @@ class Orchestrator(ChatAgent):
                         f"[Orchestrator] Created per-round worktree for {agent_id}: {round_worktree_paths}",
                     )
             except Exception as e:
-                logger.warning(f"[Orchestrator] Failed to create per-round worktree for {agent_id}: {e}")
+                # D2: per-round worktree isolation failed. The agent keeps its own
+                # base workspace (agents always have separate cwds), so we degrade
+                # gracefully rather than aborting the round on a transient git error
+                # — but we now RECORD the degradation on AgentState and emit a
+                # visible signal instead of only writing a log line.
+                self._record_round_isolation_degraded(agent_id, e)
                 round_worktree_paths = None
 
         # Track outcome for span attributes (set in finally block)

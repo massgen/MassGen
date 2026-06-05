@@ -14,6 +14,7 @@ The manager is backend-agnostic and works with any backend that has filesystem
 MCP tools configured.
 """
 
+import asyncio
 import json
 import os
 import shutil
@@ -30,6 +31,7 @@ from . import _workspace_tools_server as wc_module
 from ._base import Permission
 from ._constants import FRAMEWORK_MCPS
 from ._path_permission_manager import PathPermissionManager
+from ._snapshot_version_store import SnapshotVersionStore
 
 
 def _remove_readonly(func, path, _exc_unused):
@@ -1957,30 +1959,39 @@ class FilesystemManager:
                 elif not workspace_has_content and snapshot_storage_has_content:
                     logger.info(f"[FilesystemManager] Skipping snapshot_storage update - workspace is empty but snapshot_storage has content ({self.snapshot_storage})")
                 else:
-                    # Normal case: overwrite with current workspace
-                    if self.snapshot_storage.exists():
-                        _safe_rmtree(self.snapshot_storage)
-                    self.snapshot_storage.mkdir(parents=True, exist_ok=True)
+                    # Normal case: publish the current workspace as a new
+                    # IMMUTABLE snapshot version and atomically repoint
+                    # <base>/<agent_id> at it. A peer copying the previous version
+                    # keeps a consistent, never-deleted-underneath view -- this is
+                    # the B1 race fix (see SnapshotVersionStore). The old in-place
+                    # rmtree+rebuild raced the offloaded peer-context copytree.
+                    items_copied = {"n": 0}
 
-                    items_copied = 0
-                    for item in source_path.iterdir():
-                        if item.is_symlink():
-                            logger.debug(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
-                            continue
-                        if item.is_file():
-                            shutil.copy2(item, self.snapshot_storage / item.name)
-                        elif item.is_dir():
-                            # Use symlinks=True to copy symlinks as symlinks, not follow them
-                            # Use ignore_dangling_symlinks=True to handle broken symlinks in subdirectories (e.g., from subagent workspaces)
-                            shutil.copytree(
-                                item,
-                                self.snapshot_storage / item.name,
-                                symlinks=True,
-                                ignore_dangling_symlinks=True,
-                            )
-                        items_copied += 1
+                    def _populate_snapshot_version(version_dir: Path) -> None:
+                        for item in source_path.iterdir():
+                            if item.is_symlink():
+                                logger.debug(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
+                                continue
+                            if item.is_file():
+                                shutil.copy2(item, version_dir / item.name)
+                            elif item.is_dir():
+                                # Use symlinks=True to copy symlinks as symlinks, not follow them
+                                # Use ignore_dangling_symlinks=True to handle broken symlinks in subdirectories (e.g., from subagent workspaces)
+                                shutil.copytree(
+                                    item,
+                                    version_dir / item.name,
+                                    symlinks=True,
+                                    ignore_dangling_symlinks=True,
+                                )
+                            items_copied["n"] += 1
 
-                    logger.info(f"[FilesystemManager] Saved snapshot with {items_copied} items to {self.snapshot_storage}")
+                    # Key on the snapshot_storage basename (== agent_id in
+                    # production, where snapshot_storage is <base>/<agent_id>) so
+                    # the published symlink lands exactly at self.snapshot_storage.
+                    store = SnapshotVersionStore.for_base(self.snapshot_storage.parent)
+                    store.publish_version(self.snapshot_storage.name, _populate_snapshot_version)
+
+                    logger.info(f"[FilesystemManager] Saved snapshot with {items_copied['n']} items to {self.snapshot_storage}")
 
             # --- 2. Save to log directories ---
             log_session_dir = get_log_session_dir()
@@ -2350,7 +2361,28 @@ class FilesystemManager:
         Returns:
             Path to the temporary workspace with restored snapshots
 
-        TODO: reimplement without 'shutil' and 'os' operations for true async
+        B1: the blocking filesystem work (rmtree/copytree/scrub) is offloaded to a
+        worker thread via ``asyncio.to_thread`` so it does not stall the
+        orchestrator event loop. While one agent's snapshots are copied, the other
+        agents' streams keep being consumed. Each agent owns a distinct
+        ``agent_temporary_workspace`` directory, so concurrent offloaded copies
+        write to disjoint paths — there is no shared-state race.
+        """
+        if not self.agent_temporary_workspace:
+            return None
+
+        return await asyncio.to_thread(
+            self._copy_snapshots_to_temp_workspace_sync,
+            all_snapshots,
+            agent_mapping,
+        )
+
+    def _copy_snapshots_to_temp_workspace_sync(self, all_snapshots: dict[str, Path], agent_mapping: dict[str, str]) -> Path | None:
+        """Synchronous body of :meth:`copy_snapshots_to_temp_workspace`.
+
+        Runs on a worker thread (see that method). Each agent's
+        ``agent_temporary_workspace`` is distinct, so concurrent invocations on
+        different FilesystemManager instances touch disjoint directories.
         """
         if not self.agent_temporary_workspace:
             return None

@@ -7,7 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.94] - 2026-06-05
+
+### Theme: Parallelism Hardening (Engineering Health)
+
+Strengthen the orchestrator's parallel execution: move blocking snapshot work off the event loop so agents keep streaming concurrently, close the latent concurrency races that the previously-serialized copy had kept hidden, and finish the last refactor blocker. No per-backend functionality changes (parity principle). All items landed under TDD (tests written first, confirmed red, then green) with cost-free simulation (mock backends / real collaborator code, no LLM calls).
+
+### Changed
+- **Immutable, versioned snapshot storage**: each agent's snapshot path `<base>/<agent_id>` is now a symlink to an immutable version directory under `<base>/.versions/<agent_id>/v<N>`. `save_snapshot` (and the interrupted-turn partial save) publish a fresh version and atomically repoint the symlink rather than rewriting in place; the peer-context copy `acquire`s (refcounts) the current version for the duration of its offloaded copy. The symlink is transparent to all other readers, so the on-disk layout consumers see is unchanged. Coordinated by the new `SnapshotVersionStore` (`massgen/filesystem_manager/_snapshot_version_store.py`). On platforms without symlink support it falls back to a direct copy.
+- **Snapshot copy moved off the event loop (B1)**: `FilesystemManager.copy_snapshots_to_temp_workspace` now runs its blocking `rmtree`/`copytree`/scrub on a worker thread via `asyncio.to_thread`, so one agent's snapshot copy no longer stalls every other agent's streaming.
+- **Unified mid-stream injection (A1)**: the two ~150-line `get_injection_content` closures collapsed into a single `MidStreamInjectionHookInstaller.build_midstream_injection(..., native=)`; both hook-setup paths delegate, preserving the `update_context → refresh_checklist` side-effect order for both paths. The triplicated background-wait interrupt provider was likewise consolidated into one `_install_wait_interrupt_provider`.
+
+### Fixed
+- **Snapshot read-during-write race (B1 hardening)**: offloading the snapshot copy (above) removed the implicit event-loop serialization that kept a peer's `copytree` from overlapping an owner's in-place `rmtree`+rebuild of the same directory, which could surface `FileNotFoundError` or a torn snapshot. The versioned-snapshot scheme makes the read source immutable for the copy's duration, eliminating the race (including a concurrent-publisher GC edge case).
+- **R1 — lost peer-answer revision**: the mid-stream injection path marked a peer "seen" by re-reading the live revision count after a yielding `await`, dropping a revision appended during the window. Revision counts captured at selection time are now threaded through `mark_seen_answer_revisions` / `register_injected_answer_updates`.
+- **R2/R3 — lost background-subagent result**: a blind `pop(agent_id)` after the injection `await` discarded results appended during the window; consumption now removes only the consumed subagent ids.
+- **R4 — leaked trace tasks on cleanup**: detached background trace-analyzer tasks are now cancelled before the pending-result flush.
+- **R5 — cancel-without-await teardown**: `cancel_all_subagents` now awaits the cancellations so each task runs its `CancelledError` handler against the live registry before it is cleared.
+- **D2 — worktree-isolation degradation never surfaced**: `_record_round_isolation_degraded` called `emit_status(status=…)`, which is not a valid parameter, so the `TypeError` was silently swallowed and the visible signal never fired; it now calls `emit_status(message=…, level="warning", agent_id=…)`.
+- **D3 — changedoc enrichment made non-fatal** so a post-record failure cannot kill a valid-answer agent.
+- **Interrupted-turn save over a published snapshot**: the partial save did `shutil.rmtree` on the (now symlinked) snapshot path, raising and silently dropping the snapshot; it now publishes a new version through the store.
+
+### Tests
+- New race/regression suites: `test_concurrency_race_fixes.py` (R1–R5, D2/D3), `test_snapshot_version_store.py` and `test_snapshot_versioned_save.py` (versioned snapshots incl. concurrent-publish-during-read and concurrent-publisher GC), `test_snapshot_copy_offload.py` (off-loop copy), `test_midstream_injection_unified.py` (cross-path effect-order equality), and `test_wait_interrupt_provider.py` (consolidated interrupt-provider contract).
+
 ## Recent Releases
+
+**v0.1.94 (June 5, 2026)** - Parallelism Hardening (Engineering Health)
+Strengthens the orchestrator's parallel execution: moves the snapshot copy off the event loop so agents keep streaming concurrently — backed by immutable versioned snapshots that keep the off-loop copy safe — and closes latent concurrency races (lost peer-answer revisions, lost background-subagent results, leaked trace tasks, cancel-without-await teardown). Also unifies the mid-stream injection paths and surfaces worktree-isolation degradation. No per-backend functionality changes.
 
 **v0.1.93 (June 3, 2026)** - CLI Package Decomposition & Pydantic Config Migration
 Splits the monolithic `cli.py` into a focused `massgen/cli/` package, migrates the configuration classes to pydantic dataclasses with `Literal`-typed modes validated at construction, removes ~8.7k lines of dead legacy code, and hardens the test-signal and type-checking tooling (coverage gate, no-assert guard, `uv.lock` enforcement, and an incremental mypy ratchet). Internal-quality release with no runtime behavior changes.

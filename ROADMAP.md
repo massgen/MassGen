@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.93
+**Current Version:** v0.1.94
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** June 3, 2026
+**Last Updated:** June 5, 2026
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -42,9 +42,26 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.94** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.93 ([#959](https://github.com/massgen/MassGen/issues/959)) |
+| **v0.1.95** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.94 ([#959](https://github.com/massgen/MassGen/issues/959)) |
 
 *All releases ship on MWF @ 9am PT when ready*
+
+---
+
+## ✅ v0.1.94 - Parallelism Hardening (Engineering Health) (Completed)
+
+**Released:** June 5, 2026
+
+### Features
+- **Snapshot Copy Off the Event Loop**: `FilesystemManager.copy_snapshots_to_temp_workspace` offloads its blocking `rmtree`/`copytree`/scrub to a worker thread via `asyncio.to_thread`, so one agent's snapshot copy no longer serializes every other agent's streaming
+- **Immutable, Versioned Snapshots**: snapshots publish to `<base>/.versions/<id>/v<N>` with an atomically-repointed symlink; readers `acquire`/refcount the current version for the duration of their copy (new `SnapshotVersionStore`), eliminating the read-during-write race the off-loop copy would otherwise expose
+- **Concurrency Correctness**: fixed lost peer-answer revisions (R1), lost background-subagent results (R2/R3), leaked background trace tasks on cleanup (R4), and a cancel-without-await teardown (R5)
+- **Worktree-Isolation Degradation Surfaced (D2)**: an invalid `emit_status(status=…)` kwarg had its `TypeError` swallowed, silencing the signal entirely
+- **Unified Mid-Stream Injection (A1)**: the two ~150-line per-backend `get_injection_content` closures collapsed into one `build_midstream_injection(..., native=)`; the background-wait interrupt provider was deduplicated, removing backend-parity drift
+
+### Notes
+- Engineering-health release: no per-backend functionality changes (parity principle); all items landed under TDD with cost-free simulation.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.95.
 
 ---
 
