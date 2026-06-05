@@ -36,6 +36,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from massgen.filesystem_manager._snapshot_version_store import SnapshotVersionStore
 from massgen.logger_config import get_log_session_dir, logger
 
 if TYPE_CHECKING:
@@ -157,12 +158,23 @@ class SnapshotManager:
         agent_mapping = orch.coordination_tracker.get_reverse_agent_mapping()
 
         all_snapshots = {}
+        # Logical (symlink) path per source, kept for stale-path rewriting even
+        # though the copy reads from the pinned concrete version.
+        logical_paths: dict[str, Path] = {}
+        # Pinned immutable versions to release after the copy completes.
+        version_store = None
+        pinned: list[Path] = []
         if orch._snapshot_storage:
             snapshot_base = Path(orch._snapshot_storage)
+            version_store = SnapshotVersionStore.for_base(snapshot_base)
             for source_agent_id in orch.agents.keys():
-                source_snapshot = snapshot_base / source_agent_id
-                if source_snapshot.exists() and source_snapshot.is_dir():
-                    all_snapshots[source_agent_id] = source_snapshot
+                # Pin the current immutable version so a concurrent peer
+                # save_snapshot (republish) cannot delete it mid-copy (B1 fix).
+                concrete = version_store.acquire(source_agent_id)
+                if concrete is not None and concrete.is_dir():
+                    all_snapshots[source_agent_id] = concrete
+                    logical_paths[source_agent_id] = snapshot_base / source_agent_id
+                    pinned.append(concrete)
 
         if orch._step_mode and orch._step_mode.enabled and orch._step_inputs:
             for va_id, va_state in orch._step_inputs.virtual_agents.items():
@@ -171,26 +183,36 @@ class SnapshotManager:
                     if va_ws.exists() and va_ws.is_dir():
                         all_snapshots[va_id] = va_ws
 
-        workspace_path = await agent.backend.filesystem_manager.copy_snapshots_to_temp_workspace(
-            all_snapshots,
-            agent_mapping,
-        )
+        try:
+            workspace_path = await agent.backend.filesystem_manager.copy_snapshots_to_temp_workspace(
+                all_snapshots,
+                agent_mapping,
+            )
 
-        if workspace_path:
-            from massgen.filesystem_manager import replace_stale_paths_in_workspace
+            if workspace_path:
+                from massgen.filesystem_manager import replace_stale_paths_in_workspace
 
-            for source_agent_id, snapshot_path in all_snapshots.items():
-                anon_id = agent_mapping.get(source_agent_id, source_agent_id)
-                dest_dir = workspace_path / anon_id
-                if not dest_dir.exists():
-                    continue
-                replacements: dict[str, str] = {str(snapshot_path): str(dest_dir)}
-                source_agent = orch.agents.get(source_agent_id)
-                if source_agent and source_agent.backend.filesystem_manager:
-                    fm = source_agent.backend.filesystem_manager
-                    if fm.cwd:
-                        replacements[str(fm.cwd)] = str(dest_dir)
-                replace_stale_paths_in_workspace(dest_dir, replacements)
+                for source_agent_id, snapshot_path in all_snapshots.items():
+                    anon_id = agent_mapping.get(source_agent_id, source_agent_id)
+                    dest_dir = workspace_path / anon_id
+                    if not dest_dir.exists():
+                        continue
+                    # Rewrite both the concrete version path AND the logical
+                    # symlink path, since either may be embedded in copied files.
+                    replacements: dict[str, str] = {str(snapshot_path): str(dest_dir)}
+                    logical = logical_paths.get(source_agent_id)
+                    if logical is not None and str(logical) != str(snapshot_path):
+                        replacements[str(logical)] = str(dest_dir)
+                    source_agent = orch.agents.get(source_agent_id)
+                    if source_agent and source_agent.backend.filesystem_manager:
+                        fm = source_agent.backend.filesystem_manager
+                        if fm.cwd:
+                            replacements[str(fm.cwd)] = str(dest_dir)
+                    replace_stale_paths_in_workspace(dest_dir, replacements)
+        finally:
+            if version_store is not None:
+                for concrete in pinned:
+                    version_store.release(concrete)
 
         return str(workspace_path) if workspace_path else None
 
@@ -529,13 +551,24 @@ class SnapshotManager:
                     f"[Orchestrator] Preserving existing snapshot for {agent_id} during interrupted turn: " f"{snapshot_storage}",
                 )
             elif workspace_has_content:
-                copied = orch._copy_workspace_contents(
-                    workspace_path,
-                    snapshot_storage,
-                    replace_destination=True,
-                )
+                # Publish a fresh IMMUTABLE version rather than rmtree+rebuild the
+                # public path: under the versioned-snapshot scheme that path is a
+                # symlink, and shutil.rmtree(symlink) raises -- which would have
+                # silently dropped the interrupted-turn snapshot. See
+                # SnapshotVersionStore (B1 race fix).
+                store = SnapshotVersionStore.for_base(Path(snapshot_storage).parent)
+                copied_count = {"n": 0}
+
+                def _populate_interrupted(version_dir: Path, _src=workspace_path) -> None:
+                    copied_count["n"] = orch._copy_workspace_contents(
+                        _src,
+                        version_dir,
+                        replace_destination=False,
+                    )
+
+                store.publish_version(Path(snapshot_storage).name, _populate_interrupted)
                 logger.info(
-                    f"[Orchestrator] Saved interrupted-turn workspace snapshot for {agent_id} to " f"{snapshot_storage} ({copied} items)",
+                    f"[Orchestrator] Saved interrupted-turn workspace snapshot for {agent_id} to " f"{snapshot_storage} ({copied_count['n']} items)",
                 )
 
         if log_session_dir:

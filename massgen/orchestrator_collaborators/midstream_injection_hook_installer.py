@@ -158,6 +158,43 @@ class MidStreamInjectionHookInstaller:
             logger.debug(f"[Orchestrator] Could not compute plan progress: {e}")
             return None
 
+    def _install_wait_interrupt_provider(self, agent: Any, agent_id: str) -> None:
+        """Register the background-wait interrupt provider on the backend.
+
+        Shared by every hook-setup path (GeneralHookManager, Codex MCP, native)
+        so the cancellation / runtime-fallback contract cannot drift across
+        backends. No-op when the backend does not support the hook.
+        """
+        orch = self._orchestrator
+        if not hasattr(agent.backend, "set_background_wait_interrupt_provider"):
+            return
+
+        async def _wait_interrupt_provider(
+            requested_agent_id: str,
+            *,
+            _agent_id: str = agent_id,
+        ) -> dict[str, Any] | None:
+            target_agent_id = requested_agent_id or _agent_id
+            if hasattr(orch, "cancellation_manager") and orch.cancellation_manager and orch.cancellation_manager.is_cancelled:
+                return {
+                    "interrupt_reason": "turn_cancelled",
+                    "injected_content": None,
+                }
+
+            runtime_sections = await orch._collect_no_hook_runtime_fallback_sections(
+                target_agent_id,
+            )
+            if not runtime_sections:
+                return None
+            return {
+                "interrupt_reason": "runtime_injection_available",
+                "injected_content": "\n".join(runtime_sections),
+            }
+
+        agent.backend.set_background_wait_interrupt_provider(
+            _wait_interrupt_provider,
+        )
+
     def setup_hook_manager_for_agent(
         self,
         agent_id: str,
@@ -283,33 +320,7 @@ class MidStreamInjectionHookInstaller:
 
         # Set manager on backend
         agent.backend.set_general_hook_manager(manager)
-        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
-
-            async def _wait_interrupt_provider(
-                requested_agent_id: str,
-                *,
-                _agent_id: str = agent_id,
-            ) -> dict[str, Any] | None:
-                target_agent_id = requested_agent_id or _agent_id
-                if hasattr(orch, "cancellation_manager") and orch.cancellation_manager and orch.cancellation_manager.is_cancelled:
-                    return {
-                        "interrupt_reason": "turn_cancelled",
-                        "injected_content": None,
-                    }
-
-                runtime_sections = await orch._collect_no_hook_runtime_fallback_sections(
-                    target_agent_id,
-                )
-                if not runtime_sections:
-                    return None
-                return {
-                    "interrupt_reason": "runtime_injection_available",
-                    "injected_content": "\n".join(runtime_sections),
-                }
-
-            agent.backend.set_background_wait_interrupt_provider(
-                _wait_interrupt_provider,
-            )
+        self._install_wait_interrupt_provider(agent, agent_id)
         logger.debug(
             f"[Orchestrator] Set up hook manager for {agent_id} with mid-stream and reminder hooks",
         )
@@ -340,33 +351,7 @@ class MidStreamInjectionHookInstaller:
         }
 
         # Set up the background wait interrupt provider (reuse existing pattern)
-        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
-
-            async def _wait_interrupt_provider(
-                requested_agent_id: str,
-                *,
-                _agent_id: str = agent_id,
-            ) -> dict[str, Any] | None:
-                target_agent_id = requested_agent_id or _agent_id
-                if hasattr(orch, "cancellation_manager") and orch.cancellation_manager and orch.cancellation_manager.is_cancelled:
-                    return {
-                        "interrupt_reason": "turn_cancelled",
-                        "injected_content": None,
-                    }
-
-                runtime_sections = await orch._collect_no_hook_runtime_fallback_sections(
-                    target_agent_id,
-                )
-                if not runtime_sections:
-                    return None
-                return {
-                    "interrupt_reason": "runtime_injection_available",
-                    "injected_content": "\n".join(runtime_sections),
-                }
-
-            agent.backend.set_background_wait_interrupt_provider(
-                _wait_interrupt_provider,
-            )
+        self._install_wait_interrupt_provider(agent, agent_id)
 
         logger.info(
             "[Orchestrator] Set up MCP server-level hook delivery for %s",
@@ -557,33 +542,7 @@ class MidStreamInjectionHookInstaller:
 
         # Set native hooks config on backend
         agent.backend.set_native_hooks_config(native_config)
-        if hasattr(agent.backend, "set_background_wait_interrupt_provider"):
-
-            async def _wait_interrupt_provider(
-                requested_agent_id: str,
-                *,
-                _agent_id: str = agent_id,
-            ) -> dict[str, Any] | None:
-                target_agent_id = requested_agent_id or _agent_id
-                if hasattr(orch, "cancellation_manager") and orch.cancellation_manager and orch.cancellation_manager.is_cancelled:
-                    return {
-                        "interrupt_reason": "turn_cancelled",
-                        "injected_content": None,
-                    }
-
-                runtime_sections = await orch._collect_no_hook_runtime_fallback_sections(
-                    target_agent_id,
-                )
-                if not runtime_sections:
-                    return None
-                return {
-                    "interrupt_reason": "runtime_injection_available",
-                    "injected_content": "\n".join(runtime_sections),
-                }
-
-            agent.backend.set_background_wait_interrupt_provider(
-                _wait_interrupt_provider,
-            )
+        self._install_wait_interrupt_provider(agent, agent_id)
         logger.info(
             f"[Orchestrator] Set up native hooks for {agent_id}: " f"PreToolUse={len(native_config.get('PreToolUse', []))}, " f"PostToolUse={len(native_config.get('PostToolUse', []))} hooks",
         )

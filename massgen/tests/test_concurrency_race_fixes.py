@@ -358,6 +358,34 @@ def test_d2_record_is_safe_for_unknown_agent(mock_orchestrator) -> None:
     orch._record_round_isolation_degraded("nonexistent", ValueError("boom"))
 
 
+def test_d2_emits_status_with_valid_signature(mock_orchestrator, monkeypatch) -> None:
+    """The degradation signal must reach the emitter via emit_status's real
+    contract (message=..., agent_id=...). A previous bug passed status=..., which
+    is not a parameter of EventEmitter.emit_status, so the call raised TypeError
+    that was silently swallowed -- the visible signal never fired.
+    """
+    import massgen.orchestrator as orch_mod
+
+    captured: dict[str, object] = {}
+
+    class _Emitter:
+        def emit_status(self, message, level="info", agent_id=None):
+            captured["message"] = message
+            captured["level"] = level
+            captured["agent_id"] = agent_id
+
+    orch = mock_orchestrator(num_agents=1)
+    monkeypatch.setattr(orch_mod, "get_event_emitter", lambda: _Emitter())
+
+    orch._record_round_isolation_degraded("agent_a", RuntimeError("git worktree add failed"))
+
+    # The emitter must have been called with a real message + agent_id and no
+    # bogus status kwarg (the _Emitter signature would TypeError on status=).
+    assert captured.get("agent_id") == "agent_a"
+    assert "round isolation degraded" in str(captured.get("message", ""))
+    assert "git worktree add failed" in str(captured.get("message", ""))
+
+
 # --------------------------------------------------------------------------- #
 # D3 — post-record changedoc enrichment must not kill a valid-answer agent
 # --------------------------------------------------------------------------- #

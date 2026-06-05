@@ -1,6 +1,6 @@
 # Next Version — Engineering Health Plan
 
-**Theme: "Real Parallelism"** — make the orchestrator's N-agents-in-parallel promise actually hold, fix the correctness races that the current (accidental) serialization masks, and finish the one remaining refactor blocker. No per-backend functionality changes (parity principle).
+**Theme: Parallelism Hardening** — strengthen the orchestrator's parallel execution: move blocking work off the event loop so agents keep streaming concurrently, close the latent concurrency races that the currently-serialized copy keeps hidden, and finish the one remaining refactor blocker. No per-backend functionality changes (parity principle).
 
 **Date:** 2026-06-04
 
@@ -18,9 +18,10 @@ stashed.
 | R2/R3 lost subagent result (blind pop) | ✅ done | same (R2 ×5) |
 | R4 leaked trace tasks on cleanup | ✅ done | same (R4 ×2) |
 | R5 cancel-without-await teardown | ✅ done | same (R5 ×1) |
-| D2 surface worktree-isolation degradation | ✅ done | same (D2 ×3) |
+| D2 surface worktree-isolation degradation | ✅ done + **emit bug fixed** | same (D2 ×3) + `test_d2_emits_status_with_valid_signature` |
 | D3 changedoc enrichment non-fatal | ✅ done (scoped to changedoc) | same (D3 ×2) |
-| B1 snapshot copy off the event loop | ✅ done | `test_snapshot_copy_offload.py` (×5) |
+| B1 snapshot copy off the event loop | ✅ done + **race hardened** | `test_snapshot_copy_offload.py` (×5) |
+| **B1-race shared-source fix** | ✅ **done** — a post-merge review caught that B1's `to_thread` offload removed the implicit event-loop serialization between the peer-context `copytree` (now on a worker thread) and `save_snapshot`'s in-place `rmtree`+rebuild of the **same** `<base>/<agent_id>` dir (the offload's "disjoint paths" safety claim only covered copy *destinations*, not the shared *source*). Fix: snapshots are now **immutable, versioned** — `save_snapshot` publishes `<base>/.versions/<agent_id>/v<N>` and atomically repoints the `<base>/<agent_id>` symlink; the peer-context reader `acquire`s (refcounts) the current version so a concurrent republish can't delete/mutate it mid-copy. See `SnapshotVersionStore`. | `test_snapshot_version_store.py` (×9, incl. concurrent-republish-during-read), `test_snapshot_versioned_save.py` (×3) |
 | C2 eager debug f-strings | ✅ done (loguru brace-style; NOT `isEnabledFor` — logger is loguru) | `test_answer_normalizer_debug_guard.py` (×3) |
 | E1 assertion-free context test | ✅ done (assertions verified vs real output) | `test_message_context_building.py` (×4) |
 | E2 assertion-free grok test | ✅ done (offline unit + live_api skips) | `test_grok_backend.py` |

@@ -4592,8 +4592,9 @@ class Orchestrator(ChatAgent):
             emitter = get_event_emitter()
             if emitter is not None and hasattr(emitter, "emit_status"):
                 emitter.emit_status(
+                    message=f"round isolation degraded: {error_text}",
+                    level="warning",
                     agent_id=agent_id,
-                    status=f"round isolation degraded: {error_text}",
                 )
         except Exception:
             logger.debug("[Orchestrator] Unable to emit round-isolation degraded status", exc_info=True)

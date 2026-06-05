@@ -44,12 +44,14 @@ This file contains:
 **Always follow this order:**
 
 1. **CHANGELOG.md** ⭐ START HERE
-2. **Sphinx Documentation** (docs/source/)
-3. **Config Documentation** (massgen/configs/README.md)
-4. **Case Studies** (docs/source/examples/case_studies/)
-5. **README.md**
-6. **README_PYPI.md** (auto-synced via pre-commit)
-7. **Roadmap** (ROADMAP.md)
+2. **Version bump** (`massgen/__init__.py` `__version__`)
+3. **Sphinx Documentation** (docs/source/)
+4. **Config Documentation** (massgen/configs/README.md)
+5. **Case Studies** (docs/source/examples/case_studies/)
+6. **README.md**
+7. **README_PYPI.md** (auto-synced via pre-commit)
+8. **Roadmap** (ROADMAP.md)
+9. **Announcements** (docs/announcements/) — current-release.md, github-release-vX.md, archive
 
 This order is critical - never skip ahead!
 
@@ -136,26 +138,49 @@ uv run python scripts/sync_readme_pypi.py
 - Update `ROADMAP_v0.1.X+1.md` for next release
 - Do NOT edit `docs/source/development/roadmap.rst` (auto-generated)
 
+### Phase 8: Announcements (`docs/announcements/`)
+
+**⚠️ Easy to miss — not auto-generated.** Each release rotates three things in `docs/announcements/`:
+
+1. **Archive the outgoing announcement**: copy the current `current-release.md` to `archive/v0.1.X-1.md` (the version it currently describes).
+   ```bash
+   cp docs/announcements/current-release.md docs/announcements/archive/v0.1.X-1.md
+   ```
+2. **Rewrite `current-release.md`** for the new version: update the title, Release Summary, Install version, release-notes link, "Suggested image" version, and the full LinkedIn announcement body (Key Improvements bullets). This is the long-form social/LinkedIn copy.
+3. **Replace the GitHub-release highlights file**: delete `github-release-v0.1.X-1.md` and create `github-release-v0.1.X.md` (the short, emoji-sectioned GitHub Releases body dated `(YYYY-MM-DD)`).
+   ```bash
+   git rm docs/announcements/github-release-v0.1.X-1.md
+   # then write docs/announcements/github-release-v0.1.X.md
+   ```
+
+`feature-highlights.md` and `README.md` in that directory are general (not per-version) — leave them unless the highlights changed.
+
+Use the just-archived previous version's files as templates so the structure/sections stay consistent. Keep `[TO BE ADDED AFTER POSTING]` placeholders for the X/LinkedIn links.
+
+> **Don't forget the version bump** (`massgen/__init__.py` `__version__ = "0.1.X"`) — `pyproject.toml` reads the version dynamically from there.
+
 ## Quick Validation Checklist
 
 **Must Update (every release):**
 1. ✅ CHANGELOG.md
-2. ✅ docs/source/index.rst (Recent Releases)
-3. ✅ docs/source/user_guide/ (if user-facing feature)
-4. ✅ README.md (Recent Achievements)
-5. ✅ massgen/configs/ (example configs)
-6. ✅ Case study
+2. ✅ `massgen/__init__.py` (`__version__` bump)
+3. ✅ docs/source/index.rst (Recent Releases)
+4. ✅ README.md (Recent Achievements + Latest Features + TOC anchors)
+5. ✅ ROADMAP.md (Current Version, completed section, table)
+6. ✅ docs/announcements/ (archive old, rewrite current-release.md, swap github-release-vX.md)
+7. ⚠️ docs/source/user_guide/ (if user-facing feature)
+8. ⚠️ massgen/configs/ (example configs, if any)
+9. ⚠️ Case study (skip for internal-quality/no-user-facing-feature releases)
 
 **Should Update (if applicable):**
-7. ⚠️ massgen/config_builder.py (if config params added)
-8. ⚠️ massgen/backend/capabilities.py (if backend changes)
-9. ✅ README_PYPI.md (auto-synced)
-10. ⚠️ ROADMAP.md
+10. ⚠️ massgen/config_builder.py (if config params added)
+11. ⚠️ massgen/backend/capabilities.py (if backend changes)
+12. ✅ README_PYPI.md (auto-synced from README.md via pre-commit)
 
 **Build & Verify:**
-11. 🔨 `cd docs && make html && make linkcheck`
-12. 🔨 Test new config files
-13. 🔨 Verify all links work
+13. 🔨 `cd docs && make html && make linkcheck`
+14. 🔨 Test new config files
+15. 🔨 Verify all links work
 
 See `docs/dev_notes/release_checklist.md` section "Quick Reference Checklist" for complete list.
 

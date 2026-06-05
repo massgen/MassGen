@@ -1,4 +1,4 @@
-# MassGen v0.1.93 Release Announcement
+# MassGen v0.1.94 Release Announcement (Parallelism Hardening)
 
 <!--
 This is the current release announcement. Copy this + feature-highlights.md to LinkedIn/X.
@@ -7,23 +7,23 @@ After posting, update the social links below.
 
 ## Release Summary
 
-We're excited to release MassGen v0.1.93 — CLI Package Decomposition & Pydantic Config Migration! 🚀 This internal-quality release keeps runtime behavior stable while tightening the layers developers touch most: the 12k-line CLI is now a focused `massgen/cli/` package, config dataclasses validate at construction time, provider-exclusion lists share one source of truth, dead legacy code is gone from the wheel, and CI/type-checking catches issues earlier.
+We're excited to release MassGen v0.1.94 — Parallelism Hardening (Engineering Health)! 🚀 This release strengthens the orchestrator's parallel execution: we moved the per-round snapshot copy off the event loop so agents keep streaming concurrently, backed it with an immutable, versioned snapshot store that keeps the off-loop copy safe, and closed several latent concurrency races. No per-backend functionality changes — pure parallelism correctness and reliability.
 
 ## Install
 
 ```bash
-pip install massgen==0.1.93
+pip install massgen==0.1.94
 ```
 
 ## Links
 
-- **Release notes:** https://github.com/massgen/MassGen/releases/tag/v0.1.93
+- **Release notes:** https://github.com/massgen/MassGen/releases/tag/v0.1.94
 - **X post:** [TO BE ADDED AFTER POSTING]
 - **LinkedIn post:** [TO BE ADDED AFTER POSTING]
 
 ## Posting Notes
 
-- **Suggested image:** Use a screenshot of the v0.1.93 release notes.
+- **Suggested image:** Use a screenshot of the v0.1.94 release notes.
 
 ---
 
@@ -33,41 +33,35 @@ Copy everything below this line, then append content from `feature-highlights.md
 
 ---
 
-We're excited to release MassGen v0.1.93 — CLI Package Decomposition & Pydantic Config Migration! 🚀 This internal-quality release keeps runtime behavior stable while tightening the layers developers touch most: the 12k-line CLI is now a focused `massgen/cli/` package, config dataclasses validate at construction time, provider-exclusion lists share one source of truth, dead legacy code is gone from the wheel, and CI/type-checking catches issues earlier.
+We're excited to release MassGen v0.1.94 — Parallelism Hardening (Engineering Health)! 🚀 This release strengthens the orchestrator's parallel execution: it moves blocking snapshot work off the event loop so agents keep streaming concurrently, backs it with immutable versioned snapshots that keep the off-loop copy safe, and closes latent concurrency races. No per-backend functionality changes.
 
 **Key Improvements:**
 
-🧩 **CLI Package Decomposition**:
-- `massgen/cli.py` was split into an 18-module `massgen/cli/` package
-- The facade keeps `from massgen.cli import ...` and `massgen.cli...` imports working
-- The Textual per-turn handler was extracted into a dependency-injected function
+⚡ **Snapshot copy off the event loop**:
+- The peer-context snapshot copy now runs its blocking `rmtree`/`copytree`/scrub on a worker thread via `asyncio.to_thread`
+- One agent's snapshot copy no longer stalls every other agent's streaming
 
-🛡️ **Pydantic Config Validation**:
-- Core config classes now validate field types on construction
-- Mode fields use `Literal` types in `massgen/config_modes.py`
-- `config_validator` derives valid mode sets from those typed definitions instead of maintaining drift-prone duplicates
+🔒 **Immutable, versioned snapshots**:
+- Each agent's snapshot path is now a symlink to an immutable `.versions/<id>/v<N>` directory
+- Writers publish a new version and atomically repoint the symlink; readers pin (refcount) the current version for the duration of their copy
+- Eliminates the read-during-write race the off-loop copy would otherwise expose — no `FileNotFoundError`, no torn snapshots
 
-🔧 **Correctness Fixes**:
-- Concurrent in-process Textual runs keep their own logging/snapshot session
-- `CoordinationConfig.from_dict()` now drops absent `None` values so field defaults apply
-- Response backend tool-argument parsing now logs malformed payloads instead of silently converting them to `{}`
+🧵 **Concurrency correctness fixes**:
+- Lost peer-answer revisions across the injection `await` window — fixed (revision counts captured at selection time)
+- Lost background-subagent results from a blind queue `pop` — fixed (consume only the consumed ids)
+- Leaked background trace tasks on cleanup, and a cancel-without-await teardown — fixed
+- Worktree-isolation degradation is now surfaced (a swallowed `TypeError` previously hid it)
 
-🧪 **Test Signal & Typing**:
-- Coverage config now points at the real package
-- No-assert pytest returns are treated as errors
-- CI enforces `uv.lock` with `uv sync --frozen`
-- An incremental mypy island runs as a blocking pre-commit/CI gate
-
-🧹 **Dead Code Removal**:
-- Removed unreferenced legacy `massgen/v1` and `massgen/prototype` code from the shipped wheel
+🧩 **Unified mid-stream injection**:
+- The two large per-backend injection closures collapsed into one shared implementation; the background-wait interrupt provider was likewise deduplicated, removing backend-parity drift
 
 **Install:**
 
 ```bash
-pip install massgen==0.1.93
+pip install massgen==0.1.94
 ```
 
-Release notes: https://github.com/massgen/MassGen/releases/tag/v0.1.93
+Release notes: https://github.com/massgen/MassGen/releases/tag/v0.1.94
 
 Feature highlights:
 
