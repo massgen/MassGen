@@ -43,6 +43,7 @@ This file contains:
 
 **Always follow this order:**
 
+0. **Fresh-branch bootstrap** (once, at branch creation) — version bump + rename `ROADMAP_v0.1.X.md` → `ROADMAP_v0.1.X+1.md` (see Phase 0)
 1. **CHANGELOG.md** ⭐ START HERE
 2. **Version bump** (`massgen/__init__.py` `__version__`)
 3. **Sphinx Documentation** (docs/source/)
@@ -56,6 +57,20 @@ This file contains:
 This order is critical - never skip ahead!
 
 ## Quick Reference Workflow
+
+### Phase 0: Fresh Release Branch Bootstrap (do this when the branch is created)
+
+**⚠️ Easy to miss — this happens once, at the *start* of a new `dev/v0.1.X` branch, not at doc-writing time.** When `dev/v0.1.X` is branched (right after the previous release merges in), a small bootstrap commit (`feat: v0.1.X`) sets the branch up:
+
+1. **Bump the version**: `massgen/__init__.py` `__version__ = "0.1.X"` (`pyproject.toml` reads it dynamically).
+2. **Roll the forward-looking roadmap file**: rename `ROADMAP_v0.1.X.md` → `ROADMAP_v0.1.X+1.md` and rewrite its content to plan the *next* release. This file always names the version *after* the one currently in development (the in-development version is tracked in the main `ROADMAP.md` sections). Update its title, "Overview", the deferred-feature "Deferred from …" range, and add the just-shipped version(s) to its "Related Tracks" list.
+
+```bash
+git mv ROADMAP_v0.1.X.md ROADMAP_v0.1.X+1.md
+# then edit __version__ and the renamed roadmap file
+```
+
+> If you arrive mid-branch and find `ROADMAP_v0.1.X.md` (matching the in-dev version) still present, or `__version__` still on the previous release, the bootstrap was skipped — do it now before the release docs.
 
 ### Phase 1: CHANGELOG.md (Required First Step)
 
@@ -162,6 +177,7 @@ Use the just-archived previous version's files as templates so the structure/sec
 ## Quick Validation Checklist
 
 **Must Update (every release):**
+0. ✅ Fresh-branch bootstrap done? (`__version__` bumped + `ROADMAP_v0.1.X.md` → `ROADMAP_v0.1.X+1.md` renamed — see Phase 0)
 1. ✅ CHANGELOG.md
 2. ✅ `massgen/__init__.py` (`__version__` bump)
 3. ✅ docs/source/index.rst (Recent Releases)
