@@ -151,6 +151,11 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         # Monotonic sequence for MCP-middleware hook payloads (parity with codex).
         self._hook_sequence = 0
 
+        # Mid-round interrupt-and-resume steering (kill + `agy --continue`).
+        self._enable_interrupt_resume = kwargs.get("enable_interrupt_resume", True)
+        self._interrupt_poll_seconds = float(kwargs.get("interrupt_poll_seconds", 2.0))
+        self._max_interrupts_per_turn = int(kwargs.get("max_interrupts_per_turn", 25))
+
         configured_mcp_servers = kwargs.get("mcp_servers", [])
         self.mcp_servers: list[dict[str, Any]] = list(configured_mcp_servers) if isinstance(configured_mcp_servers, list) else []
 
@@ -614,6 +619,13 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         """agy uses MCP server middleware for PostToolUse injection (parity with codex)."""
         return True
 
+    def supports_interrupt_resume(self) -> bool:
+        """agy can be killed mid-turn and resumed via ``agy --continue``,
+        preserving full conversation context (verified: --continue recalls
+        prior-turn context across a process kill). Used to deliver steering /
+        mid-round injection at ANY point in a long round."""
+        return getattr(self, "_enable_interrupt_resume", True)
+
     def get_hook_dir(self) -> Path:
         """Directory for hook IPC files — the workspace agy config dir.
 
@@ -678,8 +690,12 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         """
         return self._workspace_config_dir() / "antigravity-cli" / "agy.log"
 
-    def _build_exec_command(self, prompt: str) -> list[str]:
+    def _build_exec_command(self, prompt: str, resume: bool = False) -> list[str]:
         """Build the agy subprocess command for non-interactive print mode.
+
+        When ``resume=True``, adds ``--continue`` so agy resumes the most recent
+        conversation (verified: ``--continue`` recalls prior-turn context across a
+        process kill) — used for mid-round interrupt-and-resume steering.
 
         Always passes ``--gemini_dir <abs_path>`` so agy reads our workspace-local
         config (mcp_config.json, settings.json) instead of the user's global one.
@@ -721,6 +737,8 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             )
         if self.dangerously_skip_permissions:
             cmd.append("--dangerously-skip-permissions")
+        if resume:
+            cmd.append("--continue")
         cmd.extend(["-p", prompt])
         return cmd
 
@@ -1058,10 +1076,47 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         self,
         prompt: str,
     ) -> AsyncGenerator[StreamChunk]:
-        """Run agy as a subprocess, tailing transcript.jsonl for real-time events."""
-        cmd = self._build_exec_command(prompt)
+        """Run agy with mid-round interrupt-and-resume steering.
+
+        Wraps :meth:`_stream_agy_once`: when a run is interrupted by steering (the
+        watcher terminated agy and recorded it in ``steer_holder``), resume with
+        ``agy --continue`` and the steering text as the new prompt — so steering
+        lands at ANY point in a long round, not just when agy calls an MCP tool.
+        """
+        current_prompt = prompt
+        current_resume = False
+        interrupts = 0
+        while True:
+            steer_holder: dict[str, str | None] = {"content": None}
+            async for chunk in self._stream_agy_once(current_prompt, current_resume, steer_holder, interrupts):
+                yield chunk
+            if steer_holder["content"] is not None:
+                interrupts += 1
+                logger.info(
+                    f"Antigravity CLI: interrupt #{interrupts} — resuming session with steering ({len(steer_holder['content'])} chars)",
+                )
+                yield StreamChunk(type="content", content="\n[Steering delivered — resuming Antigravity session]\n")
+                current_prompt = steer_holder["content"]
+                current_resume = True
+                continue
+            return
+
+    async def _stream_agy_once(
+        self,
+        prompt: str,
+        resume: bool,
+        steer_holder: dict,
+        interrupts: int,
+    ) -> AsyncGenerator[StreamChunk]:
+        """Run agy as a subprocess once, tailing transcript.jsonl for real-time events.
+
+        A concurrent watcher polls the hook file the orchestrator writes pending
+        steering into; on content it terminates agy and records the steering in
+        ``steer_holder`` so :meth:`_stream_local` resumes with ``agy --continue``.
+        """
+        cmd = self._build_exec_command(prompt, resume=resume)
         env = self._build_subprocess_env()
-        logger.info("Running Antigravity CLI")
+        logger.info("Running Antigravity CLI" + (" (resume)" if resume else ""))
 
         brain_dir = self._workspace_config_dir() / "antigravity-cli" / "brain"
         pre_existing = self._existing_transcripts(brain_dir)
@@ -1115,8 +1170,29 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             finally:
                 await queue.put(_DONE)
 
+        # Steering watcher — poll the hook file; on content, terminate agy so the
+        # stream ends and :meth:`_stream_local` resumes with `agy --continue`.
+        watch_stop = asyncio.Event()
+
+        async def _watch(p: asyncio.subprocess.Process = proc) -> None:
+            while not watch_stop.is_set():
+                try:
+                    await asyncio.wait_for(watch_stop.wait(), timeout=self._interrupt_poll_seconds)
+                    return
+                except TimeoutError:
+                    pass
+                if not self.supports_interrupt_resume() or interrupts >= self._max_interrupts_per_turn:
+                    continue
+                steer = self.read_unconsumed_hook_content()
+                if steer:
+                    steer_holder["content"] = steer
+                    logger.info("Antigravity CLI: steering detected mid-turn — terminating to resume")
+                    await self._terminate_subprocess(p)
+                    return
+
         stdout_task = asyncio.create_task(_read_stdout())
         tail_task = asyncio.create_task(_tail())
+        watcher = asyncio.create_task(_watch())
 
         done_count = 0
         try:
@@ -1132,14 +1208,34 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             # propagate. Background reader tasks observe proc exit and finish
             # on their own.
             logger.info("Antigravity CLI: cancellation requested — terminating agy subprocess")
+            watch_stop.set()
+            watcher.cancel()
             await self._terminate_subprocess(proc)
             for task in (stdout_task, tail_task):
                 task.cancel()
             raise
         except Exception as exc:
             logger.error(f"Antigravity CLI streaming error: {exc}")
+            watch_stop.set()
+            watcher.cancel()
             await self._terminate_subprocess(proc)
             yield StreamChunk(type="error", error=str(exc))
+            return
+        finally:
+            watch_stop.set()
+            watcher.cancel()
+            try:
+                await watcher
+            except (asyncio.CancelledError, Exception):
+                pass
+
+        # Interrupted by steering → promote any work agy did (so pre-interrupt
+        # deliverables aren't lost), then end this run; _stream_local resumes.
+        if steer_holder["content"] is not None:
+            try:
+                self._promote_scratch_deliverables(pre_existing_scratch)
+            except Exception as exc:
+                logger.warning(f"Antigravity CLI: scratch promotion (pre-resume) failed: {exc}")
             return
 
         rc = proc.returncode

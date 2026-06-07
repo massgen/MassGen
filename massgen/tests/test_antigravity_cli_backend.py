@@ -1335,3 +1335,32 @@ class TestMcpServerHookPayloads:
         backend.write_post_tool_use_hook("x")
         backend.clear_hook_files()
         assert not (backend.get_hook_dir() / "hook_post_tool_use.json").exists()
+
+
+class TestInterruptResume:
+    """agy mid-round interrupt-and-resume steering (kill + `agy --continue`)."""
+
+    def test_supports_interrupt_resume_default_true(self, backend):
+        assert backend.supports_interrupt_resume() is True
+
+    def test_supports_interrupt_resume_can_be_disabled(self, tmp_path):
+        with patch.object(AntigravityCLIBackend, "_find_agy_cli", return_value="/fake/bin/agy"):
+            b = AntigravityCLIBackend(cwd=str(tmp_path), skip_health_check=True, enable_interrupt_resume=False)
+        assert b.supports_interrupt_resume() is False
+
+    def test_resume_command_adds_continue(self, backend):
+        cmd = backend._build_exec_command("steer me", resume=True)
+        assert "--continue" in cmd
+        # prompt still passed via -p after --continue
+        assert "-p" in cmd
+        assert "steer me" in cmd
+
+    def test_non_resume_command_omits_continue(self, backend):
+        cmd = backend._build_exec_command("hello", resume=False)
+        assert "--continue" not in cmd
+
+    def test_config_knobs(self, tmp_path):
+        with patch.object(AntigravityCLIBackend, "_find_agy_cli", return_value="/fake/bin/agy"):
+            b = AntigravityCLIBackend(cwd=str(tmp_path), skip_health_check=True, interrupt_poll_seconds=0.5, max_interrupts_per_turn=3)
+        assert b._interrupt_poll_seconds == 0.5
+        assert b._max_interrupts_per_turn == 3
