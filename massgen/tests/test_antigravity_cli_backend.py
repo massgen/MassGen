@@ -2,8 +2,8 @@
 
 The Antigravity CLI (`agy`, Google's successor to the Gemini CLI as of I/O 2026)
 is architecturally simpler than the Gemini CLI: plain text stdout, no
-stream-json events, no per-invocation --model flag. These tests pin the
-contract MassGen depends on.
+stream-json events. (agy 1.0.5+ does have a real --model flag, resolved from
+the configured model id.) These tests pin the contract MassGen depends on.
 
 Run with: uv run pytest massgen/tests/test_antigravity_cli_backend.py -v
 """
@@ -172,12 +172,117 @@ class TestCommandConstruction:
         assert Path(log_path).is_absolute()
         assert ".antigravity" in log_path
 
-    def test_command_does_not_pass_model_flag(self, backend):
-        """agy 1.0.0 has no --model flag; we must not emit one even when configured."""
-        backend.model = "gemini-3-flash-preview"
+    def test_command_passes_model_flag_for_known_alias(self, backend):
+        """agy 1.0.5+ has a real --model flag taking an exact `agy models` label.
+
+        A configured short id (e.g. ``gemini-3.5-flash``) must resolve to the
+        canonical agy label and be emitted as ``--model <label>``.
+        """
+        backend.model = "gemini-3.5-flash"
+        cmd = backend._build_exec_command("hello")
+        assert "--model" in cmd, f"--model flag missing from: {cmd}"
+        idx = cmd.index("--model")
+        assert cmd[idx + 1] == "Gemini 3.5 Flash (High)", cmd
+
+    def test_command_passes_model_flag_for_exact_label(self, backend):
+        """An already-canonical label is emitted verbatim (case-insensitive match)."""
+        backend.model = "Gemini 3.1 Pro (High)"
+        cmd = backend._build_exec_command("hello")
+        assert "--model" in cmd
+        assert cmd[cmd.index("--model") + 1] == "Gemini 3.1 Pro (High)"
+
+    def test_command_omits_model_flag_for_unresolvable_model(self, backend):
+        """An unrecognizable model id must NOT be passed (agy would reject it).
+
+        Falling back to agy's default is safer than emitting a bad --model that
+        makes the whole call fail.
+        """
+        backend.model = "totally-unknown-model-xyz"
         cmd = backend._build_exec_command("hello")
         assert "--model" not in cmd
-        assert "-m" not in cmd
+
+
+class TestModelResolution:
+    """Configured model ids map to exact `agy models` labels for --model."""
+
+    @pytest.mark.parametrize(
+        "configured,expected",
+        [
+            ("gemini-3.5-flash", "Gemini 3.5 Flash (High)"),
+            ("gemini-3.5-flash-low", "Gemini 3.5 Flash (Low)"),
+            ("gemini-3.5-flash-medium", "Gemini 3.5 Flash (Medium)"),
+            ("gemini-3.1-pro", "Gemini 3.1 Pro (High)"),
+            ("gemini-3.1-pro-low", "Gemini 3.1 Pro (Low)"),
+            ("claude-sonnet-4.6", "Claude Sonnet 4.6 (Thinking)"),
+            ("claude-opus-4.6", "Claude Opus 4.6 (Thinking)"),
+            ("gpt-oss-120b", "GPT-OSS 120B (Medium)"),
+            # Exact labels pass through (case-insensitive)
+            ("Gemini 3.5 Flash (High)", "Gemini 3.5 Flash (High)"),
+            ("gemini 3.5 flash (medium)", "Gemini 3.5 Flash (Medium)"),
+            # Default label resolves to itself
+            (AGY_DEFAULT_MODEL_LABEL, "Gemini 3.5 Flash (High)"),
+        ],
+    )
+    def test_resolve_known_models(self, configured, expected):
+        assert AntigravityCLIBackend._resolve_agy_model_label(configured) == expected
+
+    @pytest.mark.parametrize("bad", ["", None, "gpt-4o", "llama-3", "random"])
+    def test_resolve_unknown_returns_none(self, bad):
+        assert AntigravityCLIBackend._resolve_agy_model_label(bad) is None
+
+
+class TestScratchPromotion:
+    """agy may route write_to_file into its internal scratch dir (excluded from
+    snapshots). After each run we promote new scratch files into the workspace
+    root so deliverables stay visible — without clobbering files the model
+    already placed in the workspace."""
+
+    def _scratch_dir(self, backend):
+        return backend._workspace_config_dir() / "antigravity-cli" / "scratch"
+
+    def test_promote_copies_new_scratch_file_to_workspace(self, backend):
+        scratch = self._scratch_dir(backend)
+        scratch.mkdir(parents=True, exist_ok=True)
+        pre = backend._snapshot_scratch_files(scratch)
+        deliverable = scratch / "result.svg"
+        deliverable.write_text("<svg/>")
+        promoted = backend._promote_scratch_deliverables(pre)
+        assert "result.svg" in promoted
+        dest = Path(backend.cwd).resolve() / "result.svg"
+        assert dest.exists() and dest.read_text() == "<svg/>"
+
+    def test_promote_preserves_subdir_structure(self, backend):
+        scratch = self._scratch_dir(backend)
+        (scratch / "out").mkdir(parents=True, exist_ok=True)
+        pre = backend._snapshot_scratch_files(scratch)
+        (scratch / "out" / "a.txt").write_text("x")
+        promoted = backend._promote_scratch_deliverables(pre)
+        assert any(p.replace("\\", "/") == "out/a.txt" for p in promoted)
+        assert (Path(backend.cwd).resolve() / "out" / "a.txt").read_text() == "x"
+
+    def test_promote_does_not_clobber_existing_workspace_file(self, backend):
+        scratch = self._scratch_dir(backend)
+        scratch.mkdir(parents=True, exist_ok=True)
+        pre = backend._snapshot_scratch_files(scratch)
+        (scratch / "result.svg").write_text("FROM_SCRATCH")
+        ws_file = Path(backend.cwd).resolve() / "result.svg"
+        ws_file.write_text("MODEL_PLACED")
+        promoted = backend._promote_scratch_deliverables(pre)
+        assert "result.svg" not in promoted
+        assert ws_file.read_text() == "MODEL_PLACED"
+
+    def test_promote_ignores_preexisting_scratch_files(self, backend):
+        scratch = self._scratch_dir(backend)
+        scratch.mkdir(parents=True, exist_ok=True)
+        (scratch / "old.txt").write_text("old")
+        pre = backend._snapshot_scratch_files(scratch)
+        promoted = backend._promote_scratch_deliverables(pre)
+        assert promoted == []
+        assert not (Path(backend.cwd).resolve() / "old.txt").exists()
+
+    def test_promote_noop_when_scratch_missing(self, backend):
+        # No scratch dir at all → empty result, no crash.
+        assert backend._promote_scratch_deliverables({}) == []
 
 
 class TestMCPConfigEmission:

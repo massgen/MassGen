@@ -12,9 +12,11 @@ Compared to GeminiCLIBackend this wrapper is intentionally minimal:
   ``<cwd>/.antigravity/antigravity-cli/brain/<uuid>/.system_generated/logs/``
   concurrently with the subprocess to get real-time thinking + tool events,
   and forward stdout lines as content chunks on process exit.
-- No ``--model``: the model is selected server-side per the user's
-  Antigravity tier (Gemini 3.5 Flash by default). A ``model`` config value
-  is accepted for logging/registry consistency but ignored at invocation.
+- ``--model``: agy 1.0.5+ exposes a real ``--model`` flag taking an exact
+  label from ``agy models`` (e.g. ``"Gemini 3.5 Flash (High)"``). The
+  configured ``model`` is resolved to such a label (exact or via alias) and
+  passed through; unrecognizable ids fall back to agy's default rather than
+  failing the call. See ``AGY_MODEL_LABELS`` / ``AGY_MODEL_ALIASES``.
 - ``--conversation <id>`` replaces ``--resume <id>``.
 - ``--dangerously-skip-permissions`` replaces ``--approval-mode yolo``.
 - Per-project isolation via the hidden ``--gemini_dir <abs_path>`` flag (not
@@ -49,6 +51,36 @@ from .native_tool_mixin import NativeToolBackendMixin
 AGY_DEFAULT_MODEL_LABEL = "Gemini 3.5 Flash (High)"
 AGY_AGENT_ID_LITERAL = "antigravity_cli"
 AGY_MCP_CONFIG_PATH = Path.home() / ".gemini" / "config" / "mcp_config.json"
+
+# Exact model labels accepted by `agy --model` (source of truth: `agy models`).
+# agy 1.0.5+ exposes a real ``--model`` flag that takes one of these strings
+# verbatim; anything else is rejected. Keep in sync with `agy models` output.
+AGY_MODEL_LABELS: tuple[str, ...] = (
+    "Gemini 3.5 Flash (Low)",
+    "Gemini 3.5 Flash (Medium)",
+    "Gemini 3.5 Flash (High)",
+    "Gemini 3.1 Pro (Low)",
+    "Gemini 3.1 Pro (High)",
+    "Claude Sonnet 4.6 (Thinking)",
+    "Claude Opus 4.6 (Thinking)",
+    "GPT-OSS 120B (Medium)",
+)
+
+# Deterministic alias map: short config ids → canonical agy label. This is an
+# explicit id-normalization table (registry-style), NOT heuristic similarity
+# matching. A bare family id maps to the highest-effort variant by default.
+AGY_MODEL_ALIASES: dict[str, str] = {
+    "gemini-3.5-flash": "Gemini 3.5 Flash (High)",
+    "gemini-3.5-flash-high": "Gemini 3.5 Flash (High)",
+    "gemini-3.5-flash-medium": "Gemini 3.5 Flash (Medium)",
+    "gemini-3.5-flash-low": "Gemini 3.5 Flash (Low)",
+    "gemini-3.1-pro": "Gemini 3.1 Pro (High)",
+    "gemini-3.1-pro-high": "Gemini 3.1 Pro (High)",
+    "gemini-3.1-pro-low": "Gemini 3.1 Pro (Low)",
+    "claude-sonnet-4.6": "Claude Sonnet 4.6 (Thinking)",
+    "claude-opus-4.6": "Claude Opus 4.6 (Thinking)",
+    "gpt-oss-120b": "GPT-OSS 120B (Medium)",
+}
 
 # Mirrors gemini_cli.py:48-52 so workflow-mode inference behaves identically
 # across both Google-CLI backends. The orchestrator embeds prior-round
@@ -97,12 +129,13 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         )
         self.disable_auto_update: bool = kwargs.get("disable_auto_update", True)
 
-        # Accept a `model` for logging/registry consistency but warn that agy
-        # ignores it at invocation time.
+        # agy 1.0.5+ has a real --model flag; the configured model is resolved
+        # to an exact `agy models` label at command-build time. Warn early if
+        # it won't resolve so the operator knows agy will use its default.
         self.model = kwargs.get("model", AGY_DEFAULT_MODEL_LABEL)
-        if kwargs.get("model") and not self.model.lower().startswith("gemini"):
+        if kwargs.get("model") and self._resolve_agy_model_label(self.model) is None:
             logger.warning(
-                f"Antigravity CLI: configured model '{self.model}' is not a known " "Gemini label. agy selects models server-side; this value is " "informational only.",
+                f"Antigravity CLI: configured model '{self.model}' does not map to a " "known `agy models` label; agy will use its default model. Valid " f"labels: {list(AGY_MODEL_LABELS)}",
             )
 
         self._config_cwd = kwargs.get("cwd")
@@ -234,6 +267,28 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             if candidate.exists():
                 return str(candidate)
         return None
+
+    @staticmethod
+    def _resolve_agy_model_label(model: str | None) -> str | None:
+        """Resolve a configured model id to an exact ``agy --model`` label.
+
+        agy 1.0.5+ accepts ``--model`` but only with one of the exact strings
+        from ``agy models`` (``AGY_MODEL_LABELS``). We accept either an exact
+        label (case-insensitive) or a short alias (``AGY_MODEL_ALIASES``).
+        Returns ``None`` for anything unresolvable so the caller omits
+        ``--model`` and lets agy fall back to its default instead of failing
+        the whole call on a rejected label.
+        """
+        if not model or not isinstance(model, str):
+            return None
+        raw = model.strip()
+        if not raw:
+            return None
+        for label in AGY_MODEL_LABELS:
+            if raw.lower() == label.lower():
+                return label
+        norm = re.sub(r"[\s_]+", "-", raw.lower())
+        return AGY_MODEL_ALIASES.get(norm)
 
     # ── MCP config ────────────────────────────────────────────────────────
 
@@ -550,6 +605,17 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         log_path = self._agy_log_file_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         cmd.extend(["--log-file", str(log_path)])
+        # agy 1.0.5+ exposes a real --model flag (exact label from `agy models`).
+        # Emit it only when the configured model resolves to a known label;
+        # otherwise fall back to agy's server-side default rather than passing a
+        # bad value that would fail the call.
+        model_label = self._resolve_agy_model_label(self.model)
+        if model_label:
+            cmd.extend(["--model", model_label])
+        elif self.model:
+            logger.info(
+                f"Antigravity CLI: configured model '{self.model}' has no agy label " "mapping; using agy's default model.",
+            )
         if self.dangerously_skip_permissions:
             cmd.append("--dangerously-skip-permissions")
         cmd.extend(["-p", prompt])
@@ -594,6 +660,79 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         if self.disable_auto_update:
             env["AGY_CLI_DISABLE_AUTO_UPDATE"] = "1"
         return env
+
+    # ── Scratch deliverable promotion ─────────────────────────────────────
+
+    def _scratch_dir(self) -> Path:
+        """agy's internal scratch directory (under the workspace gemini_dir).
+
+        agy may route ``write_to_file`` here instead of the workspace root —
+        observed in the 2026-06-05 baseline run, where the SVG deliverable
+        landed in ``.antigravity/antigravity-cli/scratch/`` and was invisible
+        to snapshots (``.antigravity`` is in the filesystem manager's metadata
+        exclusion set). 1.0.6 writes to the process cwd in the common case, but
+        we keep this as a safety net so deliverables never get silently dropped.
+        """
+        return self._workspace_config_dir() / "antigravity-cli" / "scratch"
+
+    @staticmethod
+    def _snapshot_scratch_files(scratch_dir: Path) -> dict[Path, float]:
+        """Record {path: mtime} of files currently in scratch (pre-run baseline).
+
+        Used to detect which scratch files are NEW or MODIFIED by this run so
+        :meth:`_promote_scratch_deliverables` only copies fresh deliverables.
+        """
+        out: dict[Path, float] = {}
+        if not scratch_dir.exists():
+            return out
+        for p in scratch_dir.rglob("*"):
+            if p.is_file():
+                try:
+                    out[p] = p.stat().st_mtime
+                except OSError:
+                    continue
+        return out
+
+    def _promote_scratch_deliverables(self, pre_existing: dict[Path, float]) -> list[str]:
+        """Copy new/modified scratch files into the workspace root.
+
+        Promotes any file under ``scratch/`` that wasn't present before the run
+        (or was modified during it), preserving its relative path. Never
+        clobbers a file the model already placed in the workspace — if the
+        destination exists, the model's copy wins. Returns the list of promoted
+        relative paths (for logging / "real output" detection).
+        """
+        scratch = self._scratch_dir()
+        if not scratch.exists():
+            return []
+        workspace = Path(self.cwd).resolve()
+        promoted: list[str] = []
+        for src in scratch.rglob("*"):
+            if not src.is_file():
+                continue
+            try:
+                mtime = src.stat().st_mtime
+            except OSError:
+                continue
+            prev = pre_existing.get(src)
+            if prev is not None and mtime <= prev:
+                continue  # unchanged pre-existing file
+            rel = src.relative_to(scratch)
+            dest = workspace / rel
+            if dest.exists():
+                continue  # model already placed it in the workspace; don't clobber
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dest)
+            except OSError as exc:
+                logger.warning(f"Antigravity CLI: failed to promote scratch file {src}: {exc}")
+                continue
+            promoted.append(str(rel))
+        if promoted:
+            logger.info(
+                f"Antigravity CLI: promoted {len(promoted)} scratch deliverable(s) to " f"workspace {workspace}: {promoted}",
+            )
+        return promoted
 
     # ── Transcript tailing ────────────────────────────────────────────────
 
@@ -823,6 +962,9 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
 
         brain_dir = self._workspace_config_dir() / "antigravity-cli" / "brain"
         pre_existing = self._existing_transcripts(brain_dir)
+        # Baseline scratch contents so we can promote only files agy writes
+        # during THIS run (safety net for the scratch-routing case).
+        pre_existing_scratch = self._snapshot_scratch_files(self._scratch_dir())
 
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -906,6 +1048,21 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             except (AttributeError, TypeError):
                 pass
             return
+
+        # Safety net: if agy routed write_to_file into its internal scratch dir
+        # (excluded from snapshots), promote those deliverables into the
+        # workspace root so peers + snapshot promotion can see them.
+        try:
+            promoted = self._promote_scratch_deliverables(pre_existing_scratch)
+        except Exception as exc:
+            logger.warning(f"Antigravity CLI: scratch promotion failed: {exc}")
+            promoted = []
+        if promoted:
+            produced_real_output["value"] = True
+            yield StreamChunk(
+                type="content",
+                content=f"\n[Antigravity CLI] Recovered {len(promoted)} deliverable(s) from scratch into the workspace: {', '.join(promoted)}\n",
+            )
 
         # agy exits 0 with empty stdout on quota/auth failures — surface what
         # the log file actually says so the orchestrator doesn't retry-loop

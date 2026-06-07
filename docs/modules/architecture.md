@@ -71,6 +71,7 @@ Agents are STATELESS and ANONYMOUS across coordination rounds. Each round:
 - Agent does not know which agent it is (all identities are anonymous)
 - Cross-agent information (answers, workspaces) is presented anonymously
 - System prompts and branch names must NOT reveal agent identity or round history
+- **Statelessness extends to the filesystem.** Under `write_mode`, the working tree is wiped to a clean state between rounds (only `.git/` survives), so an agent does not inherit its own prior round's leftover files — including native-CLI session dirs like `.antigravity/` / `.codex/`. Prior work is preserved in per-round branches + snapshots and surfaced via `temp_workspaces/`. NOTE: this per-round reset is done by `IsolationContextManager._clear_workspace_between_rounds()`, **not** by `Orchestrator.clear_workspace()` (disabled since v0.0.22). See [worktrees.md → Per-Round Workspace Reset](worktrees.md#per-round-workspace-reset).
 
 ## Logging Architecture: Session-Scoped Isolation
 
