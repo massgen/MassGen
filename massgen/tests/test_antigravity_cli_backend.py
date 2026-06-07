@@ -1288,3 +1288,50 @@ class TestSubprocessEnv:
         backend.disable_auto_update = True
         env = backend._build_subprocess_env()
         assert env.get("AGY_CLI_DISABLE_AUTO_UPDATE") == "1"
+
+
+class TestMcpServerHookPayloads:
+    """agy parity with codex for the MCP-middleware mid-stream injection IPC.
+
+    The orchestrator's per-chunk flush is backend-agnostic (gated only on
+    `write_post_tool_use_hook` + `supports_mcp_server_hooks()`), so these methods
+    let agy participate in the same MCP-middleware injection path codex uses.
+    (Live end-to-end delivery shares the unresolved Codex MCP-client gap — see
+    test_codex_middleware_firing_live.py.)
+    """
+
+    def test_supports_mcp_server_hooks(self, backend):
+        assert backend.supports_mcp_server_hooks() is True
+
+    def test_hook_dir_is_workspace_config_dir(self, backend):
+        assert backend.get_hook_dir() == backend._workspace_config_dir()
+
+    def test_write_then_read_roundtrip(self, backend):
+        backend.write_post_tool_use_hook("[Human Input]: steer agy")
+        # File present until consumed
+        assert (backend.get_hook_dir() / "hook_post_tool_use.json").exists()
+        content = backend.read_unconsumed_hook_content()
+        assert content == "[Human Input]: steer agy"
+        # read consumes it
+        assert not (backend.get_hook_dir() / "hook_post_tool_use.json").exists()
+        assert backend.read_unconsumed_hook_content() is None
+
+    def test_write_payload_shape_matches_middleware_contract(self, backend):
+        backend.write_post_tool_use_hook("hi", tool_matcher="*")
+        data = json.loads((backend.get_hook_dir() / "hook_post_tool_use.json").read_text())
+        assert data["inject"]["content"] == "hi"
+        assert data["inject"]["strategy"] == "tool_result"
+        assert data["tool_matcher"] == "*"
+        assert isinstance(data["expires_at"], float)
+        assert data["sequence"] == 1
+
+    def test_sequence_increments(self, backend):
+        backend.write_post_tool_use_hook("a")
+        backend.write_post_tool_use_hook("b")
+        data = json.loads((backend.get_hook_dir() / "hook_post_tool_use.json").read_text())
+        assert data["sequence"] == 2
+
+    def test_clear_hook_files(self, backend):
+        backend.write_post_tool_use_hook("x")
+        backend.clear_hook_files()
+        assert not (backend.get_hook_dir() / "hook_post_tool_use.json").exists()

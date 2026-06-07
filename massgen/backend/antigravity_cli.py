@@ -39,6 +39,7 @@ import json
 import os
 import re
 import shutil
+import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
@@ -146,6 +147,9 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         self._config_cwd = kwargs.get("cwd")
         self.system_prompt = kwargs.get("system_prompt", "")
         self.agent_id = kwargs.get("agent_id")
+
+        # Monotonic sequence for MCP-middleware hook payloads (parity with codex).
+        self._hook_sequence = 0
 
         configured_mcp_servers = kwargs.get("mcp_servers", [])
         self.mcp_servers: list[dict[str, Any]] = list(configured_mcp_servers) if isinstance(configured_mcp_servers, list) else []
@@ -592,6 +596,76 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         if adapter is not None and hasattr(adapter, "hook_dir"):
             adapter.hook_dir = self._workspace_config_dir()
         return adapter
+
+    # ── MCP-server-hook (mid-stream injection) payload IPC ─────────────────
+    #
+    # Parity with codex.py: the orchestrator's per-chunk flush
+    # (`_flush_codex_hook_payloads`, backend-agnostic — gated only on
+    # `write_post_tool_use_hook` + `supports_mcp_server_hooks()`) writes pending
+    # peer/steering content here, and the `MassGenHookMiddleware` attached to
+    # agy's MassGen MCP servers appends it to the next MCP tool result. This is
+    # the only mid-stream channel that doesn't depend on the CLI firing native
+    # hooks (agy's native hooks are trust-gated and inert headlessly). NOTE: live
+    # end-to-end delivery shares the unresolved Codex MCP-client gap — see
+    # test_codex_middleware_firing_live.py; the middleware itself is verified
+    # (test_mcp_hook_middleware).
+
+    def supports_mcp_server_hooks(self) -> bool:
+        """agy uses MCP server middleware for PostToolUse injection (parity with codex)."""
+        return True
+
+    def get_hook_dir(self) -> Path:
+        """Directory for hook IPC files — the workspace agy config dir.
+
+        Must match the ``--hook-dir`` the MassGen MCP servers attached to agy are
+        launched with, so the middleware reads the same file this writes.
+        """
+        return self._workspace_config_dir()
+
+    def write_post_tool_use_hook(
+        self,
+        content: str,
+        tool_matcher: str = "*",
+        ttl_seconds: float = 30.0,
+    ) -> None:
+        """Atomic write of hook_post_tool_use.json for the MCP middleware to consume."""
+        self._hook_sequence += 1
+        hook_dir = self.get_hook_dir()
+        hook_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "inject": {"content": content, "strategy": "tool_result"},
+            "tool_matcher": tool_matcher,
+            "expires_at": time.time() + ttl_seconds,
+            "sequence": self._hook_sequence,
+        }
+        hook_file = hook_dir / "hook_post_tool_use.json"
+        tmp_file = hook_file.with_suffix(".tmp")
+        tmp_file.write_text(json.dumps(payload), encoding="utf-8")
+        tmp_file.replace(hook_file)
+        logger.info(f"Antigravity CLI: wrote hook_post_tool_use.json (seq={self._hook_sequence}, {len(content)} chars)")
+
+    def read_unconsumed_hook_content(self) -> str | None:
+        """Read+remove an unconsumed hook payload (round-end carryforward)."""
+        hook_file = self.get_hook_dir() / "hook_post_tool_use.json"
+        try:
+            data = json.loads(hook_file.read_text(encoding="utf-8"))
+            hook_file.unlink(missing_ok=True)
+            content = data.get("inject", {}).get("content")
+            if content:
+                logger.info(f"Antigravity CLI: read unconsumed hook content ({len(content)} chars) — carrying forward")
+            return content
+        except FileNotFoundError:
+            return None
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning(f"Antigravity CLI: failed reading unconsumed hook file: {exc}")
+            hook_file.unlink(missing_ok=True)
+            return None
+
+    def clear_hook_files(self) -> None:
+        """Remove stale hook IPC files at turn start."""
+        hook_dir = self.get_hook_dir()
+        for filename in ("hook_post_tool_use.json", "hook_post_tool_use.tmp"):
+            (hook_dir / filename).unlink(missing_ok=True)
 
     # ── Command construction ──────────────────────────────────────────────
 
