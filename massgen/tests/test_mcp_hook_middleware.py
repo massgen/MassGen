@@ -299,3 +299,44 @@ class TestToolResultCompatibilityFallback:
         assert isinstance(content, list)
         assert structured == {"ok": True}
         assert any("inject" in getattr(item, "text", "") for item in content)
+
+
+# ---------------------------------------------------------------------------
+# Integration: real FastMCP server machinery (in-memory transport)
+# ---------------------------------------------------------------------------
+
+
+class TestRealFastMCPInvocation:
+    """Prove the middleware actually fires when added via mcp.add_middleware()
+    and a tool is called through real FastMCP machinery.
+
+    This is the in-memory counterpart to the live Codex test. It passes here —
+    establishing the middleware LOGIC + wiring are correct — which localizes the
+    live-Codex non-delivery to the `fastmcp run <module>:create_server` stdio
+    deployment path (where on_call_tool is never invoked), NOT the middleware.
+    """
+
+    @pytest.mark.asyncio
+    async def test_middleware_injects_via_real_server(self, tmp_path: Path) -> None:
+        from fastmcp import Client, FastMCP
+
+        from massgen.mcp_tools.hook_middleware import MassGenHookMiddleware
+
+        _write_hook_file(tmp_path, _make_payload(content="[Human Input]: ISO"))
+
+        mcp = FastMCP("iso-test")
+
+        @mcp.tool
+        def echo(x: str) -> str:
+            return f"echo:{x}"
+
+        mcp.add_middleware(MassGenHookMiddleware(tmp_path))
+
+        async with Client(mcp) as client:
+            res = await client.call_tool("echo", {"x": "hi"})
+
+        texts = [getattr(b, "text", "") for b in res.content]
+        assert any("echo:hi" in t for t in texts)
+        assert any("ISO" in t for t in texts), "middleware did not inject through real FastMCP server"
+        # Payload consumed on success.
+        assert not (tmp_path / "hook_post_tool_use.json").exists()
