@@ -101,6 +101,15 @@ class MassGenHookMiddleware(Middleware):
             injection = self._read_post_tool_use_injection(tool_name)
             if injection:
                 result = self._append_to_result(result, injection)
+                # Success-path observability (mirrors the error log below). This
+                # is how we confirm the middleware actually fires end-to-end in a
+                # real run — the CLIs' native hooks can't be trusted to fire, so
+                # we log every real injection.
+                logger.info(
+                    "Hook middleware injected %d chars into '%s' tool result",
+                    len(injection),
+                    tool_name,
+                )
         except Exception as e:
             logger.error(
                 "Hook middleware injection failed for tool %s: %s. " "Returning original result.",

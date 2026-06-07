@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import copy
 import json
+import os
 import sys
 import threading
 import webbrowser
@@ -586,12 +587,25 @@ async def main(args):
             log_dir = get_log_session_root()
             log_dir_name = log_dir.name
 
+            # Programmatic steering: an explicit --inbox-dir makes mid-stream
+            # human input reachable without a UI. Export it so the orchestrator's
+            # inbox-poller resolver (which reads MASSGEN_RUNTIME_INBOX_DIR) targets
+            # this deterministic, caller-known directory.
+            inbox_dir_arg = getattr(args, "inbox_dir", None)
+            resolved_inbox: Path | None = None
+            if inbox_dir_arg:
+                resolved_inbox = Path(inbox_dir_arg).expanduser().resolve()
+                resolved_inbox.mkdir(parents=True, exist_ok=True)
+                os.environ["MASSGEN_RUNTIME_INBOX_DIR"] = str(resolved_inbox)
+
             # Print LOG_DIR for automation mode (LLM agents need this to monitor progress)
             # LOG_DIR is the main session directory, STATUS includes turn/attempt subdirectory
             if args.automation:
                 full_log_dir = get_log_session_dir()
                 _automation_print(f"LOG_DIR: {Path(log_dir).resolve()}")
                 _automation_print(f"STATUS: {Path(full_log_dir).resolve() / 'status.json'}")
+                if resolved_inbox is not None:
+                    _automation_print(f"RUNTIME_INBOX: {resolved_inbox}")
 
             # Only register in global session registry if not suppressed (e.g., subagent runs)
             if not getattr(args, "no_session_registry", False):
@@ -1781,6 +1795,15 @@ Environment Variables:
         "--stream-events",
         action="store_true",
         help="Stream events to stdout as JSON lines. Used by parent processes (e.g., TUI subagent modal) " "to receive real-time updates. Implies --automation.",
+    )
+    parser.add_argument(
+        "--inbox-dir",
+        type=str,
+        default=None,
+        help="Directory for programmatic steering (mid-stream human input) without a UI. "
+        "Drop msg_*.json files here (see massgen.steering.send_steering_message) to inject "
+        "text into running agents — the same channel as TUI/WebUI steering. In --automation "
+        "mode the resolved path is echoed as 'RUNTIME_INBOX: <path>'.",
     )
     parser.add_argument(
         "--plan",
