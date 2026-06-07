@@ -100,7 +100,12 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
     Inherits ``NativeToolBackendMixin`` for native-hook adapter wiring and
     ``StreamingBufferMixin`` for context-compression recovery. Hooks use the
     ``AntigravityCLINativeHookAdapter`` (a thin subclass of the Gemini CLI
-    adapter — same exa.hooks_pb schema, same settings.json shape).
+    adapter): the hook *payload* shape is identical to Gemini CLI's
+    (``{"hooks": {"BeforeTool": [...], "AfterTool": [...]}}``, subprocess
+    JSON-stdin/stdout IPC), but agy reads it from a **standalone
+    ``hooks.json``** gated by ``enableJsonHooks: true`` in ``settings.json`` —
+    NOT embedded under ``settings.json["hooks"]`` the way Gemini CLI does. See
+    :meth:`_write_hooks_json` / :meth:`get_native_hook_adapter`.
     """
 
     def __init__(self, api_key: str | None = None, **kwargs):
@@ -563,6 +568,30 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
                 logger.info(f"Antigravity CLI: removed workspace {hooks_path}")
             except OSError as exc:
                 logger.warning(f"Antigravity CLI: failed to remove {hooks_path}: {exc}")
+
+    def get_native_hook_adapter(self) -> Any | None:
+        """Return the native hook adapter with ``hook_dir`` wired to the workspace.
+
+        The orchestrator fetches the adapter via this accessor immediately
+        before calling ``adapter.build_native_hooks_config(...)`` during per-round
+        hook setup — which happens BEFORE our stream ever runs
+        :meth:`_write_hooks_json` (the old, lazy place ``hook_dir`` got set). If
+        ``hook_dir`` is still ``None`` at build time, ``build_native_hooks_config``
+        returns ``{}`` and that round runs with **no** MassGen native hooks. On a
+        fresh backend this bit the **initial-answer round** specifically: the
+        ``[GeminiCLINativeHookAdapter] No hook_dir set`` warning fired once, no
+        ``hooks.json`` was written, and only round 2+ recovered (because the
+        adapter instance persisted the ``hook_dir`` set by round 1's stream).
+
+        Setting it here closes that gap. By the time the orchestrator runs,
+        ``filesystem_manager`` is attached so :meth:`cwd` is correct — unlike
+        ``__init__`` (gemini_cli.py:92-95), where the workspace isn't known yet
+        and a construction-time path would be baked into the hook command.
+        """
+        adapter = self._native_hook_adapter
+        if adapter is not None and hasattr(adapter, "hook_dir"):
+            adapter.hook_dir = self._workspace_config_dir()
+        return adapter
 
     # ── Command construction ──────────────────────────────────────────────
 

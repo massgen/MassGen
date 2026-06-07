@@ -621,6 +621,73 @@ class TestHooksJsonWiring:
             assert adapter.hook_dir == backend._workspace_config_dir()
 
 
+class TestNativeHookDirWiringRound1:
+    """Regression for the round-1 native-hook gap.
+
+    The orchestrator builds the native hooks config by calling
+    ``get_native_hook_adapter()`` and then ``adapter.build_native_hooks_config()``
+    BEFORE the backend's stream ever runs ``_write_hooks_json`` (which is where
+    ``hook_dir`` used to be set lazily). On the very first round the adapter's
+    ``hook_dir`` was therefore ``None``, so ``build_native_hooks_config`` returned
+    ``{}`` and the initial-answer round ran with NO MassGen native hooks.
+
+    These tests drive the REAL build path — they do NOT pre-populate
+    ``_massgen_hooks_config`` (which is what let the older TestHooksJsonWiring
+    tests pass despite the bug).
+    """
+
+    def _manager_with_hooks(self):
+        from massgen.mcp_tools.hooks import (
+            GeneralHookManager,
+            HookType,
+            PythonCallableHook,
+        )
+
+        manager = GeneralHookManager()
+        manager.register_global_hook(
+            HookType.PRE_TOOL_USE,
+            PythonCallableHook(name="t_pre", handler=lambda _e: None, matcher="*"),
+        )
+        manager.register_global_hook(
+            HookType.POST_TOOL_USE,
+            PythonCallableHook(name="t_post", handler=lambda _e: None, matcher="*"),
+        )
+        return manager
+
+    def test_get_native_hook_adapter_sets_hook_dir(self, backend):
+        # The orchestrator fetches the adapter via this accessor right before
+        # building the config. It must come back with hook_dir already set.
+        adapter = backend.get_native_hook_adapter()
+        assert adapter is not None
+        assert adapter.hook_dir is not None, "hook_dir is None at orchestrator build time — round-1 hooks lost"
+        assert Path(adapter.hook_dir) == backend._workspace_config_dir()
+
+    def test_build_native_hooks_config_nonempty_on_first_round(self, backend):
+        # Simulate exactly what the orchestrator does on round 1: fetch adapter,
+        # then build. Must NOT return {} (the round-1 bug).
+        manager = self._manager_with_hooks()
+        adapter = backend.get_native_hook_adapter()
+        cfg = adapter.build_native_hooks_config(manager, agent_id="agent_b")
+        assert cfg.get("hooks"), f"round-1 build returned empty config: {cfg!r}"
+        assert "BeforeTool" in cfg["hooks"]
+        assert "AfterTool" in cfg["hooks"]
+
+    def test_full_round1_flow_writes_hooks_json_and_enables_flag(self, backend):
+        # End-to-end round-1 simulation: orchestrator builds + sets the config,
+        # then the backend's stream-time _write_hooks_json must actually emit a
+        # hooks.json and the enableJsonHooks gate.
+        manager = self._manager_with_hooks()
+        adapter = backend.get_native_hook_adapter()
+        backend.set_native_hooks_config(adapter.build_native_hooks_config(manager, agent_id="agent_b"))
+        wrote = backend._write_hooks_json()
+        assert wrote is True, "round-1 _write_hooks_json wrote nothing — native hooks missing in initial round"
+        backend._write_workspace_settings_json(has_hooks=wrote)
+        hooks_path = backend._workspace_hooks_json_path()
+        assert hooks_path.exists()
+        settings = json.loads((backend._workspace_config_dir() / "settings.json").read_text())
+        assert settings.get("enableJsonHooks") is True
+
+
 class TestAgentsMdAtomicity:
     """AGENTS.md write/restore must survive interruptions cleanly."""
 
