@@ -87,16 +87,17 @@ def _injection_reached_codex(massgen_log: Path, sentinel: str) -> bool:
 @pytest.mark.live_api
 @pytest.mark.expensive
 @pytest.mark.xfail(
-    reason="The Codex MCP-injection middleware does not deliver in the real "
-    "deployment (verified 2026-06-07 with instrumentation): the middleware LOGIC "
-    "is correct and fires through real FastMCP in-memory "
-    "(test_mcp_hook_middleware.TestRealFastMCPInvocation passes), but when the "
-    "MassGen MCP servers run via `fastmcp run <module>:create_server` over stdio, "
-    "`on_call_tool` is NEVER invoked — Codex called a middleware-attached planning "
-    "server 20x with valid fresh payloads in the correct hook_dir and the steered "
-    "content never reached Codex. The bug is in the fastmcp-run/stdio launch path, "
-    "not the middleware. Codex mid-stream injection effectively relies on round-end "
-    "carryforward + round-start system-message injection. XPASS => launch path fixed.",
+    reason="The Codex MCP-injection middleware did not deliver in a live Codex run "
+    "(verified 2026-06-07): Codex called a middleware-attached planning server 20x "
+    "with valid fresh payloads in the correct hook_dir, yet the steered content "
+    "never reached Codex. NOTE the middleware itself is proven to work both "
+    "in-memory and via the real `fastmcp run <module>:create_server` STDIO "
+    "deployment (see test_mcp_hook_middleware.TestRealFastMCPInvocation and "
+    "TestStdioDeploymentInvocation, both passing). So the remaining gap is "
+    "Codex-MCP-client / per-server-wiring specific, not the middleware or the "
+    "transport. Codex mid-stream injection currently relies on round-end "
+    "carryforward + round-start system-message injection. XPASS => the live gap is "
+    "closed.",
     strict=False,
 )
 def test_codex_mcp_middleware_injects_steering(tmp_path):

@@ -340,3 +340,58 @@ class TestRealFastMCPInvocation:
         assert any("ISO" in t for t in texts), "middleware did not inject through real FastMCP server"
         # Payload consumed on success.
         assert not (tmp_path / "hook_post_tool_use.json").exists()
+
+
+class TestStdioDeploymentInvocation:
+    """Prove the middleware fires when the server is launched via
+    `fastmcp run <module>:create_server` over STDIO — the exact deployment Codex
+    uses. Free (local fastmcp subprocess, no model calls). This passing test
+    establishes the deployment path is sound, narrowing any live-Codex
+    non-delivery to the Codex MCP client / per-server wiring, not the middleware
+    or the fastmcp-run/stdio transport.
+    """
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_middleware_injects_via_fastmcp_run_stdio(self, tmp_path: Path) -> None:
+        import shutil
+        import textwrap
+
+        if not shutil.which("fastmcp"):
+            pytest.skip("fastmcp CLI not on PATH")
+
+        from fastmcp import Client
+        from fastmcp.client.transports import StdioTransport
+
+        server_file = tmp_path / "srv.py"
+        server_file.write_text(
+            textwrap.dedent(
+                """
+                import os
+                from pathlib import Path
+                from fastmcp import FastMCP
+                from massgen.mcp_tools.hook_middleware import MassGenHookMiddleware
+
+                async def create_server():
+                    mcp = FastMCP("iso-stdio")
+                    @mcp.tool
+                    def echo(x: str) -> str:
+                        return f"echo:{x}"
+                    mcp.add_middleware(MassGenHookMiddleware(Path(os.environ["ISO_HOOK_DIR"])))
+                    return mcp
+                """,
+            ),
+            encoding="utf-8",
+        )
+        _write_hook_file(tmp_path, _make_payload(content="[Human Input]: STDIO"))
+
+        import os as _os
+
+        env = {**_os.environ, "ISO_HOOK_DIR": str(tmp_path)}
+        transport = StdioTransport(command="fastmcp", args=["run", f"{server_file}:create_server"], env=env)
+        async with Client(transport) as client:
+            res = await client.call_tool("echo", {"x": "hi"})
+
+        texts = [getattr(b, "text", "") for b in res.content]
+        assert any("echo:hi" in t for t in texts)
+        assert any("STDIO" in t for t in texts), "middleware did not inject via fastmcp-run stdio deployment"

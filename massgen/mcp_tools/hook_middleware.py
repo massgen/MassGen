@@ -84,8 +84,11 @@ class MassGenHookMiddleware(Middleware):
     _RUNTIME_INPUT_KEY = "massgen_runtime_input"
     _RUNTIME_INPUT_PRIORITY_KEY = "massgen_runtime_input_priority"
 
-    def __init__(self, hook_dir: Path) -> None:
-        self._hook_dir = hook_dir
+    def __init__(self, hook_dir: Path | str) -> None:
+        # Coerce to Path: a string slips through (callers wrap in Path today, but
+        # a raw str would make `self._hook_dir / "..."` raise TypeError inside the
+        # swallowed try/except in on_call_tool — i.e. silent non-delivery).
+        self._hook_dir = Path(hook_dir)
         self._last_post_sequence: int = -1
 
     async def on_call_tool(self, context: Any, call_next: Any) -> Any:
