@@ -122,15 +122,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [Recent Achievements (v0.1.94)](#recent-achievements-v0194)
-- [Previous Achievements (v0.0.3 - v0.1.93)](#previous-achievements-v003---v0193)
+- [Recent Achievements (v0.1.95)](#recent-achievements-v0195)
+- [Previous Achievements (v0.0.3 - v0.1.94)](#previous-achievements-v003---v0194)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.95 Roadmap](#v0195-roadmap)
+- [v0.1.96 Roadmap](#v0196-roadmap)
 </details>
 
 <details open>
@@ -155,18 +155,18 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.94)
+## 🆕 Latest Features (v0.1.95)
 
-**🎉 Released: June 5, 2026**
+**🎉 Released: June 8, 2026**
 
-**What's New in v0.1.94** (Parallelism Hardening — engineering-health release, no per-backend functionality changes):
-- **⚡ Snapshot Copy Off the Event Loop** - The peer-context snapshot copy now runs its blocking filesystem work on a worker thread, so one agent's copy no longer stalls every other agent's streaming.
-- **🔒 Immutable, Versioned Snapshots** - Snapshots are published as immutable versions with an atomically-repointed symlink; readers pin the current version, eliminating the read-during-write race the off-loop copy would otherwise expose.
-- **🧵 Concurrency Correctness Fixes** - Lost peer-answer revisions, lost background-subagent results, leaked trace tasks, and a cancel-without-await teardown are all fixed; worktree-isolation degradation is now surfaced.
+**What's New in v0.1.95** (Mid-Stream Steering):
+- **📨 Programmatic Steering Inbox** - Drop human guidance into a streaming agent from `--automation` (no UI) via a file inbox (`--inbox-dir` + `send_steering_message()`), routed through the same chokepoint the TUI/WebUI already use, with per-message targeting.
+- **⏯️ Interrupt-and-Resume Steering** - Codex and Antigravity now interrupt the in-flight turn and resume (`codex exec resume` / `agy --continue`) when steering arrives mid-stream, instead of waiting for a round boundary — pre-interrupt work is preserved.
+- **🪝 MCP-Hook Injection Parity** - Antigravity gains codex-parity mid-stream injection through the MCP middleware, with `expires_at`-guarded payloads; the Antigravity `--model` flag is now actually wired through.
 
-**Install v0.1.94:**
+**Install v0.1.95:**
 ```bash
-pip install massgen==0.1.94
+pip install massgen==0.1.95
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1241,19 +1241,20 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.94)
+### Recent Achievements (v0.1.95)
 
-**🎉 Released: June 5, 2026**
+**🎉 Released: June 8, 2026**
 
-#### Parallelism Hardening (Engineering Health)
-- **Snapshot Copy Off the Event Loop**: `FilesystemManager.copy_snapshots_to_temp_workspace` now offloads its blocking `rmtree`/`copytree`/scrub to a worker thread via `asyncio.to_thread`, so one agent's snapshot copy no longer serializes every other agent's streaming
-- **Immutable, Versioned Snapshots**: snapshots publish to `<base>/.versions/<id>/v<N>` with an atomically-repointed symlink; readers `acquire`/refcount the current version for the duration of their copy (new `SnapshotVersionStore`), eliminating the read-during-write race the off-loop copy would otherwise expose
-- **Concurrency Correctness**: fixed lost peer-answer revisions (R1), lost background-subagent results (R2/R3), leaked trace tasks on cleanup (R4), and a cancel-without-await teardown (R5)
-- **Worktree-Isolation Degradation Surfaced (D2)**: a swallowed `TypeError` (invalid `emit_status(status=…)` kwarg) had silenced the signal entirely
-- **Unified Mid-Stream Injection (A1)**: the two ~150-line per-backend injection closures collapsed into one shared implementation; the background-wait interrupt provider was deduplicated, removing backend-parity drift
-- **No per-backend functionality changes** — all landed under TDD with cost-free simulation
+#### Mid-Stream Steering
+- **Programmatic Steering Inbox (`--inbox-dir`)**: `send_steering_message()` writes a `msg_*.json` to a caller-known inbox; `RuntimeInboxPoller` routes it through `RuntimeInputDelivery` to the same `set_pending_input` chokepoint the TUI (`_queue_human_input`) and WebUI (`broadcast_response`) use — so `--automation` and any UI-less caller can inject mid-stream human input, with per-message targeting (one / subset / broadcast)
+- **Interrupt-and-Resume Steering (Codex & Antigravity)**: steering mid-turn now kills the in-flight turn and resumes (`codex exec resume <session> <prompt>` / `agy --continue -p <prompt>`) rather than waiting for a round boundary; Antigravity promotes pre-interrupt scratch deliverables first so work isn't lost
+- **MCP-Server-Hook Payload IPC (Antigravity, codex parity)**: `write_post_tool_use_hook()` / `read_unconsumed_hook_content()` with `expires_at`-guarded payloads consumed by the MCP middleware, so the backend-agnostic per-chunk injection flush works for `agy` the way it does for codex
+- **Fixes**: `--inbox-dir` now honored for resumed sessions (`--session-id` / config `session_id` / `--continue`), `expires_at`-guarded steering carryforward (both backends), watcher-cleanup failures logged instead of swallowed, round-1 native-hook gap closed, and the Antigravity `--model` flag wired through
+- All landed under TDD, with deterministic coverage plus opt-in live-fire tests
 
-### Previous Achievements (v0.0.3 - v0.1.93)
+### Previous Achievements (v0.0.3 - v0.1.94)
+
+✅ **Parallelism Hardening — Engineering Health (v0.1.94)**: Moved the peer-context snapshot copy off the event loop (worker thread via `asyncio.to_thread`) backed by immutable, versioned snapshots (`SnapshotVersionStore`) with atomically-repointed symlinks and refcounted readers, eliminating the read-during-write race; fixed lost peer-answer revisions (R1), lost background-subagent results (R2/R3), leaked trace tasks (R4), and cancel-without-await teardown (R5); surfaced worktree-isolation degradation (D2); and unified the mid-stream injection paths (A1). No per-backend functionality changes.
 
 ✅ **CLI Package Decomposition & Pydantic Config Migration (v0.1.93)**: Split the monolithic 12k-line `cli.py` into an 18-module `massgen/cli/` package, migrated config classes to `pydantic.dataclasses` with `Literal`-typed modes the validator derives from, consolidated provider-exclusion lists, removed ~8.7k lines of dead legacy code from the wheel, and hardened the test-signal/type-checking tooling. Internal-quality release, no runtime behavior changes.
 
@@ -1586,9 +1587,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.95 Roadmap
+### v0.1.96 Roadmap
 
-Version 0.1.95 picks up the image/video edit work deferred from v0.1.86-v0.1.94 and continues multimodal provider-parity work:
+Version 0.1.96 picks up the image/video edit work deferred from v0.1.86-v0.1.95 and continues multimodal provider-parity work:
 
 #### Planned Features
 - **Image/Video Edit Capabilities** ([#959](https://github.com/massgen/MassGen/issues/959)): Image and video editing across providers with multi-turn editing workflows via continuation IDs

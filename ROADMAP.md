@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.94
+**Current Version:** v0.1.95
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** June 5, 2026
+**Last Updated:** June 8, 2026
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -42,9 +42,31 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.95** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.94 ([#959](https://github.com/massgen/MassGen/issues/959)) |
+| **v0.1.96** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.95 ([#959](https://github.com/massgen/MassGen/issues/959)) |
 
 *All releases ship on MWF @ 9am PT when ready*
+
+---
+
+## ✅ v0.1.95 - Mid-Stream Steering (Completed)
+
+**Released:** June 8, 2026
+
+### Features
+- **Programmatic Steering Inbox (`--inbox-dir`)**: `send_steering_message()` (`massgen/steering.py`) writes a `msg_*.json` to a caller-known inbox; `RuntimeInboxPoller` routes it through `RuntimeInputDelivery` to the same `set_pending_input` chokepoint the TUI/WebUI use, so `--automation` and any UI-less caller can inject mid-stream human input (with one/subset/broadcast targeting)
+- **Interrupt-and-Resume Steering (Codex & Antigravity)**: steering mid-turn kills the in-flight turn and resumes (`codex exec resume <session> <prompt>` / `agy --continue -p <prompt>`) instead of waiting for a round boundary; Antigravity promotes pre-interrupt scratch deliverables first
+- **MCP-Server-Hook Payload IPC (Antigravity, codex parity)**: `write_post_tool_use_hook()` / `read_unconsumed_hook_content()` with `expires_at`-guarded payloads consumed by the MCP middleware, enabling the backend-agnostic per-chunk injection flush for `agy`
+- **Antigravity `--model` wired through**: the resolved model label is now actually passed to `agy`
+
+### Bug Fixes
+- `--inbox-dir` honored for resumed sessions (`--session-id` / config `session_id` / `--continue`), not just new sessions
+- `read_unconsumed_hook_content()` honors `expires_at` so stale steering can't trigger an unexpected interrupt/resume (both backends)
+- Watcher-cleanup failures logged at debug instead of swallowed (both backends)
+- Round-1 native-hook gap closed (Antigravity `hook_dir` set at orchestrator fetch time); middleware `hook_dir` coerced to `Path`
+
+### Notes
+- All items landed under TDD, with deterministic coverage plus opt-in live-fire tests.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.96.
 
 ---
 
@@ -360,7 +382,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.94 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.93)
+## 📋 v0.1.96 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.95)
 
 ### Features
 

@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.95] - 2026-06-08
+
+### Theme: Mid-Stream Steering
+
+Extend mid-stream injection from a UI-only capability into a programmatic, headless one, and upgrade it from inject-at-next-boundary into true interrupt-and-resume for the CLI backends. A human (or any UI-less caller) can now drop guidance into an agent *while it is streaming* — over a file inbox in `--automation`, or through the MCP-middleware hook path — and Codex/Antigravity will interrupt the in-flight turn, fold the steering in, and resume rather than restart. No coordination-semantics changes; the injection chokepoint stays shared across TUI, WebUI, and the new headless path. All items landed under TDD (tests written first, confirmed red, then green), with deterministic coverage plus opt-in live-fire tests.
+
+### Added
+- **Programmatic mid-stream steering (`--inbox-dir`)**: `send_steering_message()` (`massgen/steering.py`) drops a `msg_*.json` into a caller-known inbox directory; the orchestrator's `RuntimeInboxPoller` routes it through `RuntimeInputDelivery.poll_runtime_inbox` to the same `set_pending_input` chokepoint the TUI (`_queue_human_input`) and WebUI (`broadcast_response`) already use. This makes mid-stream human input reachable from `--automation` and any UI-less caller, with per-message targeting (one agent / a subset / broadcast). The resolved inbox is announced as `RUNTIME_INBOX:` in automation output.
+- **Mid-round interrupt-and-resume steering (Codex)**: when steering arrives mid-turn, the watcher kills the in-flight `codex exec` and resumes via `codex exec resume <session_id> <prompt>`, folding the steering in without waiting for a round boundary. Gated by `supports_interrupt_resume()` with `interrupt_poll_seconds` / `max_interrupts_per_turn` knobs.
+- **Mid-round interrupt-and-resume steering (Antigravity)**: parity path for `agy` — kill the in-flight turn and resume with `agy --continue -p <prompt>`. Pre-interrupt scratch deliverables are promoted to the workspace first so work done before the interrupt isn't lost.
+- **MCP-server-hook payload IPC for Antigravity (codex parity)**: `write_post_tool_use_hook()` / `read_unconsumed_hook_content()` with `expires_at`-guarded payloads, consumed by the MCP middleware (`massgen/mcp_tools/hook_middleware.py`), so the backend-agnostic per-chunk injection flush works for `agy` the same way it does for codex.
+
+### Changed
+- **Antigravity `--model` flag wired through for real**: the model label is now passed to `agy` (it was previously resolved but omitted from the command). Documented the per-round workspace reset and worktree-vs-workspace git-isolation modes in `docs/modules/worktrees.md` and `docs/source/user_guide/agent_workspaces.rst`.
+
+### Fixed
+- **`--inbox-dir` honored for all session modes**: the `MASSGEN_RUNTIME_INBOX_DIR` export lived inside the new-session branch of `main()`, so runs started with `--session-id`, a config `session_id`, or `--continue` silently dropped programmatic steering. Resolution is now hoisted into a `_resolve_runtime_inbox()` helper that runs before the session-mode branch.
+- **Stale steering carryforward**: `read_unconsumed_hook_content()` (the round-end carryforward path) returned payloads without honoring `expires_at`, so a stale hook could trigger an unexpected interrupt/resume on the next round. It now drops expired payloads (fail-open on malformed values), mirroring the middleware. Applied to **both** `codex` and `antigravity_cli` for parity.
+- **Swallowed watcher failures**: the interrupt/resume cleanup caught `(CancelledError, Exception)` and passed, masking real watcher bugs; non-cancellation failures are now logged at debug (`exc_info=True`). Both backends.
+- **Round-1 native-hook gap (Antigravity)**: the native-hook adapter's `hook_dir` is now set at orchestrator fetch time, so first-round hooks are wired before the initial stream rather than lazily later.
+- **Middleware `hook_dir` typing**: coerce the middleware `hook_dir` to `Path`, fixing the fastmcp-run stdio deployment path.
+
+### Tests
+- New deterministic suites: `test_steering_inbox.py` (writer → poller → chokepoint routing + `_resolve_runtime_inbox` export across all session modes), `test_codex_interrupt_resume.py` (resume-command + `expires_at` carryforward), `test_mcp_hook_middleware.py` (payload consumption + expiry), and `test_live_proc_io.py` (non-blocking subprocess stdout helper). Expanded `test_antigravity_cli_backend.py` with the MCP-hook IPC + interrupt-resume contract.
+- New opt-in live-fire tests (`@pytest.mark.live_api`): `test_steering_live.py`, `test_codex_interrupt_resume_live.py`, `test_antigravity_interrupt_resume_live.py`, `test_codex_middleware_firing_live.py`, `test_codex_hook_firing_live.py`. Their stdout polling is non-blocking (`massgen/tests/_live_proc_io.py`) so a buffering child can't hang the test past its deadline.
+
+### Documentations, Configurations and Resources
+- **Updated Docs**: `docs/modules/worktrees.md` (per-round workspace reset, worktree vs. workspace isolation), `docs/modules/architecture.md` (agent statelessness note), `docs/source/user_guide/agent_workspaces.rst` (workspace initialization / state preservation).
+- **New Config**: `massgen/configs/debug/codex_mcp_middleware_test.yaml` for exercising the Codex MCP-middleware injection path.
+- **Updated Config**: `massgen/configs/providers/antigravity/antigravity_cli_local.yaml`.
+
 ## [0.1.94] - 2026-06-05
 
 ### Theme: Parallelism Hardening (Engineering Health)
@@ -32,6 +63,9 @@ Strengthen the orchestrator's parallel execution: move blocking snapshot work of
 - New race/regression suites: `test_concurrency_race_fixes.py` (R1–R5, D2/D3), `test_snapshot_version_store.py` and `test_snapshot_versioned_save.py` (versioned snapshots incl. concurrent-publish-during-read and concurrent-publisher GC), `test_snapshot_copy_offload.py` (off-loop copy), `test_midstream_injection_unified.py` (cross-path effect-order equality), and `test_wait_interrupt_provider.py` (consolidated interrupt-provider contract).
 
 ## Recent Releases
+
+**v0.1.95 (June 8, 2026)** - Mid-Stream Steering
+Extends mid-stream injection into a programmatic, headless capability and upgrades it to true interrupt-and-resume for the CLI backends. A file inbox (`--inbox-dir`) lets `--automation` and any UI-less caller drop human guidance into a streaming agent through the same chokepoint the TUI/WebUI use; Codex and Antigravity now interrupt the in-flight turn and resume (`codex exec resume` / `agy --continue`) instead of waiting for a round boundary. Adds MCP-server-hook payload IPC for Antigravity (codex parity), wires the Antigravity `--model` flag, and fixes `--inbox-dir` for resumed sessions plus `expires_at`-guarded steering carryforward.
 
 **v0.1.94 (June 5, 2026)** - Parallelism Hardening (Engineering Health)
 Strengthens the orchestrator's parallel execution: moves the snapshot copy off the event loop so agents keep streaming concurrently — backed by immutable versioned snapshots that keep the off-loop copy safe — and closes latent concurrency races (lost peer-answer revisions, lost background-subagent results, leaked trace tasks, cancel-without-await teardown). Also unifies the mid-stream injection paths and surfaces worktree-isolation degradation. No per-backend functionality changes.
