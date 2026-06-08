@@ -97,6 +97,8 @@ CLI Parameters
      - Don't auto-open browser when using ``--web`` with a question. Useful for automation or when running on servers
    * - ``--output-file PATH``
      - Write final answer to specified file path. Works in any mode (automation, interactive, etc.). Useful for capturing agent responses in scripts or pipelines
+   * - ``--inbox-dir PATH``
+     - Expose a file inbox for programmatic mid-stream steering. A caller drops a message with ``massgen.steering.send_steering_message()`` and the orchestrator delivers it to the running agent(s) — the headless equivalent of typing into the TUI/WebUI. The resolved directory is announced as ``RUNTIME_INBOX:`` in automation output. See :doc:`../user_guide/integration/automation`
    * - ``--logfire``
      - Enable Logfire observability for structured tracing of LLM calls, tool executions, and orchestration. Requires Logfire token (via ``logfire auth login`` or ``LOGFIRE_TOKEN`` env var). See :doc:`../user_guide/logging` for setup details
    * - ``"<your question>"``

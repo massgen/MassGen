@@ -366,6 +366,48 @@ Programmatic Access
            "question": metadata["question"],
        }
 
+Mid-Stream Steering
+===================
+
+In the TUI and WebUI you can type a message to a running agent and have it fold the
+guidance in mid-stream. ``--inbox-dir`` exposes the same capability to automation and
+any UI-less caller through a file inbox.
+
+Start a run with an inbox directory:
+
+.. code-block:: bash
+
+   massgen --automation --inbox-dir /tmp/massgen_inbox \
+     --config @examples/basic/multi/three_agents_default.yaml \
+     "Write and then refine a short essay about the ocean."
+
+The resolved inbox path is announced in the automation output as ``RUNTIME_INBOX:``.
+Drop a steering message while the run is streaming:
+
+.. code-block:: python
+
+   from massgen.steering import send_steering_message
+
+   # Broadcast to all agents
+   send_steering_message("/tmp/massgen_inbox", "Prioritize concision over length.")
+
+   # Or target specific agents
+   send_steering_message(
+       "/tmp/massgen_inbox",
+       "Add a citation for that claim.",
+       target_agents=["agent_b"],
+   )
+
+The orchestrator polls the inbox and delivers the message through the same chokepoint
+the TUI and WebUI use. On the Codex and Antigravity CLI backends, steering that arrives
+mid-turn interrupts the in-flight turn and resumes, rather than waiting for the next
+round boundary.
+
+.. note::
+   ``--inbox-dir`` is honored for new runs and for resumed sessions
+   (``--session-id`` / ``--continue``). Messages are JSON files written atomically, so a
+   partially written message is never delivered.
+
 Meta-Coordination: MassGen Running MassGen
 ===========================================
 
