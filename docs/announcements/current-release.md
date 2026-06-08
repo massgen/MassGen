@@ -7,7 +7,7 @@ After posting, update the social links below.
 
 ## Release Summary
 
-We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 Steering a running agent isn't new — you've been able to redirect one mid-stream from the TUI and WebUI. v0.1.95 closes the two gaps that were left: steering is now reachable **headlessly** (a file inbox for `--automation` and any UI-less caller), and on the Codex/Antigravity CLI backends it **interrupts the in-flight turn and resumes** instead of waiting for the next round boundary. Same shared injection chokepoint across the TUI, WebUI, and the new headless path — just more ways in, and a faster response.
+We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 This release extends mid-stream steering — already available in the TUI and WebUI — to headless callers, and upgrades it to interrupt-and-resume on the CLI backends. A file inbox lets `--automation` and any UI-less caller drop guidance into a streaming agent through the same chokepoint the TUI/WebUI use, and Codex/Antigravity now interrupt the in-flight turn and resume rather than waiting for the next round boundary.
 
 ## Install
 
@@ -33,7 +33,7 @@ Copy everything below this line, then append content from `feature-highlights.md
 
 ---
 
-We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 Steering a running agent mid-stream isn't new in MassGen — you've been able to redirect one from the TUI and WebUI. v0.1.95 makes it reach further: you can now steer **without a UI** (drop a message into a file inbox from `--automation`), and on the Codex/Antigravity CLI backends steering **interrupts the current turn and resumes** rather than waiting for the next round. More ways in, faster to land.
+We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 This release extends mid-stream steering — already available in the TUI and WebUI — so it reaches further. You can now steer **without a UI** by dropping a message into a file inbox from `--automation`, and on the Codex/Antigravity CLI backends steering **interrupts the current turn and resumes** rather than waiting for the next round.
 
 **Key Improvements:**
 
