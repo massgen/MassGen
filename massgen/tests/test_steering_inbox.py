@@ -16,10 +16,12 @@ and WebUI (`broadcast_response`) call, so this covers all backends. Targeting
 from __future__ import annotations
 
 import json
+import os
 from types import SimpleNamespace
 
 import pytest
 
+from massgen.cli.entrypoint import _resolve_runtime_inbox
 from massgen.mcp_tools.hooks import HumanInputHook, RuntimeInboxPoller
 from massgen.orchestrator_collaborators.runtime_input_delivery import (
     RuntimeInputDelivery,
@@ -101,6 +103,37 @@ class TestEnvOverrideResolution:
         delivery, orch, _ = _delivery_with_stub(tmp_path)
         delivery.ensure_runtime_inbox_poller_initialized()
         assert orch._runtime_inbox_poller is None
+
+
+class TestResolveRuntimeInbox:
+    """The CLI helper exports --inbox-dir for EVERY session mode (not just new).
+
+    Regression: the export used to live inside the new-session branch of main(),
+    so runs started with --session-id / config session_id / --continue silently
+    dropped programmatic steering. The helper runs before the branch, fixing all.
+    """
+
+    def test_exports_env_var_and_creates_dir(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("MASSGEN_RUNTIME_INBOX_DIR", raising=False)
+        inbox = tmp_path / "deep" / "inbox"
+        args = SimpleNamespace(inbox_dir=str(inbox))
+
+        resolved = _resolve_runtime_inbox(args)
+
+        assert resolved == inbox.resolve()
+        assert inbox.exists()  # mkdir(parents=True) ran
+        assert os.environ["MASSGEN_RUNTIME_INBOX_DIR"] == str(inbox.resolve())
+
+    def test_no_inbox_dir_is_noop(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("MASSGEN_RUNTIME_INBOX_DIR", raising=False)
+        args = SimpleNamespace(inbox_dir=None)
+
+        assert _resolve_runtime_inbox(args) is None
+        assert "MASSGEN_RUNTIME_INBOX_DIR" not in os.environ
+
+    def test_missing_attr_is_noop(self, monkeypatch):
+        monkeypatch.delenv("MASSGEN_RUNTIME_INBOX_DIR", raising=False)
+        assert _resolve_runtime_inbox(SimpleNamespace()) is None
 
 
 class TestPollRoutesToChokepoint:

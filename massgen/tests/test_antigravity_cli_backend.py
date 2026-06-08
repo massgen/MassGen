@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -1335,6 +1336,34 @@ class TestMcpServerHookPayloads:
         backend.write_post_tool_use_hook("x")
         backend.clear_hook_files()
         assert not (backend.get_hook_dir() / "hook_post_tool_use.json").exists()
+
+    def test_read_unconsumed_drops_expired_payload(self, backend):
+        # A stale carryforward must not resurrect old steering at the next round.
+        hook_file = backend.get_hook_dir() / "hook_post_tool_use.json"
+        hook_file.parent.mkdir(parents=True, exist_ok=True)
+        hook_file.write_text(
+            json.dumps({"inject": {"content": "stale steer"}, "expires_at": 1.0}),
+        )
+        assert backend.read_unconsumed_hook_content() is None
+        # Expired payload is consumed (removed), not left to leak forward.
+        assert not hook_file.exists()
+
+    def test_read_unconsumed_returns_fresh_payload(self, backend):
+        hook_file = backend.get_hook_dir() / "hook_post_tool_use.json"
+        hook_file.parent.mkdir(parents=True, exist_ok=True)
+        hook_file.write_text(
+            json.dumps({"inject": {"content": "fresh steer"}, "expires_at": time.time() + 3600}),
+        )
+        assert backend.read_unconsumed_hook_content() == "fresh steer"
+
+    def test_read_unconsumed_tolerates_bad_expires_at(self, backend):
+        # A malformed guard must not drop a real payload (fail-open, like middleware).
+        hook_file = backend.get_hook_dir() / "hook_post_tool_use.json"
+        hook_file.parent.mkdir(parents=True, exist_ok=True)
+        hook_file.write_text(
+            json.dumps({"inject": {"content": "keep me"}, "expires_at": "not-a-number"}),
+        )
+        assert backend.read_unconsumed_hook_content() == "keep me"
 
 
 class TestInterruptResume:

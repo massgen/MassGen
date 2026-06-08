@@ -662,6 +662,17 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         try:
             data = json.loads(hook_file.read_text(encoding="utf-8"))
             hook_file.unlink(missing_ok=True)
+            # Honor payload freshness: a stale carryforward could trigger an
+            # unexpected interrupt/resume on the next round. Mirror the
+            # middleware's expires_at handling (hook_middleware.py).
+            expires_at = data.get("expires_at")
+            if expires_at is not None:
+                try:
+                    if time.time() > float(expires_at):
+                        logger.debug(f"Antigravity CLI: dropping expired unconsumed hook (expires_at={expires_at})")
+                        return None
+                except (TypeError, ValueError):
+                    logger.warning(f"Antigravity CLI: invalid expires_at {expires_at!r} in hook file; treating as non-expiring")
             content = data.get("inject", {}).get("content")
             if content:
                 logger.info(f"Antigravity CLI: read unconsumed hook content ({len(content)} chars) — carrying forward")
@@ -1226,8 +1237,12 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             watcher.cancel()
             try:
                 await watcher
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError:
                 pass
+            except Exception:
+                # A non-cancellation failure here means a real watcher bug during
+                # interrupt/resume finalization — don't mask it silently.
+                logger.debug("Antigravity CLI: watcher failed during cleanup", exc_info=True)
 
         # Interrupted by steering → promote any work agy did (so pre-interrupt
         # deliverables aren't lost), then end this run; _stream_local resumes.

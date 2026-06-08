@@ -41,7 +41,7 @@ When an agent has **no writable `context_paths`**, the workspace itself is the a
 2. **Creates and checks out a fresh branch** for the round: `git checkout -b massgen/{hex}`.
 3. Creates the git-excluded `.massgen_scratch/`.
 
-```
+```text
 Round 1 (in-place)              Round 2 (in-place)
 ──────────────────────────      ──────────────────────────
 checkout -b massgen/a1b2c3d4    checkout -b massgen/e5f6g7h8

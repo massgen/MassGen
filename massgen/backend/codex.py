@@ -481,6 +481,17 @@ class CodexBackend(StreamingBufferMixin, NativeToolBackendMixin, LLMBackend):
         try:
             data = json.loads(hook_file.read_text(encoding="utf-8"))
             hook_file.unlink(missing_ok=True)
+            # Honor payload freshness: a stale carryforward could trigger an
+            # unexpected interrupt/resume on the next round. Mirror the
+            # middleware's expires_at handling (hook_middleware.py).
+            expires_at = data.get("expires_at")
+            if expires_at is not None:
+                try:
+                    if time.time() > float(expires_at):
+                        logger.debug(f"Dropping expired unconsumed hook (expires_at={expires_at})")
+                        return None
+                except (TypeError, ValueError):
+                    logger.warning(f"Invalid expires_at {expires_at!r} in hook file; treating as non-expiring")
             inject = data.get("inject", {})
             content = inject.get("content")
             if content:
@@ -2355,8 +2366,12 @@ class CodexBackend(StreamingBufferMixin, NativeToolBackendMixin, LLMBackend):
                 watcher.cancel()
                 try:
                     await watcher
-                except (asyncio.CancelledError, Exception):
+                except asyncio.CancelledError:
                     pass
+                except Exception:
+                    # A non-cancellation failure here means a real watcher bug
+                    # during interrupt/resume finalization — don't mask it.
+                    logger.debug("Codex: watcher failed during cleanup", exc_info=True)
 
             await proc.wait()
 

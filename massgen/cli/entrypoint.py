@@ -101,6 +101,25 @@ from .streaming import (
 )
 
 
+def _resolve_runtime_inbox(args) -> Path | None:
+    """Resolve ``--inbox-dir`` and export ``MASSGEN_RUNTIME_INBOX_DIR``.
+
+    Programmatic steering: an explicit ``--inbox-dir`` makes mid-stream human
+    input reachable without a UI. This runs for ALL session modes (new,
+    ``--session-id``, config-restored, ``--continue``) so the orchestrator's
+    inbox-poller resolver targets the caller-known directory regardless of how
+    the session was started. Returns the resolved dir (also exported to the
+    environment) or ``None`` when no override was given.
+    """
+    inbox_dir_arg = getattr(args, "inbox_dir", None)
+    if not inbox_dir_arg:
+        return None
+    resolved_inbox = Path(inbox_dir_arg).expanduser().resolve()
+    resolved_inbox.mkdir(parents=True, exist_ok=True)
+    os.environ["MASSGEN_RUNTIME_INBOX_DIR"] = str(resolved_inbox)
+    return resolved_inbox
+
+
 async def main(args):
     """Main CLI entry point (async operations only)."""
     # Setup logging (only for actual agent runs, not special commands)
@@ -552,6 +571,9 @@ async def main(args):
         elif "agents" in config and config["agents"]:
             model_name = config["agents"][0].get("backend", {}).get("model")
 
+        # Resolve --inbox-dir for ALL session modes (new + resumed). See helper.
+        resolved_inbox: Path | None = _resolve_runtime_inbox(args)
+
         # Priority order: CLI arg > config file > generate new
         if args.session_id:
             # Use session_id from CLI argument (already validated) - RESTORE existing
@@ -586,17 +608,6 @@ async def main(args):
 
             log_dir = get_log_session_root()
             log_dir_name = log_dir.name
-
-            # Programmatic steering: an explicit --inbox-dir makes mid-stream
-            # human input reachable without a UI. Export it so the orchestrator's
-            # inbox-poller resolver (which reads MASSGEN_RUNTIME_INBOX_DIR) targets
-            # this deterministic, caller-known directory.
-            inbox_dir_arg = getattr(args, "inbox_dir", None)
-            resolved_inbox: Path | None = None
-            if inbox_dir_arg:
-                resolved_inbox = Path(inbox_dir_arg).expanduser().resolve()
-                resolved_inbox.mkdir(parents=True, exist_ok=True)
-                os.environ["MASSGEN_RUNTIME_INBOX_DIR"] = str(resolved_inbox)
 
             # Print LOG_DIR for automation mode (LLM agents need this to monitor progress)
             # LOG_DIR is the main session directory, STATUS includes turn/attempt subdirectory
