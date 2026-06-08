@@ -84,8 +84,11 @@ class MassGenHookMiddleware(Middleware):
     _RUNTIME_INPUT_KEY = "massgen_runtime_input"
     _RUNTIME_INPUT_PRIORITY_KEY = "massgen_runtime_input_priority"
 
-    def __init__(self, hook_dir: Path) -> None:
-        self._hook_dir = hook_dir
+    def __init__(self, hook_dir: Path | str) -> None:
+        # Coerce to Path: a string slips through (callers wrap in Path today, but
+        # a raw str would make `self._hook_dir / "..."` raise TypeError inside the
+        # swallowed try/except in on_call_tool — i.e. silent non-delivery).
+        self._hook_dir = Path(hook_dir)
         self._last_post_sequence: int = -1
 
     async def on_call_tool(self, context: Any, call_next: Any) -> Any:
@@ -101,6 +104,15 @@ class MassGenHookMiddleware(Middleware):
             injection = self._read_post_tool_use_injection(tool_name)
             if injection:
                 result = self._append_to_result(result, injection)
+                # Success-path observability (mirrors the error log below). This
+                # is how we confirm the middleware actually fires end-to-end in a
+                # real run — the CLIs' native hooks can't be trusted to fire, so
+                # we log every real injection.
+                logger.info(
+                    "Hook middleware injected %d chars into '%s' tool result",
+                    len(injection),
+                    tool_name,
+                )
         except Exception as e:
             logger.error(
                 "Hook middleware injection failed for tool %s: %s. " "Returning original result.",

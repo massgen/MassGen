@@ -1,14 +1,14 @@
-# MassGen v0.1.95 Roadmap
+# MassGen v0.1.96 Roadmap
 
 **Target Release:** TBD
 
 ## Overview
 
-Version 0.1.95 picks up the image/video edit work deferred from v0.1.86-v0.1.94 and continues multimodal provider-parity work.
+Version 0.1.96 picks up the image/video edit work deferred from v0.1.86-v0.1.95 and continues multimodal provider-parity work.
 
 ---
 
-## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.94)
+## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.95)
 
 **Issue:** [#959](https://github.com/massgen/MassGen/issues/959)
 **Owner:** @ncrispino
@@ -30,6 +30,7 @@ Version 0.1.95 picks up the image/video edit work deferred from v0.1.86-v0.1.94 
 
 ## Related Tracks
 
+- **v0.1.95**: Steering Improvements — programmatic steering inbox (`--inbox-dir`) routed to the shared `set_pending_input` chokepoint, mid-round interrupt-and-resume for Codex and Antigravity (`codex exec resume` / `agy --continue`), MCP-server-hook payload IPC for Antigravity (codex parity), and the Antigravity `--model` flag wired through
 - **v0.1.94**: Parallelism Hardening (engineering health) — snapshot copy moved off the event loop with immutable versioned snapshots, lock-free concurrency-race fixes, unified mid-stream injection, and worktree-isolation degradation surfaced
 - **v0.1.93**: CLI package decomposition and pydantic config migration — focused `massgen/cli/` package, construction-time config validation with `Literal`-typed modes, single-source exclusion lists, dead-code removal, and test-signal/type-checking hardening
 - **v0.1.92**: Orchestrator collaborator refactor and Parallel Search MCP — 49 collaborator extractions, Textual display helper split, characterization coverage, and a Parallel hosted search example
@@ -37,9 +38,6 @@ Version 0.1.95 picks up the image/video edit work deferred from v0.1.86-v0.1.94 
 - **v0.1.90**: Discriminative criteria refinements and checklist calibration — score-spread pruning, per-criterion feedback, position-bias counterbalancing, unified checklist gate, and shared score utilities
 - **v0.1.89**: Antigravity CLI full integration and hardening — workflow-mode parity, auth checks, workspace project anchoring, standalone hooks.json, and prompt affordance gating
 - **v0.1.88**: Antigravity CLI backend wrapping Google's `agy` binary, with workspace-local `.antigravity/` config isolation and runnable Antigravity examples
-- **v0.1.87**: Documentation — framework comparison pages (CrewAI, LangGraph, AutoGen) and `llms.txt` index ([#1094](https://github.com/massgen/MassGen/pull/1094)); plus a one-line `refine=False` fix for the `bootstrap_subagent` discriminator
-- **v0.1.86**: Functional `bootstrap_subagent` discriminator and Codex MCP approval fix
-- **v0.1.85**: Discriminative Criteria Emergence (`criteria_mode`) — `bootstrap_inline` and accumulator infrastructure
 
 ## What's Next
 

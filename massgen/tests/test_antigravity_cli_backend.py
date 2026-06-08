@@ -2,8 +2,8 @@
 
 The Antigravity CLI (`agy`, Google's successor to the Gemini CLI as of I/O 2026)
 is architecturally simpler than the Gemini CLI: plain text stdout, no
-stream-json events, no per-invocation --model flag. These tests pin the
-contract MassGen depends on.
+stream-json events. (agy 1.0.5+ does have a real --model flag, resolved from
+the configured model id.) These tests pin the contract MassGen depends on.
 
 Run with: uv run pytest massgen/tests/test_antigravity_cli_backend.py -v
 """
@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -172,12 +173,117 @@ class TestCommandConstruction:
         assert Path(log_path).is_absolute()
         assert ".antigravity" in log_path
 
-    def test_command_does_not_pass_model_flag(self, backend):
-        """agy 1.0.0 has no --model flag; we must not emit one even when configured."""
-        backend.model = "gemini-3-flash-preview"
+    def test_command_passes_model_flag_for_known_alias(self, backend):
+        """agy 1.0.5+ has a real --model flag taking an exact `agy models` label.
+
+        A configured short id (e.g. ``gemini-3.5-flash``) must resolve to the
+        canonical agy label and be emitted as ``--model <label>``.
+        """
+        backend.model = "gemini-3.5-flash"
+        cmd = backend._build_exec_command("hello")
+        assert "--model" in cmd, f"--model flag missing from: {cmd}"
+        idx = cmd.index("--model")
+        assert cmd[idx + 1] == "Gemini 3.5 Flash (High)", cmd
+
+    def test_command_passes_model_flag_for_exact_label(self, backend):
+        """An already-canonical label is emitted verbatim (case-insensitive match)."""
+        backend.model = "Gemini 3.1 Pro (High)"
+        cmd = backend._build_exec_command("hello")
+        assert "--model" in cmd
+        assert cmd[cmd.index("--model") + 1] == "Gemini 3.1 Pro (High)"
+
+    def test_command_omits_model_flag_for_unresolvable_model(self, backend):
+        """An unrecognizable model id must NOT be passed (agy would reject it).
+
+        Falling back to agy's default is safer than emitting a bad --model that
+        makes the whole call fail.
+        """
+        backend.model = "totally-unknown-model-xyz"
         cmd = backend._build_exec_command("hello")
         assert "--model" not in cmd
-        assert "-m" not in cmd
+
+
+class TestModelResolution:
+    """Configured model ids map to exact `agy models` labels for --model."""
+
+    @pytest.mark.parametrize(
+        "configured,expected",
+        [
+            ("gemini-3.5-flash", "Gemini 3.5 Flash (High)"),
+            ("gemini-3.5-flash-low", "Gemini 3.5 Flash (Low)"),
+            ("gemini-3.5-flash-medium", "Gemini 3.5 Flash (Medium)"),
+            ("gemini-3.1-pro", "Gemini 3.1 Pro (High)"),
+            ("gemini-3.1-pro-low", "Gemini 3.1 Pro (Low)"),
+            ("claude-sonnet-4.6", "Claude Sonnet 4.6 (Thinking)"),
+            ("claude-opus-4.6", "Claude Opus 4.6 (Thinking)"),
+            ("gpt-oss-120b", "GPT-OSS 120B (Medium)"),
+            # Exact labels pass through (case-insensitive)
+            ("Gemini 3.5 Flash (High)", "Gemini 3.5 Flash (High)"),
+            ("gemini 3.5 flash (medium)", "Gemini 3.5 Flash (Medium)"),
+            # Default label resolves to itself
+            (AGY_DEFAULT_MODEL_LABEL, "Gemini 3.5 Flash (High)"),
+        ],
+    )
+    def test_resolve_known_models(self, configured, expected):
+        assert AntigravityCLIBackend._resolve_agy_model_label(configured) == expected
+
+    @pytest.mark.parametrize("bad", ["", None, "gpt-4o", "llama-3", "random"])
+    def test_resolve_unknown_returns_none(self, bad):
+        assert AntigravityCLIBackend._resolve_agy_model_label(bad) is None
+
+
+class TestScratchPromotion:
+    """agy may route write_to_file into its internal scratch dir (excluded from
+    snapshots). After each run we promote new scratch files into the workspace
+    root so deliverables stay visible — without clobbering files the model
+    already placed in the workspace."""
+
+    def _scratch_dir(self, backend):
+        return backend._workspace_config_dir() / "antigravity-cli" / "scratch"
+
+    def test_promote_copies_new_scratch_file_to_workspace(self, backend):
+        scratch = self._scratch_dir(backend)
+        scratch.mkdir(parents=True, exist_ok=True)
+        pre = backend._snapshot_scratch_files(scratch)
+        deliverable = scratch / "result.svg"
+        deliverable.write_text("<svg/>")
+        promoted = backend._promote_scratch_deliverables(pre)
+        assert "result.svg" in promoted
+        dest = Path(backend.cwd).resolve() / "result.svg"
+        assert dest.exists() and dest.read_text() == "<svg/>"
+
+    def test_promote_preserves_subdir_structure(self, backend):
+        scratch = self._scratch_dir(backend)
+        (scratch / "out").mkdir(parents=True, exist_ok=True)
+        pre = backend._snapshot_scratch_files(scratch)
+        (scratch / "out" / "a.txt").write_text("x")
+        promoted = backend._promote_scratch_deliverables(pre)
+        assert any(p.replace("\\", "/") == "out/a.txt" for p in promoted)
+        assert (Path(backend.cwd).resolve() / "out" / "a.txt").read_text() == "x"
+
+    def test_promote_does_not_clobber_existing_workspace_file(self, backend):
+        scratch = self._scratch_dir(backend)
+        scratch.mkdir(parents=True, exist_ok=True)
+        pre = backend._snapshot_scratch_files(scratch)
+        (scratch / "result.svg").write_text("FROM_SCRATCH")
+        ws_file = Path(backend.cwd).resolve() / "result.svg"
+        ws_file.write_text("MODEL_PLACED")
+        promoted = backend._promote_scratch_deliverables(pre)
+        assert "result.svg" not in promoted
+        assert ws_file.read_text() == "MODEL_PLACED"
+
+    def test_promote_ignores_preexisting_scratch_files(self, backend):
+        scratch = self._scratch_dir(backend)
+        scratch.mkdir(parents=True, exist_ok=True)
+        (scratch / "old.txt").write_text("old")
+        pre = backend._snapshot_scratch_files(scratch)
+        promoted = backend._promote_scratch_deliverables(pre)
+        assert promoted == []
+        assert not (Path(backend.cwd).resolve() / "old.txt").exists()
+
+    def test_promote_noop_when_scratch_missing(self, backend):
+        # No scratch dir at all → empty result, no crash.
+        assert backend._promote_scratch_deliverables({}) == []
 
 
 class TestMCPConfigEmission:
@@ -514,6 +620,73 @@ class TestHooksJsonWiring:
         assert adapter is not None
         if hasattr(adapter, "hook_dir"):
             assert adapter.hook_dir == backend._workspace_config_dir()
+
+
+class TestNativeHookDirWiringRound1:
+    """Regression for the round-1 native-hook gap.
+
+    The orchestrator builds the native hooks config by calling
+    ``get_native_hook_adapter()`` and then ``adapter.build_native_hooks_config()``
+    BEFORE the backend's stream ever runs ``_write_hooks_json`` (which is where
+    ``hook_dir`` used to be set lazily). On the very first round the adapter's
+    ``hook_dir`` was therefore ``None``, so ``build_native_hooks_config`` returned
+    ``{}`` and the initial-answer round ran with NO MassGen native hooks.
+
+    These tests drive the REAL build path — they do NOT pre-populate
+    ``_massgen_hooks_config`` (which is what let the older TestHooksJsonWiring
+    tests pass despite the bug).
+    """
+
+    def _manager_with_hooks(self):
+        from massgen.mcp_tools.hooks import (
+            GeneralHookManager,
+            HookType,
+            PythonCallableHook,
+        )
+
+        manager = GeneralHookManager()
+        manager.register_global_hook(
+            HookType.PRE_TOOL_USE,
+            PythonCallableHook(name="t_pre", handler=lambda _e: None, matcher="*"),
+        )
+        manager.register_global_hook(
+            HookType.POST_TOOL_USE,
+            PythonCallableHook(name="t_post", handler=lambda _e: None, matcher="*"),
+        )
+        return manager
+
+    def test_get_native_hook_adapter_sets_hook_dir(self, backend):
+        # The orchestrator fetches the adapter via this accessor right before
+        # building the config. It must come back with hook_dir already set.
+        adapter = backend.get_native_hook_adapter()
+        assert adapter is not None
+        assert adapter.hook_dir is not None, "hook_dir is None at orchestrator build time — round-1 hooks lost"
+        assert Path(adapter.hook_dir) == backend._workspace_config_dir()
+
+    def test_build_native_hooks_config_nonempty_on_first_round(self, backend):
+        # Simulate exactly what the orchestrator does on round 1: fetch adapter,
+        # then build. Must NOT return {} (the round-1 bug).
+        manager = self._manager_with_hooks()
+        adapter = backend.get_native_hook_adapter()
+        cfg = adapter.build_native_hooks_config(manager, agent_id="agent_b")
+        assert cfg.get("hooks"), f"round-1 build returned empty config: {cfg!r}"
+        assert "BeforeTool" in cfg["hooks"]
+        assert "AfterTool" in cfg["hooks"]
+
+    def test_full_round1_flow_writes_hooks_json_and_enables_flag(self, backend):
+        # End-to-end round-1 simulation: orchestrator builds + sets the config,
+        # then the backend's stream-time _write_hooks_json must actually emit a
+        # hooks.json and the enableJsonHooks gate.
+        manager = self._manager_with_hooks()
+        adapter = backend.get_native_hook_adapter()
+        backend.set_native_hooks_config(adapter.build_native_hooks_config(manager, agent_id="agent_b"))
+        wrote = backend._write_hooks_json()
+        assert wrote is True, "round-1 _write_hooks_json wrote nothing — native hooks missing in initial round"
+        backend._write_workspace_settings_json(has_hooks=wrote)
+        hooks_path = backend._workspace_hooks_json_path()
+        assert hooks_path.exists()
+        settings = json.loads((backend._workspace_config_dir() / "settings.json").read_text())
+        assert settings.get("enableJsonHooks") is True
 
 
 class TestAgentsMdAtomicity:
@@ -1116,3 +1289,107 @@ class TestSubprocessEnv:
         backend.disable_auto_update = True
         env = backend._build_subprocess_env()
         assert env.get("AGY_CLI_DISABLE_AUTO_UPDATE") == "1"
+
+
+class TestMcpServerHookPayloads:
+    """agy parity with codex for the MCP-middleware mid-stream injection IPC.
+
+    The orchestrator's per-chunk flush is backend-agnostic (gated only on
+    `write_post_tool_use_hook` + `supports_mcp_server_hooks()`), so these methods
+    let agy participate in the same MCP-middleware injection path codex uses.
+    (Live end-to-end delivery shares the unresolved Codex MCP-client gap — see
+    test_codex_middleware_firing_live.py.)
+    """
+
+    def test_supports_mcp_server_hooks(self, backend):
+        assert backend.supports_mcp_server_hooks() is True
+
+    def test_hook_dir_is_workspace_config_dir(self, backend):
+        assert backend.get_hook_dir() == backend._workspace_config_dir()
+
+    def test_write_then_read_roundtrip(self, backend):
+        backend.write_post_tool_use_hook("[Human Input]: steer agy")
+        # File present until consumed
+        assert (backend.get_hook_dir() / "hook_post_tool_use.json").exists()
+        content = backend.read_unconsumed_hook_content()
+        assert content == "[Human Input]: steer agy"
+        # read consumes it
+        assert not (backend.get_hook_dir() / "hook_post_tool_use.json").exists()
+        assert backend.read_unconsumed_hook_content() is None
+
+    def test_write_payload_shape_matches_middleware_contract(self, backend):
+        backend.write_post_tool_use_hook("hi", tool_matcher="*")
+        data = json.loads((backend.get_hook_dir() / "hook_post_tool_use.json").read_text())
+        assert data["inject"]["content"] == "hi"
+        assert data["inject"]["strategy"] == "tool_result"
+        assert data["tool_matcher"] == "*"
+        assert isinstance(data["expires_at"], float)
+        assert data["sequence"] == 1
+
+    def test_sequence_increments(self, backend):
+        backend.write_post_tool_use_hook("a")
+        backend.write_post_tool_use_hook("b")
+        data = json.loads((backend.get_hook_dir() / "hook_post_tool_use.json").read_text())
+        assert data["sequence"] == 2
+
+    def test_clear_hook_files(self, backend):
+        backend.write_post_tool_use_hook("x")
+        backend.clear_hook_files()
+        assert not (backend.get_hook_dir() / "hook_post_tool_use.json").exists()
+
+    def test_read_unconsumed_drops_expired_payload(self, backend):
+        # A stale carryforward must not resurrect old steering at the next round.
+        hook_file = backend.get_hook_dir() / "hook_post_tool_use.json"
+        hook_file.parent.mkdir(parents=True, exist_ok=True)
+        hook_file.write_text(
+            json.dumps({"inject": {"content": "stale steer"}, "expires_at": 1.0}),
+        )
+        assert backend.read_unconsumed_hook_content() is None
+        # Expired payload is consumed (removed), not left to leak forward.
+        assert not hook_file.exists()
+
+    def test_read_unconsumed_returns_fresh_payload(self, backend):
+        hook_file = backend.get_hook_dir() / "hook_post_tool_use.json"
+        hook_file.parent.mkdir(parents=True, exist_ok=True)
+        hook_file.write_text(
+            json.dumps({"inject": {"content": "fresh steer"}, "expires_at": time.time() + 3600}),
+        )
+        assert backend.read_unconsumed_hook_content() == "fresh steer"
+
+    def test_read_unconsumed_tolerates_bad_expires_at(self, backend):
+        # A malformed guard must not drop a real payload (fail-open, like middleware).
+        hook_file = backend.get_hook_dir() / "hook_post_tool_use.json"
+        hook_file.parent.mkdir(parents=True, exist_ok=True)
+        hook_file.write_text(
+            json.dumps({"inject": {"content": "keep me"}, "expires_at": "not-a-number"}),
+        )
+        assert backend.read_unconsumed_hook_content() == "keep me"
+
+
+class TestInterruptResume:
+    """agy mid-round interrupt-and-resume steering (kill + `agy --continue`)."""
+
+    def test_supports_interrupt_resume_default_true(self, backend):
+        assert backend.supports_interrupt_resume() is True
+
+    def test_supports_interrupt_resume_can_be_disabled(self, tmp_path):
+        with patch.object(AntigravityCLIBackend, "_find_agy_cli", return_value="/fake/bin/agy"):
+            b = AntigravityCLIBackend(cwd=str(tmp_path), skip_health_check=True, enable_interrupt_resume=False)
+        assert b.supports_interrupt_resume() is False
+
+    def test_resume_command_adds_continue(self, backend):
+        cmd = backend._build_exec_command("steer me", resume=True)
+        assert "--continue" in cmd
+        # prompt still passed via -p after --continue
+        assert "-p" in cmd
+        assert "steer me" in cmd
+
+    def test_non_resume_command_omits_continue(self, backend):
+        cmd = backend._build_exec_command("hello", resume=False)
+        assert "--continue" not in cmd
+
+    def test_config_knobs(self, tmp_path):
+        with patch.object(AntigravityCLIBackend, "_find_agy_cli", return_value="/fake/bin/agy"):
+            b = AntigravityCLIBackend(cwd=str(tmp_path), skip_health_check=True, interrupt_poll_seconds=0.5, max_interrupts_per_turn=3)
+        assert b._interrupt_poll_seconds == 0.5
+        assert b._max_interrupts_per_turn == 3

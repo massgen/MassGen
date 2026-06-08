@@ -77,7 +77,18 @@ This means:
 - Agents don't know which agent they are
 - System prompts and branch names don't reveal identity
 - Cross-agent answers and workspaces are presented anonymously
-- Each round starts fresh from HEAD (no accumulated state)
+- Each round starts fresh from HEAD (no accumulated state): the working tree
+  is wiped clean between rounds (only ``.git/`` survives), after the round's
+  work is auto-committed to its branch. An agent does not inherit its own
+  prior round's leftover files.
+
+.. note::
+
+   The live ``…/agent_<id>/workspace`` symlink reflects only the *current*
+   round's in-progress state — not where finished deliverables accumulate.
+   A round's output lives in its git branch, in the per-round log snapshots
+   (``…/agent_<id>/<timestamp>/workspace/`` and ``turn_*/final/…``), and in
+   the shared ``temp_workspaces/`` copies.
 
 Migrating from use_two_tier_workspace
 ---------------------------------------

@@ -1,4 +1,4 @@
-# MassGen v0.1.94 Release Announcement (Parallelism Hardening)
+# MassGen v0.1.95 Release Announcement (Steering Improvements)
 
 <!--
 This is the current release announcement. Copy this + feature-highlights.md to LinkedIn/X.
@@ -7,23 +7,23 @@ After posting, update the social links below.
 
 ## Release Summary
 
-We're excited to release MassGen v0.1.94 — Parallelism Hardening (Engineering Health)! 🚀 This release strengthens the orchestrator's parallel execution: we moved the per-round snapshot copy off the event loop so agents keep streaming concurrently, backed it with an immutable, versioned snapshot store that keeps the off-loop copy safe, and closed several latent concurrency races. No per-backend functionality changes — pure parallelism correctness and reliability.
+We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 This release extends mid-stream steering — already available in the TUI and WebUI — to headless callers, and upgrades it to interrupt-and-resume on the CLI backends. A file inbox lets `--automation` and any UI-less caller drop guidance into a streaming agent through the same chokepoint the TUI/WebUI use, and Codex/Antigravity now interrupt the in-flight turn and resume rather than waiting for the next round boundary.
 
 ## Install
 
 ```bash
-pip install massgen==0.1.94
+pip install massgen==0.1.95
 ```
 
 ## Links
 
-- **Release notes:** https://github.com/massgen/MassGen/releases/tag/v0.1.94
+- **Release notes:** https://github.com/massgen/MassGen/releases/tag/v0.1.95
 - **X post:** [TO BE ADDED AFTER POSTING]
 - **LinkedIn post:** [TO BE ADDED AFTER POSTING]
 
 ## Posting Notes
 
-- **Suggested image:** Use a screenshot of the v0.1.94 release notes.
+- **Suggested image:** A TUI screenshot of a mid-stream steering moment — agent streaming, a steering message landing, the agent visibly changing course. (Headless file-inbox half isn't TUI-visible; cover it in text.)
 
 ---
 
@@ -33,35 +33,32 @@ Copy everything below this line, then append content from `feature-highlights.md
 
 ---
 
-We're excited to release MassGen v0.1.94 — Parallelism Hardening (Engineering Health)! 🚀 This release strengthens the orchestrator's parallel execution: it moves blocking snapshot work off the event loop so agents keep streaming concurrently, backs it with immutable versioned snapshots that keep the off-loop copy safe, and closes latent concurrency races. No per-backend functionality changes.
+We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 This release extends mid-stream steering — already available in the TUI and WebUI — so it reaches further. You can now steer **without a UI** by dropping a message into a file inbox from `--automation`, and on the Codex/Antigravity CLI backends steering **interrupts the current turn and resumes** rather than waiting for the next round.
 
 **Key Improvements:**
 
-⚡ **Snapshot copy off the event loop**:
-- The peer-context snapshot copy now runs its blocking `rmtree`/`copytree`/scrub on a worker thread via `asyncio.to_thread`
-- One agent's snapshot copy no longer stalls every other agent's streaming
+📨 **Programmatic steering inbox (`--inbox-dir`)**:
+- `send_steering_message()` drops a message into a caller-known inbox; the orchestrator routes it to the same `set_pending_input` chokepoint the TUI and WebUI use
+- Reachable from `--automation` and any UI-less caller, with per-message targeting (one agent / a subset / broadcast)
 
-🔒 **Immutable, versioned snapshots**:
-- Each agent's snapshot path is now a symlink to an immutable `.versions/<id>/v<N>` directory
-- Writers publish a new version and atomically repoint the symlink; readers pin (refcount) the current version for the duration of their copy
-- Eliminates the read-during-write race the off-loop copy would otherwise expose — no `FileNotFoundError`, no torn snapshots
+⏯️ **Interrupt-and-resume steering (Codex & Antigravity)**:
+- Steering mid-turn kills the in-flight turn and resumes (`codex exec resume` / `agy --continue`) instead of waiting for a round boundary
+- Antigravity promotes pre-interrupt deliverables first, so work isn't lost
 
-🧵 **Concurrency correctness fixes**:
-- Lost peer-answer revisions across the injection `await` window — fixed (revision counts captured at selection time)
-- Lost background-subagent results from a blind queue `pop` — fixed (consume only the consumed ids)
-- Leaked background trace tasks on cleanup, and a cancel-without-await teardown — fixed
-- Worktree-isolation degradation is now surfaced (a swallowed `TypeError` previously hid it)
+🪝 **MCP-hook injection parity**:
+- Antigravity gains codex-parity mid-stream injection through the MCP middleware, with `expires_at`-guarded payloads
+- The Antigravity `--model` flag is now actually wired through
 
-🧩 **Unified mid-stream injection**:
-- The two large per-backend injection closures collapsed into one shared implementation; the background-wait interrupt provider was likewise deduplicated, removing backend-parity drift
+🔧 **Reliability fixes**:
+- `--inbox-dir` now honored for resumed sessions (`--session-id` / `--continue`), stale steering can't carry forward past `expires_at`, and watcher failures are logged instead of swallowed
 
 **Install:**
 
 ```bash
-pip install massgen==0.1.94
+pip install massgen==0.1.95
 ```
 
-Release notes: https://github.com/massgen/MassGen/releases/tag/v0.1.94
+Release notes: https://github.com/massgen/MassGen/releases/tag/v0.1.95
 
 Feature highlights:
 

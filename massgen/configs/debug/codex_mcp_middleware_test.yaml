@@ -1,0 +1,27 @@
+# Test config for the Codex MCP-injection middleware (test_codex_middleware_firing_live.py).
+#
+# The MassGenHookMiddleware only fires on DIRECT MCP-protocol tool calls. So this
+# config deliberately:
+#   - enable_code_based_tools: false  -> tools are real MCP calls, NOT CodeAct
+#     python-wrapper scripts (which bypass the MCP server / middleware entirely).
+#   - task_planning_filesystem_mode: false -> the planning tool is a real MCP
+#     call (mcp__planning__*), which the orchestrator launches with --hook-dir so
+#     the middleware is attached. Codex calls it early to plan the task.
+# Single Codex agent keeps it cheap; planning gives a reliable middleware-equipped
+# MCP call to ride.
+agents:
+  - id: agent_a
+    backend:
+      type: codex
+      model: gpt-5.4
+      cwd: workspace
+      enable_code_based_tools: false
+orchestrator:
+  snapshot_storage: snapshots
+  agent_temporary_workspace: temp_workspaces
+  coordination:
+    enable_agent_task_planning: true
+    task_planning_filesystem_mode: false
+ui:
+  display_type: textual_terminal
+  logging_enabled: true
