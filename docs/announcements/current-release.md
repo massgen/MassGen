@@ -1,4 +1,4 @@
-# MassGen v0.1.95 Release Announcement (Mid-Stream Steering)
+# MassGen v0.1.95 Release Announcement (Steering Improvements)
 
 <!--
 This is the current release announcement. Copy this + feature-highlights.md to LinkedIn/X.
@@ -7,7 +7,7 @@ After posting, update the social links below.
 
 ## Release Summary
 
-We're excited to release MassGen v0.1.95 — Mid-Stream Steering! 🚀 This release lets a human (or any UI-less caller) drop guidance into an agent *while it is streaming*: over a file inbox in `--automation`, or through the MCP-middleware hook path. Codex and Antigravity now interrupt the in-flight turn, fold the steering in, and resume — instead of waiting for a round boundary. The injection chokepoint stays shared across the TUI, WebUI, and the new headless path.
+We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 Steering a running agent isn't new — you've been able to redirect one mid-stream from the TUI and WebUI. v0.1.95 closes the two gaps that were left: steering is now reachable **headlessly** (a file inbox for `--automation` and any UI-less caller), and on the Codex/Antigravity CLI backends it **interrupts the in-flight turn and resumes** instead of waiting for the next round boundary. Same shared injection chokepoint across the TUI, WebUI, and the new headless path — just more ways in, and a faster response.
 
 ## Install
 
@@ -33,7 +33,7 @@ Copy everything below this line, then append content from `feature-highlights.md
 
 ---
 
-We're excited to release MassGen v0.1.95 — Mid-Stream Steering! 🚀 You can now steer agents *mid-thought*: drop a message into a running agent and have it fold the guidance in and keep going — no restart, no waiting for a round boundary, and no UI required.
+We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 Steering a running agent mid-stream isn't new in MassGen — you've been able to redirect one from the TUI and WebUI. v0.1.95 makes it reach further: you can now steer **without a UI** (drop a message into a file inbox from `--automation`), and on the Codex/Antigravity CLI backends steering **interrupts the current turn and resumes** rather than waiting for the next round. More ways in, faster to land.
 
 **Key Improvements:**
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.95] - 2026-06-08
 
-### Theme: Mid-Stream Steering
+### Theme: Steering Improvements
 
 Extend mid-stream injection from a UI-only capability into a programmatic, headless one, and upgrade it from inject-at-next-boundary into true interrupt-and-resume for the CLI backends. A human (or any UI-less caller) can now drop guidance into an agent *while it is streaming* — over a file inbox in `--automation`, or through the MCP-middleware hook path — and Codex/Antigravity will interrupt the in-flight turn, fold the steering in, and resume rather than restart. No coordination-semantics changes; the injection chokepoint stays shared across TUI, WebUI, and the new headless path. All items landed under TDD (tests written first, confirmed red, then green), with deterministic coverage plus opt-in live-fire tests.
 
@@ -64,7 +64,7 @@ Strengthen the orchestrator's parallel execution: move blocking snapshot work of
 
 ## Recent Releases
 
-**v0.1.95 (June 8, 2026)** - Mid-Stream Steering
+**v0.1.95 (June 8, 2026)** - Steering Improvements
 Extends mid-stream injection into a programmatic, headless capability and upgrades it to true interrupt-and-resume for the CLI backends. A file inbox (`--inbox-dir`) lets `--automation` and any UI-less caller drop human guidance into a streaming agent through the same chokepoint the TUI/WebUI use; Codex and Antigravity now interrupt the in-flight turn and resume (`codex exec resume` / `agy --continue`) instead of waiting for a round boundary. Adds MCP-server-hook payload IPC for Antigravity (codex parity), wires the Antigravity `--model` flag, and fixes `--inbox-dir` for resumed sessions plus `expires_at`-guarded steering carryforward.
 
 **v0.1.94 (June 5, 2026)** - Parallelism Hardening (Engineering Health)

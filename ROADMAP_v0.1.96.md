@@ -30,7 +30,7 @@ Version 0.1.96 picks up the image/video edit work deferred from v0.1.86-v0.1.95 
 
 ## Related Tracks
 
-- **v0.1.95**: Mid-Stream Steering — programmatic steering inbox (`--inbox-dir`) routed to the shared `set_pending_input` chokepoint, mid-round interrupt-and-resume for Codex and Antigravity (`codex exec resume` / `agy --continue`), MCP-server-hook payload IPC for Antigravity (codex parity), and the Antigravity `--model` flag wired through
+- **v0.1.95**: Steering Improvements — programmatic steering inbox (`--inbox-dir`) routed to the shared `set_pending_input` chokepoint, mid-round interrupt-and-resume for Codex and Antigravity (`codex exec resume` / `agy --continue`), MCP-server-hook payload IPC for Antigravity (codex parity), and the Antigravity `--model` flag wired through
 - **v0.1.94**: Parallelism Hardening (engineering health) — snapshot copy moved off the event loop with immutable versioned snapshots, lock-free concurrency-race fixes, unified mid-stream injection, and worktree-isolation degradation surfaced
 - **v0.1.93**: CLI package decomposition and pydantic config migration — focused `massgen/cli/` package, construction-time config validation with `Literal`-typed modes, single-source exclusion lists, dead-code removal, and test-signal/type-checking hardening
 - **v0.1.92**: Orchestrator collaborator refactor and Parallel Search MCP — 49 collaborator extractions, Textual display helper split, characterization coverage, and a Parallel hosted search example

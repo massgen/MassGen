@@ -1,6 +1,6 @@
 # 🚀 Release Highlights — v0.1.95 (2026-06-08)
 
-v0.1.95 — Mid-Stream Steering — extends mid-stream injection from a UI-only capability into a programmatic, headless one, and upgrades it from inject-at-next-boundary into true interrupt-and-resume for the CLI backends. A human (or any UI-less caller) can now drop guidance into an agent *while it is streaming* — over a file inbox in `--automation`, or through the MCP-middleware hook path — and Codex/Antigravity will interrupt the in-flight turn, fold the steering in, and resume rather than restart. The injection chokepoint stays shared across TUI, WebUI, and the new headless path.
+v0.1.95 — Steering Improvements — extends mid-stream injection from a UI-only capability into a programmatic, headless one, and upgrades it from inject-at-next-boundary into true interrupt-and-resume for the CLI backends. A human (or any UI-less caller) can now drop guidance into an agent *while it is streaming* — over a file inbox in `--automation`, or through the MCP-middleware hook path — and Codex/Antigravity will interrupt the in-flight turn, fold the steering in, and resume rather than restart. The injection chokepoint stays shared across TUI, WebUI, and the new headless path.
 
 ### 📨 Programmatic Steering Inbox (`--inbox-dir`)
 - `send_steering_message()` (`massgen/steering.py`) drops a `msg_*.json` into a caller-known inbox directory

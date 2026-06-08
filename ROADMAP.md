@@ -48,7 +48,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## ✅ v0.1.95 - Mid-Stream Steering (Completed)
+## ✅ v0.1.95 - Steering Improvements (Completed)
 
 **Released:** June 8, 2026
 

@@ -209,7 +209,7 @@ Key Features
 Recent Releases
 ---------------
 
-**v0.1.95 (June 8, 2026)** - Mid-Stream Steering
+**v0.1.95 (June 8, 2026)** - Steering Improvements
 
 Extends mid-stream injection into a programmatic, headless capability and upgrades it to true interrupt-and-resume for the CLI backends. A file inbox (``--inbox-dir``) lets ``--automation`` and any UI-less caller drop human guidance into a streaming agent through the same chokepoint the TUI/WebUI use; Codex and Antigravity now interrupt the in-flight turn and resume (``codex exec resume`` / ``agy --continue``) instead of waiting for a round boundary. Adds MCP-server-hook payload IPC for Antigravity (codex parity), wires the Antigravity ``--model`` flag, and fixes ``--inbox-dir`` for resumed sessions plus ``expires_at``-guarded steering carryforward.
 

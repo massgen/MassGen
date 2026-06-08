@@ -159,7 +159,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 **🎉 Released: June 8, 2026**
 
-**What's New in v0.1.95** (Mid-Stream Steering):
+**What's New in v0.1.95** (Steering Improvements):
 - **📨 Programmatic Steering Inbox** - Drop human guidance into a streaming agent from `--automation` (no UI) via a file inbox (`--inbox-dir` + `send_steering_message()`), routed through the same chokepoint the TUI/WebUI already use, with per-message targeting.
 - **⏯️ Interrupt-and-Resume Steering** - Codex and Antigravity now interrupt the in-flight turn and resume (`codex exec resume` / `agy --continue`) when steering arrives mid-stream, instead of waiting for a round boundary — pre-interrupt work is preserved.
 - **🪝 MCP-Hook Injection Parity** - Antigravity gains codex-parity mid-stream injection through the MCP middleware, with `expires_at`-guarded payloads; the Antigravity `--model` flag is now actually wired through.
@@ -1245,7 +1245,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 **🎉 Released: June 8, 2026**
 
-#### Mid-Stream Steering
+#### Steering Improvements
 - **Programmatic Steering Inbox (`--inbox-dir`)**: `send_steering_message()` writes a `msg_*.json` to a caller-known inbox; `RuntimeInboxPoller` routes it through `RuntimeInputDelivery` to the same `set_pending_input` chokepoint the TUI (`_queue_human_input`) and WebUI (`broadcast_response`) use — so `--automation` and any UI-less caller can inject mid-stream human input, with per-message targeting (one / subset / broadcast)
 - **Interrupt-and-Resume Steering (Codex & Antigravity)**: steering mid-turn now kills the in-flight turn and resumes (`codex exec resume <session> <prompt>` / `agy --continue -p <prompt>`) rather than waiting for a round boundary; Antigravity promotes pre-interrupt scratch deliverables first so work isn't lost
 - **MCP-Server-Hook Payload IPC (Antigravity, codex parity)**: `write_post_tool_use_hook()` / `read_unconsumed_hook_content()` with `expires_at`-guarded payloads consumed by the MCP middleware, so the backend-agnostic per-chunk injection flush works for `agy` the way it does for codex

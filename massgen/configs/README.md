@@ -228,7 +228,7 @@ Most configurations use environment variables for API keys:so
 ## Release History & Examples
 
 ### v0.1.95 - Latest
-**New Features:** Mid-Stream Steering (programmatic + interrupt-and-resume)
+**Steering Improvements:** Existing mid-stream steering extended to headless callers + upgraded to interrupt-and-resume
 
 **Key Features:**
 - **Programmatic steering inbox** (`--inbox-dir`): drop human guidance into a streaming `--automation` run via `send_steering_message()`; routed to the same chokepoint the TUI/WebUI use, with per-message targeting
