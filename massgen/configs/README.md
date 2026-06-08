@@ -227,7 +227,27 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.93 - Latest
+### v0.1.95 - Latest
+**Steering Improvements:** Existing mid-stream steering extended to headless callers + upgraded to interrupt-and-resume
+
+**Key Features:**
+- **Programmatic steering inbox** (`--inbox-dir`): drop human guidance into a streaming `--automation` run via `send_steering_message()`; routed to the same chokepoint the TUI/WebUI use, with per-message targeting
+- **Interrupt-and-resume (Codex & Antigravity)**: steering mid-turn now kills the in-flight turn and resumes (`codex exec resume` / `agy --continue`) instead of waiting for a round boundary
+- **MCP-server-hook payload IPC**: Antigravity gains codex-parity mid-stream injection through the MCP middleware, with `expires_at`-guarded payloads
+- **Antigravity `--model`**: the model label is now actually passed to `agy`
+
+**Try It:**
+```bash
+pip install massgen==0.1.95
+
+# Headless steering: start a run, then drop a message mid-stream
+uv run massgen --automation --inbox-dir /tmp/inbox \
+  --config massgen/configs/debug/codex_mcp_middleware_test.yaml "Write and refine a short essay."
+# in another shell:
+python -c "from massgen.steering import send_steering_message; send_steering_message('/tmp/inbox', 'prioritize concision')"
+```
+
+### v0.1.93
 **Internal-Quality Release:** CLI Package Decomposition & Pydantic Config Migration
 
 **Key Changes:**

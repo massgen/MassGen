@@ -11,6 +11,7 @@ source of truth.
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
@@ -135,6 +136,23 @@ class RuntimeInputDelivery:
     def ensure_runtime_inbox_poller_initialized(self) -> None:
         orch = self._orchestrator
         if orch._runtime_inbox_poller is not None:
+            return
+
+        from massgen.mcp_tools.hooks import RuntimeInboxPoller
+
+        # Explicit override for programmatic steering in automation / headless
+        # runs. ``MASSGEN_RUNTIME_INBOX_DIR`` (set by ``--inbox-dir``) forces a
+        # deterministic, caller-known inbox dir and bypasses the workspace-derived
+        # heuristics below — which are undiscoverable to an external script and
+        # resolve to ``None`` for workspace-less configs. This is the chokepoint
+        # the TUI/WebUI steering already feeds (``set_pending_input``); the
+        # override just makes it reachable without a UI.
+        override = os.environ.get("MASSGEN_RUNTIME_INBOX_DIR")
+        if override:
+            inbox_dir = Path(override).expanduser()
+            inbox_dir.mkdir(parents=True, exist_ok=True)
+            orch._runtime_inbox_poller = RuntimeInboxPoller(inbox_dir=inbox_dir)
+            logger.info(f"[Orchestrator] Initialized runtime inbox poller (override): {inbox_dir}")
             return
 
         workspace_path: Path | None = None

@@ -12,9 +12,11 @@ Compared to GeminiCLIBackend this wrapper is intentionally minimal:
   ``<cwd>/.antigravity/antigravity-cli/brain/<uuid>/.system_generated/logs/``
   concurrently with the subprocess to get real-time thinking + tool events,
   and forward stdout lines as content chunks on process exit.
-- No ``--model``: the model is selected server-side per the user's
-  Antigravity tier (Gemini 3.5 Flash by default). A ``model`` config value
-  is accepted for logging/registry consistency but ignored at invocation.
+- ``--model``: agy 1.0.5+ exposes a real ``--model`` flag taking an exact
+  label from ``agy models`` (e.g. ``"Gemini 3.5 Flash (High)"``). The
+  configured ``model`` is resolved to such a label (exact or via alias) and
+  passed through; unrecognizable ids fall back to agy's default rather than
+  failing the call. See ``AGY_MODEL_LABELS`` / ``AGY_MODEL_ALIASES``.
 - ``--conversation <id>`` replaces ``--resume <id>``.
 - ``--dangerously-skip-permissions`` replaces ``--approval-mode yolo``.
 - Per-project isolation via the hidden ``--gemini_dir <abs_path>`` flag (not
@@ -37,6 +39,7 @@ import json
 import os
 import re
 import shutil
+import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
@@ -49,6 +52,36 @@ from .native_tool_mixin import NativeToolBackendMixin
 AGY_DEFAULT_MODEL_LABEL = "Gemini 3.5 Flash (High)"
 AGY_AGENT_ID_LITERAL = "antigravity_cli"
 AGY_MCP_CONFIG_PATH = Path.home() / ".gemini" / "config" / "mcp_config.json"
+
+# Exact model labels accepted by `agy --model` (source of truth: `agy models`).
+# agy 1.0.5+ exposes a real ``--model`` flag that takes one of these strings
+# verbatim; anything else is rejected. Keep in sync with `agy models` output.
+AGY_MODEL_LABELS: tuple[str, ...] = (
+    "Gemini 3.5 Flash (Low)",
+    "Gemini 3.5 Flash (Medium)",
+    "Gemini 3.5 Flash (High)",
+    "Gemini 3.1 Pro (Low)",
+    "Gemini 3.1 Pro (High)",
+    "Claude Sonnet 4.6 (Thinking)",
+    "Claude Opus 4.6 (Thinking)",
+    "GPT-OSS 120B (Medium)",
+)
+
+# Deterministic alias map: short config ids → canonical agy label. This is an
+# explicit id-normalization table (registry-style), NOT heuristic similarity
+# matching. A bare family id maps to the highest-effort variant by default.
+AGY_MODEL_ALIASES: dict[str, str] = {
+    "gemini-3.5-flash": "Gemini 3.5 Flash (High)",
+    "gemini-3.5-flash-high": "Gemini 3.5 Flash (High)",
+    "gemini-3.5-flash-medium": "Gemini 3.5 Flash (Medium)",
+    "gemini-3.5-flash-low": "Gemini 3.5 Flash (Low)",
+    "gemini-3.1-pro": "Gemini 3.1 Pro (High)",
+    "gemini-3.1-pro-high": "Gemini 3.1 Pro (High)",
+    "gemini-3.1-pro-low": "Gemini 3.1 Pro (Low)",
+    "claude-sonnet-4.6": "Claude Sonnet 4.6 (Thinking)",
+    "claude-opus-4.6": "Claude Opus 4.6 (Thinking)",
+    "gpt-oss-120b": "GPT-OSS 120B (Medium)",
+}
 
 # Mirrors gemini_cli.py:48-52 so workflow-mode inference behaves identically
 # across both Google-CLI backends. The orchestrator embeds prior-round
@@ -68,7 +101,12 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
     Inherits ``NativeToolBackendMixin`` for native-hook adapter wiring and
     ``StreamingBufferMixin`` for context-compression recovery. Hooks use the
     ``AntigravityCLINativeHookAdapter`` (a thin subclass of the Gemini CLI
-    adapter — same exa.hooks_pb schema, same settings.json shape).
+    adapter): the hook *payload* shape is identical to Gemini CLI's
+    (``{"hooks": {"BeforeTool": [...], "AfterTool": [...]}}``, subprocess
+    JSON-stdin/stdout IPC), but agy reads it from a **standalone
+    ``hooks.json``** gated by ``enableJsonHooks: true`` in ``settings.json`` —
+    NOT embedded under ``settings.json["hooks"]`` the way Gemini CLI does. See
+    :meth:`_write_hooks_json` / :meth:`get_native_hook_adapter`.
     """
 
     def __init__(self, api_key: str | None = None, **kwargs):
@@ -97,17 +135,26 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         )
         self.disable_auto_update: bool = kwargs.get("disable_auto_update", True)
 
-        # Accept a `model` for logging/registry consistency but warn that agy
-        # ignores it at invocation time.
+        # agy 1.0.5+ has a real --model flag; the configured model is resolved
+        # to an exact `agy models` label at command-build time. Warn early if
+        # it won't resolve so the operator knows agy will use its default.
         self.model = kwargs.get("model", AGY_DEFAULT_MODEL_LABEL)
-        if kwargs.get("model") and not self.model.lower().startswith("gemini"):
+        if kwargs.get("model") and self._resolve_agy_model_label(self.model) is None:
             logger.warning(
-                f"Antigravity CLI: configured model '{self.model}' is not a known " "Gemini label. agy selects models server-side; this value is " "informational only.",
+                f"Antigravity CLI: configured model '{self.model}' does not map to a " "known `agy models` label; agy will use its default model. Valid " f"labels: {list(AGY_MODEL_LABELS)}",
             )
 
         self._config_cwd = kwargs.get("cwd")
         self.system_prompt = kwargs.get("system_prompt", "")
         self.agent_id = kwargs.get("agent_id")
+
+        # Monotonic sequence for MCP-middleware hook payloads (parity with codex).
+        self._hook_sequence = 0
+
+        # Mid-round interrupt-and-resume steering (kill + `agy --continue`).
+        self._enable_interrupt_resume = kwargs.get("enable_interrupt_resume", True)
+        self._interrupt_poll_seconds = float(kwargs.get("interrupt_poll_seconds", 2.0))
+        self._max_interrupts_per_turn = int(kwargs.get("max_interrupts_per_turn", 25))
 
         configured_mcp_servers = kwargs.get("mcp_servers", [])
         self.mcp_servers: list[dict[str, Any]] = list(configured_mcp_servers) if isinstance(configured_mcp_servers, list) else []
@@ -234,6 +281,28 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             if candidate.exists():
                 return str(candidate)
         return None
+
+    @staticmethod
+    def _resolve_agy_model_label(model: str | None) -> str | None:
+        """Resolve a configured model id to an exact ``agy --model`` label.
+
+        agy 1.0.5+ accepts ``--model`` but only with one of the exact strings
+        from ``agy models`` (``AGY_MODEL_LABELS``). We accept either an exact
+        label (case-insensitive) or a short alias (``AGY_MODEL_ALIASES``).
+        Returns ``None`` for anything unresolvable so the caller omits
+        ``--model`` and lets agy fall back to its default instead of failing
+        the whole call on a rejected label.
+        """
+        if not model or not isinstance(model, str):
+            return None
+        raw = model.strip()
+        if not raw:
+            return None
+        for label in AGY_MODEL_LABELS:
+            if raw.lower() == label.lower():
+                return label
+        norm = re.sub(r"[\s_]+", "-", raw.lower())
+        return AGY_MODEL_ALIASES.get(norm)
 
     # ── MCP config ────────────────────────────────────────────────────────
 
@@ -509,6 +578,118 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             except OSError as exc:
                 logger.warning(f"Antigravity CLI: failed to remove {hooks_path}: {exc}")
 
+    def get_native_hook_adapter(self) -> Any | None:
+        """Return the native hook adapter with ``hook_dir`` wired to the workspace.
+
+        The orchestrator fetches the adapter via this accessor immediately
+        before calling ``adapter.build_native_hooks_config(...)`` during per-round
+        hook setup — which happens BEFORE our stream ever runs
+        :meth:`_write_hooks_json` (the old, lazy place ``hook_dir`` got set). If
+        ``hook_dir`` is still ``None`` at build time, ``build_native_hooks_config``
+        returns ``{}`` and that round runs with **no** MassGen native hooks. On a
+        fresh backend this bit the **initial-answer round** specifically: the
+        ``[GeminiCLINativeHookAdapter] No hook_dir set`` warning fired once, no
+        ``hooks.json`` was written, and only round 2+ recovered (because the
+        adapter instance persisted the ``hook_dir`` set by round 1's stream).
+
+        Setting it here closes that gap. By the time the orchestrator runs,
+        ``filesystem_manager`` is attached so :meth:`cwd` is correct — unlike
+        ``__init__`` (gemini_cli.py:92-95), where the workspace isn't known yet
+        and a construction-time path would be baked into the hook command.
+        """
+        adapter = self._native_hook_adapter
+        if adapter is not None and hasattr(adapter, "hook_dir"):
+            adapter.hook_dir = self._workspace_config_dir()
+        return adapter
+
+    # ── MCP-server-hook (mid-stream injection) payload IPC ─────────────────
+    #
+    # Parity with codex.py: the orchestrator's per-chunk flush
+    # (`_flush_codex_hook_payloads`, backend-agnostic — gated only on
+    # `write_post_tool_use_hook` + `supports_mcp_server_hooks()`) writes pending
+    # peer/steering content here, and the `MassGenHookMiddleware` attached to
+    # agy's MassGen MCP servers appends it to the next MCP tool result. This is
+    # the only mid-stream channel that doesn't depend on the CLI firing native
+    # hooks (agy's native hooks are trust-gated and inert headlessly). NOTE: live
+    # end-to-end delivery shares the unresolved Codex MCP-client gap — see
+    # test_codex_middleware_firing_live.py; the middleware itself is verified
+    # (test_mcp_hook_middleware).
+
+    def supports_mcp_server_hooks(self) -> bool:
+        """agy uses MCP server middleware for PostToolUse injection (parity with codex)."""
+        return True
+
+    def supports_interrupt_resume(self) -> bool:
+        """agy can be killed mid-turn and resumed via ``agy --continue``,
+        preserving full conversation context (verified: --continue recalls
+        prior-turn context across a process kill). Used to deliver steering /
+        mid-round injection at ANY point in a long round."""
+        return getattr(self, "_enable_interrupt_resume", True)
+
+    def get_hook_dir(self) -> Path:
+        """Directory for hook IPC files — the workspace agy config dir.
+
+        Must match the ``--hook-dir`` the MassGen MCP servers attached to agy are
+        launched with, so the middleware reads the same file this writes.
+        """
+        return self._workspace_config_dir()
+
+    def write_post_tool_use_hook(
+        self,
+        content: str,
+        tool_matcher: str = "*",
+        ttl_seconds: float = 30.0,
+    ) -> None:
+        """Atomic write of hook_post_tool_use.json for the MCP middleware to consume."""
+        self._hook_sequence += 1
+        hook_dir = self.get_hook_dir()
+        hook_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "inject": {"content": content, "strategy": "tool_result"},
+            "tool_matcher": tool_matcher,
+            "expires_at": time.time() + ttl_seconds,
+            "sequence": self._hook_sequence,
+        }
+        hook_file = hook_dir / "hook_post_tool_use.json"
+        tmp_file = hook_file.with_suffix(".tmp")
+        tmp_file.write_text(json.dumps(payload), encoding="utf-8")
+        tmp_file.replace(hook_file)
+        logger.info(f"Antigravity CLI: wrote hook_post_tool_use.json (seq={self._hook_sequence}, {len(content)} chars)")
+
+    def read_unconsumed_hook_content(self) -> str | None:
+        """Read+remove an unconsumed hook payload (round-end carryforward)."""
+        hook_file = self.get_hook_dir() / "hook_post_tool_use.json"
+        try:
+            data = json.loads(hook_file.read_text(encoding="utf-8"))
+            hook_file.unlink(missing_ok=True)
+            # Honor payload freshness: a stale carryforward could trigger an
+            # unexpected interrupt/resume on the next round. Mirror the
+            # middleware's expires_at handling (hook_middleware.py).
+            expires_at = data.get("expires_at")
+            if expires_at is not None:
+                try:
+                    if time.time() > float(expires_at):
+                        logger.debug(f"Antigravity CLI: dropping expired unconsumed hook (expires_at={expires_at})")
+                        return None
+                except (TypeError, ValueError):
+                    logger.warning(f"Antigravity CLI: invalid expires_at {expires_at!r} in hook file; treating as non-expiring")
+            content = data.get("inject", {}).get("content")
+            if content:
+                logger.info(f"Antigravity CLI: read unconsumed hook content ({len(content)} chars) — carrying forward")
+            return content
+        except FileNotFoundError:
+            return None
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning(f"Antigravity CLI: failed reading unconsumed hook file: {exc}")
+            hook_file.unlink(missing_ok=True)
+            return None
+
+    def clear_hook_files(self) -> None:
+        """Remove stale hook IPC files at turn start."""
+        hook_dir = self.get_hook_dir()
+        for filename in ("hook_post_tool_use.json", "hook_post_tool_use.tmp"):
+            (hook_dir / filename).unlink(missing_ok=True)
+
     # ── Command construction ──────────────────────────────────────────────
 
     def _agy_log_file_path(self) -> Path:
@@ -520,8 +701,12 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         """
         return self._workspace_config_dir() / "antigravity-cli" / "agy.log"
 
-    def _build_exec_command(self, prompt: str) -> list[str]:
+    def _build_exec_command(self, prompt: str, resume: bool = False) -> list[str]:
         """Build the agy subprocess command for non-interactive print mode.
+
+        When ``resume=True``, adds ``--continue`` so agy resumes the most recent
+        conversation (verified: ``--continue`` recalls prior-turn context across a
+        process kill) — used for mid-round interrupt-and-resume steering.
 
         Always passes ``--gemini_dir <abs_path>`` so agy reads our workspace-local
         config (mcp_config.json, settings.json) instead of the user's global one.
@@ -550,8 +735,21 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         log_path = self._agy_log_file_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         cmd.extend(["--log-file", str(log_path)])
+        # agy 1.0.5+ exposes a real --model flag (exact label from `agy models`).
+        # Emit it only when the configured model resolves to a known label;
+        # otherwise fall back to agy's server-side default rather than passing a
+        # bad value that would fail the call.
+        model_label = self._resolve_agy_model_label(self.model)
+        if model_label:
+            cmd.extend(["--model", model_label])
+        elif self.model:
+            logger.info(
+                f"Antigravity CLI: configured model '{self.model}' has no agy label " "mapping; using agy's default model.",
+            )
         if self.dangerously_skip_permissions:
             cmd.append("--dangerously-skip-permissions")
+        if resume:
+            cmd.append("--continue")
         cmd.extend(["-p", prompt])
         return cmd
 
@@ -594,6 +792,79 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         if self.disable_auto_update:
             env["AGY_CLI_DISABLE_AUTO_UPDATE"] = "1"
         return env
+
+    # ── Scratch deliverable promotion ─────────────────────────────────────
+
+    def _scratch_dir(self) -> Path:
+        """agy's internal scratch directory (under the workspace gemini_dir).
+
+        agy may route ``write_to_file`` here instead of the workspace root —
+        observed in the 2026-06-05 baseline run, where the SVG deliverable
+        landed in ``.antigravity/antigravity-cli/scratch/`` and was invisible
+        to snapshots (``.antigravity`` is in the filesystem manager's metadata
+        exclusion set). 1.0.6 writes to the process cwd in the common case, but
+        we keep this as a safety net so deliverables never get silently dropped.
+        """
+        return self._workspace_config_dir() / "antigravity-cli" / "scratch"
+
+    @staticmethod
+    def _snapshot_scratch_files(scratch_dir: Path) -> dict[Path, float]:
+        """Record {path: mtime} of files currently in scratch (pre-run baseline).
+
+        Used to detect which scratch files are NEW or MODIFIED by this run so
+        :meth:`_promote_scratch_deliverables` only copies fresh deliverables.
+        """
+        out: dict[Path, float] = {}
+        if not scratch_dir.exists():
+            return out
+        for p in scratch_dir.rglob("*"):
+            if p.is_file():
+                try:
+                    out[p] = p.stat().st_mtime
+                except OSError:
+                    continue
+        return out
+
+    def _promote_scratch_deliverables(self, pre_existing: dict[Path, float]) -> list[str]:
+        """Copy new/modified scratch files into the workspace root.
+
+        Promotes any file under ``scratch/`` that wasn't present before the run
+        (or was modified during it), preserving its relative path. Never
+        clobbers a file the model already placed in the workspace — if the
+        destination exists, the model's copy wins. Returns the list of promoted
+        relative paths (for logging / "real output" detection).
+        """
+        scratch = self._scratch_dir()
+        if not scratch.exists():
+            return []
+        workspace = Path(self.cwd).resolve()
+        promoted: list[str] = []
+        for src in scratch.rglob("*"):
+            if not src.is_file():
+                continue
+            try:
+                mtime = src.stat().st_mtime
+            except OSError:
+                continue
+            prev = pre_existing.get(src)
+            if prev is not None and mtime <= prev:
+                continue  # unchanged pre-existing file
+            rel = src.relative_to(scratch)
+            dest = workspace / rel
+            if dest.exists():
+                continue  # model already placed it in the workspace; don't clobber
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dest)
+            except OSError as exc:
+                logger.warning(f"Antigravity CLI: failed to promote scratch file {src}: {exc}")
+                continue
+            promoted.append(str(rel))
+        if promoted:
+            logger.info(
+                f"Antigravity CLI: promoted {len(promoted)} scratch deliverable(s) to " f"workspace {workspace}: {promoted}",
+            )
+        return promoted
 
     # ── Transcript tailing ────────────────────────────────────────────────
 
@@ -816,13 +1087,53 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
         self,
         prompt: str,
     ) -> AsyncGenerator[StreamChunk]:
-        """Run agy as a subprocess, tailing transcript.jsonl for real-time events."""
-        cmd = self._build_exec_command(prompt)
+        """Run agy with mid-round interrupt-and-resume steering.
+
+        Wraps :meth:`_stream_agy_once`: when a run is interrupted by steering (the
+        watcher terminated agy and recorded it in ``steer_holder``), resume with
+        ``agy --continue`` and the steering text as the new prompt — so steering
+        lands at ANY point in a long round, not just when agy calls an MCP tool.
+        """
+        current_prompt = prompt
+        current_resume = False
+        interrupts = 0
+        while True:
+            steer_holder: dict[str, str | None] = {"content": None}
+            async for chunk in self._stream_agy_once(current_prompt, current_resume, steer_holder, interrupts):
+                yield chunk
+            if steer_holder["content"] is not None:
+                interrupts += 1
+                logger.info(
+                    f"Antigravity CLI: interrupt #{interrupts} — resuming session with steering ({len(steer_holder['content'])} chars)",
+                )
+                yield StreamChunk(type="content", content="\n[Steering delivered — resuming Antigravity session]\n")
+                current_prompt = steer_holder["content"]
+                current_resume = True
+                continue
+            return
+
+    async def _stream_agy_once(
+        self,
+        prompt: str,
+        resume: bool,
+        steer_holder: dict,
+        interrupts: int,
+    ) -> AsyncGenerator[StreamChunk]:
+        """Run agy as a subprocess once, tailing transcript.jsonl for real-time events.
+
+        A concurrent watcher polls the hook file the orchestrator writes pending
+        steering into; on content it terminates agy and records the steering in
+        ``steer_holder`` so :meth:`_stream_local` resumes with ``agy --continue``.
+        """
+        cmd = self._build_exec_command(prompt, resume=resume)
         env = self._build_subprocess_env()
-        logger.info("Running Antigravity CLI")
+        logger.info("Running Antigravity CLI" + (" (resume)" if resume else ""))
 
         brain_dir = self._workspace_config_dir() / "antigravity-cli" / "brain"
         pre_existing = self._existing_transcripts(brain_dir)
+        # Baseline scratch contents so we can promote only files agy writes
+        # during THIS run (safety net for the scratch-routing case).
+        pre_existing_scratch = self._snapshot_scratch_files(self._scratch_dir())
 
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -870,8 +1181,29 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             finally:
                 await queue.put(_DONE)
 
+        # Steering watcher — poll the hook file; on content, terminate agy so the
+        # stream ends and :meth:`_stream_local` resumes with `agy --continue`.
+        watch_stop = asyncio.Event()
+
+        async def _watch(p: asyncio.subprocess.Process = proc) -> None:
+            while not watch_stop.is_set():
+                try:
+                    await asyncio.wait_for(watch_stop.wait(), timeout=self._interrupt_poll_seconds)
+                    return
+                except TimeoutError:
+                    pass
+                if not self.supports_interrupt_resume() or interrupts >= self._max_interrupts_per_turn:
+                    continue
+                steer = self.read_unconsumed_hook_content()
+                if steer:
+                    steer_holder["content"] = steer
+                    logger.info("Antigravity CLI: steering detected mid-turn — terminating to resume")
+                    await self._terminate_subprocess(p)
+                    return
+
         stdout_task = asyncio.create_task(_read_stdout())
         tail_task = asyncio.create_task(_tail())
+        watcher = asyncio.create_task(_watch())
 
         done_count = 0
         try:
@@ -887,14 +1219,38 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             # propagate. Background reader tasks observe proc exit and finish
             # on their own.
             logger.info("Antigravity CLI: cancellation requested — terminating agy subprocess")
+            watch_stop.set()
+            watcher.cancel()
             await self._terminate_subprocess(proc)
             for task in (stdout_task, tail_task):
                 task.cancel()
             raise
         except Exception as exc:
             logger.error(f"Antigravity CLI streaming error: {exc}")
+            watch_stop.set()
+            watcher.cancel()
             await self._terminate_subprocess(proc)
             yield StreamChunk(type="error", error=str(exc))
+            return
+        finally:
+            watch_stop.set()
+            watcher.cancel()
+            try:
+                await watcher
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                # A non-cancellation failure here means a real watcher bug during
+                # interrupt/resume finalization — don't mask it silently.
+                logger.debug("Antigravity CLI: watcher failed during cleanup", exc_info=True)
+
+        # Interrupted by steering → promote any work agy did (so pre-interrupt
+        # deliverables aren't lost), then end this run; _stream_local resumes.
+        if steer_holder["content"] is not None:
+            try:
+                self._promote_scratch_deliverables(pre_existing_scratch)
+            except Exception as exc:
+                logger.warning(f"Antigravity CLI: scratch promotion (pre-resume) failed: {exc}")
             return
 
         rc = proc.returncode
@@ -906,6 +1262,21 @@ class AntigravityCLIBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBac
             except (AttributeError, TypeError):
                 pass
             return
+
+        # Safety net: if agy routed write_to_file into its internal scratch dir
+        # (excluded from snapshots), promote those deliverables into the
+        # workspace root so peers + snapshot promotion can see them.
+        try:
+            promoted = self._promote_scratch_deliverables(pre_existing_scratch)
+        except Exception as exc:
+            logger.warning(f"Antigravity CLI: scratch promotion failed: {exc}")
+            promoted = []
+        if promoted:
+            produced_real_output["value"] = True
+            yield StreamChunk(
+                type="content",
+                content=f"\n[Antigravity CLI] Recovered {len(promoted)} deliverable(s) from scratch into the workspace: {', '.join(promoted)}\n",
+            )
 
         # agy exits 0 with empty stdout on quota/auth failures — surface what
         # the log file actually says so the orchestrator doesn't retry-loop

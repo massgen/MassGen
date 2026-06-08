@@ -12,9 +12,10 @@ agents:
 - id: agent_a
   backend:
     type: antigravity_cli
-    # NOTE: agy 1.0.0 selects the model server-side per Antigravity tier
-    # (default: Gemini 3.5 Flash). The `model` value below is informational
-    # only — the CLI has no --model flag to honor it.
+    # agy 1.0.5+ has a real --model flag. `model` is resolved to an exact
+    # `agy models` label (alias or exact match) and passed via --model.
+    # Valid: gemini-3.5-flash[-low|-medium|-high], gemini-3.1-pro[-low|-high],
+    # claude-sonnet-4.6, claude-opus-4.6, gpt-oss-120b. Unknown -> agy default.
     model: gemini-3.5-flash
 ui:
   display_type: textual_terminal

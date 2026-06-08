@@ -175,6 +175,11 @@ class CodexBackend(StreamingBufferMixin, NativeToolBackendMixin, LLMBackend):
             # better cost/quality tradeoff unless the caller explicitly overrides.
             self.model_reasoning_effort = "high"
         self._config_cwd = kwargs.get("cwd")  # May be relative; resolved at execution time
+
+        # Mid-round interrupt-and-resume steering (kill + `codex exec resume`).
+        self._enable_interrupt_resume = kwargs.get("enable_interrupt_resume", True)
+        self._interrupt_poll_seconds = float(kwargs.get("interrupt_poll_seconds", 2.0))
+        self._max_interrupts_per_turn = int(kwargs.get("max_interrupts_per_turn", 25))
         self.system_prompt = kwargs.get("system_prompt", "")
         self.approval_mode = kwargs.get("approval_mode", "full-auto")
         self.mcp_servers = kwargs.get("mcp_servers", [])
@@ -399,6 +404,35 @@ class CodexBackend(StreamingBufferMixin, NativeToolBackendMixin, LLMBackend):
         """Return True — Codex uses MCP server middleware for PostToolUse injection."""
         return True
 
+    def supports_interrupt_resume(self) -> bool:
+        """Codex can be killed mid-turn and resumed via `codex exec resume <id>`,
+        preserving full conversation context. We use this to deliver steering /
+        mid-round injection at ANY point in a long round (the MCP-middleware path
+        only fires if the agent calls a MassGen MCP tool while a payload is
+        pending — unreliable across 30-min rounds)."""
+        return getattr(self, "_enable_interrupt_resume", True)
+
+    @staticmethod
+    async def _terminate_proc(proc: asyncio.subprocess.Process, grace: float = 2.0) -> None:
+        """SIGTERM the subprocess and wait up to ``grace`` before SIGKILL."""
+        if proc.returncode is not None:
+            return
+        try:
+            proc.terminate()
+        except ProcessLookupError:
+            return
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=grace)
+        except TimeoutError:
+            try:
+                proc.kill()
+            except ProcessLookupError:
+                return
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=grace)
+            except TimeoutError:
+                logger.error("Codex: process did not exit after SIGKILL")
+
     def get_hook_dir(self) -> Path:
         """Return the directory used for hook IPC files."""
         return Path(self.cwd) / ".codex"
@@ -447,6 +481,17 @@ class CodexBackend(StreamingBufferMixin, NativeToolBackendMixin, LLMBackend):
         try:
             data = json.loads(hook_file.read_text(encoding="utf-8"))
             hook_file.unlink(missing_ok=True)
+            # Honor payload freshness: a stale carryforward could trigger an
+            # unexpected interrupt/resume on the next round. Mirror the
+            # middleware's expires_at handling (hook_middleware.py).
+            expires_at = data.get("expires_at")
+            if expires_at is not None:
+                try:
+                    if time.time() > float(expires_at):
+                        logger.debug(f"Dropping expired unconsumed hook (expires_at={expires_at})")
+                        return None
+                except (TypeError, ValueError):
+                    logger.warning(f"Invalid expires_at {expires_at!r} in hook file; treating as non-expiring")
             inject = data.get("inject", {})
             content = inject.get("content")
             if content:
@@ -2220,69 +2265,126 @@ class CodexBackend(StreamingBufferMixin, NativeToolBackendMixin, LLMBackend):
         prompt: str,
         resume_session: bool,
     ) -> AsyncGenerator[StreamChunk]:
-        """Stream Codex output via local subprocess."""
-        # Build command
-        cmd = self._build_exec_command(prompt, resume_session=resume_session)
+        """Stream Codex output via local subprocess.
 
-        logger.info(f"Running Codex command: {' '.join(cmd)}")
-
+        Supports **mid-round interrupt-and-resume steering**: a concurrent watcher
+        polls the hook file the orchestrator writes pending steering / injection
+        into. When content appears, it terminates Codex mid-turn; this generator
+        then re-invokes ``codex exec resume <session_id> "<steering>"`` — Codex
+        resumes with full context + the workspace files (which persist on disk),
+        so the steering lands at ANY point in a long round, not just when an MCP
+        tool happens to be called. Verified: resume recalls prior-turn context
+        across a process kill.
+        """
         # Set CODEX_HOME to workspace/.codex so Codex reads config from there
         # instead of ~/.codex. This avoids needing to modify the user's global
         # config with trust entries.
         codex_home = str(Path(self.cwd) / ".codex")
         Path(codex_home).mkdir(parents=True, exist_ok=True)
-
-        # Copy auth.json from user's ~/.codex/ if it exists (for OAuth)
         host_auth = Path.home() / ".codex" / "auth.json"
         if host_auth.exists():
             shutil.copy2(str(host_auth), str(Path(codex_home) / "auth.json"))
             logger.debug("Copied OAuth tokens to workspace CODEX_HOME")
 
-        try:
-            # Start subprocess
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                limit=SUBPROCESS_STREAM_LIMIT,
-                cwd=self.cwd,
-                env={**os.environ, "NO_COLOR": "1", "CODEX_HOME": codex_home},
-            )
+        current_prompt = prompt
+        current_resume = resume_session
+        interrupts = 0
+        first_content = True
 
-            first_content = True
+        while True:
+            cmd = self._build_exec_command(current_prompt, resume_session=current_resume)
+            logger.info(f"Running Codex command: {' '.join(cmd)}")
 
-            # Stream and parse JSONL output
-            async for line in proc.stdout:
-                line_str = line.decode().strip()
-                if not line_str:
-                    continue
-
-                event = self._decode_codex_event_line(line_str)
-                if event is None:
-                    continue
-
-                redacted_event = redact_secrets_in_text(json.dumps(event, default=str))
-                logger.info(
-                    f"Codex raw event: {self._truncate_line(redacted_event, max_chars=500)}",
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    limit=SUBPROCESS_STREAM_LIMIT,
+                    cwd=self.cwd,
+                    env={**os.environ, "NO_COLOR": "1", "CODEX_HOME": codex_home},
                 )
-                chunks = self._parse_codex_event(event)
-                for chunk in chunks:
-                    # Record first token timing
-                    if first_content and chunk.type == "content":
-                        self.record_first_token()
-                        first_content = False
+            except Exception as e:
+                logger.error(f"Codex backend error: {e}")
+                self.end_api_call_timing(success=False, error=str(e))
+                yield StreamChunk(type="error", error=str(e))
+                return
 
-                    yield chunk
+            # Concurrent steering watcher — polls the hook file and, on pending
+            # content, terminates Codex so this turn ends and we resume below.
+            steer_holder: dict[str, str | None] = {"content": None}
+            watch_stop = asyncio.Event()
 
-                    # Update token usage on completion
-                    if chunk.type == "done" and chunk.usage:
-                        self._update_token_usage_from_api_response(
-                            chunk.usage,
-                            self.model,
-                        )
+            async def _watch(p: asyncio.subprocess.Process = proc) -> None:
+                while not watch_stop.is_set():
+                    try:
+                        await asyncio.wait_for(watch_stop.wait(), timeout=self._interrupt_poll_seconds)
+                        return
+                    except TimeoutError:
+                        pass
+                    # Only interrupt once we have a session id to resume, and below
+                    # the per-turn interrupt cap.
+                    if not (self.supports_interrupt_resume() and self.session_id):
+                        continue
+                    if interrupts >= self._max_interrupts_per_turn:
+                        continue
+                    steer = self.read_unconsumed_hook_content()
+                    if steer:
+                        steer_holder["content"] = steer
+                        logger.info("Codex: steering detected mid-turn — terminating to resume")
+                        await self._terminate_proc(p)
+                        return
 
-            # Wait for process to complete
+            watcher = asyncio.create_task(_watch())
+            try:
+                async for line in proc.stdout:
+                    line_str = line.decode().strip()
+                    if not line_str:
+                        continue
+                    event = self._decode_codex_event_line(line_str)
+                    if event is None:
+                        continue
+                    redacted_event = redact_secrets_in_text(json.dumps(event, default=str))
+                    logger.info(f"Codex raw event: {self._truncate_line(redacted_event, max_chars=500)}")
+                    chunks = self._parse_codex_event(event)
+                    for chunk in chunks:
+                        if first_content and chunk.type == "content":
+                            self.record_first_token()
+                            first_content = False
+                        yield chunk
+                        if chunk.type == "done" and chunk.usage:
+                            self._update_token_usage_from_api_response(chunk.usage, self.model)
+            except Exception as e:
+                logger.error(f"Codex backend error: {e}")
+                watch_stop.set()
+                watcher.cancel()
+                self.end_api_call_timing(success=False, error=str(e))
+                yield StreamChunk(type="error", error=str(e))
+                return
+            finally:
+                watch_stop.set()
+                watcher.cancel()
+                try:
+                    await watcher
+                except asyncio.CancelledError:
+                    pass
+                except Exception:
+                    # A non-cancellation failure here means a real watcher bug
+                    # during interrupt/resume finalization — don't mask it.
+                    logger.debug("Codex: watcher failed during cleanup", exc_info=True)
+
             await proc.wait()
+
+            # Interrupted by steering → resume the session with it as the prompt.
+            if steer_holder["content"]:
+                interrupts += 1
+                logger.info(
+                    f"Codex: interrupt #{interrupts} — resuming session {self.session_id} with steering ({len(steer_holder['content'])} chars)",
+                )
+                yield StreamChunk(type="content", content="\n[Steering delivered — resuming Codex session]\n")
+                current_prompt = steer_holder["content"]
+                current_resume = True
+                continue
 
             if proc.returncode != 0:
                 stderr = await proc.stderr.read()
@@ -2291,11 +2393,7 @@ class CodexBackend(StreamingBufferMixin, NativeToolBackendMixin, LLMBackend):
                 self.end_api_call_timing(success=False, error=error_msg)
             else:
                 self.end_api_call_timing(success=True)
-
-        except Exception as e:
-            logger.error(f"Codex backend error: {e}")
-            self.end_api_call_timing(success=False, error=str(e))
-            yield StreamChunk(type="error", error=str(e))
+            return
 
     @staticmethod
     def _try_extract_workflow_mcp_result_from_codex(result: Any) -> dict[str, Any] | None:

@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import copy
 import json
+import os
 import sys
 import threading
 import webbrowser
@@ -98,6 +99,25 @@ from .streaming import (
     _setup_event_streaming,
     _setup_timeline_event_recording,
 )
+
+
+def _resolve_runtime_inbox(args) -> Path | None:
+    """Resolve ``--inbox-dir`` and export ``MASSGEN_RUNTIME_INBOX_DIR``.
+
+    Programmatic steering: an explicit ``--inbox-dir`` makes mid-stream human
+    input reachable without a UI. This runs for ALL session modes (new,
+    ``--session-id``, config-restored, ``--continue``) so the orchestrator's
+    inbox-poller resolver targets the caller-known directory regardless of how
+    the session was started. Returns the resolved dir (also exported to the
+    environment) or ``None`` when no override was given.
+    """
+    inbox_dir_arg = getattr(args, "inbox_dir", None)
+    if not inbox_dir_arg:
+        return None
+    resolved_inbox = Path(inbox_dir_arg).expanduser().resolve()
+    resolved_inbox.mkdir(parents=True, exist_ok=True)
+    os.environ["MASSGEN_RUNTIME_INBOX_DIR"] = str(resolved_inbox)
+    return resolved_inbox
 
 
 async def main(args):
@@ -551,6 +571,9 @@ async def main(args):
         elif "agents" in config and config["agents"]:
             model_name = config["agents"][0].get("backend", {}).get("model")
 
+        # Resolve --inbox-dir for ALL session modes (new + resumed). See helper.
+        resolved_inbox: Path | None = _resolve_runtime_inbox(args)
+
         # Priority order: CLI arg > config file > generate new
         if args.session_id:
             # Use session_id from CLI argument (already validated) - RESTORE existing
@@ -592,6 +615,8 @@ async def main(args):
                 full_log_dir = get_log_session_dir()
                 _automation_print(f"LOG_DIR: {Path(log_dir).resolve()}")
                 _automation_print(f"STATUS: {Path(full_log_dir).resolve() / 'status.json'}")
+                if resolved_inbox is not None:
+                    _automation_print(f"RUNTIME_INBOX: {resolved_inbox}")
 
             # Only register in global session registry if not suppressed (e.g., subagent runs)
             if not getattr(args, "no_session_registry", False):
@@ -1781,6 +1806,15 @@ Environment Variables:
         "--stream-events",
         action="store_true",
         help="Stream events to stdout as JSON lines. Used by parent processes (e.g., TUI subagent modal) " "to receive real-time updates. Implies --automation.",
+    )
+    parser.add_argument(
+        "--inbox-dir",
+        type=str,
+        default=None,
+        help="Directory for programmatic steering (mid-stream human input) without a UI. "
+        "Drop msg_*.json files here (see massgen.steering.send_steering_message) to inject "
+        "text into running agents — the same channel as TUI/WebUI steering. In --automation "
+        "mode the resolved path is echoed as 'RUNTIME_INBOX: <path>'.",
     )
     parser.add_argument(
         "--plan",
