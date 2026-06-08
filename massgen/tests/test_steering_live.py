@@ -30,6 +30,8 @@ import pytest
 
 from massgen.steering import send_steering_message
 
+from ._live_proc_io import read_line_nonblocking, set_nonblocking
+
 # Multi-agent config that exercises tool calls (gemini + codex). Override via env
 # if you want a cheaper/other config; it must produce mid-run tool calls.
 _CONFIG = os.environ.get(
@@ -75,6 +77,7 @@ def test_programmatic_steering_delivered_in_automation(tmp_path):
         stderr=subprocess.STDOUT,
         text=True,
     )
+    set_nonblocking(proc.stdout)
 
     delivered = False
     dropped = False
@@ -84,10 +87,11 @@ def test_programmatic_steering_delivered_in_automation(tmp_path):
         captured = ""
         # 1) Read startup output to discover LOG_DIR / confirm RUNTIME_INBOX.
         while time.time() < deadline and log_path is None:
-            line = proc.stdout.readline() if proc.stdout else ""
+            line = read_line_nonblocking(proc.stdout)
             if not line:
                 if proc.poll() is not None:
                     break
+                time.sleep(0.1)  # non-blocking read returned nothing yet
                 continue
             captured += line
             m = re.search(r"LOG_DIR:\s*(\S+)", line)

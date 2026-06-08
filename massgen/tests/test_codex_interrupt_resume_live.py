@@ -28,6 +28,8 @@ import pytest
 
 from massgen.steering import send_steering_message
 
+from ._live_proc_io import read_line_nonblocking, set_nonblocking
+
 _CONFIG = "massgen/configs/debug/codex_mcp_middleware_test.yaml"
 _SENTINEL_FILE = "STEERED_OK.txt"
 
@@ -70,6 +72,7 @@ def test_codex_interrupt_resume_delivers_steering(tmp_path):
         stderr=subprocess.STDOUT,
         text=True,
     )
+    set_nonblocking(proc.stdout)
 
     interrupted = False
     steered_file_created = False
@@ -78,10 +81,11 @@ def test_codex_interrupt_resume_delivers_steering(tmp_path):
         log_root: Path | None = None
         captured = ""
         while time.time() < deadline and log_root is None:
-            line = proc.stdout.readline() if proc.stdout else ""
+            line = read_line_nonblocking(proc.stdout)
             if not line:
                 if proc.poll() is not None:
                     break
+                time.sleep(0.1)  # non-blocking read returned nothing yet
                 continue
             captured += line
             m = re.search(r"LOG_DIR:\s*(\S+)", line)
