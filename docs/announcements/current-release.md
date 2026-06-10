@@ -1,4 +1,4 @@
-# MassGen v0.1.95 Release Announcement (Steering Improvements)
+# MassGen v0.1.96 Release Announcement (OS-Level Agent Sandboxing)
 
 <!--
 This is the current release announcement. Copy this + feature-highlights.md to LinkedIn/X.
@@ -7,23 +7,23 @@ After posting, update the social links below.
 
 ## Release Summary
 
-We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 This release extends mid-stream steering — already available in the TUI and WebUI — to headless callers, and upgrades it to interrupt-and-resume on the CLI backends. A file inbox lets `--automation` and any UI-less caller drop guidance into a streaming agent through the same chokepoint the TUI/WebUI use, and Codex/Antigravity now interrupt the in-flight turn and resume rather than waiting for the next round boundary.
+MassGen v0.1.96 — OS-Level Agent Sandboxing! 🚀 Agents that run commands can now be confined at the OS level via Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (`srt`), with a hardened permission hook on top. Defense in depth: OS and app layers from the same path policy, both active. Default-off, one knob (`command_line_execution_mode: srt`).
 
 ## Install
 
 ```bash
-pip install massgen==0.1.95
+pip install massgen==0.1.96
 ```
 
 ## Links
 
-- **Release notes:** https://github.com/massgen/MassGen/releases/tag/v0.1.95
+- **Release notes:** https://github.com/massgen/MassGen/releases/tag/v0.1.96
 - **X post:** [TO BE ADDED AFTER POSTING]
 - **LinkedIn post:** [TO BE ADDED AFTER POSTING]
 
 ## Posting Notes
 
-- **Suggested image:** A TUI screenshot of a mid-stream steering moment — agent streaming, a steering message landing, the agent visibly changing course. (Headless file-inbox half isn't TUI-visible; cover it in text.)
+- **Suggested image:** A terminal screenshot of the `srt_sandbox.yaml` demo run — agent writes to its workspace successfully, then an out-of-workspace read (`~/.ssh/id_rsa`) and network egress are both denied with `Operation not permitted`. This is a headless/security feature, so a clean before/after terminal capture beats a TUI screenshot.
 
 ---
 
@@ -33,32 +33,21 @@ Copy everything below this line, then append content from `feature-highlights.md
 
 ---
 
-We're excited to release MassGen v0.1.95 — Steering Improvements! 🚀 This release extends mid-stream steering — already available in the TUI and WebUI — so it reaches further. You can now steer **without a UI** by dropping a message into a file inbox from `--automation`, and on the Codex/Antigravity CLI backends steering **interrupts the current turn and resumes** rather than waiting for the next round.
+MassGen v0.1.96 — OS-Level Agent Sandboxing! 🚀 Agents that run commands can now be confined at the OS level, not just by MassGen's permission layer. Both layers derive from the same path policy and stay active together, closing the shell and file-tool escape hatches at once. Default-off, opt-in with a single knob.
 
 **Key Improvements:**
 
-📨 **Programmatic steering inbox (`--inbox-dir`)**:
-- `send_steering_message()` drops a message into a caller-known inbox; the orchestrator routes it to the same `set_pending_input` chokepoint the TUI and WebUI use
-- Reachable from `--automation` and any UI-less caller, with per-message targeting (one agent / a subset / broadcast)
+🛡️ **OS-level execution sandbox** — `command_line_execution_mode: srt` wraps agent command/code execution in Anthropic's sandbox-runtime (bubblewrap on Linux, Seatbelt on macOS) for OS-enforced filesystem + network isolation, derived from the same permission policy as the app layer. Network is deny-all by default.
 
-⏯️ **Interrupt-and-resume steering (Codex & Antigravity)**:
-- Steering mid-turn kills the in-flight turn and resumes (`codex exec resume` / `agy --continue`) instead of waiting for a round boundary
-- Antigravity promotes pre-interrupt deliverables first, so work isn't lost
+🔒 **Configurable read confinement** — by default (`confined`), sandboxed commands can't read your `$HOME` (secrets, other projects), only the workspace + context, while system paths stay readable so commands still run.
 
-🪝 **MCP-hook injection parity**:
-- Antigravity gains codex-parity mid-stream injection through the MCP middleware, with `expires_at`-guarded payloads
-- The Antigravity `--model` flag is now actually wired through
-
-🔧 **Reliability fixes**:
-- `--inbox-dir` now honored for resumed sessions (`--session-id` / `--continue`), stale steering can't carry forward past `expires_at`, and watcher failures are logged instead of swallowed
+🧱 **Hardened permission hook** — a key-agnostic scan walks the full tool-args tree and denies any path resolving outside managed areas, closing prior fail-open gaps with no false positives.
 
 **Install:**
 
 ```bash
-pip install massgen==0.1.95
+pip install massgen==0.1.96
 ```
-
-Release notes: https://github.com/massgen/MassGen/releases/tag/v0.1.95
 
 Feature highlights:
 

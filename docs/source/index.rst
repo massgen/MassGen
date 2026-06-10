@@ -209,6 +209,10 @@ Key Features
 Recent Releases
 ---------------
 
+**v0.1.96 (June 10, 2026)** - OS-Level Agent Sandboxing
+
+Adds a real OS-level execution sandbox for agents via Anthropic's `sandbox-runtime <https://github.com/anthropic-experimental/sandbox-runtime>`_ (``srt``: bubblewrap on Linux, Seatbelt on macOS) and hardens the application-layer permission hook against file-tool escapes. Defense in depth by design: the OS layer (``SrtManager``) and the app layer (``PathPermissionManager``) derive from the *same* path policy and both stay active — SRT closes the shell escape hatch, the hardened hook closes file-tool escapes. One-knob opt-in (``command_line_execution_mode: srt``), default-off. Read confinement defaults to ``confined`` (denies ``$HOME``, allows workspace + context), network is deny-all by default, native-sandbox backends (Codex ``--full-auto``, Claude Code) degrade ``srt``→``local``, and subagents inherit the parent's SRT settings.
+
 **v0.1.95 (June 8, 2026)** - Steering Improvements
 
 Extends mid-stream injection into a programmatic, headless capability and upgrades it to true interrupt-and-resume for the CLI backends. A file inbox (``--inbox-dir``) lets ``--automation`` and any UI-less caller drop human guidance into a streaming agent through the same chokepoint the TUI/WebUI use; Codex and Antigravity now interrupt the in-flight turn and resume (``codex exec resume`` / ``agy --continue``) instead of waiting for a round boundary. Adds MCP-server-hook payload IPC for Antigravity (codex parity), wires the Antigravity ``--model`` flag, and fixes ``--inbox-dir`` for resumed sessions plus ``expires_at``-guarded steering carryforward.

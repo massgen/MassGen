@@ -38,6 +38,12 @@ BASE_EXCLUDED_CONFIG_PARAMS: frozenset[str] = frozenset(
         # Docker credential and package management (nested dicts)
         "command_line_docker_credentials",
         "command_line_docker_packages",
+        # SRT (OS-level sandbox-runtime) execution mode parameters
+        "command_line_srt_network_allowed_domains",
+        "command_line_srt_deny_read",
+        "command_line_srt_allow_unix_sockets",
+        "command_line_srt_read_mode",
+        "command_line_srt_allow_read",
         "exclude_file_operation_mcps",
         "use_mcpwrapped_for_tool_filtering",
         "use_no_roots_wrapper",

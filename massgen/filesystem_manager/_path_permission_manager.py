@@ -1119,6 +1119,13 @@ class PathPermissionManager:
         Returns:
             Tuple of (allowed: bool, reason: Optional[str])
         """
+        # Defense in depth: deny if ANY argument (under any key, incl. lists)
+        # resolves outside every managed area — catches write/read-capable tools
+        # whose name doesn't match the write patterns and would otherwise fail-open.
+        escape_check = self._validate_no_path_arg_escapes(tool_args)
+        if not escape_check[0]:
+            return escape_check
+
         # Extract file path from arguments
         file_path = self._extract_file_path(tool_args)
         if not file_path:
@@ -1152,6 +1159,13 @@ class PathPermissionManager:
 
     def _validate_write_tool(self, tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str | None]:
         """Validate write tool access."""
+        # Defense in depth: no argument (under any key, incl. lists / `source`) may
+        # resolve outside allowed directories. Closes the fail-open gap where a path
+        # under an unrecognized key bypasses the primary extractor.
+        escape_check = self._validate_no_path_arg_escapes(tool_args)
+        if not escape_check[0]:
+            return escape_check
+
         # Special handling for copy_files_batch - validate all destination paths after globbing
         if tool_name == "copy_files_batch":
             return self._validate_copy_files_batch(tool_args)
@@ -1387,6 +1401,97 @@ class PathPermissionManager:
                 # If we can't parse it, allow it - might not be a real path
                 continue
 
+        return (True, None)
+
+    # Argument keys that carry CONTENT (text/data), never filesystem paths. Skipped
+    # by the key-agnostic escape scan so a path-looking string inside file content
+    # isn't mistaken for a target path.
+    _CONTENT_ARG_KEYS = frozenset(
+        {
+            "content",
+            "contents",
+            "text",
+            "data",
+            "body",
+            "old_string",
+            "new_string",
+            "old_str",
+            "new_str",
+            "patch",
+            "diff",
+            "message",
+            "prompt",
+            "query",
+            "command",
+            "code",
+            "snippet",
+            "description",
+            "instructions",
+            # search patterns may legitimately be absolute-path-looking regex/globs
+            "pattern",
+            "regex",
+            "glob",
+        },
+    )
+
+    def _is_path_within_any_managed_area(self, path: Path) -> bool:
+        """Like ``_is_path_within_allowed_directories`` but ALSO counts
+        ``file_context_parent`` dirs as inside.
+
+        Used by the escape scan so it only flags paths that are TRULY outside every
+        managed area; finer-grained denials (e.g. a sibling file inside a
+        file-context directory) are left to the downstream permission logic, which
+        gives a more specific reason.
+        """
+        resolved = path.resolve()
+        for managed_path in self.managed_paths:
+            if managed_path.contains(resolved) or managed_path.path == resolved:
+                return True
+        return False
+
+    def _validate_no_path_arg_escapes(self, tool_args: dict[str, Any]) -> tuple[bool, str | None]:
+        """Defense in depth: deny if ANY argument value resolves outside allowed dirs.
+
+        Closes the fail-open gap in the primary extractor: a path under an
+        unrecognized key, inside a list, or in a move/copy ``source`` (which the
+        extractor deliberately skips) would otherwise bypass the boundary check.
+
+        Safe against false positives: non-path strings and relative values resolve
+        harmlessly *inside* the workspace, so only genuine absolute-outside /
+        ``..``-escape / symlink-escape values are denied. Content-bearing keys are
+        skipped so file content that merely mentions a path isn't flagged.
+
+        Walks the FULL argument tree (nested dicts and lists), so a path buried under
+        e.g. ``{"opts": {"path": "/etc/passwd"}}`` or ``{"items": [{"path": ...}]}``
+        is caught, not just top-level keys.
+        """
+
+        def walk(obj: Any, key: str | None):
+            if isinstance(obj, str):
+                yield (key, obj)
+            elif isinstance(obj, dict):
+                for k, v in obj.items():
+                    if k in self._CONTENT_ARG_KEYS:
+                        continue
+                    yield from walk(v, k)
+            elif isinstance(obj, (list, tuple)):
+                for item in obj:
+                    yield from walk(item, key)
+
+        for key, cand in walk(tool_args, None):
+            if not cand:
+                continue
+            if "\x00" in cand:
+                return (False, f"Access denied: argument '{key}' contains a null byte.")
+            try:
+                resolved = Path(self._resolve_path_against_workspace(cand)).resolve()
+            except (OSError, ValueError):
+                continue
+            if not self._is_path_within_any_managed_area(resolved):
+                return (
+                    False,
+                    f"Access denied: argument '{key}'='{cand}' resolves to '{resolved}', outside allowed directories.",
+                )
         return (True, None)
 
     def _extract_file_path(self, tool_args: dict[str, Any]) -> str | None:

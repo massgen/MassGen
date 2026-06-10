@@ -3893,3 +3893,36 @@ class TestCleanSubprocessEnv:
         env = SubagentManager._clean_subprocess_env()
         env["__TEST_SENTINEL__"] = "yes"
         assert os.environ.get("__TEST_SENTINEL__") is None
+
+
+class TestSrtSettingsInheritance:
+    """SRT settings must propagate from parent to subagent (parity with Docker)."""
+
+    def test_srt_settings_inherited_by_subagent(self, tmp_path):
+        from pathlib import Path
+
+        from massgen.subagent.manager import SubagentManager
+        from massgen.subagent.models import SubagentConfig
+
+        parent_backend = {
+            "type": "openai",
+            "model": "gpt-5",
+            "cwd": "ws",
+            "enable_mcp_command_line": True,
+            "command_line_execution_mode": "srt",
+            "command_line_srt_network_allowed_domains": ["pypi.org"],
+            "command_line_srt_deny_read": ["/x/.secret"],
+        }
+        parent_cfg = {"id": "parent", "backend": parent_backend}
+        mgr = SubagentManager(
+            parent_workspace=str(tmp_path),
+            parent_agent_id="parent",
+            orchestrator_id="orch",
+            parent_agent_configs=[parent_cfg],
+        )
+        cfg = SubagentConfig.create(task="do x", parent_agent_id="parent")
+        out = mgr._generate_subagent_yaml_config(cfg, Path(tmp_path) / "sub")
+        child_backend = out["agents"][0]["backend"]
+        assert child_backend["command_line_execution_mode"] == "srt"
+        assert child_backend["command_line_srt_network_allowed_domains"] == ["pypi.org"]
+        assert child_backend["command_line_srt_deny_read"] == ["/x/.secret"]

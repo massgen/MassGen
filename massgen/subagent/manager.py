@@ -1918,6 +1918,23 @@ You are a subagent spawned to work on a specific task. Your workspace is isolate
                     elif setting in fallback_backend:
                         backend_config[setting] = fallback_backend[setting]
 
+            # Inherit SRT settings if using srt mode (parity with Docker). Without
+            # this, a subagent inherits srt MODE but not the parent's network
+            # allowlist / read-denies, so commands that worked in the parent (e.g.
+            # an install reaching an allowlisted domain) would fail under the child's
+            # deny-all default, and parent-protected reads would become readable.
+            if backend_config.get("command_line_execution_mode") == "srt":
+                srt_settings = [
+                    "command_line_srt_network_allowed_domains",
+                    "command_line_srt_deny_read",
+                    "command_line_srt_allow_unix_sockets",
+                ]
+                for setting in srt_settings:
+                    if setting in source_backend:
+                        backend_config[setting] = source_backend[setting]
+                    elif setting in fallback_backend:
+                        backend_config[setting] = fallback_backend[setting]
+
             # Inherit code-based tools settings
             code_tools_settings = [
                 "enable_code_based_tools",

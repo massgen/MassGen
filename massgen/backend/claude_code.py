@@ -351,6 +351,10 @@ class ClaudeCodeBackend(NativeToolBackendMixin, StreamingBufferMixin, LLMBackend
         """
         return FilesystemSupport.NATIVE
 
+    def has_native_execution_sandbox(self) -> bool:
+        """Claude Code confines its own execution via its OS-level sandbox."""
+        return True
+
     def is_stateful(self) -> bool:
         """
         Claude Code backend is stateful - maintains conversation context.
