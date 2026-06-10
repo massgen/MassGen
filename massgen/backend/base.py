@@ -162,10 +162,27 @@ class LLMBackend(ABC):
             if filesystem_support in (FilesystemSupport.MCP, FilesystemSupport.NATIVE):
                 # Validate execution mode
                 execution_mode = kwargs.get("command_line_execution_mode", "local")
-                if execution_mode not in ["local", "docker"]:
+                if execution_mode not in ["local", "docker", "srt"]:
                     raise ValueError(
-                        f"Invalid command_line_execution_mode: '{execution_mode}'. Must be 'local' or 'docker'.",
+                        f"Invalid command_line_execution_mode: '{execution_mode}'. Must be 'local', 'docker', or 'srt'.",
                     )
+
+                # Backends with a native execution sandbox (codex, claude_code) must
+                # not be SRT-wrapped: SRT (Seatbelt/bubblewrap) would nest inside the
+                # backend's own sandbox and hang. Degrade srt -> local; the backend's
+                # native sandbox provides the isolation. (SRT targets backends without
+                # one — e.g. OpenAI/Claude/Gemini/Grok API backends via the MCP.)
+                if execution_mode == "srt" and self.has_native_execution_sandbox():
+                    logger.warning(
+                        f"[{self.get_provider_name()}] command_line_execution_mode 'srt' ignored — this backend "
+                        "has a native execution sandbox; using its own isolation (SRT would nest sandboxes). "
+                        "Falling back to 'local' for MassGen's command-line MCP.",
+                    )
+                    execution_mode = "local"
+                    # Normalize the stored config too, so downstream RAW reads of
+                    # command_line_execution_mode (e.g. claude_code disallowed-tools /
+                    # system-prompt logic) see the effective 'local', not 'srt'.
+                    kwargs["command_line_execution_mode"] = "local"
 
                 # Validate network mode
                 network_mode = kwargs.get("command_line_docker_network_mode", "none")
@@ -193,6 +210,11 @@ class LLMBackend(ABC):
                     # Nested credential and package management
                     "command_line_docker_credentials": kwargs.get("command_line_docker_credentials"),
                     "command_line_docker_packages": kwargs.get("command_line_docker_packages"),
+                    # SRT (OS-level sandbox-runtime) execution mode. Network defaults to
+                    # deny-all; an allowlisted domain is an opt-in capability grant.
+                    "command_line_srt_network_allowed_domains": kwargs.get("command_line_srt_network_allowed_domains", []),
+                    "command_line_srt_deny_read": kwargs.get("command_line_srt_deny_read", []),
+                    "command_line_srt_allow_unix_sockets": kwargs.get("command_line_srt_allow_unix_sockets", []),
                     "enable_audio_generation": kwargs.get("enable_audio_generation", False),
                     "exclude_file_operation_mcps": kwargs.get("exclude_file_operation_mcps", False),
                     "use_mcpwrapped_for_tool_filtering": kwargs.get("use_mcpwrapped_for_tool_filtering", False),
@@ -662,6 +684,19 @@ class LLMBackend(ABC):
         # By default, backends have no filesystem support
         # Subclasses should override this method
         return FilesystemSupport.NONE
+
+    def has_native_execution_sandbox(self) -> bool:
+        """Whether this backend sandboxes its own command execution natively.
+
+        Backends like Codex (`--full-auto` → Landlock/Seatbelt) and Claude Code
+        confine their own command execution. For these, MassGen's OS-level SRT
+        sandbox is both redundant and harmful: SRT also uses Seatbelt/bubblewrap,
+        and the backend spawns its MCP servers inside its own sandbox, so an
+        SRT-wrapped command nests sandboxes and hangs. When True, MassGen degrades
+        `command_line_execution_mode: srt` to `local` for this backend (its native
+        sandbox provides the isolation). SRT is for backends WITHOUT one.
+        """
+        return False
 
     def get_supported_builtin_tools(self) -> list[str]:
         """Get list of builtin tools supported by this provider."""

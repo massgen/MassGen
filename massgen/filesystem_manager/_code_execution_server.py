@@ -255,8 +255,14 @@ async def create_server() -> fastmcp.FastMCP:
         "--execution-mode",
         type=str,
         default="local",
-        choices=["local", "docker"],
-        help="Execution mode: local (subprocess) or docker (container isolation)",
+        choices=["local", "docker", "srt"],
+        help="Execution mode: local (subprocess), docker (container isolation), or srt (OS-level sandbox-runtime)",
+    )
+    parser.add_argument(
+        "--srt-settings",
+        type=str,
+        default=None,
+        help="Path to the SRT settings JSON file (required for srt mode)",
     )
     parser.add_argument(
         "--agent-id",
@@ -294,6 +300,7 @@ async def create_server() -> fastmcp.FastMCP:
     mcp.allowed_commands = args.allowed_commands  # Whitelist patterns
     mcp.blocked_commands = args.blocked_commands  # Blacklist patterns
     mcp.execution_mode = args.execution_mode
+    mcp.srt_settings_path = args.srt_settings
     mcp.agent_id = args.agent_id
     mcp.instance_id = args.instance_id
     mcp.enable_sudo = args.enable_sudo
@@ -333,6 +340,26 @@ async def create_server() -> fastmcp.FastMCP:
             except ImportError:
                 pass
             raise RuntimeError(f"Failed to connect to Docker: {e}")
+
+    # Validate SRT mode at startup (parallel to Docker validation above).
+    if args.execution_mode == "srt":
+        import platform
+
+        from massgen.filesystem_manager._srt_manager import srt_available
+
+        if platform.system() == "Windows":
+            raise RuntimeError(
+                "SRT sandboxing (command_line_execution_mode: srt) is not supported on Windows. " "Use 'docker' mode or run under Linux/macOS.",
+            )
+        if not args.srt_settings:
+            raise RuntimeError("SRT mode requires --srt-settings <path>. This should be configured by the orchestrator.")
+        if not Path(args.srt_settings).exists():
+            raise RuntimeError(f"SRT settings file not found: {args.srt_settings}")
+        if not srt_available():
+            raise RuntimeError(
+                "SRT mode requested but the 'srt' CLI was not found on PATH. " "Install it with: npm install -g @anthropic-ai/sandbox-runtime",
+            )
+        print(f"[SRT] Sandbox-runtime enabled (settings: {args.srt_settings})")
 
     @mcp.tool()
     def execute_command(
@@ -585,16 +612,27 @@ async def create_server() -> fastmcp.FastMCP:
                     }
 
             else:
-                # Local mode: execute using subprocess (existing logic)
+                # Local or SRT mode: execute using subprocess (existing logic).
                 # Prepare environment (auto-detects .venv in work_dir and sets up skills)
                 env = _prepare_environment(work_path, mcp.local_skills_directory)
+
+                # SRT mode wraps the command in an OS-level sandbox. The original
+                # command is passed to `sh -c` INSIDE the sandbox so shell features
+                # (pipes, redirection) and any spawned subprocesses are contained.
+                effective_command = command
+                if mcp.execution_mode == "srt":
+                    from massgen.filesystem_manager._srt_manager import (
+                        wrap_command_with_srt,
+                    )
+
+                    effective_command = wrap_command_with_srt(command, mcp.srt_settings_path)
 
                 # Execute command
                 start_time = time.time()
 
                 try:
                     result = subprocess.run(
-                        command,
+                        effective_command,
                         shell=True,
                         cwd=str(work_path),
                         timeout=timeout,

@@ -171,6 +171,9 @@ class FilesystemManager:
         command_line_docker_enable_sudo: bool = False,
         command_line_docker_credentials: dict[str, Any] | None = None,
         command_line_docker_packages: dict[str, Any] | None = None,
+        command_line_srt_network_allowed_domains: list[str] | None = None,
+        command_line_srt_deny_read: list[str] | None = None,
+        command_line_srt_allow_unix_sockets: list[str] | None = None,
         enable_audio_generation: bool = False,
         enable_file_generation: bool = False,
         exclude_file_operation_mcps: bool = False,
@@ -307,6 +310,9 @@ class FilesystemManager:
         self.command_line_docker_enable_sudo = command_line_docker_enable_sudo
         self.command_line_docker_credentials = command_line_docker_credentials
         self.command_line_docker_packages = command_line_docker_packages
+        self.command_line_srt_network_allowed_domains = command_line_srt_network_allowed_domains or []
+        self.command_line_srt_deny_read = command_line_srt_deny_read or []
+        self.command_line_srt_allow_unix_sockets = command_line_srt_allow_unix_sockets or []
 
         # Initialize Docker manager if Docker mode enabled
         self.docker_manager = None
@@ -352,6 +358,25 @@ class FilesystemManager:
         # Add context paths if provided
         if context_paths:
             self.path_permission_manager.add_context_paths(context_paths)
+
+        # Initialize SRT (OS-level sandbox-runtime) manager if SRT mode enabled.
+        # Reads managed_paths lazily at settings-build time, so it's safe to
+        # construct here before workspace/temp paths are added below. Settings
+        # live OUTSIDE the sandbox's writable set so the agent can't tamper with
+        # its own policy.
+        self.srt_manager = None
+        if enable_mcp_command_line and self.command_line_execution_mode == "srt":
+            import tempfile
+
+            from ._srt_manager import SrtManager
+
+            self.srt_manager = SrtManager(
+                self.path_permission_manager,
+                network_allowed_domains=self.command_line_srt_network_allowed_domains,
+                extra_deny_read=self.command_line_srt_deny_read,
+                allow_unix_sockets=self.command_line_srt_allow_unix_sockets,
+                settings_dir=Path(tempfile.gettempdir()) / "massgen_srt",
+            )
 
         # Set agent_temporary_workspace_parent first, before calling _setup_workspace
         self.agent_temporary_workspace_parent = agent_temporary_workspace_parent
@@ -1591,6 +1616,12 @@ class FilesystemManager:
                 # Normal mode: Exclude read_media_file since we have our own implementation
                 config["exclude_tools"] = ["read_media_file"]
 
+        # Defense in depth: OS-sandbox the filesystem (write_file/edit_file) server
+        # too. Self-skips npx/npm launchers (they need registry + ~/.npm writes the
+        # sandbox blocks) — those keep the npm server's own --allowed-paths + the hook.
+        if self.command_line_execution_mode == "srt" and self.srt_manager:
+            config = self._wrap_stdio_config_with_srt(config)
+
         return config
 
     def get_workspace_tools_mcp_config(self, backend_type: str | None = None) -> dict[str, Any]:
@@ -1654,6 +1685,61 @@ class FilesystemManager:
                 ],
             )
 
+        # Defense in depth: OS-sandbox the filesystem-tools SERVER itself so a
+        # flawed/injected/permission-hook-bypassing file op is OS-denied, not just
+        # app-denied. (Command execution is already OS-sandboxed by the command_line
+        # srt mode; this closes the same hole for the file-manipulation MCP tools.)
+        if self.command_line_execution_mode == "srt" and self.srt_manager:
+            config = self._wrap_stdio_config_with_srt(config)
+
+        return config
+
+    def _wrap_stdio_config_with_srt(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Wrap a stdio MCP server launch with `srt` using the fs_tools profile.
+
+        Transforms ``{command: "fastmcp", args: ["run", srv, "--", "--allowed-paths", …]}``
+        into ``{command: "srt", args: ["--settings", <cfg>, "sh", "-c", "<orig cmdline>"]}``.
+
+        CRITICAL: the original command line (including its ``--`` option separator)
+        is passed via ``sh -c`` so that `srt`'s own argv parser cannot consume the
+        ``--`` (which would strip the server's ``--allowed-paths`` and crash it).
+        Verified: the direct-argv form breaks the MCP handshake; the sh -c form works.
+        """
+        import shlex
+
+        # Skip launchers that need network + cache writes at STARTUP. `npx`/`npm`
+        # fetch the package from registry.npmjs.org and write to ~/.npm/_cacache —
+        # both blocked by the tight sandbox (E403 / EPERM), so wrapping them crashes
+        # the server. Also skip the no-roots filesystem wrapper, which is launched as
+        # `python3 filesystem_no_roots.py …` but INTERNALLY spawns `npx …` (so it has
+        # the same network/cache need). These servers keep their app-layer protections
+        # (each server's own --allowed-paths + PathPermissionManager). For full OS-level
+        # coverage, install the server as a global binary (no npx).
+        command = config.get("command", "")
+        args = config.get("args", [])
+        # Token-based detection (not a fragile substring): any whole token == npx/npm,
+        # or the launched script is the npx-spawning no-roots wrapper.
+        tokens = [str(command), *[str(a) for a in args]]
+        needs_network = any(t in ("npx", "npm") or t.endswith("/npx") or t.endswith("/npm") or "filesystem_no_roots" in t for t in tokens)
+        if needs_network:
+            logger.info(
+                f"[SrtManager] Not srt-wrapping network-dependent MCP launcher "
+                f"('{command}' …); it keeps its app-layer permission enforcement. "
+                "Install the server as a global binary for OS-level sandboxing.",
+            )
+            return config
+
+        extra_writable = []
+        if self.snapshot_storage:
+            extra_writable.append(self.snapshot_storage)
+        if self.agent_temporary_workspace_parent:
+            extra_writable.append(self.agent_temporary_workspace_parent)
+        self.srt_manager.fs_tools_extra_writable = [Path(p).resolve() for p in extra_writable]
+
+        fs_settings = self.srt_manager.write_settings_file(profile="fs_tools", agent_id=self.agent_id)
+        inner_cmdline = shlex.join([str(config["command"]), *[str(a) for a in config["args"]]])
+        config["command"] = self.srt_manager.srt_path
+        config["args"] = ["--settings", str(fs_settings), "sh", "-c", inner_cmdline]
         return config
 
     def get_command_line_mcp_config(self) -> dict[str, Any]:
@@ -1704,6 +1790,12 @@ class FilesystemManager:
         # Add sudo flag for Docker mode
         if self.command_line_execution_mode == "docker" and self.command_line_docker_enable_sudo:
             config["args"].append("--enable-sudo")
+
+        # SRT mode: generate the per-agent settings file (derived from the SAME
+        # PathPermissionManager policy as the app layer) and point the server at it.
+        if self.command_line_execution_mode == "srt" and self.srt_manager:
+            settings_path = self.srt_manager.write_settings_file(profile="execution", agent_id=self.agent_id)
+            config["args"].extend(["--srt-settings", str(settings_path)])
 
         # Add command filters if specified
         if self.command_line_allowed_commands:

@@ -1,0 +1,59 @@
+# SRT Sandboxing — OS-level command execution sandbox
+#
+# Enables Anthropic's sandbox-runtime (SRT: bubblewrap on Linux, Seatbelt on
+# macOS) for an agent's command/code execution. SRT enforces BOTH filesystem and
+# network isolation at the OS level, derived from the SAME path-permission policy
+# as MassGen's application-level permission layer (defense in depth).
+#
+# This is the right sandbox for backends that run commands through MassGen's
+# command-line MCP (OpenAI/Claude/Gemini/Grok API backends). Native-sandbox
+# backends (codex `--full-auto`, claude_code) use their own and don't need this.
+#
+# Prerequisite (one-time):
+#   npm install -g @anthropic-ai/sandbox-runtime
+#
+# Turn it on with ONE knob: `command_line_execution_mode: srt`.
+#
+# Run with:
+#   uv run massgen --automation --config massgen/configs/tools/filesystem/sandbox/srt_sandbox.yaml \
+#     "Create out.txt in the workspace, then try to read ~/.ssh/id_rsa"
+# Expected: the workspace write succeeds; reading a secret store like ~/.ssh and
+# all network egress are denied by the sandbox. (SRT allows general filesystem
+# READS by default so commands can run; we deny the well-known secret locations —
+# ~/.ssh, ~/.aws, ~/.gnupg, cloud creds, etc. — and all WRITES outside the
+# workspace. Add more read-denied paths via command_line_srt_deny_read.)
+
+agents:
+  - id: "sandboxed"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+
+      cwd: "workspace_sandboxed"
+      enable_mcp_command_line: true
+
+      # ▼▼▼ The single opt-in knob ▼▼▼
+      command_line_execution_mode: "srt"
+
+      # ── Optional SRT knobs (all default-safe) ──────────────────────────────
+      # Network is DENY-ALL by default. Each allowlisted domain is a capability
+      # grant (an allowlisted domain can be an exfiltration channel), so add only
+      # what the sandboxed commands genuinely need:
+      # command_line_srt_network_allowed_domains:
+      #   - "pypi.org"
+      #   - "files.pythonhosted.org"
+      #
+      # Extra paths to block from reading (on top of the agent's protected paths):
+      # command_line_srt_deny_read:
+      #   - "~/.aws"
+      #
+      # Unix sockets to allow (advanced; e.g. a local service):
+      # command_line_srt_allow_unix_sockets: []
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

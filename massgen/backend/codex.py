@@ -2566,6 +2566,10 @@ class CodexBackend(StreamingBufferMixin, NativeToolBackendMixin, LLMBackend):
         """Codex has native filesystem support via built-in tools."""
         return FilesystemSupport.NATIVE
 
+    def has_native_execution_sandbox(self) -> bool:
+        """Codex confines its own execution via `--full-auto` (Landlock/Seatbelt)."""
+        return True
+
     def is_stateful(self) -> bool:
         """Codex maintains session state via session files."""
         return True
