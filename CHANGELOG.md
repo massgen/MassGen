@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.96] - 2026-06-10
+
+### Theme: OS-Level Agent Sandboxing
+
+Add a real OS-level execution sandbox for agents via Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (`srt`: bubblewrap on Linux, Seatbelt on macOS), and harden the existing application-layer permission hook against file-tool escapes. **Defense in depth by design**: the OS layer (`SrtManager`) and the app layer (`PathPermissionManager`) are derived from the *same* path policy and both stay active — SRT closes the shell escape hatch (e.g. `echo x > /etc/passwd`, which never goes through a file tool), the hardened hook closes file-tool escapes (`write_file`/`move`/`copy` to/from outside the workspace). Default-off, one-knob opt-in (`command_line_execution_mode: srt`); current behavior is unchanged unless a config turns it on. All items landed under TDD (tests written first, confirmed red, then green), plus live verification across multiple backends.
+
+### Added
+- **SRT sandbox mode (`command_line_execution_mode: srt`)**: a third command-execution mode alongside `local`/`docker`. `SrtManager` (`massgen/filesystem_manager/_srt_manager.py`) derives per-agent SRT settings from `PathPermissionManager.managed_paths` — `allowWrite` for writable paths, `denyWrite` for read-only/protected paths, **network deny-all by default** (allowlist is opt-in, documented as a capability grant), and a built-in secret-store read-deny baseline. Commands are wrapped as `srt --settings cfg sh -c '<cmd>'` (the `sh -c` form is required so `srt` does not consume the server's `--` separator). Both the command-line MCP and the filesystem-tools MCP servers are OS-wrapped (defense in depth); npx/npm launchers and the no-roots wrapper auto-skip wrapping (they need registry + `~/.npm` writes the sandbox blocks) and keep their app-layer protection. Example config: `massgen/configs/tools/filesystem/sandbox/srt_sandbox.yaml`.
+- **Configurable SRT read confinement (`command_line_srt_read_mode`, default `confined`)**: SRT reads are allow-all by default, so `confined` denies all of `$HOME` (personal data, secrets, other projects) and re-allows only the workspace + context + temp paths while system paths stay readable so commands run; `strict` denies `/` and allows only managed paths + a system runtime baseline + extras; `open` allows-all reads minus a built-in secret denylist + extras. `command_line_srt_allow_read` widens the allow-list per config. New backend params `command_line_srt_network_allowed_domains` / `_deny_read` / `_allow_unix_sockets` / `_allow_read` / `_read_mode` added to the single-source exclusion list; `srt` added to the MCP executable allowlist. When the `fs_tools` profile OS-wraps a framework MCP server (`fastmcp run <massgen script>`), the framework's own read roots — the interpreter/site-packages (`sys.prefix`/`sys.base_prefix`), the `massgen` package source, and git's user config (`~/.gitconfig`, `~/.config/git`; git is core to the workspace snapshot model) — are re-allowed so the wrapped server can read its own code/runtime under `confined`/`strict` while user secrets stay denied. The agent's own `execution` profile is unaffected.
+- **Subagent SRT inheritance**: subagents inherit the parent's `command_line_srt_*` settings (parity with Docker).
+
+### Changed
+- **Native-sandbox backends degrade `srt`→`local`**: `has_native_execution_sandbox()` (True for `codex` `--full-auto` and `claude_code`) prevents nested Seatbelt/Landlock hangs; the stored config is normalized so downstream raw reads see `local`.
+
+### Fixed
+- **Permission-hook hardening (`PathPermissionManager`)**: new `_validate_no_path_arg_escapes` — a key-agnostic scan that walks the full tool-args tree (nested dicts + lists) and denies any value resolving outside all managed areas. Closes the prior **fail-open** behavior (path under an unrecognized key, list-valued path, or `move`/`copy` `source` pointing outside the workspace) without false positives (non-path strings resolve harmlessly inside the workspace; content keys are skipped). Symlinks/`..` were already handled by `.resolve()`.
+
+### Tests
+- New deterministic suites: `test_srt_manager.py` (settings derivation, profiles, secret read-deny baseline, protected-path read+write deny, wrapping, availability guards), `test_srt_filesystem_integration.py` (command-line + fs-tools config wiring, `sh -c` wrap, npx / no-roots auto-skip, MCP-security validation), `test_srt_backend_degrade.py` (`srt`→`local` degrade for native-sandbox backends; API backends keep `srt`), `test_path_permission_hook_adversarial.py` (15 escape vectors — absolute/`..`/symlink/unrecognized-key/list/nested-dict/move-source/copy-source/read-exfil — plus false-positive guards), and `test_subagent_manager.py::TestSrtSettingsInheritance` (subagent inherits parent SRT settings).
+- Live-verified (macOS 15.7, srt 1.0.0): standalone srt (allowed-write, out-of-scope write blocked, deny-all network blocked, secret read blocked); 3 API backends (OpenRouter/`chatcompletion`, OpenAI Responses, Gemini) with workspace write OK and out-of-workspace write/file-tool escape blocked; codex + srt and claude_code + srt degrade to local and complete via their native sandbox.
+
+### Documentations, Configurations and Resources
+- **New Config**: `massgen/configs/tools/filesystem/sandbox/srt_sandbox.yaml` — fully-commented SRT opt-in example with all read/network/socket knobs documented.
+
 ## [0.1.95] - 2026-06-08
 
 ### Theme: Steering Improvements
@@ -63,6 +87,9 @@ Strengthen the orchestrator's parallel execution: move blocking snapshot work of
 - New race/regression suites: `test_concurrency_race_fixes.py` (R1–R5, D2/D3), `test_snapshot_version_store.py` and `test_snapshot_versioned_save.py` (versioned snapshots incl. concurrent-publish-during-read and concurrent-publisher GC), `test_snapshot_copy_offload.py` (off-loop copy), `test_midstream_injection_unified.py` (cross-path effect-order equality), and `test_wait_interrupt_provider.py` (consolidated interrupt-provider contract).
 
 ## Recent Releases
+
+**v0.1.96 (June 10, 2026)** - OS-Level Agent Sandboxing
+Adds a real OS-level execution sandbox for agents via Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (`srt`) and hardens the application-layer permission hook against file-tool escapes. The new opt-in `command_line_execution_mode: srt` derives OS-enforced filesystem and network isolation from the same `PathPermissionManager` policy as MassGen's app layer, defaults network to deny-all, confines reads away from `$HOME` by default, degrades to native backend sandboxes where appropriate, and preserves subagent parity by inheriting parent SRT settings.
 
 **v0.1.95 (June 8, 2026)** - Steering Improvements
 Extends mid-stream injection into a programmatic, headless capability and upgrades it to true interrupt-and-resume for the CLI backends. A file inbox (`--inbox-dir`) lets `--automation` and any UI-less caller drop human guidance into a streaming agent through the same chokepoint the TUI/WebUI use; Codex and Antigravity now interrupt the in-flight turn and resume (`codex exec resume` / `agy --continue`) instead of waiting for a round boundary. Adds MCP-server-hook payload IPC for Antigravity (codex parity), wires the Antigravity `--model` flag, and fixes `--inbox-dir` for resumed sessions plus `expires_at`-guarded steering carryforward.

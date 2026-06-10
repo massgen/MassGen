@@ -154,6 +154,10 @@ def _get_default_allowed_executables(level: str) -> set[str]:
         "rust",
         "cargo",
         "fastmcp",
+        # SRT (Anthropic sandbox-runtime) — trusted MassGen-controlled wrapper used
+        # only when command_line_execution_mode: srt is opted in. It prefixes a
+        # legitimate server command (e.g. `srt --settings <cfg> fastmcp run ...`).
+        "srt",
         # MCP servers (when globally installed)
         "mcp-server-filesystem",
         # System utilities (limited set)
