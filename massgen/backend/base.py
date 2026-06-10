@@ -191,6 +191,13 @@ class LLMBackend(ABC):
                         f"Invalid command_line_docker_network_mode: '{network_mode}'. Must be 'none', 'bridge', or 'host'.",
                     )
 
+                # Validate SRT read-confinement mode
+                srt_read_mode = kwargs.get("command_line_srt_read_mode", "confined")
+                if srt_read_mode not in ["confined", "strict", "open"]:
+                    raise ValueError(
+                        f"Invalid command_line_srt_read_mode: '{srt_read_mode}'. Must be 'confined', 'strict', or 'open'.",
+                    )
+
                 # Extract all FilesystemManager parameters from kwargs
                 filesystem_params = {
                     "cwd": cwd,
@@ -215,6 +222,10 @@ class LLMBackend(ABC):
                     "command_line_srt_network_allowed_domains": kwargs.get("command_line_srt_network_allowed_domains", []),
                     "command_line_srt_deny_read": kwargs.get("command_line_srt_deny_read", []),
                     "command_line_srt_allow_unix_sockets": kwargs.get("command_line_srt_allow_unix_sockets", []),
+                    # Read confinement: "confined" (default) denies $HOME, re-allows
+                    # managed paths; "strict" denies "/"; "open" allows-all minus secrets.
+                    "command_line_srt_read_mode": srt_read_mode,
+                    "command_line_srt_allow_read": kwargs.get("command_line_srt_allow_read", []),
                     "enable_audio_generation": kwargs.get("enable_audio_generation", False),
                     "exclude_file_operation_mcps": kwargs.get("exclude_file_operation_mcps", False),
                     "use_mcpwrapped_for_tool_filtering": kwargs.get("use_mcpwrapped_for_tool_filtering", False),

@@ -76,14 +76,6 @@ def test_execution_profile_temp_and_read_context_are_not_writable(pm_with_paths)
     assert str(pm_with_paths["ctx_read"]) in deny_write
 
 
-def test_protected_paths_are_deny_read(pm_with_paths):
-    mgr = SrtManager(pm_with_paths["pm"], extra_deny_read=["/some/extra/secret"])
-    settings = mgr.build_settings(profile="execution")
-    deny_read = settings["filesystem"]["denyRead"]
-    assert str(pm_with_paths["protected"]) in deny_read
-    assert "/some/extra/secret" in deny_read
-
-
 def test_protected_paths_are_also_deny_write(pm_with_paths):
     # Protected paths are immune from modification even inside a writable context.
     mgr = SrtManager(pm_with_paths["pm"])
@@ -91,17 +83,56 @@ def test_protected_paths_are_also_deny_write(pm_with_paths):
     assert str(pm_with_paths["protected"]) in settings["filesystem"]["denyWrite"]
 
 
-def test_secret_stores_are_deny_read_by_default(pm_with_paths):
-    # SRT reads are allow-all by default; the manager must deny known secret stores
-    # so a sandboxed `cat ~/.ssh/id_rsa` is blocked.
+# --------------------------------------------------------------------------- #
+# Read-confinement modes (SRT reads are allow-all by default; allowRead WINS)
+# --------------------------------------------------------------------------- #
+def test_default_read_mode_is_confined(pm_with_paths):
+    assert SrtManager(pm_with_paths["pm"]).read_mode == "confined"
+
+
+def test_confined_mode_denies_home_allows_managed(pm_with_paths):
     from pathlib import Path
 
-    mgr = SrtManager(pm_with_paths["pm"])
-    deny_read = mgr.build_settings(profile="execution")["filesystem"]["denyRead"]
+    mgr = SrtManager(pm_with_paths["pm"])  # default confined
+    fs = mgr.build_settings(profile="execution")["filesystem"]
+    # $HOME denied (covers ~/.ssh, ~/.aws, other projects, personal data)…
+    assert str(Path.home()) in fs["denyRead"]
+    assert "/etc/shadow" in fs["denyRead"]
+    # …but the agent's managed paths are re-allowed (allowRead wins over denyRead).
+    assert str(pm_with_paths["workspace"]) in fs["allowRead"]
+    assert str(pm_with_paths["ctx_read"]) in fs["allowRead"]
+
+
+def test_strict_mode_denies_root_allows_managed_and_system(pm_with_paths):
+    mgr = SrtManager(pm_with_paths["pm"], read_mode="strict")
+    fs = mgr.build_settings(profile="execution")["filesystem"]
+    assert fs["denyRead"] == ["/"]
+    assert str(pm_with_paths["workspace"]) in fs["allowRead"]
+    assert "/usr" in fs["allowRead"]  # system baseline so commands can run
+
+
+def test_open_mode_uses_secret_denylist(pm_with_paths):
+    from pathlib import Path
+
+    mgr = SrtManager(pm_with_paths["pm"], read_mode="open", extra_deny_read=["/some/extra/secret"])
+    fs = mgr.build_settings(profile="execution")["filesystem"]
     home = Path.home()
-    for rel in (".ssh", ".aws", ".gnupg", ".config/gcloud"):
-        assert str(home / rel) in deny_read, f"{rel} should be read-denied by default"
-    assert "/etc/shadow" in deny_read
+    for rel in (".ssh", ".aws", ".gnupg"):
+        assert str(home / rel) in fs["denyRead"]
+    # protected + extras are read-denied in open mode (nothing re-allows them).
+    assert str(pm_with_paths["protected"]) in fs["denyRead"]
+    assert "/some/extra/secret" in fs["denyRead"]
+    assert fs["allowRead"] == []
+
+
+def test_allow_read_extras_propagate(pm_with_paths):
+    mgr = SrtManager(pm_with_paths["pm"], allow_read=["/opt/shared-cache"])
+    fs = mgr.build_settings(profile="execution")["filesystem"]
+    assert "/opt/shared-cache" in fs["allowRead"]
+
+
+def test_invalid_read_mode_falls_back_to_confined(pm_with_paths):
+    assert SrtManager(pm_with_paths["pm"], read_mode="bogus").read_mode == "confined"
 
 
 # --------------------------------------------------------------------------- #

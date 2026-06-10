@@ -42,6 +42,8 @@ BASE_EXCLUDED_CONFIG_PARAMS: frozenset[str] = frozenset(
         "command_line_srt_network_allowed_domains",
         "command_line_srt_deny_read",
         "command_line_srt_allow_unix_sockets",
+        "command_line_srt_read_mode",
+        "command_line_srt_allow_read",
         "exclude_file_operation_mcps",
         "use_mcpwrapped_for_tool_filtering",
         "use_no_roots_wrapper",

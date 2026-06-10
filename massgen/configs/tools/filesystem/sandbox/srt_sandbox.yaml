@@ -17,11 +17,8 @@
 # Run with:
 #   uv run massgen --automation --config massgen/configs/tools/filesystem/sandbox/srt_sandbox.yaml \
 #     "Create out.txt in the workspace, then try to read ~/.ssh/id_rsa"
-# Expected: the workspace write succeeds; reading a secret store like ~/.ssh and
-# all network egress are denied by the sandbox. (SRT allows general filesystem
-# READS by default so commands can run; we deny the well-known secret locations —
-# ~/.ssh, ~/.aws, ~/.gnupg, cloud creds, etc. — and all WRITES outside the
-# workspace. Add more read-denied paths via command_line_srt_deny_read.)
+# Expected: the workspace write succeeds; reading ~/.ssh (or anything else in your
+# home dir outside the workspace/context) and all network egress are denied.
 
 agents:
   - id: "sandboxed"
@@ -36,6 +33,19 @@ agents:
       command_line_execution_mode: "srt"
 
       # ── Optional SRT knobs (all default-safe) ──────────────────────────────
+      # READ confinement. Default "confined": denies all of $HOME (personal data,
+      # secrets, other projects) and re-allows only the workspace + context paths;
+      # system paths (/usr, /opt, …) stay readable so commands run.
+      #   confined (default) — deny $HOME, allow workspace+context (+ allow_read)
+      #   strict            — deny "/", allow only workspace+context+system+extras
+      #   open              — allow-all reads except a built-in secret denylist
+      # command_line_srt_read_mode: "confined"
+      #
+      # Extra paths the sandboxed commands may READ (e.g. a shared cache the
+      # interpreter needs, or a data dir outside the workspace):
+      # command_line_srt_allow_read:
+      #   - "~/.cache/uv"
+      #
       # Network is DENY-ALL by default. Each allowlisted domain is a capability
       # grant (an allowlisted domain can be an exfiltration channel), so add only
       # what the sandboxed commands genuinely need:
@@ -43,9 +53,9 @@ agents:
       #   - "pypi.org"
       #   - "files.pythonhosted.org"
       #
-      # Extra paths to block from reading (on top of the agent's protected paths):
+      # Extra paths to block from reading (effective outside the allow-read region):
       # command_line_srt_deny_read:
-      #   - "~/.aws"
+      #   - "/opt/secret-data"
       #
       # Unix sockets to allow (advanced; e.g. a local service):
       # command_line_srt_allow_unix_sockets: []

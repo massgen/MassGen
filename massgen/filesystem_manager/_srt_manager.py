@@ -61,6 +61,39 @@ _DEFAULT_DENY_READ_HOME_RELATIVE = (
 )
 _DEFAULT_DENY_READ_ABSOLUTE = ("/etc/shadow",)
 
+# Read-confinement modes (SRT reads are allow-all by default; deny-then-allow, where
+# allowRead WINS over denyRead).
+#   "confined" (default): deny all of $HOME, re-allow the agent's managed paths
+#       (workspace + context + temp). Denies personal data/secrets/other projects;
+#       system paths (/usr, /opt, …) outside $HOME stay readable so commands run.
+#   "strict":   deny "/", re-allow managed paths + a system runtime baseline + extras.
+#       Tightest; may break commands that read an unlisted path.
+#   "open":     allow-all reads except the built-in secret denylist + extras.
+READ_MODE_CONFINED = "confined"
+READ_MODE_STRICT = "strict"
+READ_MODE_OPEN = "open"
+READ_MODES = (READ_MODE_CONFINED, READ_MODE_STRICT, READ_MODE_OPEN)
+
+# System roots a sandboxed command needs to READ to run, used by "strict" mode.
+_STRICT_SYSTEM_READ_BASELINE = (
+    "/usr",
+    "/bin",
+    "/sbin",
+    "/etc",
+    "/opt",
+    "/dev",
+    "/tmp",
+    "/var",
+    "/private",  # macOS: /private/var, /private/tmp
+    "/System",  # macOS
+    "/Library",  # macOS
+    "/lib",  # linux
+    "/lib64",
+    "/proc",
+    "/sys",
+    "/run",
+)
+
 # Profiles -------------------------------------------------------------------
 # "execution": tight — reflects exactly what the AGENT may write.
 # "fs_tools":  widened — the fs-tools MCP server also writes temp + snapshot
@@ -114,6 +147,8 @@ class SrtManager:
         network_allowed_domains: list[str] | None = None,
         extra_deny_read: list[str] | None = None,
         allow_unix_sockets: list[str] | None = None,
+        read_mode: str = READ_MODE_CONFINED,
+        allow_read: list[str] | None = None,
         fs_tools_extra_writable: list[str | Path] | None = None,
         settings_dir: str | Path | None = None,
         srt_path: str = DEFAULT_SRT_BINARY,
@@ -122,6 +157,8 @@ class SrtManager:
         self.network_allowed_domains = list(network_allowed_domains or [])
         self.extra_deny_read = list(extra_deny_read or [])
         self.allow_unix_sockets = list(allow_unix_sockets or [])
+        self.read_mode = read_mode if read_mode in READ_MODES else READ_MODE_CONFINED
+        self.allow_read = list(allow_read or [])
         self.fs_tools_extra_writable = [Path(p).resolve() for p in (fs_tools_extra_writable or [])]
         self.settings_dir = Path(settings_dir) if settings_dir else None
         self.srt_path = srt_path
@@ -157,20 +194,41 @@ class SrtManager:
         deny_write = [str(mp.path) for mp in managed if mp.permission == Permission.READ and str(mp.path) not in writable_set]
         deny_write += protected_paths
 
-        # Reads: SRT defaults to allow-all, so deny the well-known secret stores
-        # (else a sandboxed `cat ~/.ssh/id_rsa` exfiltrates), plus per-context
-        # protected paths and any user-configured extras.
-        home = Path.home()
-        deny_read: list[str] = [str(home / rel) for rel in _DEFAULT_DENY_READ_HOME_RELATIVE]
-        deny_read += list(_DEFAULT_DENY_READ_ABSOLUTE)
-        deny_read += protected_paths
-        deny_read += list(self.extra_deny_read)
+        # Reads: SRT defaults to allow-all (deny-then-allow; allowRead WINS over
+        # denyRead). The managed paths the agent may read (re-allowed within any
+        # denied region) plus user-configured extras:
+        home = str(Path.home())
+        managed_readable = [str(mp.path) for mp in managed]
+        allow_read = managed_readable + [str(p) for p in self.fs_tools_extra_writable] + list(self.allow_read)
+
+        if self.read_mode == READ_MODE_OPEN:
+            # Allow-all minus the secret denylist + protected + extras. (No allowRead:
+            # protected/secret denies stay effective because nothing re-allows them.)
+            deny_read = [str(Path(home) / rel) for rel in _DEFAULT_DENY_READ_HOME_RELATIVE]
+            deny_read += list(_DEFAULT_DENY_READ_ABSOLUTE)
+            deny_read += protected_paths
+            deny_read += list(self.extra_deny_read)
+            allow_read = []
+        elif self.read_mode == READ_MODE_STRICT:
+            # Deny everything; re-allow only managed paths + a system runtime baseline
+            # (so the interpreter/libs are readable) + user extras.
+            deny_read = ["/"] + list(self.extra_deny_read)
+            allow_read = sorted(set(allow_read) | set(_STRICT_SYSTEM_READ_BASELINE))
+        else:  # READ_MODE_CONFINED (default)
+            # Deny all of $HOME (personal data/secrets/other projects), re-allow the
+            # agent's managed paths within it; system paths outside $HOME stay
+            # readable so commands run. NOTE: a protected sub-path inside an
+            # allow-read context can't be read-denied here (allowRead wins); its
+            # write-immunity (denyWrite) still holds.
+            deny_read = [home, *_DEFAULT_DENY_READ_ABSOLUTE]
+            deny_read += list(self.extra_deny_read)
 
         return {
             "filesystem": {
                 "allowWrite": sorted(writable_set),
                 "denyWrite": sorted(set(deny_write)),
                 "denyRead": sorted(set(deny_read)),
+                "allowRead": sorted(set(allow_read)),
             },
             "network": {
                 "allowedDomains": list(self.network_allowed_domains),
