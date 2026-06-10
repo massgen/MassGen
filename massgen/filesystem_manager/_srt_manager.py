@@ -131,6 +131,40 @@ def srt_available(srt_path: str = DEFAULT_SRT_BINARY) -> bool:
     return shutil.which(srt_path) is not None
 
 
+def _framework_read_roots() -> list[str]:
+    """Read roots the framework's OWN MCP servers need to start under SRT.
+
+    When SRT wraps a framework server (``fastmcp run <massgen script> …``), the
+    sandbox must be able to READ the server's code, the Python interpreter, the
+    installed dependencies (fastmcp, mcp, GitPython, …), and the runtime config those
+    dependencies require at startup. In a typical dev/editable install all of these
+    live under ``$HOME`` — exactly the region ``confined``/``strict`` deny — so without
+    re-allowing them ``srt`` denies the read and the server never starts (first the
+    server's own script, then GitPython's ``git version`` reading ``~/.gitconfig``).
+
+    Returns, all framework code/runtime (NOT user data — these don't widen access to
+    secrets or other projects):
+      - ``sys.prefix`` / ``sys.base_prefix`` — interpreter + site-packages (deps)
+      - the ``massgen`` package directory — the server scripts
+      - git's user config (``~/.gitconfig``, ``~/.config/git``) — git is core to the
+        workspace model (snapshots/commits via GitPython); git reads its global config
+        on essentially every invocation.
+    """
+    import sys
+
+    roots = {sys.prefix, sys.base_prefix}
+    try:
+        import massgen
+
+        roots.add(str(Path(massgen.__file__).resolve().parent))
+    except Exception:  # pragma: no cover - massgen is always importable in practice
+        pass
+    home = Path.home()
+    roots.add(str(home / ".gitconfig"))
+    roots.add(str(home / ".config" / "git"))
+    return sorted(roots)
+
+
 class SrtManager:
     """Builds per-agent SRT settings and wraps commands.
 
@@ -200,6 +234,16 @@ class SrtManager:
         home = str(Path.home())
         managed_readable = [str(mp.path) for mp in managed]
         allow_read = managed_readable + [str(p) for p in self.fs_tools_extra_writable] + list(self.allow_read)
+
+        # The fs-tools profile wraps a FRAMEWORK MCP server (fastmcp run <massgen
+        # script>). Under confined/strict the server's own code + interpreter + deps
+        # live in a denied region ($HOME), so re-allow the framework runtime roots or
+        # the wrapped server can't read its own script and fails to start. This is
+        # framework code, not user data; the agent's own command sandbox (execution
+        # profile) stays tight and is unaffected. ("open" re-allows nothing because
+        # it is allow-all-minus-denylist; the framework roots are readable anyway.)
+        if profile == FS_TOOLS_PROFILE:
+            allow_read = allow_read + _framework_read_roots()
 
         if self.read_mode == READ_MODE_OPEN:
             # Allow-all minus the secret denylist + protected + extras. (No allowRead:

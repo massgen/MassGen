@@ -151,6 +151,64 @@ def test_fs_tools_profile_widens_writes_for_temp_and_snapshot(pm_with_paths, tmp
     assert str(snapshot.resolve()) in allow_write
 
 
+def _is_read_allowed(allow_read, target: str) -> bool:
+    """True if `target` is covered by some allowRead root (itself or an ancestor)."""
+    from pathlib import Path as _P
+
+    t = _P(target).resolve()
+    for root in allow_read:
+        r = _P(root).resolve()
+        if t == r or r in t.parents:
+            return True
+    return False
+
+
+def test_fs_tools_profile_confined_allows_reading_framework_runtime(pm_with_paths):
+    """REGRESSION: when SRT wraps a framework MCP server (fastmcp run <massgen script>),
+    confined mode denies all of $HOME — but the venv (fastmcp + deps + interpreter) and
+    the massgen package source both live under $HOME. Without re-allowing the framework's
+    own read roots, `srt` denies reading the server's own code and the server can't start
+    ("Operation not permitted: _workspace_tools_server.py"). The fs_tools profile must
+    re-allow the framework runtime roots so the wrapped server can read its own code while
+    $HOME otherwise stays denied.
+    """
+    import sys
+    from pathlib import Path
+
+    import massgen
+
+    mgr = SrtManager(pm_with_paths["pm"])  # default confined
+    fs = mgr.build_settings(profile="fs_tools")["filesystem"]
+
+    # $HOME is still denied (we didn't just open everything back up).
+    assert str(Path.home()) in fs["denyRead"]
+
+    # The framework's own code + interpreter + deps must be readable (allowRead wins).
+    massgen_dir = Path(massgen.__file__).resolve().parent
+    assert _is_read_allowed(fs["allowRead"], str(massgen_dir)), "massgen package dir must be readable by the wrapped fs-tools server"
+    assert _is_read_allowed(fs["allowRead"], sys.prefix), "Python prefix (venv: fastmcp + deps) must be readable"
+    assert _is_read_allowed(fs["allowRead"], sys.base_prefix), "base Python prefix must be readable"
+
+    # git is core to the workspace model (GitPython reads ~/.gitconfig at import), so
+    # its user config must be readable too — else the server crashes on import under
+    # confined ("unable to access '~/.gitconfig': Operation not permitted").
+    assert _is_read_allowed(fs["allowRead"], str(Path.home() / ".gitconfig")), "git user config must be readable by the wrapped fs-tools server"
+
+
+def test_execution_profile_does_not_widen_for_framework_runtime(pm_with_paths):
+    """The framework-runtime re-allow is fs_tools-only: the agent's own command sandbox
+    (execution profile) stays tight and must NOT gain the massgen package dir just because
+    fs_tools needs it."""
+    from pathlib import Path
+
+    import massgen
+
+    mgr = SrtManager(pm_with_paths["pm"])  # default confined
+    fs = mgr.build_settings(profile="execution")["filesystem"]
+    massgen_dir = str(Path(massgen.__file__).resolve().parent)
+    assert massgen_dir not in fs["allowRead"]
+
+
 # --------------------------------------------------------------------------- #
 # network — deny-all by default, opt-in allowlist
 # --------------------------------------------------------------------------- #
