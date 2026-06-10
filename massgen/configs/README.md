@@ -227,7 +227,27 @@ Most configurations use environment variables for API keys:so
 
 ## Release History & Examples
 
-### v0.1.95 - Latest
+### v0.1.96 - Latest
+**OS-Level Agent Sandboxing:** Real OS-level execution sandbox (Anthropic sandbox-runtime) + hardened permission hook, defense in depth
+
+**Key Features:**
+- **SRT sandbox mode** (`command_line_execution_mode: srt`): wraps agent command/code execution in `srt` (bubblewrap on Linux, Seatbelt on macOS); OS-enforced filesystem + network isolation derived from the same path policy as the app layer. One-knob opt-in, default-off
+- **Configurable read confinement** (`command_line_srt_read_mode`, default `confined`): denies `$HOME` and re-allows only the workspace + context; `strict` / `open` modes available. Network is deny-all by default
+- **Hardened permission hook**: key-agnostic scan walks the full tool-args tree and denies any value resolving outside managed areas, closing prior fail-open gaps without false positives
+- **Parity & safety**: native-sandbox backends (Codex `--full-auto`, Claude Code) degrade `srt`→`local`; subagents inherit parent SRT settings
+
+**Try It:**
+```bash
+pip install massgen==0.1.96
+
+# Prerequisite (one-time): npm install -g @anthropic-ai/sandbox-runtime
+uv run massgen --automation \
+  --config massgen/configs/tools/filesystem/sandbox/srt_sandbox.yaml \
+  "Create out.txt in the workspace, then try to read ~/.ssh/id_rsa"
+# Expected: the workspace write succeeds; reading ~/.ssh and all network egress are denied.
+```
+
+### v0.1.95
 **Steering Improvements:** Existing mid-stream steering extended to headless callers + upgraded to interrupt-and-resume
 
 **Key Features:**

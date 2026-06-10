@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.95
+**Current Version:** v0.1.96
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** June 8, 2026
+**Last Updated:** June 10, 2026
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -42,9 +42,27 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.96** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.95 ([#959](https://github.com/massgen/MassGen/issues/959)) |
+| **v0.1.97** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.96 ([#959](https://github.com/massgen/MassGen/issues/959)) |
 
 *All releases ship on MWF @ 9am PT when ready*
+
+---
+
+## ✅ v0.1.96 - OS-Level Agent Sandboxing (Completed)
+
+**Released:** June 10, 2026
+
+### Features
+- **SRT Sandbox Mode (`command_line_execution_mode: srt`)**: a third command-execution mode alongside `local`/`docker`. `SrtManager` (`massgen/filesystem_manager/_srt_manager.py`) wraps agent command/code execution in Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (bubblewrap on Linux, Seatbelt on macOS), deriving per-agent OS-enforced filesystem + network isolation from the **same** `PathPermissionManager` policy as the app layer (defense in depth). Both the command-line MCP and the filesystem-tools MCP servers are OS-wrapped; npx/npm launchers auto-skip and keep their app-layer protection
+- **Configurable Read Confinement (`command_line_srt_read_mode`, default `confined`)**: `confined` denies all of `$HOME` and re-allows only the workspace + context (system paths stay readable); `strict` denies `/` and allows only managed + a system baseline; `open` allows-all minus a secret denylist. `command_line_srt_allow_read` widens it per config. Network is deny-all by default — each allowlisted domain is an explicit capability grant
+- **Hardened Permission Hook**: `_validate_no_path_arg_escapes` walks the full tool-args tree (nested dicts + lists) and denies any value resolving outside managed areas, closing prior fail-open gaps (unrecognized key, list-valued paths, `move`/`copy` source pointing outside) without false positives
+- **Parity & Safety**: native-sandbox backends (Codex `--full-auto`, Claude Code) degrade `srt`→`local` to avoid nested-sandbox hangs; subagents inherit the parent's SRT settings (parity with Docker)
+
+### Notes
+- All items landed under TDD, with a 15-vector adversarial escape suite and an adversarially-verified multi-agent pre-merge review.
+- Default-off, one-knob opt-in; current behavior unchanged unless a config sets `command_line_execution_mode: srt`.
+- Live-verified (macOS 15.7, srt 1.0.0) across OpenRouter, OpenAI Responses, and Gemini backends.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.97.
 
 ---
 
@@ -66,7 +84,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ### Notes
 - All items landed under TDD, with deterministic coverage plus opt-in live-fire tests.
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.96.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.97.
 
 ---
 
@@ -382,7 +400,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.96 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.95)
+## 📋 v0.1.97 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.96)
 
 ### Features
 

@@ -68,7 +68,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.94 Features](#-latest-features-v0194)
+- [v0.1.96 Features](#-latest-features-v0196)
 </details>
 
 <details open>
@@ -121,15 +121,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [Recent Achievements (v0.1.95)](#recent-achievements-v0195)
-- [Previous Achievements (v0.0.3 - v0.1.94)](#previous-achievements-v003---v0194)
+- [Recent Achievements (v0.1.96)](#recent-achievements-v0196)
+- [Previous Achievements (v0.0.3 - v0.1.95)](#previous-achievements-v003---v0195)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.96 Roadmap](#v0196-roadmap)
+- [v0.1.97 Roadmap](#v0197-roadmap)
 </details>
 
 <details open>
@@ -154,18 +154,18 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.95)
+## 🆕 Latest Features (v0.1.96)
 
-**🎉 Released: June 8, 2026**
+**🎉 Released: June 10, 2026**
 
-**What's New in v0.1.95** (Steering Improvements):
-- **📨 Programmatic Steering Inbox** - Drop human guidance into a streaming agent from `--automation` (no UI) via a file inbox (`--inbox-dir` + `send_steering_message()`), routed through the same chokepoint the TUI/WebUI already use, with per-message targeting.
-- **⏯️ Interrupt-and-Resume Steering** - Codex and Antigravity now interrupt the in-flight turn and resume (`codex exec resume` / `agy --continue`) when steering arrives mid-stream, instead of waiting for a round boundary — pre-interrupt work is preserved.
-- **🪝 MCP-Hook Injection Parity** - Antigravity gains codex-parity mid-stream injection through the MCP middleware, with `expires_at`-guarded payloads; the Antigravity `--model` flag is now actually wired through.
+**What's New in v0.1.96** (OS-Level Agent Sandboxing):
+- **🛡️ OS-Level Execution Sandbox** - Confine agent command/code execution at the OS level via Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (bubblewrap on Linux, Seatbelt on macOS) with one knob: `command_line_execution_mode: srt`. Filesystem + network isolation derived from the same path policy as the application layer — **defense in depth**, both layers active.
+- **🔒 Configurable Read Confinement** - By default (`confined`), sandboxed commands can't read your `$HOME` (secrets, other projects) — only the workspace + context — while system paths stay readable so commands still run. `strict` and `open` modes available. Network is **deny-all by default**; each allowlisted domain is an explicit capability grant.
+- **🧱 Hardened Permission Hook** - A key-agnostic scan walks the full tool-args tree (nested dicts + lists) and denies any value resolving outside managed areas, closing prior fail-open gaps (unrecognized key, list-valued paths, `move`/`copy` source pointing outside) — with no false positives.
 
-**Install v0.1.95:**
+**Install v0.1.96:**
 ```bash
-pip install massgen==0.1.95
+pip install massgen==0.1.96
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1240,18 +1240,20 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.95)
+### Recent Achievements (v0.1.96)
 
-**🎉 Released: June 8, 2026**
+**🎉 Released: June 10, 2026**
 
-#### Steering Improvements
-- **Programmatic Steering Inbox (`--inbox-dir`)**: `send_steering_message()` writes a `msg_*.json` to a caller-known inbox; `RuntimeInboxPoller` routes it through `RuntimeInputDelivery` to the same `set_pending_input` chokepoint the TUI (`_queue_human_input`) and WebUI (`broadcast_response`) use — so `--automation` and any UI-less caller can inject mid-stream human input, with per-message targeting (one / subset / broadcast)
-- **Interrupt-and-Resume Steering (Codex & Antigravity)**: steering mid-turn now kills the in-flight turn and resumes (`codex exec resume <session> <prompt>` / `agy --continue -p <prompt>`) rather than waiting for a round boundary; Antigravity promotes pre-interrupt scratch deliverables first so work isn't lost
-- **MCP-Server-Hook Payload IPC (Antigravity, codex parity)**: `write_post_tool_use_hook()` / `read_unconsumed_hook_content()` with `expires_at`-guarded payloads consumed by the MCP middleware, so the backend-agnostic per-chunk injection flush works for `agy` the way it does for codex
-- **Fixes**: `--inbox-dir` now honored for resumed sessions (`--session-id` / config `session_id` / `--continue`), `expires_at`-guarded steering carryforward (both backends), watcher-cleanup failures logged instead of swallowed, round-1 native-hook gap closed, and the Antigravity `--model` flag wired through
-- All landed under TDD, with deterministic coverage plus opt-in live-fire tests
+#### OS-Level Agent Sandboxing
+- **OS-Level Execution Sandbox (`command_line_execution_mode: srt`)**: a third execution mode alongside `local`/`docker` that wraps agent command/code execution in Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (bubblewrap on Linux, Seatbelt on macOS). `SrtManager` (`massgen/filesystem_manager/_srt_manager.py`) derives per-agent OS-enforced filesystem + network isolation from the **same** `PathPermissionManager` policy as the app layer — defense in depth, both layers active. Default-off, one-knob opt-in
+- **Configurable Read Confinement (`command_line_srt_read_mode`, default `confined`)**: SRT reads are allow-all by default, so `confined` denies all of `$HOME` and re-allows only the workspace + context (system paths stay readable so commands run); `strict` denies `/` and allows only managed + a system baseline; `open` allows-all minus a secret denylist. `command_line_srt_allow_read` widens it per config. **Network is deny-all by default** — each allowlisted domain is an explicit capability grant
+- **Hardened Permission Hook**: a new key-agnostic scan (`_validate_no_path_arg_escapes`) walks the full tool-args tree (nested dicts + lists) and denies any value resolving outside managed areas, closing prior fail-open gaps (path under an unrecognized key, list-valued paths, `move`/`copy` source pointing outside) without false positives
+- **Parity & safety**: native-sandbox backends (Codex `--full-auto`, Claude Code) degrade `srt`→`local` to avoid nested-sandbox hangs; subagents inherit the parent's SRT settings (parity with Docker); live-verified across OpenRouter, OpenAI Responses, and Gemini backends
+- All landed under TDD, with a 15-vector adversarial escape suite and an adversarially-verified multi-agent pre-merge review
 
-### Previous Achievements (v0.0.3 - v0.1.94)
+### Previous Achievements (v0.0.3 - v0.1.95)
+
+✅ **Steering Improvements (v0.1.95)**: Extended mid-stream steering from a UI-only capability into a programmatic, headless one — `send_steering_message()` drops guidance into a file inbox (`--inbox-dir`) routed through the same `set_pending_input` chokepoint the TUI/WebUI use — and upgraded Codex/Antigravity to interrupt-and-resume the in-flight turn (`codex exec resume` / `agy --continue`) instead of waiting for a round boundary, with `expires_at`-guarded MCP-hook payload IPC and the Antigravity `--model` flag wired through.
 
 ✅ **Parallelism Hardening — Engineering Health (v0.1.94)**: Moved the peer-context snapshot copy off the event loop (worker thread via `asyncio.to_thread`) backed by immutable, versioned snapshots (`SnapshotVersionStore`) with atomically-repointed symlinks and refcounted readers, eliminating the read-during-write race; fixed lost peer-answer revisions (R1), lost background-subagent results (R2/R3), leaked trace tasks (R4), and cancel-without-await teardown (R5); surfaced worktree-isolation degradation (D2); and unified the mid-stream injection paths (A1). No per-backend functionality changes.
 
@@ -1586,9 +1588,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.96 Roadmap
+### v0.1.97 Roadmap
 
-Version 0.1.96 picks up the image/video edit work deferred from v0.1.86-v0.1.95 and continues multimodal provider-parity work:
+Version 0.1.97 picks up the image/video edit work deferred from v0.1.86-v0.1.96 and continues multimodal provider-parity work:
 
 #### Planned Features
 - **Image/Video Edit Capabilities** ([#959](https://github.com/massgen/MassGen/issues/959)): Image and video editing across providers with multi-turn editing workflows via continuation IDs

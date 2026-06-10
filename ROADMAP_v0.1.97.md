@@ -1,14 +1,14 @@
-# MassGen v0.1.96 Roadmap
+# MassGen v0.1.97 Roadmap
 
 **Target Release:** TBD
 
 ## Overview
 
-Version 0.1.96 picks up the image/video edit work deferred from v0.1.86-v0.1.95 and continues multimodal provider-parity work.
+Version 0.1.97 picks up the image/video edit work deferred from v0.1.86-v0.1.96 and continues multimodal provider-parity work.
 
 ---
 
-## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.95)
+## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.96)
 
 **Issue:** [#959](https://github.com/massgen/MassGen/issues/959)
 **Owner:** @ncrispino
@@ -30,6 +30,7 @@ Version 0.1.96 picks up the image/video edit work deferred from v0.1.86-v0.1.95 
 
 ## Related Tracks
 
+- **v0.1.96**: OS-Level Agent Sandboxing — `command_line_execution_mode: srt` wraps agent command/code execution in Anthropic's sandbox-runtime (bubblewrap/Seatbelt) with OS-enforced filesystem + network isolation derived from the same `PathPermissionManager` policy as the app layer (defense in depth), configurable read confinement (default `confined`), and a hardened key-agnostic permission-hook escape scan
 - **v0.1.95**: Steering Improvements — programmatic steering inbox (`--inbox-dir`) routed to the shared `set_pending_input` chokepoint, mid-round interrupt-and-resume for Codex and Antigravity (`codex exec resume` / `agy --continue`), MCP-server-hook payload IPC for Antigravity (codex parity), and the Antigravity `--model` flag wired through
 - **v0.1.94**: Parallelism Hardening (engineering health) — snapshot copy moved off the event loop with immutable versioned snapshots, lock-free concurrency-race fixes, unified mid-stream injection, and worktree-isolation degradation surfaced
 - **v0.1.93**: CLI package decomposition and pydantic config migration — focused `massgen/cli/` package, construction-time config validation with `Literal`-typed modes, single-source exclusion lists, dead-code removal, and test-signal/type-checking hardening
