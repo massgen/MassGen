@@ -30,7 +30,22 @@ agents:
       permissions:
         enabled: true
         automation_default: "risk-based"   # risk-based | deny-all | allow-all
-        # P1.1 will add declarative allow/ask/deny rules here.
+        # Declarative allow/ask/deny rules — action(target) algebra, deny-wins.
+        # Actions: command | read_file | write_file | read_url | mcp | *
+        # A matching deny/allow is authoritative (an allow suppresses the risk-ask);
+        # if NO rule matches, the call falls through to the risk classifier.
+        rules:
+          deny:
+            - "command(git push --force*)"
+            - "write_file(/etc/**)"
+          ask:
+            - "read_url(*)"            # any network fetch needs approval
+            - "command(npm publish*)"
+          allow:
+            - "command(git status)"
+            - "command(git diff*)"
+            - "write_file(./**)"       # writes inside the workspace
+            - "read_file(./**)"
 
 orchestrator:
   snapshot_storage: "snapshots"

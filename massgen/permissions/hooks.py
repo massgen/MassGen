@@ -69,8 +69,20 @@ class PermissionEngineHook(PatternHook):
     async def execute(self, function_name: str, arguments: str, context: dict[str, Any] | None = None, **kwargs) -> HookResult:
         args = _parse_args(arguments)
 
-        # P1.1 will evaluate declarative rules here (deny > allow > ask), and an
-        # explicit allow must suppress the risk-ask below. For P0: risk only.
+        # 1) Declarative rules (deny > allow > ask). An explicit allow/deny is
+        #    authoritative and SUPPRESSES the risk classifier — which is why rules
+        #    and risk live in this one hook (ask always wins over allow in the
+        #    manager's aggregation, so they can't be separate hooks).
+        if self.rules is not None and not self.rules.is_empty:
+            decision = self.rules.evaluate(function_name, args)
+            if decision == "deny":
+                return HookResult.deny(reason=f"Denied by permission rule: {function_name}")
+            if decision == "allow":
+                return HookResult.allow()
+            if decision == "ask":
+                return HookResult.ask(reason=f"Permission rule requires approval: {function_name}")
+
+        # 2) No rule matched → tier by risk. Low → allow; medium/high → ask.
         risk = self.risk_classifier.classify(function_name, args)
         if risk == RiskTier.LOW:
             return HookResult.allow()

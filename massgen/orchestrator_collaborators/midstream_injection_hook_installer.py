@@ -352,10 +352,15 @@ class MidStreamInjectionHookInstaller:
             PermissionEngineHook,
         )
         from massgen.permissions.models import AutomationDefault
+        from massgen.permissions.rules import PermissionRuleSet
 
-        # Hardline first (catastrophic floor), then the composite engine.
+        # Declarative allow/ask/deny rules (Antigravity action(target) algebra).
+        rules_cfg = perms.get("rules") if isinstance(perms, dict) else None
+        rule_set = PermissionRuleSet.from_config(rules_cfg) if rules_cfg else None
+
+        # Hardline first (catastrophic floor), then the composite engine (rules → risk).
         manager.register_global_hook(HookType.PRE_TOOL_USE, HardlineBlocklistHook())
-        manager.register_global_hook(HookType.PRE_TOOL_USE, PermissionEngineHook())
+        manager.register_global_hook(HookType.PRE_TOOL_USE, PermissionEngineHook(rules=rule_set))
 
         default_raw = str((perms.get("automation_default") if isinstance(perms, dict) else None) or "risk-based")
         try:

@@ -46,3 +46,35 @@ def test_normalize_pattern():
     assert normalize_pattern("execute_command", {"command": "git status"}) == "command:git status"
     assert normalize_pattern("write_file", {"path": "out.txt"}) == "write_file:out.txt"
     assert normalize_pattern("Foo", {}) == "Foo"
+
+
+# --------------------------------------------------------------------------- #
+# Engine + declarative rules (rules override risk; deny-wins)
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+async def test_allow_rule_suppresses_risk_ask():
+    from massgen.permissions.rules import PermissionRuleSet
+
+    # git push --force is HIGH risk → would ask, but an explicit allow rule wins.
+    rules = PermissionRuleSet(allow=["command(git push --force*)"])
+    h = PermissionEngineHook(rules=rules)
+    assert (await h.execute("execute_command", _args(command="git push --force origin main"))).decision == "allow"
+
+
+@pytest.mark.asyncio
+async def test_deny_rule_wins():
+    from massgen.permissions.rules import PermissionRuleSet
+
+    rules = PermissionRuleSet(deny=["command(rm *)"], allow=["command(*)"])
+    h = PermissionEngineHook(rules=rules)
+    assert (await h.execute("execute_command", _args(command="rm file.txt"))).decision == "deny"
+
+
+@pytest.mark.asyncio
+async def test_no_rule_falls_through_to_risk():
+    from massgen.permissions.rules import PermissionRuleSet
+
+    rules = PermissionRuleSet(allow=["command(git status)"])  # doesn't match curl
+    h = PermissionEngineHook(rules=rules)
+    # curl egress is HIGH risk and no rule matches → ask
+    assert (await h.execute("execute_command", _args(command="curl https://x"))).decision == "ask"
