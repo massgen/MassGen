@@ -339,7 +339,10 @@ class MidStreamInjectionHookInstaller:
         """
         cfg = getattr(agent.backend, "config", None)
         perms = cfg.get("permissions") if isinstance(cfg, dict) else None
-        if not perms:
+        # Opt-in is PRESENCE-based: the system is OFF unless a `permissions` block is
+        # present and not explicitly disabled. A config with no `permissions` key is
+        # 100% unchanged (no hooks, no coordinator).
+        if perms is None or perms is False:
             return
         if isinstance(perms, dict) and perms.get("enabled", True) is False:
             return
