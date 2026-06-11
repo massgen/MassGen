@@ -535,6 +535,10 @@ class CustomToolAndMCPBackend(LLMBackend):
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
 
+        # Permission coordinator that resolves PreToolUse `ask` decisions (set by the
+        # hook installer when a `permissions:` config block is present).
+        self._permission_coordinator: Any = None
+
         # Initialize General Hook Manager for Pre/PostToolUse hooks
         self._general_hook_manager: GeneralHookManager | None = None
         hooks_config = self.config.get("hooks") or kwargs.get("hooks")
@@ -563,6 +567,18 @@ class CustomToolAndMCPBackend(LLMBackend):
     def set_general_hook_manager(self, manager: GeneralHookManager) -> None:
         """Set the GeneralHookManager (used by orchestrator for global hooks)."""
         self._general_hook_manager = manager
+
+    def set_permission_coordinator(self, coordinator: Any) -> None:
+        """Set the PermissionCoordinator that resolves PreToolUse `ask` decisions
+        into allow/deny via the configured ApprovalProvider (interactive modal or
+        automation policy). When unset, an `ask` fails closed (denies)."""
+        self._permission_coordinator = coordinator
+
+    def set_approval_provider(self, provider: Any) -> None:
+        """Swap the ApprovalProvider on the active coordinator (e.g. the interactive
+        TUI installs a modal-backed provider in place of the automation default)."""
+        if getattr(self, "_permission_coordinator", None) is not None:
+            self._permission_coordinator.provider = provider
 
     def set_subagent_spawn_callback(self, callback: Callable[[str, dict[str, Any], str], None]) -> None:
         """Set callback for subagent spawn notifications.
@@ -2698,9 +2714,39 @@ class CustomToolAndMCPBackend(LLMBackend):
                         tool_call_id=call_id,
                     )
 
-                # Handle deny decision
+                # Resolve the hook decision into deny / ask / allow.
+                deny_reason: str | None = None
                 if not pre_result.allowed or pre_result.decision == "deny":
-                    error_msg = f"Hook denied tool execution: {pre_result.reason or 'No reason provided'}"
+                    deny_reason = f"Hook denied tool execution: {pre_result.reason or 'No reason provided'}"
+                elif pre_result.decision == "ask":
+                    # A hook (the permission engine) requested human/policy approval.
+                    # Route through the approval coordinator; never silently execute.
+                    coordinator = getattr(self, "_permission_coordinator", None)
+                    if coordinator is None:
+                        deny_reason = (f"Approval required for '{tool_name}' but no approval handler is configured; " f"denied (fail-closed). {pre_result.reason or ''}").strip()
+                    else:
+                        try:
+                            _approval_args = json.loads(arguments_str) if arguments_str else {}
+                        except (json.JSONDecodeError, TypeError):
+                            _approval_args = {}
+                        yield StreamChunk(
+                            type=config.chunk_type,
+                            status=getattr(config, "status_running", None),
+                            content=f"⏸️ Awaiting approval for {tool_name}…",
+                            source=f"{config.source_prefix}{tool_name}",
+                            tool_call_id=call_id,
+                        )
+                        approved, feedback = await coordinator.resolve_ask(
+                            self.agent_id,
+                            tool_name,
+                            _approval_args,
+                            reason=pre_result.reason or "",
+                        )
+                        if not approved:
+                            deny_reason = feedback or f"Tool '{tool_name}' was not approved."
+
+                if deny_reason is not None:
+                    error_msg = deny_reason
                     logger.warning(f"[PreToolUse] {error_msg}")
                     yield StreamChunk(
                         type=config.chunk_type,
@@ -2718,7 +2764,7 @@ class CustomToolAndMCPBackend(LLMBackend):
                     )
                     processed_call_ids.add(call_id)
 
-                    # Record metric for denied execution
+                    # Record metric for denied/unapproved execution
                     metric.end_time = time.time()
                     metric.success = False
                     metric.error_message = error_msg[:500]

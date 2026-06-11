@@ -318,11 +318,55 @@ class MidStreamInjectionHookInstaller:
                     f"[Orchestrator] Registered user-configured hooks for {agent_id}",
                 )
 
+        # Register the permissions system (hardline blocklist + composite engine) and
+        # the approval coordinator, when a `permissions:` block opts in.
+        self._install_permission_hooks(agent, agent_id, manager)
+
         # Set manager on backend
         agent.backend.set_general_hook_manager(manager)
         self._install_wait_interrupt_provider(agent, agent_id)
         logger.debug(
             f"[Orchestrator] Set up hook manager for {agent_id} with mid-stream and reminder hooks",
+        )
+
+    def _install_permission_hooks(self, agent: Any, agent_id: str, manager: Any) -> None:
+        """Wire the permissions system onto this agent's hook manager when opted in.
+
+        Opt-in via a `permissions:` block on the backend config. Registers the
+        hardline blocklist (catastrophic-command floor) + the composite permission
+        engine (risk → allow/ask), and installs a PermissionCoordinator with the
+        automation policy provider (the interactive TUI swaps in a modal provider).
+        """
+        cfg = getattr(agent.backend, "config", None)
+        perms = cfg.get("permissions") if isinstance(cfg, dict) else None
+        if not perms:
+            return
+        if isinstance(perms, dict) and perms.get("enabled", True) is False:
+            return
+
+        from massgen.mcp_tools.hooks import HookType
+        from massgen.permissions.approval_provider import PolicyApprovalProvider
+        from massgen.permissions.coordinator import PermissionCoordinator
+        from massgen.permissions.hooks import (
+            HardlineBlocklistHook,
+            PermissionEngineHook,
+        )
+        from massgen.permissions.models import AutomationDefault
+
+        # Hardline first (catastrophic floor), then the composite engine.
+        manager.register_global_hook(HookType.PRE_TOOL_USE, HardlineBlocklistHook())
+        manager.register_global_hook(HookType.PRE_TOOL_USE, PermissionEngineHook())
+
+        default_raw = str((perms.get("automation_default") if isinstance(perms, dict) else None) or "risk-based")
+        try:
+            automation_default = AutomationDefault(default_raw)
+        except ValueError:
+            automation_default = AutomationDefault.RISK_BASED
+        coordinator = PermissionCoordinator(provider=PolicyApprovalProvider(automation_default))
+        if hasattr(agent.backend, "set_permission_coordinator"):
+            agent.backend.set_permission_coordinator(coordinator)
+        logger.info(
+            f"[Orchestrator] Permissions system enabled for {agent_id} " f"(automation_default={automation_default.value})",
         )
 
     def setup_codex_mcp_hooks(
