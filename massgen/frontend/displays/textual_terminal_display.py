@@ -2406,6 +2406,58 @@ class TextualTerminalDisplay(TerminalDisplay):
                 pass
             return ReviewResult(approved=False, metadata={"error": "timeout"})
 
+    async def show_tool_approval_modal(self, authz: "Any") -> "Any":
+        """Ask the operator to approve a single tool call. Returns an ApprovalDecision.
+
+        Mirrors show_change_review_modal: bridge the asyncio loop ↔ Textual thread via
+        a Future. On no-app / error / timeout, fail CLOSED (deny) — a tool call must
+        never proceed without an explicit approval.
+        """
+        import asyncio
+
+        from massgen.permissions.models import ApprovalDecision
+
+        def _denied(reason: str) -> ApprovalDecision:
+            return ApprovalDecision(allowed=False, feedback=reason, operator="policy")
+
+        if not self._app:
+            return _denied("No TUI available to approve; denied (fail-closed).")
+
+        from .textual.widgets.modals.tool_approval_modal import ToolApprovalModal
+
+        loop = asyncio.get_running_loop()
+        result_future: asyncio.Future = loop.create_future()
+
+        def show_modal():
+            try:
+                modal = ToolApprovalModal(authz)
+
+                def handle_result(result) -> None:
+                    if not result_future.done():
+                        loop.call_soon_threadsafe(result_future.set_result, result)
+
+                self._app.push_screen(modal, handle_result)
+            except Exception as e:
+                logger.exception(f"[ToolApproval] Error showing modal: {e}")
+                if not result_future.done():
+                    loop.call_soon_threadsafe(result_future.set_result, _denied(f"Approval modal error: {e}"))
+
+        try:
+            self._app.call_from_thread(show_modal)
+        except Exception as e:
+            logger.exception(f"[ToolApproval] call_from_thread failed: {e}")
+            return _denied(f"Approval unavailable ({e}); denied (fail-closed).")
+
+        try:
+            return await asyncio.wait_for(result_future, timeout=300)
+        except TimeoutError:
+            logger.warning("[ToolApproval] Modal timed out after 5 minutes; denying (fail-closed)")
+            try:
+                self._app.call_from_thread(self._app.pop_screen)
+            except Exception:
+                pass
+            return _denied("Approval timed out; denied (fail-closed).")
+
     async def show_final_answer_modal(
         self,
         changes: list[dict[str, Any]],
