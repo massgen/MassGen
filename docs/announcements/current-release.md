@@ -7,7 +7,7 @@ After posting, update the social links below.
 
 ## Release Summary
 
-MassGen v0.1.97 — an **application-layer permission engine** for agent tool calls! 🛡️ The companion to v0.1.96's OS sandbox: a fully opt-in pipeline of a hardline catastrophic-command floor, declarative `allow/ask/deny` rules, and a blast-radius risk classifier — resolving to allow / **ask** / deny. An `ask` pops an interactive approval modal (allow once/session/always · reject) or, headless, an automation policy or file handshake. Every decision is audited; per-agent roles scope each agent; a guardrail system prompt nudges the model to surface blocks rather than circumvent them. Presence-gated — no `permissions:` block means nothing changes.
+MassGen v0.1.97 — an **application-layer permission engine** for agent tool calls! 🛡️ The companion to v0.1.96's OS sandbox: a fully opt-in pipeline of a hardline catastrophic-command floor, declarative `allow/ask/deny` rules, and a blast-radius risk classifier — resolving to allow / **ask** / deny. An `ask` is resolved by an automation policy (`risk-based`/`deny-all`/`allow-all`) or a file request/response handshake for headless/remote approval. Every decision is audited; per-agent roles scope each agent; a guardrail system prompt nudges the model to surface blocks rather than circumvent them. Presence-gated — no `permissions:` block means nothing changes.
 
 ## Install
 
@@ -23,7 +23,7 @@ pip install massgen==0.1.97
 
 ## Posting Notes
 
-- **Suggested image:** A TUI/terminal capture of the approval modal firing on a risky call (`curl …`) with allow once/session/always · reject — or, for an automation run, the denied call rendered as a first-class failed tool row (`🔧 Calling execute_command(curl …) → ❌ Denied by automation policy: high-risk`). Pairs well with the v0.1.96 sandbox image to tell the defense-in-depth story.
+- **Suggested image:** A terminal capture of an automation run where a denied call renders as a first-class failed tool row (`🔧 Calling execute_command(curl …) → ❌ Denied by automation policy: high-risk`), alongside an allowed low-risk call. Pairs well with the v0.1.96 sandbox image to tell the defense-in-depth story.
 
 ---
 
@@ -39,7 +39,7 @@ MassGen v0.1.97 — an application-layer permission engine for agent tool calls!
 
 🧱 **Hardline + rules + risk** — a non-overridable catastrophic-command floor (`rm -rf /`, fork bombs), declarative `allow/ask/deny` rules over a small `action(target)` algebra (deny-wins), and a blast-radius classifier that auto-allows reads/in-workspace edits and asks only for the dangerous tail (egress, force-push, publish, privilege).
 
-✋ **Approval that fits the run** — an `ask` pops an interactive modal (allow once / session / always · reject) when a human is present, or resolves via an automation policy (`risk-based` / `deny-all` / `allow-all`) or a file request/response handshake for headless/remote approval. Fail-closed by design.
+✋ **Approval that fits the run** — an `ask` resolves via an automation policy (`risk-based` / `deny-all` / `allow-all`) or a file request/response handshake for headless/remote approval (Slack bot, `/approve <id>`, …). Fail-closed by design.
 
 🧑‍🤝‍🧑 **Per-agent roles + audit** — scope each agent with a `role` (e.g. `read-only`), which also empties its OS-sandbox writable set; every approval decision lands in an append-only JSONL audit ledger; a runaway-loop budget caps consecutive auto-approvals.
 
