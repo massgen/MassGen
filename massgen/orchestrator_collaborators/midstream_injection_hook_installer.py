@@ -347,6 +347,24 @@ class MidStreamInjectionHookInstaller:
         if isinstance(perms, dict) and perms.get("enabled", True) is False:
             return
 
+        # Backend parity guard: the `ask` → approval round-trip lives in the
+        # CustomToolAndMCPBackend tool chokepoint. Native backends (claude_code,
+        # codex) don't run framework PreToolUse hooks, so registering the engine
+        # there would be inert — and silently inert is worse than off (false
+        # confidence). Warn loudly and skip; those backends are governed by the OS
+        # sandbox + their own native approval policies instead.
+        if not hasattr(agent.backend, "set_permission_coordinator"):
+            backend_name = getattr(agent.backend, "backend_name", None) or type(agent.backend).__name__
+            logger.warning(
+                f"[Orchestrator] permissions: block is set for {agent_id} but backend "
+                f"'{backend_name}' does not support the approval chokepoint; the permission "
+                f"engine is INACTIVE for this agent. Use OS sandbox / native approval policy "
+                f"for {backend_name}, or run it on an MCP-family backend.",
+            )
+            return
+
+        from pathlib import Path as _Path
+
         from massgen.mcp_tools.hooks import HookType
         from massgen.permissions.approval_provider import PolicyApprovalProvider
         from massgen.permissions.coordinator import PermissionCoordinator
@@ -355,11 +373,18 @@ class MidStreamInjectionHookInstaller:
             PermissionEngineHook,
         )
         from massgen.permissions.models import AutomationDefault
+        from massgen.permissions.persistence import load_persisted_rules
 
         # Per-agent rules = role preset (higher-precedence scope) merged with the
         # agent's own allow/ask/deny rules, deny-wins across scopes. Each agent gets
         # its OWN engine hook (own manager), so this is naturally per-agent scoping.
         from massgen.permissions.rules import PermissionRuleSet, role_rule_set
+
+        # Where 'always' grants persist and load back from (human-gated, opt-out via
+        # permissions.persist_approvals: false). Shared by persist + load + the default
+        # approval dir below so the loop is symmetric.
+        settings_path = _Path((perms.get("settings_path") if isinstance(perms, dict) else None) or ".massgen/settings.local.json")
+        persist_on = perms.get("persist_approvals", True) if isinstance(perms, dict) else True
 
         role = perms.get("role") if isinstance(perms, dict) else None
         rules_cfg = perms.get("rules") if isinstance(perms, dict) else None
@@ -369,6 +394,12 @@ class MidStreamInjectionHookInstaller:
             scopes.append(role_rs)
         if rules_cfg:
             scopes.append(PermissionRuleSet.from_config(rules_cfg))
+        # Load previously-persisted 'always' grants so they actually persist across
+        # runs (lowest precedence; deny-wins merge means a role/user deny still wins).
+        if persist_on:
+            persisted_rs = load_persisted_rules(settings_path)
+            if persisted_rs is not None:
+                scopes.append(persisted_rs)
         rule_set = PermissionRuleSet.merge(scopes) if scopes else None
 
         # Hardline first (catastrophic floor), then the composite engine (rules → risk).
@@ -384,8 +415,6 @@ class MidStreamInjectionHookInstaller:
         # Approval transport: 'policy' (automation default; interactive TUI swaps in a
         # modal) or 'file' (request/response JSON for headless/remote approval — e.g.
         # a Slack bot or `/approve <id>`; not overridden by the TUI swap).
-        from pathlib import Path as _Path
-
         approval_mode = str((perms.get("approval_mode") if isinstance(perms, dict) else None) or "policy").lower()
         appr_dir = _Path((perms.get("approval_dir") if isinstance(perms, dict) else None) or ".massgen/approvals")
         if approval_mode == "file":
@@ -404,11 +433,33 @@ class MidStreamInjectionHookInstaller:
 
             ledger = ApprovalLedger(appr_dir / "ledger.jsonl", run_id=str(agent_id or ""))
 
-        coordinator = PermissionCoordinator(provider=provider, ledger=ledger)
+        # Runaway-loop guard: cap consecutive AUTO (policy/cache) approvals per agent.
+        # Opt-in (absent → unlimited) so long automation runs are unaffected unless asked.
+        budget = None
+        max_auto = perms.get("max_consecutive_auto") if isinstance(perms, dict) else None
+        if max_auto is not None:
+            from massgen.permissions.ledger import ApprovalBudget
+
+            try:
+                budget = ApprovalBudget(max_consecutive_auto=int(max_auto))
+            except (TypeError, ValueError):
+                logger.warning(f"[Orchestrator] invalid max_consecutive_auto={max_auto!r}; ignoring")
+
+        # Persist 'always' grants to settings.local.json so they survive across runs
+        # (the read-back happens above via load_persisted_rules).
+        persist_cb = None
+        if persist_on:
+            from massgen.permissions.persistence import make_persist_callback
+
+            persist_cb = make_persist_callback(settings_path)
+
+        coordinator = PermissionCoordinator(provider=provider, ledger=ledger, budget=budget, persist_always=persist_cb)
         if hasattr(agent.backend, "set_permission_coordinator"):
             agent.backend.set_permission_coordinator(coordinator)
         logger.info(
-            f"[Orchestrator] Permissions system enabled for {agent_id} " f"(automation_default={automation_default.value}, approval_mode={approval_mode}, audit={bool(ledger)})",
+            f"[Orchestrator] Permissions system enabled for {agent_id} "
+            f"(automation_default={automation_default.value}, approval_mode={approval_mode}, "
+            f"audit={bool(ledger)}, budget={max_auto if budget else 'off'}, persist={persist_on})",
         )
 
     def setup_codex_mcp_hooks(

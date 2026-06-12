@@ -82,3 +82,58 @@ async def test_end_to_end_with_policy_provider():
     c = PermissionCoordinator(provider=PolicyApprovalProvider(AutomationDefault.RISK_BASED))
     assert (await c.resolve_ask("a1", "execute_command", {"command": "git push --force"}))[0] is False
     assert (await c.resolve_ask("a1", "execute_command", {"command": "python x.py"}))[0] is True
+
+
+# --------------------------------------------------------------------------- #
+# ApprovalBudget integration — the runaway-loop circuit breaker, wired
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+async def test_budget_trips_consecutive_auto_approvals_into_deny():
+    from massgen.permissions.ledger import ApprovalBudget
+
+    c = PermissionCoordinator(
+        provider=PolicyApprovalProvider(AutomationDefault.ALLOW_ALL),
+        budget=ApprovalBudget(max_consecutive_auto=2),
+    )
+    assert (await c.resolve_ask("a1", "bash", {"command": "echo 1"}))[0] is True
+    assert (await c.resolve_ask("a1", "bash", {"command": "echo 2"}))[0] is True
+    # 3rd consecutive AUTO approval exceeds the cap → fail closed.
+    allowed, feedback = await c.resolve_ask("a1", "bash", {"command": "echo 3"})
+    assert allowed is False
+    assert "budget" in (feedback or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_budget_is_per_agent_in_coordinator():
+    from massgen.permissions.ledger import ApprovalBudget
+
+    c = PermissionCoordinator(
+        provider=PolicyApprovalProvider(AutomationDefault.ALLOW_ALL),
+        budget=ApprovalBudget(max_consecutive_auto=1),
+    )
+    assert (await c.resolve_ask("a1", "bash", {"command": "echo a"}))[0] is True
+    assert (await c.resolve_ask("a2", "bash", {"command": "echo b"}))[0] is True  # separate streak
+    assert (await c.resolve_ask("a1", "bash", {"command": "echo c"}))[0] is False  # a1 over cap
+
+
+@pytest.mark.asyncio
+async def test_budget_never_trips_under_human_approvals():
+    # Human decisions reset the streak, so interactive use never hits the cap.
+    from massgen.permissions.ledger import ApprovalBudget
+
+    class _Human(PolicyApprovalProvider):
+        async def request_approval(self, authz):
+            return ApprovalDecision(allowed=True, scope=GrantScope.ONCE, operator="human")
+
+    c = PermissionCoordinator(provider=_Human(), budget=ApprovalBudget(max_consecutive_auto=1))
+    for i in range(5):
+        allowed, _ = await c.resolve_ask("a1", "bash", {"command": f"echo {i}"})
+        assert allowed is True
+
+
+@pytest.mark.asyncio
+async def test_budget_disabled_by_default():
+    # No budget → unlimited auto-approvals (long automation runs are unaffected).
+    c = PermissionCoordinator(provider=PolicyApprovalProvider(AutomationDefault.ALLOW_ALL))
+    for i in range(50):
+        assert (await c.resolve_ask("a1", "bash", {"command": f"echo {i}"}))[0] is True

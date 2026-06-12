@@ -15,7 +15,7 @@ from typing import Any
 
 from .approval_provider import ApprovalProvider
 from .hooks import normalize_pattern
-from .ledger import ApprovalLedger
+from .ledger import ApprovalBudget, ApprovalLedger
 from .models import AuthorizationObject, GrantScope
 from .risk_classifier import RiskClassifier
 from .session_cache import SessionApprovalCache
@@ -30,12 +30,14 @@ class PermissionCoordinator:
         risk_classifier: RiskClassifier | None = None,
         persist_always: Callable[[AuthorizationObject, Any], None] | None = None,
         ledger: ApprovalLedger | None = None,
+        budget: ApprovalBudget | None = None,
     ) -> None:
         self.provider = provider
         self.cache = cache or SessionApprovalCache()
         self.risk_classifier = risk_classifier or RiskClassifier()
         self._persist_always = persist_always
         self.ledger = ledger
+        self.budget = budget
 
     async def resolve_ask(
         self,
@@ -58,10 +60,22 @@ class PermissionCoordinator:
             args_preview=self._preview(tool, arguments),
         )
         if self.cache.check(key):
+            # A cache hit is an *auto* approval — it counts against the runaway budget.
+            if self.budget is not None and not self.budget.check_auto(authz.agent_id):
+                return self._budget_tripped(authz)
             self._audit(authz, allowed=True, operator="cache", scope=GrantScope.SESSION, source="cache")
             return (True, None)
 
         decision = await self.provider.request_approval(authz)
+
+        # Runaway-loop guard: a human decision resets the streak; an auto (policy)
+        # approval ticks it and trips the circuit breaker once the cap is exceeded.
+        if self.budget is not None:
+            if decision.operator == "human":
+                self.budget.reset(authz.agent_id)
+            elif decision.allowed and not self.budget.check_auto(authz.agent_id):
+                return self._budget_tripped(authz)
+
         if decision.allowed and decision.scope in (GrantScope.SESSION, GrantScope.ALWAYS):
             self.cache.grant(key, decision.scope)
             if decision.scope == GrantScope.ALWAYS and self._persist_always:
@@ -75,6 +89,14 @@ class PermissionCoordinator:
             feedback=decision.feedback,
         )
         return (decision.allowed, decision.feedback)
+
+    def _budget_tripped(self, authz: AuthorizationObject) -> tuple[bool, str | None]:
+        """The agent exceeded its consecutive auto-approval budget → fail closed and
+        audit it, so a human re-approval (or halt) is forced instead of rubber-stamping."""
+        cap = self.budget.max_consecutive_auto if self.budget else 0
+        feedback = f"Auto-approval budget exceeded for agent '{authz.agent_id}' " f"({cap} consecutive auto-approvals); denied (fail-closed). A human must re-approve."
+        self._audit(authz, allowed=False, operator="budget", scope=GrantScope.ONCE, source="budget", feedback=feedback)
+        return (False, feedback)
 
     def _audit(
         self,

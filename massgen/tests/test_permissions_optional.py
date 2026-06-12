@@ -112,6 +112,85 @@ def test_audit_can_be_disabled(tmp_path):
     assert agent.backend.coordinator.ledger is None
 
 
+# --------------------------------------------------------------------------- #
+# Backend parity guard: a backend without the approval chokepoint is skipped
+# (loudly) rather than getting inert hooks that imply false protection.
+# --------------------------------------------------------------------------- #
+class _NativeBackend:
+    """Mimics claude_code/codex: no set_permission_coordinator chokepoint."""
+
+    def __init__(self, config):
+        self.config = config
+        self.backend_name = "claude_code"
+
+
+class _NativeAgent:
+    def __init__(self, config):
+        self.backend = _NativeBackend(config)
+
+
+def test_native_backend_without_chokepoint_is_skipped():
+    from massgen.logger_config import logger
+
+    messages: list[str] = []
+    sink_id = logger.add(lambda m: messages.append(str(m)), level="WARNING")
+    try:
+        inst = MidStreamInjectionHookInstaller.__new__(MidStreamInjectionHookInstaller)
+        agent = _NativeAgent({"permissions": {"enabled": True, "role": "read-only"}})
+        mgr = _Manager()
+        inst._install_permission_hooks(agent, "native1", mgr)
+    finally:
+        logger.remove(sink_id)
+    # No inert hooks registered (would imply protection the backend can't deliver).
+    assert mgr.hooks == []
+    # …and the user is warned the engine is inactive for this backend.
+    assert any("INACTIVE" in m for m in messages)
+
+
+# --------------------------------------------------------------------------- #
+# ApprovalBudget + persist wiring (opt-in / on-by-default respectively)
+# --------------------------------------------------------------------------- #
+def test_budget_off_by_default(tmp_path):
+    agent, _ = _install({"permissions": {"enabled": True, "approval_dir": str(tmp_path), "settings_path": str(tmp_path / "s.json")}})
+    assert agent.backend.coordinator.budget is None
+
+
+def test_max_consecutive_auto_enables_budget(tmp_path):
+    from massgen.permissions.ledger import ApprovalBudget
+
+    agent, _ = _install(
+        {"permissions": {"enabled": True, "approval_dir": str(tmp_path), "settings_path": str(tmp_path / "s.json"), "max_consecutive_auto": 5}},
+    )
+    budget = agent.backend.coordinator.budget
+    assert isinstance(budget, ApprovalBudget)
+    assert budget.max_consecutive_auto == 5
+
+
+def test_persist_callback_wired_by_default(tmp_path):
+    agent, _ = _install({"permissions": {"enabled": True, "approval_dir": str(tmp_path), "settings_path": str(tmp_path / "s.json")}})
+    assert agent.backend.coordinator._persist_always is not None
+
+
+def test_persist_can_be_disabled(tmp_path):
+    agent, _ = _install(
+        {"permissions": {"enabled": True, "approval_dir": str(tmp_path), "settings_path": str(tmp_path / "s.json"), "persist_approvals": False}},
+    )
+    assert agent.backend.coordinator._persist_always is None
+
+
+def test_persisted_always_rules_load_back_into_engine(tmp_path):
+    # A prior run's persisted 'always' grant must show up as an allow rule on a
+    # fresh install (closing the persistence loop).
+    import json
+
+    settings = tmp_path / "s.json"
+    settings.write_text(json.dumps({"permissions": {"rules": {"allow": ["command(make build)"]}}}))
+    agent, mgr = _install({"permissions": {"enabled": True, "approval_dir": str(tmp_path), "settings_path": str(settings)}})
+    engine = _engine(mgr)
+    assert engine.rules is not None
+    assert engine.rules.evaluate("bash", {"command": "make build"}) == "allow"
+
+
 def test_two_agents_get_independent_engines():
     # A "researcher" (read-only) and an "implementer" (read-write) built side by side
     # have distinct rule sets — the multi-agent differentiator.

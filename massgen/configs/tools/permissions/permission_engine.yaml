@@ -12,6 +12,12 @@
 #   allow-all            → every ask allowed
 # Interactively, an ASK pops an approval modal (allow once/session/always | reject).
 #
+# BACKEND SCOPE: the approval chokepoint lives in the MCP-family backends
+#   (openai/response, chat_completions, claude, gemini, grok). Native backends
+#   (claude_code, codex) do NOT run the framework hook chokepoint — a `permissions:`
+#   block there is reported INACTIVE at startup; govern those via the OS sandbox (SRT)
+#   and their own native approval policies instead.
+#
 # Run with:
 #   uv run massgen --automation --config massgen/configs/tools/permissions/permission_engine.yaml \
 #     "Run 'git status', then run 'git push --force origin main' and report each result."
@@ -30,6 +36,12 @@ agents:
       permissions:
         enabled: true
         automation_default: "risk-based"   # risk-based | deny-all | allow-all
+        # audit: true                      # append-only JSONL ledger of every decision (default on)
+        # max_consecutive_auto: 25         # runaway-loop guard: deny after N straight AUTO approvals
+        #                                  #   per agent (a human resets the streak). Omitted → unlimited.
+        # persist_approvals: true          # 'Always allow' grants persist to settings.local.json and
+        #                                  #   load back next run (default on; human-gated).
+        # settings_path: ".massgen/settings.local.json"   # where 'always' grants are written/read
         # Declarative allow/ask/deny rules — action(target) algebra, deny-wins.
         # Actions: command | read_file | write_file | read_url | mcp | *
         # A matching deny/allow is authoritative (an allow suppresses the risk-ask);
