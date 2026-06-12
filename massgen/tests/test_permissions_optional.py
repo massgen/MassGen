@@ -99,6 +99,19 @@ def test_approval_mode_file_uses_file_provider(tmp_path):
     assert isinstance(agent.backend.coordinator.provider, FileApprovalProvider)
 
 
+def test_audit_ledger_on_by_default_when_enabled(tmp_path):
+    # With permissions enabled, an ApprovalLedger is attached by default (auditable).
+    from massgen.permissions.ledger import ApprovalLedger
+
+    agent, _ = _install({"permissions": {"enabled": True, "approval_dir": str(tmp_path)}})
+    assert isinstance(agent.backend.coordinator.ledger, ApprovalLedger)
+
+
+def test_audit_can_be_disabled(tmp_path):
+    agent, _ = _install({"permissions": {"enabled": True, "approval_dir": str(tmp_path), "audit": False}})
+    assert agent.backend.coordinator.ledger is None
+
+
 def test_two_agents_get_independent_engines():
     # A "researcher" (read-only) and an "implementer" (read-write) built side by side
     # have distinct rule sets — the multi-agent differentiator.

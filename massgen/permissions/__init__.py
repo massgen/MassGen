@@ -6,6 +6,7 @@ sandbox (``SRT``). See docs/dev_notes/permission_systems_research.md and the pla
 """
 
 from .hardline import is_hardline_blocked
+from .ledger import ApprovalBudget, ApprovalLedger
 from .models import (
     ApprovalDecision,
     AuthorizationObject,
@@ -17,7 +18,9 @@ from .risk_classifier import RiskClassifier
 from .session_cache import SessionApprovalCache
 
 __all__ = [
+    "ApprovalBudget",
     "ApprovalDecision",
+    "ApprovalLedger",
     "AuthorizationObject",
     "AutomationDefault",
     "GrantScope",

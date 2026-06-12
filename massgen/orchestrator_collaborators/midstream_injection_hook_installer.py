@@ -384,21 +384,31 @@ class MidStreamInjectionHookInstaller:
         # Approval transport: 'policy' (automation default; interactive TUI swaps in a
         # modal) or 'file' (request/response JSON for headless/remote approval — e.g.
         # a Slack bot or `/approve <id>`; not overridden by the TUI swap).
-        approval_mode = str((perms.get("approval_mode") if isinstance(perms, dict) else None) or "policy").lower()
-        if approval_mode == "file":
-            from pathlib import Path as _Path
+        from pathlib import Path as _Path
 
+        approval_mode = str((perms.get("approval_mode") if isinstance(perms, dict) else None) or "policy").lower()
+        appr_dir = _Path((perms.get("approval_dir") if isinstance(perms, dict) else None) or ".massgen/approvals")
+        if approval_mode == "file":
             from massgen.permissions.approval_provider import FileApprovalProvider
 
-            appr_dir = (perms.get("approval_dir") if isinstance(perms, dict) else None) or ".massgen/approvals"
-            provider = FileApprovalProvider(_Path(appr_dir) / (agent_id or "agent"))
+            provider = FileApprovalProvider(appr_dir / (agent_id or "agent"))
         else:
             provider = PolicyApprovalProvider(automation_default)
-        coordinator = PermissionCoordinator(provider=provider)
+
+        # Audit ledger: an append-only JSONL of every approval decision, on by
+        # default once permissions are enabled. Disable with `permissions.audit: false`.
+        ledger = None
+        audit_on = perms.get("audit", True) if isinstance(perms, dict) else True
+        if audit_on:
+            from massgen.permissions.ledger import ApprovalLedger
+
+            ledger = ApprovalLedger(appr_dir / "ledger.jsonl", run_id=str(agent_id or ""))
+
+        coordinator = PermissionCoordinator(provider=provider, ledger=ledger)
         if hasattr(agent.backend, "set_permission_coordinator"):
             agent.backend.set_permission_coordinator(coordinator)
         logger.info(
-            f"[Orchestrator] Permissions system enabled for {agent_id} " f"(automation_default={automation_default.value}, approval_mode={approval_mode})",
+            f"[Orchestrator] Permissions system enabled for {agent_id} " f"(automation_default={automation_default.value}, approval_mode={approval_mode}, audit={bool(ledger)})",
         )
 
     def setup_codex_mcp_hooks(
