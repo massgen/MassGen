@@ -176,6 +176,7 @@ class FilesystemManager:
         command_line_srt_allow_unix_sockets: list[str] | None = None,
         command_line_srt_read_mode: str = "confined",
         command_line_srt_allow_read: list[str] | None = None,
+        command_line_srt_read_only: bool = False,
         enable_audio_generation: bool = False,
         enable_file_generation: bool = False,
         exclude_file_operation_mcps: bool = False,
@@ -317,6 +318,7 @@ class FilesystemManager:
         self.command_line_srt_allow_unix_sockets = command_line_srt_allow_unix_sockets or []
         self.command_line_srt_read_mode = command_line_srt_read_mode or "confined"
         self.command_line_srt_allow_read = command_line_srt_allow_read or []
+        self.command_line_srt_read_only = bool(command_line_srt_read_only)
 
         # Initialize Docker manager if Docker mode enabled
         self.docker_manager = None
@@ -381,6 +383,7 @@ class FilesystemManager:
                 allow_unix_sockets=self.command_line_srt_allow_unix_sockets,
                 read_mode=self.command_line_srt_read_mode,
                 allow_read=self.command_line_srt_allow_read,
+                read_only=self.command_line_srt_read_only,
                 settings_dir=Path(tempfile.gettempdir()) / "massgen_srt",
             )
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 from ..logger_config import logger
 from .models import (
@@ -54,6 +55,92 @@ class PolicyApprovalProvider(ApprovalProvider):
                     f"Denied by automation policy: '{authz.tool}' is high-risk " f"({authz.reason or 'no human available to approve'}). " "Choose a lower-risk action or run interactively to approve."
                 ),
             )
+        return ApprovalDecision(allowed=True, operator="policy")
+
+
+class FileApprovalProvider(ApprovalProvider):
+    """Headless/remote approval via a request/response JSON handshake.
+
+    Writes ``<dir>/req_<id>.json`` describing the call, then polls for
+    ``<dir>/resp_<id>.json`` (written by an external approver — a TUI watcher, a
+    Slack bot, ``/approve <id>``, …). The id is stable per logical request, so a
+    response that already exists on resume is honored (idempotent). The response is
+    consumed (deleted) on read so a later identical call re-prompts. On timeout we
+    fail closed (deny) — a tool never proceeds without an explicit approval.
+
+    Response JSON: ``{"approved": bool, "scope": "once|session|always", "feedback": str}``.
+    """
+
+    def __init__(
+        self,
+        requests_dir: str | Path,
+        *,
+        poll_interval: float = 0.4,
+        timeout: float = 300.0,
+        fail_closed: bool = True,
+    ) -> None:
+        self.dir = Path(requests_dir)
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.poll_interval = max(0.01, poll_interval)
+        self.timeout = max(0.0, timeout)
+        self.fail_closed = fail_closed
+
+    def request_id(self, authz: AuthorizationObject) -> str:
+        import hashlib
+
+        raw = f"{authz.agent_id}\x1f{authz.tool}\x1f{authz.normalized_pattern}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+    async def request_approval(self, authz: AuthorizationObject) -> ApprovalDecision:
+        import asyncio
+        import json
+
+        rid = self.request_id(authz)
+        req_path = self.dir / f"req_{rid}.json"
+        resp_path = self.dir / f"resp_{rid}.json"
+        try:
+            req_path.write_text(
+                json.dumps(
+                    {
+                        "id": rid,
+                        "agent_id": authz.agent_id,
+                        "tool": authz.tool,
+                        "pattern": authz.normalized_pattern,
+                        "risk": authz.risk.value,
+                        "reason": authz.reason,
+                        "preview": authz.args_preview,
+                        "status": "pending",
+                    },
+                    indent=2,
+                ),
+            )
+        except OSError as e:
+            logger.warning(f"[FileApprovalProvider] could not write request: {e}")
+
+        waited = 0.0
+        while waited < self.timeout:
+            if resp_path.exists():
+                try:
+                    data = json.loads(resp_path.read_text())
+                except (OSError, ValueError):
+                    data = {}
+                try:
+                    resp_path.unlink()
+                except OSError:
+                    pass
+                allowed = bool(data.get("approved", data.get("allowed", False)))
+                scope = GrantScope.ONCE
+                raw_scope = str(data.get("scope", "once"))
+                try:
+                    scope = GrantScope(raw_scope)
+                except ValueError:
+                    pass
+                return ApprovalDecision(allowed=allowed, scope=scope, feedback=data.get("feedback"), operator="human")
+            await asyncio.sleep(self.poll_interval)
+            waited += self.poll_interval
+
+        if self.fail_closed:
+            return ApprovalDecision(allowed=False, feedback="Approval request timed out (no response); denied (fail-closed).", operator="policy")
         return ApprovalDecision(allowed=True, operator="policy")
 
 

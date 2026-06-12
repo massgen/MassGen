@@ -380,11 +380,25 @@ class MidStreamInjectionHookInstaller:
             automation_default = AutomationDefault(default_raw)
         except ValueError:
             automation_default = AutomationDefault.RISK_BASED
-        coordinator = PermissionCoordinator(provider=PolicyApprovalProvider(automation_default))
+
+        # Approval transport: 'policy' (automation default; interactive TUI swaps in a
+        # modal) or 'file' (request/response JSON for headless/remote approval — e.g.
+        # a Slack bot or `/approve <id>`; not overridden by the TUI swap).
+        approval_mode = str((perms.get("approval_mode") if isinstance(perms, dict) else None) or "policy").lower()
+        if approval_mode == "file":
+            from pathlib import Path as _Path
+
+            from massgen.permissions.approval_provider import FileApprovalProvider
+
+            appr_dir = (perms.get("approval_dir") if isinstance(perms, dict) else None) or ".massgen/approvals"
+            provider = FileApprovalProvider(_Path(appr_dir) / (agent_id or "agent"))
+        else:
+            provider = PolicyApprovalProvider(automation_default)
+        coordinator = PermissionCoordinator(provider=provider)
         if hasattr(agent.backend, "set_permission_coordinator"):
             agent.backend.set_permission_coordinator(coordinator)
         logger.info(
-            f"[Orchestrator] Permissions system enabled for {agent_id} " f"(automation_default={automation_default.value})",
+            f"[Orchestrator] Permissions system enabled for {agent_id} " f"(automation_default={automation_default.value}, approval_mode={approval_mode})",
         )
 
     def setup_codex_mcp_hooks(

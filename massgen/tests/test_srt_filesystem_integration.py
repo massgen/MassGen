@@ -37,6 +37,21 @@ def local_fs_manager(tmp_path):
 # --------------------------------------------------------------------------- #
 # command-line MCP server
 # --------------------------------------------------------------------------- #
+def test_read_only_flows_to_empty_allowwrite(tmp_path):
+    # A read-only permission role → FilesystemManager(command_line_srt_read_only=True)
+    # → SRT execution settings grant NO writes (OS backstop).
+    fm = FilesystemManager(
+        cwd=str(tmp_path / "workspace"),
+        enable_mcp_command_line=True,
+        command_line_execution_mode="srt",
+        command_line_srt_read_only=True,
+    )
+    config = fm.get_command_line_mcp_config()
+    settings_path = Path(config["args"][config["args"].index("--srt-settings") + 1])
+    data = json.loads(settings_path.read_text())
+    assert data["filesystem"]["allowWrite"] == []
+
+
 def test_command_line_config_has_srt_args(srt_fs_manager):
     config = srt_fs_manager.get_command_line_mcp_config()
     args = config["args"]

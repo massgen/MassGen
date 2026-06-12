@@ -97,3 +97,14 @@ def test_noop_when_display_lacks_modal_method():
     ui = _ui(object(), {})  # display without show_tool_approval_modal
     ui._install_interactive_approval_provider(_Orch({"a1": agent}))
     assert isinstance(agent.backend._permission_coordinator.provider, PolicyApprovalProvider)
+
+
+def test_interactive_swap_does_not_override_file_provider(tmp_path):
+    from massgen.permissions.approval_provider import FileApprovalProvider
+
+    agent = _Agent()
+    agent.backend._permission_coordinator.provider = FileApprovalProvider(tmp_path)
+    ui = _ui(_Disp(), {})
+    ui._install_interactive_approval_provider(_Orch({"a1": agent}))
+    # a file/remote provider stays in place even under a TUI
+    assert isinstance(agent.backend._permission_coordinator.provider, FileApprovalProvider)

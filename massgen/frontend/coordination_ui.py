@@ -822,7 +822,10 @@ class CoordinationUI:
         if not hasattr(display, "show_tool_approval_modal"):
             return
         try:
-            from massgen.permissions.approval_provider import CallbackApprovalProvider
+            from massgen.permissions.approval_provider import (
+                CallbackApprovalProvider,
+                PolicyApprovalProvider,
+            )
             from massgen.permissions.models import ApprovalDecision
         except Exception:
             return
@@ -836,9 +839,15 @@ class CoordinationUI:
 
         for agent_id, agent in (getattr(orchestrator, "agents", {}) or {}).items():
             backend = getattr(agent, "backend", None)
-            if backend is not None and getattr(backend, "_permission_coordinator", None) is not None and hasattr(backend, "set_approval_provider"):
-                backend.set_approval_provider(CallbackApprovalProvider(_approval_callback, fail_closed=True))
-                logger.info(f"[TUI] Installed interactive approval provider for {agent_id}")
+            coordinator = getattr(backend, "_permission_coordinator", None) if backend is not None else None
+            if coordinator is None or not hasattr(backend, "set_approval_provider"):
+                continue
+            # Only take over the automation-policy provider — leave a file/remote
+            # provider (approval_mode: file) in place even under a TUI.
+            if not isinstance(coordinator.provider, PolicyApprovalProvider):
+                continue
+            backend.set_approval_provider(CallbackApprovalProvider(_approval_callback, fail_closed=True))
+            logger.info(f"[TUI] Installed interactive approval provider for {agent_id}")
 
     async def coordinate(self, orchestrator, question: str, agent_ids: list[str] | None = None) -> str:
         """Coordinate agents with visual display.

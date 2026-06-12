@@ -85,6 +85,20 @@ def test_read_write_agent_has_no_rules_falls_to_risk():
     assert _engine(mgr).rules is None  # → falls through to the risk classifier
 
 
+def test_approval_mode_default_is_policy():
+    from massgen.permissions.approval_provider import PolicyApprovalProvider
+
+    agent, _ = _install({"permissions": {"enabled": True}})
+    assert isinstance(agent.backend.coordinator.provider, PolicyApprovalProvider)
+
+
+def test_approval_mode_file_uses_file_provider(tmp_path):
+    from massgen.permissions.approval_provider import FileApprovalProvider
+
+    agent, _ = _install({"permissions": {"enabled": True, "approval_mode": "file", "approval_dir": str(tmp_path)}})
+    assert isinstance(agent.backend.coordinator.provider, FileApprovalProvider)
+
+
 def test_two_agents_get_independent_engines():
     # A "researcher" (read-only) and an "implementer" (read-write) built side by side
     # have distinct rule sets — the multi-agent differentiator.
