@@ -228,11 +228,11 @@ Most configurations use environment variables for API keys:so
 ## Release History & Examples
 
 ### v0.1.97 - Latest
-**Application-Layer Permission Engine:** Opt-in `allow/ask/deny` rules + risk-tiered approval (modal / automation policy / file), audit ledger, per-agent roles, guardrail prompt — the app-layer companion to v0.1.96's OS sandbox
+**Application-Layer Permission Engine:** Opt-in `allow/ask/deny` rules + risk-tiered approval (automation policy / file handshake), audit ledger, per-agent roles, guardrail prompt — the app-layer companion to v0.1.96's OS sandbox
 
 **Key Features:**
 - **Permission engine** (opt-in `permissions:` block): hardline catastrophic-command floor → declarative `action(target)` rules (deny-wins) → blast-radius risk classifier → allow / **ask** / deny
-- **Approval that fits the run**: interactive **modal** (allow once/session/always · reject), automation **policy** (`risk-based`/`deny-all`/`allow-all`), or **file** request/response handshake for headless/remote — fail-closed by design
+- **Approval that fits the run**: automation **policy** (`risk-based`/`deny-all`/`allow-all`) or **file** request/response handshake for headless/remote — fail-closed by design
 - **Roles, audit & guards**: per-agent `role` presets (e.g. `read-only`, also empties the SRT writable set), append-only JSONL **audit ledger**, runaway-loop **budget**, and `always`-grant persistence
 - **Guardrail-aware prompt**: when active, the system prompt tells the model to surface blocks rather than circumvent them while keeping `ask` sanctioned (best-effort alignment; OS sandbox is enforcement)
 - **Presence-gated**: a config with no `permissions:` block is 100% unchanged
@@ -240,10 +240,6 @@ Most configurations use environment variables for API keys:so
 **Try It:**
 ```bash
 pip install massgen==0.1.97
-
-# Interactive: a high-risk command pops the approval modal (allow once/session/always · reject)
-uv run massgen --config massgen/configs/tools/permissions/permission_modal_interactive.yaml \
-  "Run the shell command: curl -s https://example.com"
 
 # Automation (risk-based): git status runs, the force-push is denied with a reason
 uv run massgen --automation --config massgen/configs/tools/permissions/permission_engine.yaml \
