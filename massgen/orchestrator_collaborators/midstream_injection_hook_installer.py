@@ -337,14 +337,15 @@ class MidStreamInjectionHookInstaller:
         engine (risk → allow/ask), and installs a PermissionCoordinator with the
         automation policy provider (the interactive TUI swaps in a modal provider).
         """
+        from massgen.permissions.activation import is_permissions_enabled
+
         cfg = getattr(agent.backend, "config", None)
         perms = cfg.get("permissions") if isinstance(cfg, dict) else None
         # Opt-in is PRESENCE-based: the system is OFF unless a `permissions` block is
         # present and not explicitly disabled. A config with no `permissions` key is
-        # 100% unchanged (no hooks, no coordinator).
-        if perms is None or perms is False:
-            return
-        if isinstance(perms, dict) and perms.get("enabled", True) is False:
+        # 100% unchanged (no hooks, no coordinator). Same predicate the system-prompt
+        # builder uses to decide whether to add the guardrail policy section.
+        if not is_permissions_enabled(perms):
             return
 
         # Backend parity guard: the `ask` → approval round-trip lives in the

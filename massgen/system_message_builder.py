@@ -34,6 +34,7 @@ from massgen.system_prompt_sections import (
     MultimodalToolsSection,
     NoveltyPressureSection,
     OutputFirstVerificationSection,
+    PermissionGuardrailSection,
     PlanningModeSection,
     PostEvaluationSection,
     ProjectInstructionsSection,
@@ -257,6 +258,17 @@ class SystemMessageBuilder:
 
         # PRIORITY 1 (CRITICAL): Core Behaviors - HOW to act
         builder.add_section(CoreBehaviorsSection())
+
+        # PRIORITY 2 (HIGH): Permission guardrails — only when the permission engine
+        # is ACTIVE for this agent (enabled block + chokepoint-capable backend). The
+        # policy is channel-based: authority comes only from this system prompt.
+        from massgen.permissions.activation import guardrail_prompt_active
+
+        if guardrail_prompt_active(agent.backend):
+            _perms = agent.backend.config.get("permissions") or {}
+            _role = _perms.get("role") if isinstance(_perms, dict) else None
+            builder.add_section(PermissionGuardrailSection(role=_role))
+            logger.info(f"[SystemMessageBuilder] Added permission guardrail section for {agent_id} (role={_role})")
 
         # PRIORITY 4: File Persistence Guidance (solution persistence + tool preambles)
         # Added for models that tend to output file contents in answers instead of using file tools
