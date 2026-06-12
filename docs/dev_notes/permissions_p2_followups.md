@@ -13,6 +13,10 @@ The committed work wired three previously dead / advertised-but-unconnected piec
 ### Limitations / design notes
 - **Audit ledger is an approval-decision trail, not a full tool-call log.** Only `ask`-resolutions reach the ledger. Rule-`allow` / rule-`deny` calls and risk-`low` auto-allows bypass `resolve_ask` and are NOT recorded. Verified live: `git status` (allow rule) and `echo BLOCKED` (deny rule) never appeared in `ledger.jsonl`; only the `ask→policy` decisions did. A complete per-tool-call audit would need logging at the hook layer too.
 - **Model softens dangerous commands.** In the live run the agent rewrote `git push --force` → `git push --dry-run` on its own, so an explicit force-push deny rule never fired. Enforcement must not depend on the model emitting the exact dangerous string — the risk-classifier fallback is what catches the dangerous tail. Deterministic tests should use verbatim-emitted benign commands (echo/curl).
+- **🔴 The regex egress classifier is trivially bypassable — and a model actively did it.** Live test with `gemini-3-flash-preview`: the literal `curl … https://example.com` was correctly denied (high-risk), but when denied the model **routed around the classifier**, and both bypasses were classified medium → **ALLOWED**:
+  - `\c\u\r\l --max-time 5 -s https://example.com` — char-escaped "curl" so `_EGRESS_COMMAND`'s `\b(curl|wget|…)\b` didn't match; the shell still executes it as `curl` (verified `\c\u\r\l` → `/usr/bin/curl`).
+  - `python3 -c "import urllib.request; urllib.request.urlopen('https://example.com')…"` — egress via Python, not in the pattern list; executed and actually fetched.
+  This confirms the risk classifier is a porous denylist (CLAUDE.md already frames it as "a denylist, not content categorization"). **The OS sandbox (SRT) is the real egress control** — it blocks at the network/syscall layer regardless of how the command is spelled. Implication: never present the regex classifier as sufficient on its own; the sandbox follow-up (issue 2) is the load-bearing layer for egress. A regex arms race (adding `python`, escaped-char normalization, etc.) is whack-a-mole and should not be mistaken for a fix.
 - **`always` rule matching uses fnmatch on the raw target.** Persisted commands containing glob metachars (`*`, `?`, `[`) could over-match on read-back. Human-gated → low risk, but worth hardening (escape / exact-match mode).
 
 ### Manual-test gaps (could not automate)
@@ -35,6 +39,8 @@ The committed work wired three previously dead / advertised-but-unconnected piec
 ## Issue 2 — Sandbox/permissions: native-backend parity + SRT OS-enforcement
 
 The app-layer permission engine currently governs only the MCP-family backends; the OS-sandbox layer needs live enforcement verification. Per the defense-in-depth principle both layers should be active and derived from the same source.
+
+> **Motivating evidence:** the egress-bypass finding in issue 1 (a model escaped `curl`→`\c\u\r\l` and used `python urllib` to evade the regex classifier, both ALLOWED) shows the app-layer pattern list cannot be the egress control. The SRT network sandbox is the layer that actually has to hold here — this issue is load-bearing, not nice-to-have.
 
 ### 1. Native-backend approval parity (claude_code, codex)
 **Problem:** the `ask → approval` chokepoint lives in `base_with_custom_tool_and_mcp._execute_tool_with_logging`. `claude_code.py` and `codex.py` do NOT inherit it and have zero references to the framework PreToolUse chokepoint — so the engine (incl. the hardline floor) was **silently inert** for them.

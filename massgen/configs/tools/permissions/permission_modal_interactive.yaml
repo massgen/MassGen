@@ -24,8 +24,10 @@
 agents:
   - id: "guarded"
     backend:
-      type: "openai"
-      model: "gpt-5-nano"
+      # Gemini reliably ISSUES the tool call, so the approval modal actually fires.
+      # (gpt-5-nano tended to answer without attempting the command → no modal.)
+      type: "gemini"
+      model: "gemini-3-flash-preview"
       cwd: "permission_demo_workspace"     # created automatically; relative → portable
       enable_mcp_command_line: true
       permissions:
