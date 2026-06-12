@@ -68,7 +68,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.96 Features](#-latest-features-v0196)
+- [v0.1.97 Features](#-latest-features-v0197)
 </details>
 
 <details open>
@@ -129,7 +129,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.97 Roadmap](#v0197-roadmap)
+- [v0.1.98 Roadmap](#v0198-roadmap)
 </details>
 
 <details open>
@@ -1590,9 +1590,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.97 Roadmap
+### v0.1.98 Roadmap
 
-Version 0.1.97 picks up the image/video edit work deferred from v0.1.86-v0.1.96 and continues multimodal provider-parity work:
+Version 0.1.98 picks up the image/video edit work deferred from v0.1.86-v0.1.97 and continues multimodal provider-parity work:
 
 #### Planned Features
 - **Image/Video Edit Capabilities** ([#959](https://github.com/massgen/MassGen/issues/959)): Image and video editing across providers with multi-turn editing workflows via continuation IDs

@@ -116,6 +116,9 @@ Strengthen the orchestrator's parallel execution: move blocking snapshot work of
 
 ## Recent Releases
 
+**v0.1.97 (June 12, 2026)** - Application-Layer Permission Engine
+Adds a layered, fully opt-in permission system for agent tool calls: a hardline catastrophic-command floor, declarative `allow`/`ask`/`deny` rules over an `action(target)` algebra, and a blast-radius risk classifier that resolves each call to allow, ask, or deny. Approval can happen through an interactive modal, automation policy, or file request/response handshake; every decision is audited; per-agent roles scope capabilities; and denied calls render as first-class failed tool events. This is the application-layer companion to v0.1.96's OS sandbox, with honest scope documented: prompt/risk-classifier alignment is best-effort, while OS sandboxing remains the load-bearing enforcement.
+
 **v0.1.96 (June 10, 2026)** - OS-Level Agent Sandboxing
 Adds a real OS-level execution sandbox for agents via Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (`srt`) and hardens the application-layer permission hook against file-tool escapes. The new opt-in `command_line_execution_mode: srt` derives OS-enforced filesystem and network isolation from the same `PathPermissionManager` policy as MassGen's app layer, defaults network to deny-all, confines reads away from `$HOME` by default, degrades to native backend sandboxes where appropriate, and preserves subagent parity by inheriting parent SRT settings.
 

@@ -13,6 +13,7 @@ massgen/configs/
 │   ├── mcp/              # MCP server integrations
 │   ├── web-search/       # Web search enabled configs
 │   ├── code-execution/   # Code interpreter/execution
+│   ├── permissions/      # Tool-call approval rules, roles, and audit demos
 │   └── filesystem/       # File operations & workspace
 ├── providers/             # Provider-specific examples
 │   ├── openai/           # GPT-5 series configs

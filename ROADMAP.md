@@ -81,7 +81,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 - All items landed under TDD, with a 15-vector adversarial escape suite and an adversarially-verified multi-agent pre-merge review.
 - Default-off, one-knob opt-in; current behavior unchanged unless a config sets `command_line_execution_mode: srt`.
 - Live-verified (macOS 15.7, srt 1.0.0) across OpenRouter, OpenAI Responses, and Gemini backends.
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.97.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.98.
 
 ---
 
@@ -103,7 +103,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ### Notes
 - All items landed under TDD, with deterministic coverage plus opt-in live-fire tests.
-- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.97.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.98.
 
 ---
 
@@ -419,7 +419,7 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 ---
 
-## 📋 v0.1.97 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.96)
+## 📋 v0.1.98 - Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.97)
 
 ### Features
 
