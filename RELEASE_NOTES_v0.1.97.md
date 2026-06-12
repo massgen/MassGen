@@ -8,7 +8,6 @@
 - **Risk classifier**: tiers a call by blast radius, not name — auto-allows reads and in-workspace edits, asks only for the dangerous tail (network egress, force-push, publish/spend, privilege escalation).
 
 ### ✋ Approval that fits the run
-- **Interactive modal** (`ToolApprovalModal`): allow once / allow session / always · reject, when a human is present.
 - **Automation policy**: `risk-based` (default — high denied with a reason, low/medium allowed), `deny-all`, or `allow-all`.
 - **File handshake** (`FileApprovalProvider`): `req_*.json` / `resp_*.json` for headless/remote approval (Slack bot, `/approve <id>`, …). Fail-closed on timeout throughout.
 
@@ -30,14 +29,6 @@
 
 ### 📖 Getting Started
 - [**Quick Start Guide**](https://github.com/massgen/MassGen?tab=readme-ov-file#1--installation): upgrade and try the permission engine.
-- **Try the approval modal (interactive):**
-
-```bash
-# A high-risk command pops the approval modal (allow once/session/always · reject)
-uv run massgen --config massgen/configs/tools/permissions/permission_modal_interactive.yaml \
-  "Run the shell command: curl -s https://example.com"
-```
-
 - **Try risk-tiered automation (headless deny):**
 
 ```bash
