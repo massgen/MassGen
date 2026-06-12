@@ -355,11 +355,21 @@ class MidStreamInjectionHookInstaller:
             PermissionEngineHook,
         )
         from massgen.permissions.models import AutomationDefault
-        from massgen.permissions.rules import PermissionRuleSet
 
-        # Declarative allow/ask/deny rules (Antigravity action(target) algebra).
+        # Per-agent rules = role preset (higher-precedence scope) merged with the
+        # agent's own allow/ask/deny rules, deny-wins across scopes. Each agent gets
+        # its OWN engine hook (own manager), so this is naturally per-agent scoping.
+        from massgen.permissions.rules import PermissionRuleSet, role_rule_set
+
+        role = perms.get("role") if isinstance(perms, dict) else None
         rules_cfg = perms.get("rules") if isinstance(perms, dict) else None
-        rule_set = PermissionRuleSet.from_config(rules_cfg) if rules_cfg else None
+        scopes = []
+        role_rs = role_rule_set(role)
+        if role_rs is not None:
+            scopes.append(role_rs)
+        if rules_cfg:
+            scopes.append(PermissionRuleSet.from_config(rules_cfg))
+        rule_set = PermissionRuleSet.merge(scopes) if scopes else None
 
         # Hardline first (catastrophic floor), then the composite engine (rules → risk).
         manager.register_global_hook(HookType.PRE_TOOL_USE, HardlineBlocklistHook())

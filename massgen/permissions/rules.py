@@ -163,3 +163,35 @@ class PermissionRuleSet:
             merged.allow_rules.extend(rs.allow_rules)
             merged.ask_rules.extend(rs.ask_rules)
         return merged
+
+
+# Per-agent ROLE presets — a one-liner for the common multi-agent shapes. Role rules
+# are a higher-precedence scope (merged with deny-wins), so a `read-only` agent's
+# write-deny cannot be loosened by a per-agent allow rule.
+_ROLE_SPECS: dict[str, dict[str, list[str]]] = {
+    # Reads files, may ask before network; NO writes, NO shell. (alias: researcher)
+    "read-only": {
+        "deny": ["write_file(*)", "command(*)"],
+        "ask": ["read_url(*)"],
+        "allow": ["read_file(*)"],
+    },
+    "researcher": {
+        "deny": ["write_file(*)", "command(*)"],
+        "ask": ["read_url(*)"],
+        "allow": ["read_file(*)"],
+    },
+    # Full workspace access — no preset rules (falls to user rules + risk).
+    "read-write": {},
+    "implementer": {},
+}
+
+
+def role_rule_set(role: str | None) -> PermissionRuleSet | None:
+    """Return the rule set for a named role, or None if the role is unknown/empty."""
+    if not role:
+        return None
+    spec = _ROLE_SPECS.get(role.strip().lower())
+    if spec is None:
+        logger.warning(f"[permissions] unknown role '{role}' (known: {sorted(_ROLE_SPECS)})")
+        return None
+    return PermissionRuleSet(allow=spec.get("allow"), ask=spec.get("ask"), deny=spec.get("deny"))

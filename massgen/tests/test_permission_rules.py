@@ -101,3 +101,45 @@ def test_merge_scopes_deny_wins_across():
     merged = PermissionRuleSet.merge([managed, project])
     assert merged.evaluate("execute_command", {"command": "curl evil"}) == "deny"
     assert merged.evaluate("execute_command", {"command": "ls"}) == "allow"
+
+
+# --------------------------------------------------------------------------- #
+# Role presets (per-agent scoping)
+# --------------------------------------------------------------------------- #
+def test_role_read_only_denies_writes_and_shell_allows_reads():
+    from massgen.permissions.rules import role_rule_set
+
+    rs = role_rule_set("read-only")
+    assert rs.evaluate("write_file", {"path": "x"}) == "deny"
+    assert rs.evaluate("execute_command", {"command": "ls"}) == "deny"  # no shell
+    assert rs.evaluate("read_file", {"path": "x"}) == "allow"
+    assert rs.evaluate("WebFetch", {"url": "x"}) == "ask"
+
+
+def test_role_researcher_is_alias_for_read_only():
+    from massgen.permissions.rules import role_rule_set
+
+    assert role_rule_set("researcher").evaluate("write_file", {"path": "x"}) == "deny"
+
+
+def test_role_read_write_is_empty():
+    from massgen.permissions.rules import role_rule_set
+
+    assert role_rule_set("read-write").is_empty
+
+
+def test_role_unknown_or_none_returns_none():
+    from massgen.permissions.rules import role_rule_set
+
+    assert role_rule_set(None) is None
+    assert role_rule_set("bogus") is None
+
+
+def test_role_deny_beats_user_allow():
+    from massgen.permissions.rules import role_rule_set
+
+    role = role_rule_set("read-only")
+    user = PermissionRuleSet(allow=["write_file(./out.txt)"])
+    merged = PermissionRuleSet.merge([role, user])
+    # read-only role's write-deny cannot be loosened by a per-agent allow.
+    assert merged.evaluate("write_file", {"path": "./out.txt"}) == "deny"
