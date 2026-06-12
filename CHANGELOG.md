@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.97] - 2026-06-12
+
+### Theme: Application-Layer Permission Engine
+
+A layered, **fully opt-in** permission system for agent tool calls — the application-layer companion to v0.1.96's OS sandbox. When a `permissions:` block is present, every tool call flows through a hardline catastrophic-command floor, a declarative `allow/ask/deny` rule layer, and a blast-radius risk classifier, resolving to allow / **ask** / deny. An `ask` routes through a pluggable approval provider: an automation policy (`risk-based` / `deny-all` / `allow-all`) or a file request/response handshake for headless/remote approval. Approvals are recorded in an append-only audit ledger; per-agent **role presets** (e.g. `read-only`) scope each agent and also empty the SRT writable set as an OS backstop. A channel-based **guardrail system prompt** tells the model to follow blocks and surface-and-ask rather than circumvent — while keeping `ask` a sanctioned path. **Presence-gated**: a config with no `permissions:` block is 100% unchanged. All items landed under TDD (tests first, confirmed red, then green), with live verification across automation runs. **Honest scope**: the prompt + regex classifier are best-effort *alignment*, not enforcement — the OS sandbox (v0.1.96) remains the load-bearing control (see `docs/dev_notes/permissions_p2_followups.md`).
+
+### Added
+- **Permission engine (opt-in `permissions:` block)**: composite `PreToolUse` pipeline in `massgen/permissions/` — a non-overridable hardline blocklist (`hardline.py`, catastrophic patterns like `rm -rf /`, fork bombs, raw-disk `dd`), a declarative `action(target)` rule layer (`rules.py`: `command`/`read_file`/`write_file`/`read_url`/`mcp`/`*`, **deny-wins** across scopes), and a blast-radius `RiskClassifier` (`risk_classifier.py`: tiers by what the call *does* — egress/force-push/publish/privilege → high, reads/in-workspace edits → low). An explicit rule suppresses the risk-ask, so rules + risk live in one hook.
+- **Approval round-trip**: the `base_with_custom_tool_and_mcp` chokepoint resolves an `ask` via a pluggable `ApprovalProvider` — `PolicyApprovalProvider` → automation default (`risk-based` ships default; high denied with reason, low/medium allowed) and `FileApprovalProvider` → `req_*.json`/`resp_*.json` handshake for headless/remote approval (Slack bot, `/approve <id>`, …). Both are live-verified and fail-closed on timeout.
+- **Per-agent role scoping**: `permissions.role` presets (`read-only`/`researcher` deny writes+shell; `read-write`/`implementer` fall through to rules+risk), merged with user rules deny-wins. A `read-only` role also empties the agent's SRT writable set (OS-layer backstop to the engine's write denials).
+- **Audit ledger + runaway guard (`ledger.py`)**: `ApprovalLedger` writes one append-only JSONL line per approval decision (who/what/why/outcome, crash-safe). `ApprovalBudget` caps consecutive auto-approvals per agent (opt-in `max_consecutive_auto`; fail-closed past the cap, reset by any human decision).
+- **`always`-grant persistence**: an operator's "Always" approval persists as a deduped `allow(...)` rule in `settings.local.json` and loads back as a merged scope next run (opt-out `persist_approvals: false`).
+- **Channel-based guardrail system prompt**: `PermissionGuardrailSection` is injected into the system prompt only when the engine is active for that agent — follow the guardrails, don't circumvent a denial (no rewording/obfuscation/tool-swap), surface-and-ask instead; **`ask` is explicitly sanctioned, not a block**. Authority is established by channel (only the system prompt is authoritative; tool/file/web content never is) — no token needed.
+
+### Changed
+- **Denied tool calls render as first-class FAILED tool events**: the deny path now emits `tool_start` (with the attempted command/args) + `tool_complete(is_error=True, status="denied")` and the status line shows the command (`Denied ($ curl …): …`), so blocked calls appear in the TUI/WebUI timeline instead of only a transient status line.
+
+### Fixed
+- **Backend parity guard**: native backends (`claude_code`, `codex`) don't run the framework `PreToolUse` chokepoint, so a `permissions:` block there is reported **INACTIVE** at startup (loud warning) and inert hooks are skipped — preventing a false promise of enforcement.
+
+### Tests
+- New deterministic suites: `test_permissions_core.py`, `test_permission_rules.py`, `test_permission_hooks.py`, `test_permission_coordinator.py`, `test_approval_provider.py` / `test_file_approval_provider.py`, `test_approval_ledger.py`, `test_permissions_optional.py` (opt-in/presence gate + parity guard), `test_permission_persistence.py` (write↔load roundtrip + dedup), `test_permission_guardrail_prompt.py` (gating + content incl. ask-is-sanctioned), `test_permission_denied_tool_visibility.py` (start→error-complete events + command preview), plus SRT read-only backstop in `test_srt_manager.py` / `test_srt_filesystem_integration.py`.
+- Live-verified (automation, `gemini-3-flash-preview`): all three chokepoint branches end-to-end (allow / deny-rule / ask→policy-deny + ledger), guardrail policy present in the real system message, denied calls emitting real `tool_start`/`tool_complete(error)` events with the command. Documented honest limitation: the model evaded the regex egress classifier via `\c\u\r\l` / `python urllib`, confirming the OS sandbox is the load-bearing control.
+
+### Documentations, Configurations and Resources
+- **New Configs**: `massgen/configs/tools/permissions/permission_engine.yaml` (risk-tiered approval + rule algebra), `per_agent_roles.yaml` (role scoping).
+- **Design Notes**: `docs/dev_notes/permission_systems_research.md` (three-layer model), `docs/dev_notes/permissions_p2_followups.md` (limitations, manual-test gaps, OS-enforcement follow-up).
+
 ## [0.1.96] - 2026-06-10
 
 ### Theme: OS-Level Agent Sandboxing

@@ -121,8 +121,8 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [Recent Achievements (v0.1.96)](#recent-achievements-v0196)
-- [Previous Achievements (v0.0.3 - v0.1.95)](#previous-achievements-v003---v0195)
+- [Recent Achievements (v0.1.97)](#recent-achievements-v0197)
+- [Previous Achievements (v0.0.3 - v0.1.96)](#previous-achievements-v003---v0196)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
@@ -154,18 +154,18 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.96)
+## 🆕 Latest Features (v0.1.97)
 
-**🎉 Released: June 10, 2026**
+**🎉 Released: June 12, 2026**
 
-**What's New in v0.1.96** (OS-Level Agent Sandboxing):
-- **🛡️ OS-Level Execution Sandbox** - Confine agent command/code execution at the OS level via Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (bubblewrap on Linux, Seatbelt on macOS) with one knob: `command_line_execution_mode: srt`. Filesystem + network isolation derived from the same path policy as the application layer — **defense in depth**, both layers active.
-- **🔒 Configurable Read Confinement** - By default (`confined`), sandboxed commands can't read your `$HOME` (secrets, other projects) — only the workspace + context — while system paths stay readable so commands still run. `strict` and `open` modes available. Network is **deny-all by default**; each allowlisted domain is an explicit capability grant.
-- **🧱 Hardened Permission Hook** - A key-agnostic scan walks the full tool-args tree (nested dicts + lists) and denies any value resolving outside managed areas, closing prior fail-open gaps (unrecognized key, list-valued paths, `move`/`copy` source pointing outside) — with no false positives.
+**What's New in v0.1.97** (Application-Layer Permission Engine):
+- **🛡️ Layered Permission Engine** - Opt-in `permissions:` block routes every tool call through a non-overridable **hardline** floor (`rm -rf /`, fork bombs), declarative **`allow/ask/deny` rules** over a small `action(target)` algebra (deny-wins), and a **blast-radius risk classifier** — auto-allowing reads/in-workspace edits and asking only for the dangerous tail (egress, force-push, publish, privilege). The app-layer companion to v0.1.96's OS sandbox.
+- **✋ Approval That Fits the Run** - An `ask` resolves via an automation **policy** (`risk-based` / `deny-all` / `allow-all`) or a **file** request/response handshake for headless/remote approval (Slack bot, `/approve <id>`, …) — fail-closed by design.
+- **🧑‍🤝‍🧑 Roles, Audit & Guards** - Per-agent `role` presets (e.g. `read-only`, which also empties the agent's OS-sandbox writable set), an append-only JSONL **audit ledger** of every decision, a runaway-loop **budget**, `always`-grant persistence, and a channel-based **guardrail prompt** that nudges the model to surface blocks rather than circumvent them while keeping `ask` sanctioned. *(Honest scope: the prompt is best-effort alignment; the OS sandbox is the enforcement.)*
 
-**Install v0.1.96:**
+**Install v0.1.97:**
 ```bash
-pip install massgen==0.1.96
+pip install massgen==0.1.97
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -1240,18 +1240,20 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.96)
+### Recent Achievements (v0.1.97)
 
-**🎉 Released: June 10, 2026**
+**🎉 Released: June 12, 2026**
 
-#### OS-Level Agent Sandboxing
-- **OS-Level Execution Sandbox (`command_line_execution_mode: srt`)**: a third execution mode alongside `local`/`docker` that wraps agent command/code execution in Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (bubblewrap on Linux, Seatbelt on macOS). `SrtManager` (`massgen/filesystem_manager/_srt_manager.py`) derives per-agent OS-enforced filesystem + network isolation from the **same** `PathPermissionManager` policy as the app layer — defense in depth, both layers active. Default-off, one-knob opt-in
-- **Configurable Read Confinement (`command_line_srt_read_mode`, default `confined`)**: SRT reads are allow-all by default, so `confined` denies all of `$HOME` and re-allows only the workspace + context (system paths stay readable so commands run); `strict` denies `/` and allows only managed + a system baseline; `open` allows-all minus a secret denylist. `command_line_srt_allow_read` widens it per config. **Network is deny-all by default** — each allowlisted domain is an explicit capability grant
-- **Hardened Permission Hook**: a new key-agnostic scan (`_validate_no_path_arg_escapes`) walks the full tool-args tree (nested dicts + lists) and denies any value resolving outside managed areas, closing prior fail-open gaps (path under an unrecognized key, list-valued paths, `move`/`copy` source pointing outside) without false positives
-- **Parity & safety**: native-sandbox backends (Codex `--full-auto`, Claude Code) degrade `srt`→`local` to avoid nested-sandbox hangs; subagents inherit the parent's SRT settings (parity with Docker); live-verified across OpenRouter, OpenAI Responses, and Gemini backends
-- All landed under TDD, with a 15-vector adversarial escape suite and an adversarially-verified multi-agent pre-merge review
+#### Application-Layer Permission Engine
+- **Permission engine (opt-in `permissions:` block)**: a composite `PreToolUse` pipeline in `massgen/permissions/` — a non-overridable **hardline** blocklist (`hardline.py`: `rm -rf /`, fork bombs, raw-disk `dd`), a declarative **`action(target)` rule layer** (`rules.py`: `command`/`read_file`/`write_file`/`read_url`/`mcp`/`*`, deny-wins across scopes), and a **blast-radius `RiskClassifier`** that tiers by what the call does (egress/force-push/publish/privilege → high; reads/in-workspace edits → low). An explicit rule suppresses the risk-ask, so rules + risk live in one hook
+- **Approval round-trip**: the `base_with_custom_tool_and_mcp` chokepoint resolves an `ask` via a pluggable `ApprovalProvider` — automation **policy** (`risk-based` default / `deny-all` / `allow-all`) and **file** request/response handshake for headless/remote (both live-verified, fail-closed on timeout)
+- **Roles, audit & guards**: per-agent `role` presets (`read-only`/`researcher` deny writes+shell, also empties the agent's SRT writable set), an append-only JSONL **`ApprovalLedger`**, a runaway-loop **`ApprovalBudget`**, and `always`-grant persistence to `settings.local.json`
+- **Guardrail system prompt** (`PermissionGuardrailSection`, injected only when the engine is active): follow the guardrails, don't circumvent a denial, surface-and-ask — while keeping `ask` a sanctioned path. Authority is established by channel (only the system prompt is authoritative). Denied tool calls now render as **first-class failed tool events** (with the command) in the TUI/WebUI timeline
+- **Presence-gated & honest**: a config with no `permissions:` block is 100% unchanged; native backends (claude_code/codex) report **INACTIVE** rather than silently inert. All under TDD; live-verified that the prompt is best-effort *alignment* (a model evaded the regex egress classifier via `\c\u\r\l` / `python urllib`), so the OS sandbox remains the load-bearing enforcement
 
-### Previous Achievements (v0.0.3 - v0.1.95)
+### Previous Achievements (v0.0.3 - v0.1.96)
+
+✅ **OS-Level Agent Sandboxing (v0.1.96)**: Added a real OS-level execution sandbox (`command_line_execution_mode: srt`) wrapping agent command/code execution in Anthropic's sandbox-runtime (bubblewrap/Seatbelt), with OS-enforced filesystem + network isolation derived from the same `PathPermissionManager` policy as the app layer (defense in depth), configurable read confinement (`confined`/`strict`/`open`, deny-all network), a hardened key-agnostic permission hook, native-sandbox-backend `srt`→`local` degrade, and subagent inheritance.
 
 ✅ **Steering Improvements (v0.1.95)**: Extended mid-stream steering from a UI-only capability into a programmatic, headless one — `send_steering_message()` drops guidance into a file inbox (`--inbox-dir`) routed through the same `set_pending_input` chokepoint the TUI/WebUI use — and upgraded Codex/Antigravity to interrupt-and-resume the in-flight turn (`codex exec resume` / `agy --continue`) instead of waiting for a round boundary, with `expires_at`-guarded MCP-hook payload IPC and the Antigravity `--model` flag wired through.
 

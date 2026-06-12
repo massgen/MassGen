@@ -812,6 +812,43 @@ class CoordinationUI:
         if self.display and hasattr(self.display, "begin_restart"):
             self.display.begin_restart(attempt, max_attempts, reason, instructions)
 
+    def _install_interactive_approval_provider(self, orchestrator) -> None:
+        """Route per-tool `ask` approvals to the TUI modal when a real interactive
+        display exists. No-op in automation/headless (the coordinator keeps its
+        PolicyApprovalProvider) and for agents without a permission coordinator."""
+        display = self.display
+        if display is None or self.config.get("automation_mode", False):
+            return
+        if not hasattr(display, "show_tool_approval_modal"):
+            return
+        try:
+            from massgen.permissions.approval_provider import (
+                CallbackApprovalProvider,
+                PolicyApprovalProvider,
+            )
+            from massgen.permissions.models import ApprovalDecision
+        except Exception:
+            return
+
+        async def _approval_callback(authz):
+            try:
+                return await display.show_tool_approval_modal(authz)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"[TUI] approval modal failed: {e}")
+                return ApprovalDecision(allowed=False, feedback=f"Approval unavailable ({e}); denied.", operator="policy")
+
+        for agent_id, agent in (getattr(orchestrator, "agents", {}) or {}).items():
+            backend = getattr(agent, "backend", None)
+            coordinator = getattr(backend, "_permission_coordinator", None) if backend is not None else None
+            if coordinator is None or not hasattr(backend, "set_approval_provider"):
+                continue
+            # Only take over the automation-policy provider — leave a file/remote
+            # provider (approval_mode: file) in place even under a TUI.
+            if not isinstance(coordinator.provider, PolicyApprovalProvider):
+                continue
+            backend.set_approval_provider(CallbackApprovalProvider(_approval_callback, fail_closed=True))
+            logger.info(f"[TUI] Installed interactive approval provider for {agent_id}")
+
     async def coordinate(self, orchestrator, question: str, agent_ids: list[str] | None = None) -> str:
         """Coordinate agents with visual display.
 
@@ -912,6 +949,11 @@ class CoordinationUI:
         # so the callback can access the display for TUI notifications
         if hasattr(orchestrator, "setup_subagent_spawn_callbacks"):
             orchestrator.setup_subagent_spawn_callbacks()
+
+        # Permissions: when a real interactive TUI exists, route per-tool `ask`
+        # decisions to the approval MODAL (swapping out the automation-policy provider
+        # each agent's coordinator was created with). Automation/headless keeps Policy.
+        self._install_interactive_approval_provider(orchestrator)
 
         # Start lightweight event-driven agent output writer
         from massgen.frontend.agent_output_writer import create_agent_output_writer
@@ -1549,6 +1591,11 @@ class CoordinationUI:
         # so the callback can access the display for TUI notifications
         if hasattr(orchestrator, "setup_subagent_spawn_callbacks"):
             orchestrator.setup_subagent_spawn_callbacks()
+
+        # Permissions: when a real interactive TUI exists, route per-tool `ask`
+        # decisions to the approval MODAL (swapping out the automation-policy provider
+        # each agent's coordinator was created with). Automation/headless keeps Policy.
+        self._install_interactive_approval_provider(orchestrator)
 
         # Start lightweight event-driven agent output writer
         from massgen.frontend.agent_output_writer import create_agent_output_writer

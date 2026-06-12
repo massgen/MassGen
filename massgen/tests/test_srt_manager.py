@@ -131,6 +131,15 @@ def test_allow_read_extras_propagate(pm_with_paths):
     assert "/opt/shared-cache" in fs["allowRead"]
 
 
+def test_read_only_empties_execution_writes_but_keeps_fs_tools(pm_with_paths):
+    # read-only role → the agent's EXECUTION sandbox grants NO writes (OS backstop),
+    # but the fs_tools server profile still writes (so snapshots work).
+    mgr = SrtManager(pm_with_paths["pm"], read_only=True)
+    assert mgr.build_settings(profile="execution")["filesystem"]["allowWrite"] == []
+    fs_tools = mgr.build_settings(profile="fs_tools")["filesystem"]["allowWrite"]
+    assert str(pm_with_paths["workspace"]) in fs_tools
+
+
 def test_invalid_read_mode_falls_back_to_confined(pm_with_paths):
     assert SrtManager(pm_with_paths["pm"], read_mode="bogus").read_mode == "confined"
 
