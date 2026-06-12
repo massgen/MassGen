@@ -2498,6 +2498,57 @@ class CustomToolAndMCPBackend(LLMBackend):
         - Claude: {"role": "user", "content": [{"type": "tool_result", "tool_use_id": ..., "content": ...}]}
         """
 
+    @staticmethod
+    def _denied_tool_preview(tool_name: str, args: dict[str, Any]) -> str:
+        """Human-readable preview of WHAT was blocked (the command/path), not just
+        the tool name — surfaced in the denial status line."""
+        cmd = args.get("command") or args.get("cmd")
+        if isinstance(cmd, str) and cmd.strip():
+            return f"$ {cmd.strip()[:200]}"
+        for key in ("path", "file_path", "url", "destination", "destination_path", "target"):
+            v = args.get(key)
+            if isinstance(v, str) and v:
+                return f"{tool_name} {v}"
+        return tool_name
+
+    def _emit_denied_tool_call(
+        self,
+        *,
+        call_id: str,
+        tool_name: str,
+        args: dict[str, Any],
+        reason: str,
+        server_name: str | None = None,
+        elapsed_seconds: float = 0.0,
+    ) -> None:
+        """Emit tool_start + tool_complete(is_error=True) for a permission-denied
+        call so it renders as a first-class FAILED tool call in the TUI/WebUI
+        timeline. The chokepoint returns before the normal emission path, so without
+        this a denied call would never appear as a tool-call row (only a transient
+        status line). Telemetry must never break execution → failures are swallowed."""
+        emitter = get_event_emitter()
+        if not emitter:
+            return
+        try:
+            emitter.emit_tool_start(
+                tool_id=call_id,
+                tool_name=tool_name,
+                args=args,
+                server_name=server_name,
+                agent_id=self.agent_id,
+            )
+            emitter.emit_tool_complete(
+                tool_id=call_id,
+                tool_name=tool_name,
+                result=reason,
+                elapsed_seconds=elapsed_seconds,
+                status="denied",
+                is_error=True,
+                agent_id=self.agent_id,
+            )
+        except Exception as e:  # noqa: BLE001 - telemetry must not break execution
+            logger.debug(f"[PreToolUse] failed to emit denied-tool events: {e}")
+
     @abstractmethod
     def _append_tool_error_message(
         self,
@@ -2748,12 +2799,32 @@ class CustomToolAndMCPBackend(LLMBackend):
                 if deny_reason is not None:
                     error_msg = deny_reason
                     logger.warning(f"[PreToolUse] {error_msg}")
+                    try:
+                        _denied_args = json.loads(arguments_str) if arguments_str else {}
+                    except (json.JSONDecodeError, TypeError):
+                        _denied_args = {}
+                    if not isinstance(_denied_args, dict):
+                        _denied_args = {}
+                    # Show WHAT was blocked (the command/path), not just the tool name.
+                    preview = self._denied_tool_preview(tool_name, _denied_args)
                     yield StreamChunk(
                         type=config.chunk_type,
                         status=config.status_error,
-                        content=f"{config.error_emoji} {error_msg}",
+                        content=f"{config.error_emoji} Denied ({preview}): {error_msg}",
                         source=f"{config.source_prefix}{tool_name}",
                         tool_call_id=call_id,
+                    )
+                    # Surface the denied call as a first-class FAILED tool call in the
+                    # TUI/WebUI timeline (the early return below skips the normal
+                    # emit_tool_start / emit_tool_complete path).
+                    metric.end_time = time.time()
+                    self._emit_denied_tool_call(
+                        call_id=call_id,
+                        tool_name=tool_name,
+                        args=_denied_args,
+                        reason=error_msg,
+                        server_name=config.source_prefix.rstrip("_: ") if config.tool_type == "mcp" else None,
+                        elapsed_seconds=max(0.0, metric.end_time - getattr(metric, "start_time", metric.end_time)),
                     )
                     # Still need to add error result to messages
                     self._append_tool_error_message(
@@ -2765,7 +2836,6 @@ class CustomToolAndMCPBackend(LLMBackend):
                     processed_call_ids.add(call_id)
 
                     # Record metric for denied/unapproved execution
-                    metric.end_time = time.time()
                     metric.success = False
                     metric.error_message = error_msg[:500]
                     self._tool_execution_metrics.append(metric)
