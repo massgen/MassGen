@@ -535,6 +535,10 @@ class CustomToolAndMCPBackend(LLMBackend):
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
 
+        # Permission coordinator that resolves PreToolUse `ask` decisions (set by the
+        # hook installer when a `permissions:` config block is present).
+        self._permission_coordinator: Any = None
+
         # Initialize General Hook Manager for Pre/PostToolUse hooks
         self._general_hook_manager: GeneralHookManager | None = None
         hooks_config = self.config.get("hooks") or kwargs.get("hooks")
@@ -563,6 +567,18 @@ class CustomToolAndMCPBackend(LLMBackend):
     def set_general_hook_manager(self, manager: GeneralHookManager) -> None:
         """Set the GeneralHookManager (used by orchestrator for global hooks)."""
         self._general_hook_manager = manager
+
+    def set_permission_coordinator(self, coordinator: Any) -> None:
+        """Set the PermissionCoordinator that resolves PreToolUse `ask` decisions
+        into allow/deny via the configured ApprovalProvider (interactive modal or
+        automation policy). When unset, an `ask` fails closed (denies)."""
+        self._permission_coordinator = coordinator
+
+    def set_approval_provider(self, provider: Any) -> None:
+        """Swap the ApprovalProvider on the active coordinator (e.g. the interactive
+        TUI installs a modal-backed provider in place of the automation default)."""
+        if getattr(self, "_permission_coordinator", None) is not None:
+            self._permission_coordinator.provider = provider
 
     def set_subagent_spawn_callback(self, callback: Callable[[str, dict[str, Any], str], None]) -> None:
         """Set callback for subagent spawn notifications.
@@ -2482,6 +2498,57 @@ class CustomToolAndMCPBackend(LLMBackend):
         - Claude: {"role": "user", "content": [{"type": "tool_result", "tool_use_id": ..., "content": ...}]}
         """
 
+    @staticmethod
+    def _denied_tool_preview(tool_name: str, args: dict[str, Any]) -> str:
+        """Human-readable preview of WHAT was blocked (the command/path), not just
+        the tool name — surfaced in the denial status line."""
+        cmd = args.get("command") or args.get("cmd")
+        if isinstance(cmd, str) and cmd.strip():
+            return f"$ {cmd.strip()[:200]}"
+        for key in ("path", "file_path", "url", "destination", "destination_path", "target"):
+            v = args.get(key)
+            if isinstance(v, str) and v:
+                return f"{tool_name} {v}"
+        return tool_name
+
+    def _emit_denied_tool_call(
+        self,
+        *,
+        call_id: str,
+        tool_name: str,
+        args: dict[str, Any],
+        reason: str,
+        server_name: str | None = None,
+        elapsed_seconds: float = 0.0,
+    ) -> None:
+        """Emit tool_start + tool_complete(is_error=True) for a permission-denied
+        call so it renders as a first-class FAILED tool call in the TUI/WebUI
+        timeline. The chokepoint returns before the normal emission path, so without
+        this a denied call would never appear as a tool-call row (only a transient
+        status line). Telemetry must never break execution → failures are swallowed."""
+        emitter = get_event_emitter()
+        if not emitter:
+            return
+        try:
+            emitter.emit_tool_start(
+                tool_id=call_id,
+                tool_name=tool_name,
+                args=args,
+                server_name=server_name,
+                agent_id=self.agent_id,
+            )
+            emitter.emit_tool_complete(
+                tool_id=call_id,
+                tool_name=tool_name,
+                result=reason,
+                elapsed_seconds=elapsed_seconds,
+                status="denied",
+                is_error=True,
+                agent_id=self.agent_id,
+            )
+        except Exception as e:  # noqa: BLE001 - telemetry must not break execution
+            logger.debug(f"[PreToolUse] failed to emit denied-tool events: {e}")
+
     @abstractmethod
     def _append_tool_error_message(
         self,
@@ -2698,16 +2765,66 @@ class CustomToolAndMCPBackend(LLMBackend):
                         tool_call_id=call_id,
                     )
 
-                # Handle deny decision
+                # Resolve the hook decision into deny / ask / allow.
+                deny_reason: str | None = None
                 if not pre_result.allowed or pre_result.decision == "deny":
-                    error_msg = f"Hook denied tool execution: {pre_result.reason or 'No reason provided'}"
+                    deny_reason = f"Hook denied tool execution: {pre_result.reason or 'No reason provided'}"
+                elif pre_result.decision == "ask":
+                    # A hook (the permission engine) requested human/policy approval.
+                    # Route through the approval coordinator; never silently execute.
+                    coordinator = getattr(self, "_permission_coordinator", None)
+                    if coordinator is None:
+                        deny_reason = (f"Approval required for '{tool_name}' but no approval handler is configured; " f"denied (fail-closed). {pre_result.reason or ''}").strip()
+                    else:
+                        try:
+                            _approval_args = json.loads(arguments_str) if arguments_str else {}
+                        except (json.JSONDecodeError, TypeError):
+                            _approval_args = {}
+                        yield StreamChunk(
+                            type=config.chunk_type,
+                            status=getattr(config, "status_running", None),
+                            content=f"⏸️ Awaiting approval for {tool_name}…",
+                            source=f"{config.source_prefix}{tool_name}",
+                            tool_call_id=call_id,
+                        )
+                        approved, feedback = await coordinator.resolve_ask(
+                            self.agent_id,
+                            tool_name,
+                            _approval_args,
+                            reason=pre_result.reason or "",
+                        )
+                        if not approved:
+                            deny_reason = feedback or f"Tool '{tool_name}' was not approved."
+
+                if deny_reason is not None:
+                    error_msg = deny_reason
                     logger.warning(f"[PreToolUse] {error_msg}")
+                    try:
+                        _denied_args = json.loads(arguments_str) if arguments_str else {}
+                    except (json.JSONDecodeError, TypeError):
+                        _denied_args = {}
+                    if not isinstance(_denied_args, dict):
+                        _denied_args = {}
+                    # Show WHAT was blocked (the command/path), not just the tool name.
+                    preview = self._denied_tool_preview(tool_name, _denied_args)
                     yield StreamChunk(
                         type=config.chunk_type,
                         status=config.status_error,
-                        content=f"{config.error_emoji} {error_msg}",
+                        content=f"{config.error_emoji} Denied ({preview}): {error_msg}",
                         source=f"{config.source_prefix}{tool_name}",
                         tool_call_id=call_id,
+                    )
+                    # Surface the denied call as a first-class FAILED tool call in the
+                    # TUI/WebUI timeline (the early return below skips the normal
+                    # emit_tool_start / emit_tool_complete path).
+                    metric.end_time = time.time()
+                    self._emit_denied_tool_call(
+                        call_id=call_id,
+                        tool_name=tool_name,
+                        args=_denied_args,
+                        reason=error_msg,
+                        server_name=config.source_prefix.rstrip("_: ") if config.tool_type == "mcp" else None,
+                        elapsed_seconds=max(0.0, metric.end_time - getattr(metric, "start_time", metric.end_time)),
                     )
                     # Still need to add error result to messages
                     self._append_tool_error_message(
@@ -2718,8 +2835,7 @@ class CustomToolAndMCPBackend(LLMBackend):
                     )
                     processed_call_ids.add(call_id)
 
-                    # Record metric for denied execution
-                    metric.end_time = time.time()
+                    # Record metric for denied/unapproved execution
                     metric.success = False
                     metric.error_message = error_msg[:500]
                     self._tool_execution_metrics.append(metric)

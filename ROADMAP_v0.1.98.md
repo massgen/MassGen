@@ -1,14 +1,14 @@
-# MassGen v0.1.97 Roadmap
+# MassGen v0.1.98 Roadmap
 
 **Target Release:** TBD
 
 ## Overview
 
-Version 0.1.97 picks up the image/video edit work deferred from v0.1.86-v0.1.96 and continues multimodal provider-parity work.
+Version 0.1.98 picks up the image/video edit work deferred from v0.1.86-v0.1.97 and continues multimodal provider-parity work.
 
 ---
 
-## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.96)
+## Feature: Image/Video Edit Capabilities (Deferred from v0.1.86-v0.1.97)
 
 **Issue:** [#959](https://github.com/massgen/MassGen/issues/959)
 **Owner:** @ncrispino

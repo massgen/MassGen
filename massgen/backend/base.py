@@ -226,6 +226,11 @@ class LLMBackend(ABC):
                     # managed paths; "strict" denies "/"; "open" allows-all minus secrets.
                     "command_line_srt_read_mode": srt_read_mode,
                     "command_line_srt_allow_read": kwargs.get("command_line_srt_allow_read", []),
+                    # A read-only permission role also empties the SRT writable set
+                    # (OS-layer backstop to the permission engine's write denials).
+                    "command_line_srt_read_only": (
+                        str((kwargs.get("permissions") or {}).get("role", "")).lower() in ("read-only", "researcher") if isinstance(kwargs.get("permissions"), dict) else False
+                    ),
                     "enable_audio_generation": kwargs.get("enable_audio_generation", False),
                     "exclude_file_operation_mcps": kwargs.get("exclude_file_operation_mcps", False),
                     "use_mcpwrapped_for_tool_filtering": kwargs.get("use_mcpwrapped_for_tool_filtering", False),

@@ -108,6 +108,8 @@ BASE_EXCLUDED_CONFIG_PARAMS: frozenset[str] = frozenset(
         "audio_generation_model",
         # Hook framework (handled by base class)
         "hooks",
+        # Permissions system (handled by the hook installer)
+        "permissions",
         # Debug options (not passed to API)
         "debug_delay_seconds",
         "debug_delay_after_n_tools",

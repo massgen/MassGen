@@ -1,0 +1,68 @@
+# Permissions System (P0) — risk-tiered tool approval
+#
+# Opt-in via a `permissions:` block. When enabled, every tool call passes through:
+#   1. a HARDLINE blocklist (catastrophic commands like `rm -rf /` — always denied)
+#   2. a composite permission ENGINE that classifies blast radius:
+#        low  → allow      (reads, in-workspace edits, `git status`, …)
+#        med/high → ASK    (force-push, network egress, publish, unknown commands)
+#
+# In `--automation` (no human), an ASK is resolved by `automation_default`:
+#   risk-based (default) → high denied (reason fed back), low/medium allowed
+#   deny-all             → every ask denied
+#   allow-all            → every ask allowed
+# Interactively, an ASK pops an approval modal (allow once/session/always | reject).
+#
+# BACKEND SCOPE: the approval chokepoint lives in the MCP-family backends
+#   (openai/response, chat_completions, claude, gemini, grok). Native backends
+#   (claude_code, codex) do NOT run the framework hook chokepoint — a `permissions:`
+#   block there is reported INACTIVE at startup; govern those via the OS sandbox (SRT)
+#   and their own native approval policies instead.
+#
+# Run with:
+#   uv run massgen --automation --config massgen/configs/tools/permissions/permission_engine.yaml \
+#     "Run 'git status', then run 'git push --force origin main' and report each result."
+# Expected (automation, risk-based): git status runs; the force-push is DENIED with a reason.
+
+agents:
+  - id: "guarded"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+
+      cwd: "workspace_guarded"
+      enable_mcp_command_line: true
+
+      # ▼▼▼ Opt-in to the permissions system ▼▼▼
+      permissions:
+        enabled: true
+        automation_default: "risk-based"   # risk-based | deny-all | allow-all
+        # audit: true                      # append-only JSONL ledger of every decision (default on)
+        # max_consecutive_auto: 25         # runaway-loop guard: deny after N straight AUTO approvals
+        #                                  #   per agent (a human resets the streak). Omitted → unlimited.
+        # persist_approvals: true          # 'Always allow' grants persist to settings.local.json and
+        #                                  #   load back next run (default on; human-gated).
+        # settings_path: ".massgen/settings.local.json"   # where 'always' grants are written/read
+        # Declarative allow/ask/deny rules — action(target) algebra, deny-wins.
+        # Actions: command | read_file | write_file | read_url | mcp | *
+        # A matching deny/allow is authoritative (an allow suppresses the risk-ask);
+        # if NO rule matches, the call falls through to the risk classifier.
+        rules:
+          deny:
+            - "command(git push --force*)"
+            - "write_file(/etc/**)"
+          ask:
+            - "read_url(*)"            # any network fetch needs approval
+            - "command(npm publish*)"
+          allow:
+            - "command(git status)"
+            - "command(git diff*)"
+            - "write_file(./**)"       # writes inside the workspace
+            - "read_file(./**)"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

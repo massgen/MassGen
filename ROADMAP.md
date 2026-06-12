@@ -1,10 +1,10 @@
 # MassGen Roadmap
 
-**Current Version:** v0.1.96
+**Current Version:** v0.1.97
 
 **Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 
-**Last Updated:** June 10, 2026
+**Last Updated:** June 12, 2026
 
 This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
@@ -42,9 +42,28 @@ Want to contribute or collaborate on a specific track? Reach out to the track ow
 
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
-| **v0.1.97** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.96 ([#959](https://github.com/massgen/MassGen/issues/959)) |
+| **v0.1.98** | TBD | Image/Video Edit Capabilities | @ncrispino | Check and support img/video editing capabilities — deferred from v0.1.86-v0.1.97 ([#959](https://github.com/massgen/MassGen/issues/959)) |
 
 *All releases ship on MWF @ 9am PT when ready*
+
+---
+
+## ✅ v0.1.97 - Application-Layer Permission Engine (Completed)
+
+**Released:** June 12, 2026
+
+### Features
+- **Permission engine (opt-in `permissions:` block)**: a composite `PreToolUse` pipeline in `massgen/permissions/` — a non-overridable **hardline** blocklist (`hardline.py`: catastrophic patterns like `rm -rf /`, fork bombs, raw-disk `dd`), a declarative **`action(target)` rule layer** (`rules.py`: `command`/`read_file`/`write_file`/`read_url`/`mcp`/`*`, deny-wins across scopes), and a **blast-radius `RiskClassifier`** that tiers by what the call does (egress/force-push/publish/privilege → high; reads/in-workspace edits → low). An explicit rule suppresses the risk-ask, so rules + risk live in one hook
+- **Approval round-trip**: the `base_with_custom_tool_and_mcp` chokepoint resolves an `ask` via a pluggable `ApprovalProvider` — interactive **modal** (`ToolApprovalModal`: allow once/session/always · reject), automation **policy** (`risk-based` default / `deny-all` / `allow-all`), or **file** request/response handshake for headless/remote (fail-closed on timeout)
+- **Roles, audit & guards**: per-agent `role` presets (`read-only`/`researcher` deny writes+shell, also empty the agent's SRT writable set), an append-only JSONL **`ApprovalLedger`**, a runaway-loop **`ApprovalBudget`** (opt-in `max_consecutive_auto`), and `always`-grant persistence to `settings.local.json`
+- **Channel-based guardrail system prompt** (`PermissionGuardrailSection`, injected only when the engine is active): follow the guardrails, don't circumvent a denial, surface-and-ask — while keeping `ask` a sanctioned path. Denied tool calls now render as **first-class failed tool events** (with the command) in the TUI/WebUI timeline
+- **Backend parity guard**: native backends (`claude_code`, `codex`) lack the framework chokepoint, so a `permissions:` block there is reported **INACTIVE** instead of silently inert
+
+### Notes
+- All items landed under TDD (tests first, confirmed red, then green); presence-gated so a config with no `permissions:` block is 100% unchanged.
+- Live-verified (automation, `gemini-3-flash-preview`): all three chokepoint branches end-to-end + audit ledger; denied calls emitting real `tool_start`/`tool_complete(error)` events.
+- **Honest scope**: the prompt + regex classifier are best-effort *alignment* — a model evaded the egress classifier via `\c\u\r\l` / `python urllib`, confirming the OS sandbox (v0.1.96) is the load-bearing enforcement. Follow-ups in `docs/dev_notes/permissions_p2_followups.md` (limitations) and OS-layer egress enforcement.
+- Image/Video Edit Capabilities ([#959](https://github.com/massgen/MassGen/issues/959)) remain deferred to v0.1.98.
 
 ---
 

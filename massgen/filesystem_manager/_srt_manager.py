@@ -183,6 +183,7 @@ class SrtManager:
         allow_unix_sockets: list[str] | None = None,
         read_mode: str = READ_MODE_CONFINED,
         allow_read: list[str] | None = None,
+        read_only: bool = False,
         fs_tools_extra_writable: list[str | Path] | None = None,
         settings_dir: str | Path | None = None,
         srt_path: str = DEFAULT_SRT_BINARY,
@@ -193,6 +194,9 @@ class SrtManager:
         self.allow_unix_sockets = list(allow_unix_sockets or [])
         self.read_mode = read_mode if read_mode in READ_MODES else READ_MODE_CONFINED
         self.allow_read = list(allow_read or [])
+        # read_only (e.g. a read-only permission role): the OS backstop empties the
+        # agent's writable set, so even a permission-hook bypass can't write.
+        self.read_only = read_only
         self.fs_tools_extra_writable = [Path(p).resolve() for p in (fs_tools_extra_writable or [])]
         self.settings_dir = Path(settings_dir) if settings_dir else None
         self.srt_path = srt_path
@@ -215,6 +219,11 @@ class SrtManager:
             # agent) and the framework's snapshot storage.
             writable += [mp.path for mp in managed if mp.path_type == "temp_workspace"]
             writable += self.fs_tools_extra_writable
+        elif self.read_only:
+            # Read-only role: the agent's EXECUTION sandbox grants NO writes (OS-layer
+            # backstop to the permission engine's write-denials). The fs_tools profile
+            # is unaffected so the framework's own server can still snapshot.
+            writable = []
 
         writable_set = {str(p) for p in writable}
 

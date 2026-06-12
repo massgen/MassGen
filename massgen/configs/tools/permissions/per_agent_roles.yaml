@@ -1,0 +1,46 @@
+# Per-agent permission roles — MassGen's multi-agent differentiator.
+#
+# Each agent gets its OWN permission scope. Here a "researcher" is locked to
+# read-only (no writes, no shell, asks before network) while an "implementer" has
+# full workspace access (but can never force-push). Roles are a one-liner preset;
+# they layer with per-agent `rules` (deny-wins, so a role's write-deny can't be
+# loosened by a per-agent allow).
+#
+# Roles: read-only (alias researcher) | read-write (alias implementer)
+#
+# Run with:
+#   uv run massgen --automation --config massgen/configs/tools/permissions/per_agent_roles.yaml \
+#     "Research the repo layout, then create SUMMARY.md describing it."
+# Expected: the researcher's write attempts are DENIED (read-only); the implementer
+# writes SUMMARY.md; neither can force-push.
+
+agents:
+  - id: "researcher"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      cwd: "workspace_researcher"
+      enable_mcp_command_line: true
+      permissions:
+        enabled: true
+        role: "read-only"          # no writes, no shell; asks before network
+
+  - id: "implementer"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      cwd: "workspace_implementer"
+      enable_mcp_command_line: true
+      permissions:
+        enabled: true
+        role: "read-write"         # full workspace access…
+        rules:
+          deny: [ "command(git push --force*)" ]   # …but never a force-push
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
