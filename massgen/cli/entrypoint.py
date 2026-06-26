@@ -2242,7 +2242,7 @@ def _cli_main_continued(args):
             )
 
             class _QuickstartWizardApp(_QApp):
-                CSS_PATH = Path(__file__).parent / "frontend" / "displays" / "textual_themes" / "dark.tcss"
+                CSS_PATH = Path(__file__).parent.parent / "frontend" / "displays" / "textual_themes" / "dark.tcss"
                 BINDINGS = [("ctrl+c", "quit", "Quit")]
 
                 def __init__(self, quickstart_config_filename: str | None = None):
@@ -2363,7 +2363,7 @@ def _cli_main_continued(args):
             class SetupWizardApp(App):
                 """Standalone app for setup wizard."""
 
-                CSS_PATH = Path(__file__).parent / "frontend" / "displays" / "textual_themes" / "dark.tcss"
+                CSS_PATH = Path(__file__).parent.parent / "frontend" / "displays" / "textual_themes" / "dark.tcss"
                 SCREENS = {"wizard": SetupWizard}
                 BINDINGS = [("ctrl+c", "quit", "Quit")]
 
@@ -2803,7 +2803,7 @@ def _cli_main_continued(args):
                 )
 
                 class _FirstRunSetupApp(_FirstRunApp):
-                    CSS_PATH = Path(__file__).parent / "frontend" / "displays" / "textual_themes" / "dark.tcss"
+                    CSS_PATH = Path(__file__).parent.parent / "frontend" / "displays" / "textual_themes" / "dark.tcss"
                     SCREENS = {"wizard": SetupWizard}
                     BINDINGS = [("ctrl+c", "quit", "Quit")]
 
