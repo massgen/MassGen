@@ -22,13 +22,25 @@ _ENTRYPOINT_PATH = Path(entrypoint_module.__file__)
 _CSS_PATH_PATTERN = re.compile(
     r"CSS_PATH\s*=\s*(Path\(__file__\)(?:\.parent)+\s*/\s*(?:\"[^\"]+\"\s*/?\s*)+)",
 )
+# Setup, quickstart, and first-run wizards each declare their own CSS_PATH.
+# If a wizard is removed intentionally, lower this and update the comment;
+# do not silently drop coverage.
+_EXPECTED_WIZARD_CSS_PATH_COUNT = 3
 
 
 def _resolve_css_path(expression: str) -> Path:
-    """Evaluate a literal ``Path(__file__).parent[...] / "a" / "b"`` expression.
+    """Resolve a literal ``Path(__file__).parent[...] / "a" / "b"`` expression.
 
     Restricted to the exact shape used in ``entrypoint.py`` so we can avoid
     ``eval`` on arbitrary code while still asserting the real filesystem result.
+
+    Args:
+        expression: The matched ``Path(__file__).parent... / "..."`` source text
+            captured from ``entrypoint.py``.
+
+    Returns:
+        The filesystem path obtained by applying each ``.parent`` to
+        ``entrypoint.py`` and then joining the quoted segments.
     """
 
     parents = expression.count(".parent")
@@ -39,14 +51,31 @@ def _resolve_css_path(expression: str) -> Path:
     return base.joinpath(*segments)
 
 
-def test_entrypoint_declares_at_least_one_css_path():
+def test_entrypoint_declares_expected_wizard_css_paths():
+    """Pin the wizard CSS_PATH count so silent loss-of-coverage fails the test.
+
+    The wizards in ``entrypoint.py`` (setup, quickstart, first-run) each declare
+    their own ``CSS_PATH``. If one is removed by accident, the existence check
+    below would still pass on whatever remained; this test forces the count to
+    stay in sync with the wizard surface area.
+    """
+
     source = _ENTRYPOINT_PATH.read_text(encoding="utf-8")
     matches = _CSS_PATH_PATTERN.findall(source)
-    assert matches, "Expected entrypoint.py to declare wizard CSS_PATH constants"
+    assert len(matches) == _EXPECTED_WIZARD_CSS_PATH_COUNT, (
+        f"Expected {_EXPECTED_WIZARD_CSS_PATH_COUNT} wizard CSS_PATH declarations "
+        f"in entrypoint.py (setup, quickstart, first-run); found {len(matches)}. "
+        "If a wizard was intentionally removed, update _EXPECTED_WIZARD_CSS_PATH_COUNT."
+    )
 
 
 def test_every_wizard_css_path_resolves_to_an_existing_file():
-    """Each ``CSS_PATH = Path(__file__).parent... / "*.tcss"`` must exist on disk."""
+    """Verify each wizard ``CSS_PATH`` literal resolves to a real ``.tcss`` file.
+
+    This is the regression for the ``massgen/cli/`` package split, where every
+    wizard ``CSS_PATH`` silently pointed at a nonexistent
+    ``massgen/cli/frontend/...`` directory and crashed the TUI on launch.
+    """
 
     source = _ENTRYPOINT_PATH.read_text(encoding="utf-8")
     expressions = _CSS_PATH_PATTERN.findall(source)
