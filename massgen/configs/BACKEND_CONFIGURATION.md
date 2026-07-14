@@ -328,7 +328,7 @@ backend:
 
 Generic backend supporting multiple providers (v0.0.18+ with MCP).
 
-Supports: Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, Kimi/Moonshot, and any OpenAI-compatible API.
+Supports: Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, Kimi/Moonshot, DaoXE, and any OpenAI-compatible API.
 
 ```yaml
 backend:
@@ -365,6 +365,20 @@ backend:
 - **OpenRouter**: `https://openrouter.ai/api/v1`
 - **Nvidia NIM**: `https://integrate.api.nvidia.com/v1`
 - **Kimi/Moonshot**: `https://api.moonshot.cn/v1`
+- **DaoXE**: `https://daoxe.com/v1` (multi-model multi-protocol gateway; Chat Completions path; account-scoped model IDs; not available in mainland China)
+
+### Example: DaoXE multi-protocol gateway
+
+[DaoXE](https://daoxe.com) is a multi-model multi-protocol API gateway. Use the Chat Completions backend with account-scoped model IDs from your DaoXE dashboard (`GET /v1/models`). Not available in mainland China.
+
+```yaml
+backend:
+  type: "chatcompletion"
+  model: "YOUR_DAOXE_MODEL_ID"
+  base_url: "https://daoxe.com/v1"
+  api_key: "${DAOXE_API_KEY}"  # or omit if DAOXE_API_KEY / OPENAI_API_KEY is set
+```
+
 
 ---
 
