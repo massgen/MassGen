@@ -376,7 +376,17 @@ backend:
   type: "chatcompletion"
   model: "YOUR_DAOXE_MODEL_ID"
   base_url: "https://daoxe.com/v1"
-  api_key: "${DAOXE_API_KEY}"  # or omit if DAOXE_API_KEY / OPENAI_API_KEY is set
+  # Chat Completions backend falls back to OPENAI_API_KEY when api_key is omitted.
+  # Prefer an explicit key if you keep multiple OpenAI-compatible backends configured:
+  api_key: "${OPENAI_API_KEY}"
+```
+
+Export a DaoXE key into the env var the backend actually reads:
+
+```bash
+export OPENAI_API_KEY="<your-daoxe-api-key>"
+# optional if your process does not load the YAML value above:
+# export OPENAI_BASE_URL="https://daoxe.com/v1"
 ```
 
 
