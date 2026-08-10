@@ -156,7 +156,7 @@ The ``chatcompletion`` backend provides a generic way to connect to any OpenAI-c
    * - **Backend Type**
      - ``chatcompletion``
    * - **Compatible Providers**
-     - Cerebras AI, Together AI, Fireworks AI, Groq, OpenRouter, POE, and any OpenAI-compatible API
+     - Cerebras AI, Together AI, Fireworks AI, Groq, OpenRouter, Atlas Cloud, POE, and any OpenAI-compatible API
    * - **Required Config**
      - ``base_url`` pointing to the provider's API endpoint
    * - **API Key**
@@ -216,6 +216,9 @@ The ``chatcompletion`` backend provides a generic way to connect to any OpenAI-c
    * - **POE**
      - Platform-specific
      - Platform credentials
+   * - **Atlas Cloud**
+     - ``https://api.atlascloud.ai/v1``
+     - ``ATLASCLOUD_API_KEY``
 
 **Common Models:**
 
@@ -223,6 +226,7 @@ The ``chatcompletion`` backend provides a generic way to connect to any OpenAI-c
 * **Together AI**: ``meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo``, ``mistralai/Mixtral-8x7B-Instruct-v0.1``
 * **Fireworks AI**: ``accounts/fireworks/models/llama-v3p1-405b-instruct``
 * **Groq**: ``llama-3.1-70b-versatile``, ``mixtral-8x7b-32768``
+* **Atlas Cloud**: use a model ID available to your Atlas Cloud account
 
 Tool Enablement Reference
 --------------------------

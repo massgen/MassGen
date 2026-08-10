@@ -328,7 +328,7 @@ backend:
 
 Generic backend supporting multiple providers (v0.0.18+ with MCP).
 
-Supports: Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, Kimi/Moonshot, and any OpenAI-compatible API.
+Supports: Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, Kimi/Moonshot, Atlas Cloud, and any OpenAI-compatible API.
 
 ```yaml
 backend:
@@ -365,6 +365,7 @@ backend:
 - **OpenRouter**: `https://openrouter.ai/api/v1`
 - **Nvidia NIM**: `https://integrate.api.nvidia.com/v1`
 - **Kimi/Moonshot**: `https://api.moonshot.cn/v1`
+- **Atlas Cloud**: `https://api.atlascloud.ai/v1`
 
 ---
 

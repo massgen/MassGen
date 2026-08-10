@@ -15,6 +15,8 @@ from massgen.backend.base_with_custom_tool_and_mcp import (
     BACKGROUND_TOOL_STATUS_NAME,
     BACKGROUND_TOOL_WAIT_NAME,
 )
+from massgen.cli.backends import create_backend
+from massgen.cli.config_loading import ConfigurationError
 
 
 def test_openai_backend_defaults():
@@ -45,6 +47,41 @@ def test_cerebras_backend():
     )
     assert backend.get_provider_name() == "Cerebras AI"
     assert backend.config["base_url"] == "https://api.cerebras.ai/v1"
+
+
+def test_atlascloud_backend():
+    """Provider should be inferred from the Atlas Cloud base URL."""
+    backend = ChatCompletionsBackend(
+        base_url="https://api.atlascloud.ai/v1",
+        api_key="test-key",
+    )
+    assert backend.get_provider_name() == "Atlas Cloud"
+    assert backend.config["base_url"] == "https://api.atlascloud.ai/v1"
+
+
+def test_atlascloud_api_key_is_detected(monkeypatch: pytest.MonkeyPatch):
+    """Atlas Cloud configs should use ATLASCLOUD_API_KEY automatically."""
+    monkeypatch.setenv("ATLASCLOUD_API_KEY", "test-atlas-key")
+
+    backend = create_backend(
+        "chatcompletion",
+        base_url="https://api.atlascloud.ai/v1",
+        model="qwen/qwen3.8-max",
+    )
+
+    assert backend.api_key == "test-atlas-key"
+
+
+def test_atlascloud_api_key_error_is_actionable(monkeypatch: pytest.MonkeyPatch):
+    """Missing Atlas Cloud credentials should name the expected variable."""
+    monkeypatch.delenv("ATLASCLOUD_API_KEY", raising=False)
+
+    with pytest.raises(ConfigurationError, match="ATLASCLOUD_API_KEY"):
+        create_backend(
+            "chatcompletion",
+            base_url="https://api.atlascloud.ai/v1",
+            model="qwen/qwen3.8-max",
+        )
 
 
 @pytest.mark.asyncio

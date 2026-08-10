@@ -15,6 +15,7 @@ Supported Providers and Environment Variables:
 - ZAI: ZAI_API_KEY
 - POE: POE_API_KEY
 - Qwen: QWEN_API_KEY
+- Atlas Cloud: ATLASCLOUD_API_KEY
 """
 
 from __future__ import annotations
@@ -1145,6 +1146,8 @@ class ChatCompletionsBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
             return "POE"
         elif "aliyuncs.com" in base_url:
             return "Qwen"
+        elif "atlascloud.ai" in base_url:
+            return "Atlas Cloud"
         else:
             return "ChatCompletion"
 

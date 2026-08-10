@@ -1,0 +1,12 @@
+# MassGen Atlas Cloud Configuration
+# uv run massgen --automation --config massgen/configs/basic/single/single_atlascloud.yaml "Hello"
+agents:
+  - id: "atlascloud_agent"
+    backend:
+      type: "chatcompletion"
+      model: "qwen/qwen3.8-max"
+      base_url: "https://api.atlascloud.ai/v1"
+
+ui:
+  display_type: "textual_terminal"
+  logging_enabled: true
