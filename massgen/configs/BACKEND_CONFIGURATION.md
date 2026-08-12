@@ -328,7 +328,7 @@ backend:
 
 Generic backend supporting multiple providers (v0.0.18+ with MCP).
 
-Supports: Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, Kimi/Moonshot, DaoXE, and any OpenAI-compatible API.
+Supports: Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, Kimi/Moonshot, and any OpenAI-compatible API.
 
 ```yaml
 backend:
@@ -388,7 +388,6 @@ export OPENAI_API_KEY="<your-daoxe-api-key>"
 # optional if your process does not load the YAML value above:
 # export OPENAI_BASE_URL="https://daoxe.com/v1"
 ```
-
 
 ---
 
