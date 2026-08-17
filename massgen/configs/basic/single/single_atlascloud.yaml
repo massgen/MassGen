@@ -1,0 +1,16 @@
+# MassGen Atlas Cloud Configuration
+# uv run massgen --automation --config massgen/configs/basic/single/single_atlascloud.yaml "Hello"
+# Requires ATLASCLOUD_API_KEY in the environment.
+# What happens: MassGen sends the prompt to Atlas Cloud through the
+# OpenAI-compatible Chat Completions endpoint and renders the response in
+# the textual terminal UI.
+agents:
+  - id: "atlascloud_agent"
+    backend:
+      type: "chatcompletion"
+      model: "qwen/qwen3.8-max"
+      base_url: "https://api.atlascloud.ai/v1"
+
+ui:
+  display_type: "textual_terminal"
+  logging_enabled: true

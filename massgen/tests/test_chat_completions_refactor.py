@@ -15,6 +15,9 @@ from massgen.backend.base_with_custom_tool_and_mcp import (
     BACKGROUND_TOOL_STATUS_NAME,
     BACKGROUND_TOOL_WAIT_NAME,
 )
+from massgen.cli.backends import create_backend
+from massgen.cli.config_loading import ConfigurationError
+from massgen.utils.provider_urls import is_atlascloud_url
 
 
 def test_openai_backend_defaults():
@@ -45,6 +48,87 @@ def test_cerebras_backend():
     )
     assert backend.get_provider_name() == "Cerebras AI"
     assert backend.config["base_url"] == "https://api.cerebras.ai/v1"
+
+
+@pytest.mark.parametrize(
+    ("base_url", "expected"),
+    [
+        ("https://atlascloud.ai/v1", True),
+        ("https://api.atlascloud.ai/v1", True),
+        ("https://atlascloud.ai.evil.example/v1", False),
+        ("https://notatlascloud.ai/v1", False),
+        ("https://atlascloud.ai@evil.example/v1", False),
+        ("https://user@api.atlascloud.ai/v1", False),
+        ("https://evil.example/v1?next=https://api.atlascloud.ai/v1", False),
+    ],
+)
+def test_atlascloud_url_detection(base_url: str, expected: bool):
+    """Only exact Atlas Cloud hosts and valid subdomains should be detected."""
+    assert is_atlascloud_url(base_url) is expected
+
+    backend = ChatCompletionsBackend(
+        base_url=base_url,
+        api_key="test-key",
+    )
+    expected_provider = "Atlas Cloud" if expected else "ChatCompletion"
+    assert backend.get_provider_name() == expected_provider
+    assert backend.config["base_url"] == base_url
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["https://atlascloud.ai/v1", "https://api.atlascloud.ai/v1"],
+)
+def test_atlascloud_api_key_is_detected(
+    monkeypatch: pytest.MonkeyPatch,
+    base_url: str,
+):
+    """Atlas Cloud configs should use ATLASCLOUD_API_KEY automatically."""
+    monkeypatch.setenv("ATLASCLOUD_API_KEY", "test-atlas-key")
+
+    backend = create_backend(
+        "chatcompletion",
+        base_url=base_url,
+        model="qwen/qwen3.8-max",
+    )
+
+    assert backend.api_key == "test-atlas-key"
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "https://atlascloud.ai.evil.example/v1",
+        "https://atlascloud.ai@evil.example/v1",
+        "https://evil.example/v1?next=https://api.atlascloud.ai/v1",
+    ],
+)
+def test_atlascloud_api_key_is_not_used_for_untrusted_urls(
+    monkeypatch: pytest.MonkeyPatch,
+    base_url: str,
+):
+    """Untrusted hosts must not receive the Atlas Cloud credential."""
+    monkeypatch.setenv("ATLASCLOUD_API_KEY", "test-atlas-key")
+
+    backend = create_backend(
+        "chatcompletion",
+        base_url=base_url,
+        model="qwen/qwen3.8-max",
+    )
+
+    assert backend.api_key is None
+
+
+def test_atlascloud_api_key_error_is_actionable(monkeypatch: pytest.MonkeyPatch):
+    """Missing Atlas Cloud credentials should name the expected variable."""
+    monkeypatch.delenv("ATLASCLOUD_API_KEY", raising=False)
+
+    with pytest.raises(ConfigurationError, match="ATLASCLOUD_API_KEY"):
+        create_backend(
+            "chatcompletion",
+            base_url="https://api.atlascloud.ai/v1",
+            model="qwen/qwen3.8-max",
+        )
 
 
 @pytest.mark.asyncio

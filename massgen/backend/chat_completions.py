@@ -15,6 +15,7 @@ Supported Providers and Environment Variables:
 - ZAI: ZAI_API_KEY
 - POE: POE_API_KEY
 - Qwen: QWEN_API_KEY
+- Atlas Cloud: ATLASCLOUD_API_KEY
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from ..formatter import ChatCompletionsFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType
 from ..structured_logging import trace_llm_api_call
+from ..utils.provider_urls import is_atlascloud_url
 
 # Local imports
 from ._constants import configure_openrouter_extra_body
@@ -1145,6 +1147,8 @@ class ChatCompletionsBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
             return "POE"
         elif "aliyuncs.com" in base_url:
             return "Qwen"
+        elif is_atlascloud_url(base_url):
+            return "Atlas Cloud"
         else:
             return "ChatCompletion"
 
