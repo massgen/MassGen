@@ -38,6 +38,7 @@ from ..dspy_paraphraser import (
 )
 from ..logger_config import logger
 from ..utils import get_backend_type_from_model
+from ..utils.provider_urls import is_atlascloud_url
 
 # --- cross-module references within the cli package ---
 from .config_loading import (
@@ -239,7 +240,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                     raise ConfigurationError(
                         "Qwen API key not found. Set QWEN_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
                     )
-            elif base_url and "atlascloud.ai" in base_url:
+            elif is_atlascloud_url(base_url):
                 api_key = os.getenv("ATLASCLOUD_API_KEY")
                 if not api_key:
                     raise ConfigurationError(

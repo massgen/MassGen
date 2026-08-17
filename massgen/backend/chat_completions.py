@@ -33,6 +33,7 @@ from ..formatter import ChatCompletionsFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType
 from ..structured_logging import trace_llm_api_call
+from ..utils.provider_urls import is_atlascloud_url
 
 # Local imports
 from ._constants import configure_openrouter_extra_body
@@ -1146,7 +1147,7 @@ class ChatCompletionsBackend(StreamingBufferMixin, CustomToolAndMCPBackend):
             return "POE"
         elif "aliyuncs.com" in base_url:
             return "Qwen"
-        elif "atlascloud.ai" in base_url:
+        elif is_atlascloud_url(base_url):
             return "Atlas Cloud"
         else:
             return "ChatCompletion"
