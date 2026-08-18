@@ -1634,4 +1634,4 @@ Made with ❤️ by the MassGen team
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Leezekun/MassGen&type=Date)](https://www.star-history.com/#Leezekun/MassGen&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Leezekun/MassGen&type=Date)](https://star-history.dera.page/#Leezekun/MassGen&Date)
