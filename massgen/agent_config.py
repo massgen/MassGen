@@ -770,6 +770,18 @@ class CoordinationConfig:
                 )
 
 
+def _registry_default_model(backend_type: str) -> str:
+    """Return the default model a backend declares in its capability registry.
+
+    Factory methods fall back to this when no model is given, so a backend
+    config that omits ``model`` (which the config validator allows for backends
+    with a registry default) resolves to the same model everywhere.
+    """
+    from .backend.capabilities import get_capabilities
+
+    return get_capabilities(backend_type).default_model
+
+
 @pydantic_dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class AgentConfig:
     """Configuration for MassGen agents using the proven binary decision framework.
@@ -1117,7 +1129,7 @@ class AgentConfig:
     @classmethod
     def create_claude_config(
         cls,
-        model: str = "claude-3-sonnet-20240229",
+        model: str | None = None,
         enable_web_search: bool = False,
         enable_code_execution: bool = False,
         **kwargs,
@@ -1125,11 +1137,14 @@ class AgentConfig:
         """Create Anthropic Claude configuration.
 
         Args:
-            model: Claude model name
+            model: Claude model name (default: the Claude backend's
+                ``default_model`` in ``massgen/backend/capabilities.py``)
             enable_web_search: Enable builtin web search tool
             enable_code_execution: Enable builtin code execution tool
             **kwargs: Additional backend parameters
         """
+        if model is None:
+            model = _registry_default_model("claude")
         backend_params = {"model": model, **kwargs}
 
         if enable_web_search:
@@ -1300,7 +1315,7 @@ class AgentConfig:
     @classmethod
     def create_claude_code_config(
         cls,
-        model: str = "claude-sonnet-4-20250514",
+        model: str | None = None,
         system_prompt: str | None = None,
         allowed_tools: list | None = None,  # Legacy support
         disallowed_tools: list | None = None,  # Preferred approach
@@ -1315,7 +1330,8 @@ class AgentConfig:
         power while maintaining safety.
 
         Args:
-            model: Claude model name (default: claude-sonnet-4-20250514)
+            model: Claude model name (default: the Claude Code backend's
+                ``default_model`` in ``massgen/backend/capabilities.py``)
             system_prompt: Custom system prompt for the agent
             allowed_tools: [LEGACY] List of allowed tools (use disallowed_tools instead)
             disallowed_tools: List of dangerous operations to block
@@ -1351,6 +1367,8 @@ class AgentConfig:
                     system_prompt="You are an expert developer assistant."
                 )
         """
+        if model is None:
+            model = _registry_default_model("claude_code")
         backend_params = {"model": model, **kwargs}
 
         # Claude Code Stream specific parameters
